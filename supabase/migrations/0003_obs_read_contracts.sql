@@ -188,12 +188,15 @@ as $$
   raw as (select profile from public.aml_entities where entity_id = p_entity_id),
   coverage as (
     -- Every governed source, with an explicit verdict. A source that was never
-    -- consulted is never rendered as a source that found nothing.
+    -- consulted is never rendered as a source that found nothing. Lo mismo vale
+    -- para una fuente de alcance parcial: si su corte solo publica una parte del
+    -- universo, no mirar a esta entidad no autoriza a decir que no tiene
+    -- registro.
     select h.source_code, h.source_name, h.source_class, h.integration_mode,
            h.authoritative_source, h.data_status as source_data_status,
            coalesce(es.status,
-             case when h.integration_mode = 'on_demand' then 'NOT_CONSULTED'
-                  else 'ABSENT' end) as status,
+             case when h.integration_mode = 'on_demand' or h.scope_partial
+                  then 'NOT_CONSULTED' else 'ABSENT' end) as status,
            es.record_count, es.last_event_at, coalesce(es.detail,'{}'::jsonb) detail
     from public.obs_source_health h
     left join public.obs_entity_source es
@@ -338,7 +341,7 @@ returns table (
   authoritative_source text, software_status text, data_status text,
   last_source_record_at timestamptz, last_successful_ingest_at timestamptz,
   records_24h bigint, error_rate_24h numeric, notes text,
-  entity_coverage bigint, coverage_share numeric)
+  entity_coverage bigint, coverage_share numeric, scope_partial boolean)
 language sql
 stable
 security invoker
@@ -349,7 +352,10 @@ as $$
          h.last_source_record_at, h.last_successful_ingest_at,
          h.records_24h, h.error_rate_24h, h.notes,
          cov.n,
-         case when tot.n > 0 then round(100.0 * cov.n / tot.n, 1) end
+         -- Cobertura sobre el universo observado. Para una fuente de alcance
+         -- parcial mide nuestro corte, no la fuente: por eso viaja el flag.
+         case when tot.n > 0 then round(100.0 * cov.n / tot.n, 1) end,
+         h.scope_partial
   from public.obs_source_health h
   cross join lateral (select count(*) n from public.obs_entity_source es
                       where es.source_code = h.source_code) cov

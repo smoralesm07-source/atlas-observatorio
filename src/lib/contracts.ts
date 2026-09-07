@@ -107,7 +107,19 @@ export interface CoverageRow {
   status: SourceStatus;
   record_count: number | null;
   last_event_at: string | null;
-  detail: { basis?: string; event_titles?: string[] };
+  detail: {
+    basis?: string;
+    event_titles?: string[];
+    /** Rótulo del recuento. Sin esto la ficha diría "eventos" a lo que son
+     *  órdenes de compra o señales de ejecución. */
+    unidad?: string;
+    roles?: string[];
+    alcance?: string;
+    monto_12m_clp?: number;
+    monto_clp?: number;
+    altas?: number;
+    prioridad_revision?: number;
+  };
 }
 
 export interface EntityEvent {
@@ -227,6 +239,9 @@ export interface SourceStatusRow {
   notes: string | null;
   entity_coverage: number;
   coverage_share: number | null;
+  /** El corte publica sólo parte del universo de esta fuente: la cobertura
+   *  mide nuestro recorte, no la fuente, y la ausencia no acredita ausencia. */
+  scope_partial: boolean;
 }
 
 /* ──────────────────────────────────────────────────────── territorio */
@@ -514,5 +529,142 @@ export interface SpendActorDetail {
     flags: unknown[];
   }[];
   hallazgos: SpendFinding[];
+  semantics: string;
+}
+
+/* ---------------------------------------------------------------- Pulso UAF
+
+   El Pulso caracteriza el padron de sujetos obligados. Su eje temporal es el
+   ciclo de vida ante el SII, porque no existe fecha de inscripcion UAF en
+   ninguna fuente, y su lectura territorial es contexto comunal: el IGR
+   describe donde opera el sujeto, nunca al sujeto. */
+
+export type UafCohort =
+  | 'TODOS' | 'ACTIVO' | 'TERMINO_GIRO' | 'SIN_PERFIL_SII'
+  | 'OSFL' | 'PROVEEDOR_ESTADO' | 'SANCIONADO' | 'PRENSA' | 'CON_SENAL'
+  | 'IGR_ALTO' | 'IGR_MUY_ALTO'
+  | 'REGION' | 'SECTOR' | 'INDUSTRIA' | 'TERMINO_ANO';
+
+export interface UafPulse {
+  contract: 'ATLAS_OBS_UAF_PULSE_V1';
+  universe: {
+    total: number;
+    activos: number;
+    terminados: number;
+    sin_perfil: number;
+    con_inicio: number;
+    juridicas: number;
+    naturales: number;
+    organismos: number;
+    con_territorio: number;
+    regiones: number;
+    sectores_uaf: number;
+    industrias: number;
+    antiguedad_media: number | null;
+  } | null;
+  crosscuts: {
+    osfl: number;
+    proveedores: number;
+    /** Lo que el padron atribuye. */
+    sancionados_padron: number;
+    /** Lo que el analista puede abrir y leer. Mide otra cosa. */
+    sancionados_con_antecedente: number;
+    sancionados_5y: number;
+    prensa: number;
+    con_senal: number;
+    senales_totales: number;
+    antecedentes_sancion: number;
+    antecedentes_prensa: number;
+  } | null;
+  lifecycle: { terminated_by_year: { ano: number; n: number }[] };
+  by_region: {
+    region: string;
+    sujetos: number;
+    terminados: number;
+    sancionados: number;
+    proveedores: number;
+    igr_medio: number | null;
+    igr_banda: string | null;
+    en_igr_muy_alto: number;
+    en_igr_alto: number;
+  }[];
+  by_sector: {
+    sector: string;
+    sujetos: number;
+    terminados: number;
+    sancionados: number;
+    ipf_medio: number | null;
+  }[];
+  by_industry: {
+    industria: string;
+    sujetos: number;
+    terminados: number;
+    sancionados: number;
+    banda_ventas_media: number | null;
+  }[];
+  igr_mix: { banda: string; sujetos: number; igr_medio: number | null }[];
+  coverage: {
+    supplier_capped: boolean;
+    supplier_cap_note: string;
+    press_has_links: boolean;
+    press_note: string;
+    sanction_note: string;
+    uaf_registration_date: boolean;
+    uaf_registration_note: string;
+  };
+  semantics: string;
+}
+
+export interface UafSubjectRow {
+  rut: string;
+  entity_id: string | null;
+  name: string;
+  subject_nature: string | null;
+  uaf_sector: string | null;
+  sii_status: string | null;
+  sii_activity_start_date: string | null;
+  sii_termination_date: string | null;
+  activity_years: number | null;
+  economic_sector: string | null;
+  main_activity: string | null;
+  sales_band: string | null;
+  workers: number | null;
+  region: string | null;
+  commune: string | null;
+  igr_score: number | null;
+  igr_level: string | null;
+  is_osfl: boolean;
+  is_state_supplier: boolean;
+  supplier_amount_12m: number | null;
+  sanction_count: number;
+  sanction_evidence_count: number;
+  sanction_last_date: string | null;
+  has_press: boolean;
+  press_evidence_count: number;
+  alert_count: number;
+  ipf_score: number | null;
+  ipf_band: string | null;
+  evidence_count: number;
+  total_count: number;
+}
+
+export interface UafEvidenceRow {
+  kind: 'SANCION' | 'PRENSA';
+  event_date: string | null;
+  source_label: string | null;
+  headline: string | null;
+  summary: string | null;
+  amount_uf: number | null;
+  amount_clp: number | null;
+  document_url: string | null;
+  /** Falso en prensa: el productor no entrega URL y la ficha lo dice. */
+  has_link: boolean;
+  identity_status: string | null;
+}
+
+export interface UafDossier {
+  contract: 'ATLAS_OBS_UAF_DOSSIER_V1';
+  subject: UafSubjectRow | null;
+  evidence: UafEvidenceRow[];
   semantics: string;
 }

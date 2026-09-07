@@ -78,6 +78,14 @@ export function Fuentes() {
                         {s.integration_mode === 'on_demand' && (
                           <Badge tone="neutral">Bajo demanda</Badge>
                         )}
+                        {s.scope_partial && (
+                          <Badge
+                            tone="unknown"
+                            title="El corte publica sólo parte del universo de esta fuente."
+                          >
+                            Alcance parcial
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="mono" style={{ fontSize: 10.5, color: 'var(--ink-4)', marginTop: 3 }}>
@@ -100,7 +108,23 @@ export function Fuentes() {
                           <Meter
                             value={Number(s.coverage_share ?? 0)}
                             label="Cobertura del universo"
-                            hint={`${n(s.entity_coverage)} entidades con registro de esta fuente`}
+                            // Redondear a un decimal convierte 15 entidades de
+                            // 50.516 en un "0%" que se lee como ninguna.
+                            valueLabel={
+                              s.entity_coverage > 0 && Number(s.coverage_share ?? 0) < 0.05
+                                ? '<0,1%'
+                                : undefined
+                            }
+                            hint={
+                              s.scope_partial
+                                ? `${n(s.entity_coverage)} entidades con registro. Mide nuestro recorte, no la fuente: fuera de él no consultamos, así que la ficha dice «no consultada» y nunca «sin registro».`
+                                : `${n(s.entity_coverage)} entidades con registro de esta fuente`
+                            }
+                            // La cobertura es una proporción, no una nota: el
+                            // semáforo por umbral leería el 20% del padrón UAF
+                            // como "malo" cuando es un subconjunto por
+                            // definición.
+                            tone="var(--accent)"
                           />
                         </div>
                       )}

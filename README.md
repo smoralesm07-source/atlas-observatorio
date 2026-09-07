@@ -131,6 +131,128 @@ comprueba que el corte vigente no haya envejecido, que el último intento no hay
 terminado en `FAILED` y que la agenda siga activa. Un planificador que se
 detiene en silencio es peor que uno que falla ruidosamente.
 
+## Credencial de OpenSanctions
+
+El screening internacional funciona hoy **sin** esta credencial: cuando falta, el
+conector `aml-entity-global-watchlists-live` responde `credential_missing` y
+conmuta solo al *fallback* oficial directo —OFAC, ONU, UE, Reino Unido, BID y
+Banco Mundial, cada uno contra su propia fuente publicada—. Incorporar la clave
+no reemplaza ese camino: agrega el agregador, que resuelve las seis listas en una
+sola llamada y suma cobertura que las fuentes directas no publican.
+
+En el código, la clave se lee así (`index.ts` del conector):
+
+```ts
+const key = Deno.env.get('OPENSANCTIONS_API_KEY');
+if (!key) return { status: 'credential_missing', source: 'OPENSANCTIONS', … };
+…
+headers: { authorization: `ApiKey ${key}`, … }   // POST /match/default
+```
+
+El nombre del secreto es exactamente **`OPENSANCTIONS_API_KEY`**. Un nombre
+distinto no falla: deja el conector en `credential_missing` para siempre.
+
+### 1. Obtener la clave
+
+1. Entra a <https://www.opensanctions.org> → sección **API**.
+2. El endpoint que usa ATLAS es `POST /match/default`, del servicio comercial:
+   requiere una licencia y una API key, no basta con una cuenta gratuita. Para
+   uso institucional hay que contactarlos desde esa misma sección.
+3. Al contratar, entregan una cadena de API key. Cópiala completa.
+
+> No pude verificar desde aquí la página de planes de OpenSanctions —el proxy de
+> red de esta sesión bloquea ese dominio—, así que confirma con ellos las
+> condiciones de licencia vigentes antes de contratar. Lo que sí está verificado
+> es todo lo de nuestro lado: el nombre del secreto, el formato del encabezado y
+> el endpoint.
+
+### 2. Cargar el secreto en Supabase
+
+Por la consola:
+
+1. <https://supabase.com/dashboard> → proyecto **`ldmtlwzqaqmegedktlxr`**
+   (el que hospeda los `obs_*` y las funciones de borde).
+2. Menú lateral → **Edge Functions** → pestaña **Secrets**.
+3. **Add new secret**:
+   - *Name*: `OPENSANCTIONS_API_KEY`
+   - *Value*: la clave, sin comillas, sin el prefijo `ApiKey` y sin espacios al
+     final. El conector arma el encabezado `ApiKey <clave>` por su cuenta; si lo
+     incluyes en el valor, el encabezado queda `ApiKey ApiKey …` y la API
+     responde 401.
+4. **Save**.
+
+Por CLI, si prefieres:
+
+```bash
+supabase secrets set OPENSANCTIONS_API_KEY='...' --project-ref ldmtlwzqaqmegedktlxr
+```
+
+El secreto queda a nivel de proyecto: lo ven todas las funciones de borde, no
+sólo el conector de listas. Nunca llega al navegador — la app llama a la función,
+y la función llama a OpenSanctions.
+
+### 3. Reiniciar la función
+
+Los secretos se leen en el arranque del runtime, así que la clave toma efecto
+recién en el siguiente arranque en frío. Para no esperarlo, redespliega:
+
+```bash
+supabase functions deploy aml-entity-global-watchlists-live --project-ref ldmtlwzqaqmegedktlxr
+```
+
+O, desde la consola, **Edge Functions → aml-entity-global-watchlists-live →
+Deploy**. No hay que cambiar ni una línea del código.
+
+### 4. Verificar que quedó activa
+
+Desde la app: **Entidades → busca un nombre → Listas internacionales**. El panel
+deja de decir *Sin credencial* y las coincidencias pasan a llegar por el
+agregador.
+
+Desde la terminal, sin abrir la app:
+
+```bash
+curl -s -X POST \
+  'https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/aml-entity-global-watchlists-live' \
+  -H "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY" \
+  -H 'content-type: application/json' \
+  -d '{"name":"Vladimir Putin","entity_type":"persona"}' \
+  | jq '.routing'
+```
+
+Antes: `"opensanctions_status": "credential_missing"`, `"fallback_used": true`.
+Después: `"opensanctions_status": "fresh"`, `"fallback_used": false`.
+
+Otros valores posibles y qué significan:
+
+| `opensanctions_status` | Qué pasó |
+| --- | --- |
+| `credential_missing` | El secreto no existe o se llama distinto |
+| `quota_exhausted` | La API respondió 429: se acabó la cuota del plan |
+| `degraded` | Error de red o HTTP; el campo `error` trae el detalle |
+| `fresh` | Funcionando |
+
+En los tres primeros casos el conector conmuta solo al *fallback* directo y lo
+declara en `fallback_reason`. El screening nunca se queda sin respuesta por una
+credencial.
+
+### 5. Dejarlo asentado en el catálogo
+
+La pantalla de Fuentes seguirá mostrando OpenSanctions *sin señal* hasta que
+exista el registro de consultas (ver `docs/ARQUITECTURA.md`), porque hoy nada
+persiste el resultado de una consulta bajo demanda. Si quieres reflejar el cambio
+de inmediato, actualiza su nota en el catálogo:
+
+```sql
+update public.aml_external_source_health
+   set software_status = 'healthy',
+       notes = 'Agregador preferente con credencial activa. Si la cuota o el servicio fallan, ATLAS conmuta automáticamente a las fuentes oficiales directas.'
+ where source_code = 'OPENSANCTIONS';
+```
+
+El cambio se refleja en la app en el corte siguiente, o antes si fuerzas un
+refresco.
+
 ## Base de datos
 
 `supabase/migrations/` contiene, en orden, las migraciones que crean el

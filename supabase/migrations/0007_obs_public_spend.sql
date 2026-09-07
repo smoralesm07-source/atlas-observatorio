@@ -495,12 +495,91 @@ begin
 
   get diagnostics v_budget = row_count;
 
+  ------------------------------------------- presencia en la ficha de entidad
+  -- Mercado Publico y Presupuesto Abierto resuelven por RUT contra el universo
+  -- observado, pero esa resolucion vivia solo dentro del modulo de gasto. Sin
+  -- escribirla en obs_entity_source, la ficha de una entidad que si tiene
+  -- compras publicas seguia declarando ambas fuentes en silencio.
+  --
+  -- obs_refresh_all() trunca obs_entity_source antes de que este refresco
+  -- corra, asi que aqui solo se agrega. El delete cubre el caso de ejecutar
+  -- obs_refresh_spend() por separado.
+  delete from public.obs_entity_source
+   where source_code in ('MERCADO_PUBLICO', 'PRESUPUESTO_ABIERTO');
+
+  insert into public.obs_entity_source (
+    entity_id, source_code, status, record_count, last_event_at, detail)
+  select a.entity_id, 'MERCADO_PUBLICO', 'PRESENT',
+         sum(a.order_count_12m)::bigint,
+         max(a.last_seen)::timestamptz,
+         jsonb_strip_nulls(jsonb_build_object(
+           'basis', 'PRESENCIA_DECLARADA',
+           -- La ficha rotula el recuento con esta unidad: llamar "eventos" a
+           -- ordenes de compra diria algo que la fuente no dice.
+           'unidad', 'órdenes en 12 meses',
+           'roles', (select array_agg(distinct case b.actor_role when 'BUYER'
+                              then 'Comprador' else 'Proveedor' end)
+                       from public.obs_spend_actor b
+                      where b.entity_id = a.entity_id),
+           'monto_12m_clp', sum(a.amount_12m),
+           'prioridad_revision', max(a.review_priority),
+           'alcance', 'Corte acotado a los 3.000 actores de mayor prioridad'))
+  from public.obs_spend_actor a
+  where a.entity_id is not null
+  group by a.entity_id;
+
+  insert into public.obs_entity_source (
+    entity_id, source_code, status, record_count, last_event_at, detail)
+  select b.entity_id, 'PRESUPUESTO_ABIERTO', 'PRESENT',
+         count(*),
+         max(b.event_date)::timestamptz,
+         jsonb_strip_nulls(jsonb_build_object(
+           'basis', case when max(b.event_date) is not null
+                         then 'EVENTOS_FECHADOS' else 'PRESENCIA_DECLARADA' end,
+           'unidad', 'señales de ejecución',
+           'event_titles', (array_agg(distinct b.title)
+                              filter (where b.title is not null))[1:4],
+           'monto_clp', sum(b.amount_clp),
+           'altas', count(*) filter (where b.severity = 'HIGH')))
+  from public.obs_budget_signal b
+  where b.entity_id is not null and b.source_code = 'PRESUPUESTO_ABIERTO'
+  group by b.entity_id;
+
+  -- obs_refresh_all() ya escribio obs_source_health cuando estas dos fuentes
+  -- todavia no tenian filas, asi que las dejo en silencio. Se corrige aqui, que
+  -- es donde por fin se sabe.
+  update public.obs_source_health h
+     set data_status = case when s.n > 0 then 'fresh' else 'silent' end,
+         records_24h = s.n,
+         last_source_record_at = s.last_at,
+         -- Compras publicas publica solo el tramo alto del universo: una
+         -- entidad ausente de ese tramo no fue mirada, y la ficha debe decir
+         -- "no consultada" en vez de "sin registro". La ejecucion
+         -- presupuestaria, en cambio, publica integra su propia poblacion de
+         -- senales, asi que ahi la ausencia si es ausencia.
+         scope_partial = (h.source_code = 'MERCADO_PUBLICO'),
+         notes = case h.source_code
+           when 'MERCADO_PUBLICO' then
+             'Ordenes de compra, compradores y proveedores. El corte publica los 3.000 actores de mayor prioridad de revision, no el universo completo de proveedores del Estado.'
+           else
+             'Senales de ejecucion presupuestaria resueltas por RUT de proveedor. Universo distinto al de compras publicas: no se suman.'
+         end
+    from (select source_code, count(*) n, max(last_event_at) last_at
+            from public.obs_entity_source
+           where source_code in ('MERCADO_PUBLICO', 'PRESUPUESTO_ABIERTO')
+           group by 1) s
+   where h.source_code = s.source_code;
+
   return jsonb_build_object(
     'compras_disponibles', coalesce((v_meta->>'ok')::boolean, false),
     'compras_error', v_meta->>'error',
     'findings', v_findings, 'buyers', v_buyers,
     'suppliers', v_suppliers, 'pairs', v_pairs,
     'budget_signals', v_budget,
+    'presencia_mercado_publico',
+      (select count(*) from public.obs_entity_source where source_code = 'MERCADO_PUBLICO'),
+    'presencia_presupuesto',
+      (select count(*) from public.obs_entity_source where source_code = 'PRESUPUESTO_ABIERTO'),
     'errores', to_jsonb(v_errors));
 end
 $$;

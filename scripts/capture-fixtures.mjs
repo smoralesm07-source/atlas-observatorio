@@ -31,6 +31,9 @@ pulse.alerts.top = pulse.alerts.top.slice(0, 4);
 
 // Las hipótesis del corte de compras se recortan a cuatro, una por estado
 // posible: la prueba verifica que «requiere fuente» se declare, no las diez.
+const FUENTES = ['RADAR_SII', 'RADAR_UAF', 'MERCADO_PUBLICO',
+                 'PRESUPUESTO_ABIERTO', 'RADAR_CGR', 'OFAC'];
+
 const HIPOTESIS = ['H-CONC-BUYER', 'H-ACCEL-SUPPLIER', 'H-PRICE', 'H-FRAGMENT'];
 
 const spendOverview = await rpc('obs_spend_overview');
@@ -53,7 +56,9 @@ const fixtures = {
   pulse,
   alerts: await rpc('obs_alert_feed', { p_limit: 4 }),
   search: await rpc('obs_search_entities', { p_q: 'banco', p_limit: 3 }),
-  sources: (await rpc('obs_source_status')).slice(0, 8),
+  // Un recorte representativo, no los ocho primeros: la prueba necesita una
+  // fuente al dia, una de alcance parcial, una en silencio y una bajo demanda.
+  sources: (await rpc('obs_source_status')).filter((s) => FUENTES.includes(s.source_code)),
   territoryMap: await rpc('obs_territory_map'),
   territoryDetail: await rpc('obs_territory_detail', { p_territory: 'San Bernardo' }),
   sectorOverview: await rpc('obs_sector_overview'),

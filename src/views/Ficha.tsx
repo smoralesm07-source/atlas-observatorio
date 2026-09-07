@@ -352,11 +352,21 @@ function SourceTile({ row }: { row: CoverageRow }) {
           {row.authoritative_source && !row.authoritative_source.startsWith('http') &&
             ` · ${row.authoritative_source}`}
         </div>
+        {row.detail?.roles?.length ? (
+          <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4 }}>
+            {row.detail.roles.join(' · ')}
+          </div>
+        ) : null}
+        {row.detail?.alcance && (
+          <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>
+            {row.detail.alcance}
+          </div>
+        )}
         <div style={{ marginTop: 7, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <SourceStatusBadge status={row.status} />
           {row.record_count != null && row.record_count > 0 && (
             <span className="num" style={{ fontSize: 11, color: 'var(--ink-3)' }}>
-              {n(row.record_count)} eventos
+              {n(row.record_count)} {row.detail?.unidad ?? 'eventos'}
             </span>
           )}
           {row.last_event_at && (

@@ -28,6 +28,10 @@ const detail = {
     { source_code: 'RADAR_SANCIONES', source_name: 'Radar Sanciones · eventos regulatorios', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'CMF / UAF / SCJ / CGR', source_data_status: 'fresh', status: 'PRESENT', record_count: 1, last_event_at: '2026-02-09T00:00:00+00:00', detail: { basis: 'EVENTOS_FECHADOS', event_titles: ['Sanción regulatoria'] } },
     { source_code: 'RADAR_UAF', source_name: 'Radar UAF · padron de sujetos obligados', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'UAF', source_data_status: 'fresh', status: 'PRESENT', record_count: 0, last_event_at: null, detail: { basis: 'PRESENCIA_DECLARADA' } },
     { source_code: 'RADAR_OSFL', source_name: 'Radar OSFL · organizaciones sin fines de lucro', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'Registro Civil / SII', source_data_status: 'fresh', status: 'ABSENT', record_count: null, last_event_at: null, detail: {} },
+    // Compras publicas: el recuento son ordenes, no eventos, y el corte declara
+    // su alcance parcial dentro de la propia fila.
+    { source_code: 'MERCADO_PUBLICO', source_name: 'Mercado Publico · compras del Estado', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'ChileCompra', source_data_status: 'fresh', status: 'PRESENT', record_count: 1283, last_event_at: null, detail: { basis: 'PRESENCIA_DECLARADA', unidad: 'órdenes en 12 meses', roles: ['Comprador'], alcance: 'Corte acotado a los 3.000 actores de mayor prioridad', monto_12m_clp: 18130049673.48, prioridad_revision: 51.4 } },
+    { source_code: 'PRESUPUESTO_ABIERTO', source_name: 'Presupuesto Abierto · ejecucion fiscal', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'DIPRES', source_data_status: 'fresh', status: 'ABSENT', record_count: null, last_event_at: null, detail: {} },
     { source_code: 'OFAC', source_name: 'OFAC Sanctions', source_class: 'official_list', integration_mode: 'on_demand', authoritative_source: 'U.S. Department of the Treasury / OFAC', source_data_status: 'unknown', status: 'NOT_CONSULTED', record_count: null, last_event_at: null, detail: {} },
     { source_code: 'MAIGRET', source_name: 'Maigret full', source_class: 'osint_on_demand', integration_mode: 'on_demand', authoritative_source: 'https://github.com/soxoj/maigret', source_data_status: 'unknown', status: 'NOT_CONSULTED', record_count: null, last_event_at: null, detail: {} },
   ],
@@ -60,6 +64,9 @@ const RPC = {
   obs_spend_overview: F.spendOverview,
   obs_spend_finding_feed: F.spendFeed,
   obs_spend_actor_detail: F.spendActor,
+  obs_uaf_pulse: F.uafPulse,
+  obs_uaf_cohort: F.uafCohort,
+  obs_uaf_subject_dossier: F.uafDossier,
 };
 
 const SESSION = {
@@ -91,7 +98,8 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
   if (fn === 'obs_search_entities') {
     let body = {};
     try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
-    if (String(body.p_q || '').toLowerCase().includes('fodich')) payload = [];
+    const q = String(body.p_q || '').toLowerCase();
+    if (q.includes('fodich') || q.includes('zarahemla')) payload = [];
   }
   // El listado de hallazgos filtra en el servidor: si el doble no respeta el
   // filtro, la prueba del filtro no probaría nada.
@@ -107,6 +115,18 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
     }
     // Sin filtro se conserva el total real del corte, para que el paginador se
     // dibuje de verdad en la prueba.
+  }
+  // La cohorte se resuelve en el servidor. El doble respeta el corte pedido
+  // para que la prueba verifique que cada cifra abre SU lista, no una fija.
+  if (fn === 'obs_uaf_cohort') {
+    let body = {};
+    try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
+    const cohorte = String(body.p_cohort || '');
+    if (cohorte === 'OSFL') payload = [];
+    else if (cohorte === 'REGION') {
+      payload = payload.filter((r) => r.region === body.p_value);
+      payload = payload.map((r) => ({ ...r, total_count: payload.length }));
+    }
   }
   // La ficha del actor solo conoce al comprador capturado en la fixture.
   if (fn === 'obs_spend_actor_detail') {
@@ -196,6 +216,12 @@ const DEEP = {
   },
 };
 
+// Radar Prensa se publica como JSON en un repo externo. Sin este doble la
+// prueba saldria a la red y su resultado cambiaria con el indice del dia.
+await ctx.route('**/raw.githubusercontent.com/**/atlas_prensa.json', (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json',
+                  body: JSON.stringify(F.pressBridge) }));
+
 await ctx.route('**/functions/v1/aml-entity-global-watchlists-live', (route) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(WATCHLIST) }));
 await ctx.route('**/functions/v1/aml-digital-identity-resolver-live', (route) =>
@@ -246,12 +272,31 @@ page.on('console', (m) => {
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 
 const checks = [
-  ['pulso', '#/pulso', ['Pulso del observatorio', '50.516', 'Anticipación']],
+  // Pulso: la composicion del padron, el ciclo de vida SII, el territorio con
+  // su IGR y la industria. Las senales NO deben estar desplegadas de entrada.
+  ['pulso', '#/pulso', ['Universo de sujetos obligados', '10.294', 'Con término de giro',
+    '445', 'Término de giro por año', 'Caracterización cruzada',
+    'Con antecedente sancionatorio', '372', 'Proveedores del Estado',
+    'Sujetos obligados por región', 'Tarapacá', 'En IGR muy alto',
+    'Sector UAF que obliga', 'Usuarios de Zonas Francas',
+    'Industria según el SII', 'Actividades Financieras y de Seguros',
+    'Antigüedad del padrón', '15,8',
+    // Los limites se declaran en la propia pantalla, no en la documentacion.
+    'no publica fecha de inscripción', 'Describe el entorno, nunca al sujeto',
+    // El entorno territorial se muestra, no se deja implícito en la tabla.
+    'Entorno territorial donde operan', 'Muy alto']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K',
      'Identidad sin resolver', 'sin RUT']],
-  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica', 'Línea de tiempo', 'Sanción regulatoria']],
-  ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio']],
+  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica',
+    'Línea de tiempo', 'Sanción regulatoria']],
+  // Fuentes: una al dia, una de alcance parcial que dice por que su cobertura
+  // es baja, una en silencio y una bajo demanda.
+  ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio',
+    'Mercado Publico', 'Alcance parcial', 'nunca «sin registro»',
+    'Presupuesto Abierto', 'Bajo demanda',
+    // 15 de 50.516 redondea a "0%", que se leería como ninguna.
+    '<0,1%']],
   // Territorio: el indicador vigente, su cobertura real y lo que queda fuera.
   ['territorio', '#/territorio', ['Territorio', 'IGR-2A-1.0.0', 'San Bernardo',
     'tráfico de sustancias', 'corrupción', 'ponderada por confianza',
@@ -299,6 +344,21 @@ for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y pad
   await page.screenshot({ path: `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`, fullPage: true });
 }
 {
+  // El recuento de una fuente lleva su propia unidad: llamar "eventos" a 1.283
+  // ordenes de compra afirmaria algo que la fuente no dice.
+  await page.getByRole('button', { name: 'Fuentes', exact: true }).click();
+  await page.waitForTimeout(260);
+  const body = await page.textContent('body');
+  const faltan = ['1.283 órdenes en 12 meses', 'Comprador',
+                  'Corte acotado a los 3.000 actores de mayor prioridad']
+    .filter((t) => !body.includes(t));
+  if (body.includes('1.283 eventos')) {
+    failed++; console.log('FAIL unidad de la fuente: rotula ordenes de compra como eventos');
+  } else if (faltan.length) {
+    failed++; console.log(`FAIL unidad de la fuente: falta ${JSON.stringify(faltan)}`);
+  } else console.log('ok   cada fuente rotula su recuento con su propia unidad');
+}
+{
   // La ficha ofrece el screening con el RUT, que el buscador no tiene.
   await page.getByRole('button', { name: 'Screening internacional', exact: true }).click();
   await page.waitForTimeout(300);
@@ -309,6 +369,77 @@ for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y pad
   else console.log('ok   la ficha ofrece screening con RUT y tipo');
 }
 console.log('ok   pestañas de la ficha');
+
+// ── Pulso · las señales van replegadas ────────────────────────────────────
+// El analista pidió que la caracterización del universo no compita con la
+// persecución de casos. Las señales existen, pero sólo cuando se piden.
+{
+  await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const cerrado = await page.textContent('body');
+  if (cerrado.includes('Señales que piden mirada')) {
+    failed++; console.log('FAIL señales: llegan desplegadas sin que nadie las pida');
+  } else {
+    await page.getByRole('button', { name: /Señales activas/ }).click();
+    await page.waitForTimeout(420);
+    const abierto = await page.textContent('body');
+    const faltan = ['Señales que piden mirada', 'Ver todas las señales']
+      .filter((t) => !abierto.includes(t));
+    if (faltan.length) {
+      failed++; console.log(`FAIL señales: al desplegar falta ${JSON.stringify(faltan)}`);
+    } else console.log('ok   las señales se recogen y sólo se despliegan al pedirlas');
+  }
+}
+
+// ── Pulso · de la cifra a los nombres y al antecedente ────────────────────
+{
+  await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: /Con término de giro/ }).click();
+  await page.waitForTimeout(450);
+  let body = await page.textContent('body');
+  const faltanLista = ['Sujetos con término de giro', 'PEHUEN SPA',
+                       'IMPORTADORA Y EXPORTADORA DENVER LIMITADA',
+                       'siguen inscritos en el registro UAF']
+    .filter((t) => !body.includes(t));
+  if (faltanLista.length) {
+    failed++; console.log(`FAIL cohorte: falta ${JSON.stringify(faltanLista)}`);
+  } else {
+    // Y de un nombre al antecedente que lo sostiene, con su enlace.
+    await page.getByRole('button', { name: /PEHUEN SPA/ }).click();
+    await page.waitForTimeout(420);
+    body = await page.textContent('body');
+    const link = await page.getByRole('link', { name: /Abrir documento original/ }).count();
+    const faltanEv = ['La UAF publicó fiscalización',
+                      'puede estar emitido bajo otra razón social del mismo contribuyente']
+      .filter((t) => !body.includes(t));
+    if (faltanEv.length || link === 0) {
+      failed++;
+      console.log(`FAIL antecedente: falta ${JSON.stringify(faltanEv)}${link === 0 ? ' y el enlace al documento' : ''}`);
+    } else console.log('ok   la cifra abre nombres y cada nombre abre su antecedente con enlace');
+    await page.screenshot({ path: `${OUT}/pulso-cohorte.png`, fullPage: true });
+  }
+  // Escape cierra la capa. Tambien deja el tablero listo para el bloque siguiente.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(260);
+  if ((await page.textContent('body')).includes('Sujetos con término de giro')) {
+    failed++; console.log('FAIL cohorte: Escape no cierra la capa');
+  } else console.log('ok   Escape cierra la lista y devuelve el tablero');
+}
+
+// ── Pulso · una cohorte vacía lo dice, no finge ───────────────────────────
+{
+  await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const osfl = page.getByRole('button', { name: /Organizaciones sin fines de lucro/ });
+  await osfl.scrollIntoViewIfNeeded();
+  await osfl.click();
+  await page.waitForTimeout(420);
+  const body = await page.textContent('body');
+  if (!body.includes('Sin sujetos en este corte')) {
+    failed++; console.log('FAIL cohorte vacía: no declara que el corte no tiene sujetos');
+  } else console.log('ok   una cohorte sin sujetos lo declara');
+}
 
 // Light theme must repaint, not invert.
 await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
@@ -420,10 +551,27 @@ await page.waitForTimeout(900);
   else console.log('ok   las tres capas se ofrecen sobre una consulta conocida');
 }
 
-// 2. Consulta desconocida: debe saltar sola a listas internacionales y mostrar
-//    el candidato exacto de OFAC junto a su encuadre.
+// 2. Una mención en prensa detiene el salto automático: el Observatorio ya
+//    tiene algo que mostrar, así que no gasta una consulta externa sin que
+//    nadie se lo pida. La capa sigue ofrecida, pero no se dispara sola.
 await page.fill('#obs-search', 'Vinko Fodich');
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1800);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/cascada-prensa.png`, fullPage: true });
+  const faltan = ['Radar Prensa', 'Investigación por presunto fraude en zona franca']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) {
+    failed++; console.log(`FAIL prensa: falta ${JSON.stringify(faltan)}`);
+  } else if (body.includes('Coincidencia exacta de nombre')) {
+    failed++; console.log('FAIL prensa: la cascada externa se disparó pese a haber coincidencia en prensa');
+  } else console.log('ok   una coincidencia en prensa detiene el salto automático');
+}
+
+// 3. Consulta que nadie registra, ni el universo ni la prensa: ahí sí debe
+//    saltar sola a listas internacionales y mostrar el candidato con encuadre.
+await page.fill('#obs-search', 'Zarahemla Quispe');
+await page.waitForTimeout(2200);
 {
   const body = await page.textContent('body');
   await page.screenshot({ path: `${OUT}/cascada-internacional.png`, fullPage: true });
