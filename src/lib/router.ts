@@ -7,6 +7,8 @@ export type Route =
   | { view: 'ficha'; entityId: string }
   | { view: 'territorio' }
   | { view: 'sectores' }
+  | { view: 'gasto'; familia?: string }
+  | { view: 'gastoActor'; actorId: string; role: 'BUYER' | 'SUPPLIER' }
   | { view: 'fuentes' }
   | { view: 'metodologia' };
 
@@ -35,6 +37,16 @@ export function parseHash(hash: string): Route {
       return { view: 'territorio' };
     case 'sectores':
       return { view: 'sectores' };
+    case 'gasto':
+      // #/gasto/comprador/<rut> y #/gasto/proveedor/<rut> abren la ficha del
+      // actor; el RUT es el identificador porque la fuente casi no trae nombre.
+      if (seg[1] === 'comprador' && seg[2]) {
+        return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'BUYER' };
+      }
+      if (seg[1] === 'proveedor' && seg[2]) {
+        return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'SUPPLIER' };
+      }
+      return { view: 'gasto', familia: params.get('familia') ?? undefined };
     case 'fuentes':
       return { view: 'fuentes' };
     case 'metodologia':
@@ -61,6 +73,10 @@ export function hrefFor(r: Route): string {
       return '#/territorio';
     case 'sectores':
       return '#/sectores';
+    case 'gasto':
+      return r.familia ? `#/gasto?familia=${encodeURIComponent(r.familia)}` : '#/gasto';
+    case 'gastoActor':
+      return `#/gasto/${r.role === 'BUYER' ? 'comprador' : 'proveedor'}/${encodeURIComponent(r.actorId)}`;
     case 'fuentes':
       return '#/fuentes';
     case 'metodologia':

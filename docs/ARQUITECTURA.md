@@ -171,6 +171,75 @@ negocio, el **IPF** ordena esfuerzo de fiscalización sobre inscritos, y la
 insumos no están materializados. El Observatorio lo dice en lugar de mostrar un
 número inventado.
 
+## Gasto público y compras: dos universos que no se suman
+
+`obs_spend_*` publica el corte de compras públicas y `obs_budget_signal` el de
+ejecución presupuestaria. **No se agregan nunca en una sola cifra.** Compras
+describe la relación entre un organismo comprador y un proveedor en ChileCompra,
+con grano de par y ventana de 12 meses; ejecución describe el devengo del
+organismo. Un total combinado no describiría ninguna población real, así que la
+pantalla los separa en dos bloques con encabezado propio y el contrato lo dice
+en su propia `semantics`.
+
+### El puente entre proyectos
+
+Las métricas de compras las calcula el pipeline de perfilado, que vive en el
+proyecto core de ATLAS. Darle al navegador una segunda sesión contra ese
+proyecto habría duplicado la superficie de autorización, así que el puente es
+**servidor a servidor**: `obs_bridge_fetch()` llama por HTTP a
+`ps_export_for_observatory()` con un token guardado en Vault en los dos
+proyectos, comparado en tiempo constante del lado del core. El navegador nunca
+ve el token ni la URL del otro proyecto, y el objeto del lado core —lo único que
+el Observatorio agrega a ATLAS— está versionado en
+`supabase/core-project/0001_ps_export_for_observatory.sql`: una función de sólo
+lectura y un índice, sin tocar ninguna tabla, vista ni función existente.
+
+El mismo tope de 8 s de PostgREST que expulsó la materialización hacia `pg_cron`
+gobierna aquí la paginación. La sección de pares tardaba 3,8 s por página de 500
+porque el `order by review_priority desc nulls last` no coincidía con un índice
+`desc` —que en btree es `desc nulls first`— y caía en un *seq scan* sobre
+494.867 filas; el puente moría con `HTTP_500`. Con `ps_pair_metric_export_idx`,
+que ordena exactamente igual que el exportador, la misma página cuesta 56 ms.
+
+### Topes deliberados, escritos en el corte
+
+Los hallazgos se traen completos porque son la superficie analítica. Actores y
+pares se acotan a 3.000 por prioridad de revisión: de 72.802 proveedores y
+494.867 pares del universo, el Observatorio publica lo que se mira, no el libro
+mayor. Los topes y el recuento real quedan en `obs_spend_snapshot.ingested`
+junto a los errores del último traspaso, y la vista los declara en la pantalla
+en vez de dejar creer que 3.000 es el universo. Cuando se abre un actor cuyos
+pares quedaron fuera del tope, la ficha lo dice: *«que no aparezca aquí no
+significa que no tenga compras públicas»*.
+
+### El proveedor casi nunca tiene nombre
+
+La fuente publica razón social para 39 de 72.802 proveedores. El refresco
+rellena la etiqueta primero desde el universo observado —el `actor_id` **es** un
+RUT, así que el cruce contra `obs_entity` es exacto y no por nombre— y después
+desde las etiquetas que sí vienen en los pares. Eso lleva a los compradores de
+234 a 840 nombres y a los proveedores a 89. Lo que queda sin nombre se muestra
+con su RUT formateado, nunca como un guión, y desde ahí se puede abrir la ficha
+de observación o la búsqueda en cascada sobre ese mismo RUT.
+
+Sólo 88 de 3.000 proveedores resuelven a una entidad del universo observado. No
+es una falla de cobertura: la mayoría de los proveedores del Estado no es sujeto
+obligado. La pantalla lo dice así, para que un número bajo no se lea como un
+error.
+
+### Hipótesis con estado, no hipótesis simuladas
+
+`ps_readiness` viaja íntegro dentro del corte. De las diez hipótesis del
+pipeline, seis están disponibles o parciales y cuatro declaran `REQUIRES_SOURCE`
+con las fuentes que les faltan —fragmentación de compras, redes de oferentes,
+trazabilidad OC↔devengo y perfil de proveedor—. La vista las muestra igual, con
+su estado y su explicación: la ausencia de un hallazgo en esas familias es un
+vacío de datos declarado, no un resultado negativo.
+
+Las audiencias de lobby se excluyen del read model: 52.548 registros que llegan
+sin comprador, sin proveedor y sin monto. Publicarlas junto a señales con
+materialidad las habría hecho parecer equivalentes.
+
 ## Color: una rampa secuencial, no el semáforo de las señales
 
 El nivel de IGR es una escala **ordenada de magnitud**, no un estado, así que no
@@ -192,7 +261,7 @@ amenaza pintado de verde diría lo contrario de lo que significa.
   los claims de un analista habilitado y de uno que no lo está.
 - **Render**: `tests/render.mjs` levanta el bundle construido, intercepta las
   llamadas RPC con payloads reales capturados de los contratos vivos, y recorre
-  las seis vistas, las pestañas de la ficha, el tema claro, el ancho de teléfono
+  las ocho vistas, las pestañas de la ficha, el tema claro, el ancho de teléfono
   y los tres estados de acceso. Incluye una guarda de regresión contra el
   defecto de autenticación: si vuelve a aparecer un campo de contraseña en la
   pantalla de ingreso, la prueba falla.
@@ -202,6 +271,11 @@ amenaza pintado de verde diría lo contrario de lo que significa.
 - **Territorio y sector**: el detalle comunal se verifica descomponiendo capas y
   componentes (intensidad, persistencia, tendencia, anomalía), y el sectorial
   abriendo giros, bandas de IPF y distribución territorial.
+- **Gasto público**: el doble de la RPC respeta el filtro por familia y
+  recalcula el total, para que la prueba del filtro pruebe algo; se verifica que
+  el filtro viaje en la URL, que un proveedor sin razón social siga siendo
+  navegable por su RUT y que un actor fuera del tope de 3.000 lo declare en vez
+  de mostrar una ficha vacía.
 - **Agenda**: verificada programando el mismo comando cada minuto y leyendo
   `cron.job_run_details`: cinco corridas consecutivas exitosas, de 18 a 19 s.
 
@@ -223,8 +297,9 @@ que puede cometer esta herramienta.
 
 `RADAR_CGR`, `RADAR_DELICTUAL`, `MERCADO_PUBLICO` y `PRESUPUESTO_ABIERTO` están
 declarados en el catálogo de fuentes pero todavía no aportan vínculos por
-entidad: la interfaz los muestra honestamente como *en silencio* en lugar de
-omitirlos. Conectarlos consiste en que sus productores escriban `entity_id` en el
+entidad en la ficha: la interfaz los muestra honestamente como *en silencio* en
+lugar de omitirlos. (CGR y Presupuesto Abierto sí alimentan la sección de gasto
+público, con grano de organismo en vez de grano de entidad.) Conectarlos consiste en que sus productores escriban `entity_id` en el
 perfil Fusion; el Observatorio los recoge en el corte siguiente sin cambios de
 código.
 

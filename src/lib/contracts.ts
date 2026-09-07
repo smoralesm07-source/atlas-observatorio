@@ -425,3 +425,94 @@ export interface SectorDetail {
   }[];
   semantics: string;
 }
+
+/* ─────────────────────────────────────── gasto público y compras */
+
+export interface SpendOverview {
+  contract: 'ATLAS_OBS_SPEND_V1';
+  disponible: boolean;
+  corte: {
+    snapshot_id: string;
+    source_snapshot_id: string | null;
+    generated_at: string | null;
+    period_start: string | null;
+    period_end: string | null;
+    window_months: number | null;
+    amount_total_clp: number | null;
+    order_count: number | null;
+    buyer_count: number | null;
+    supplier_count: number | null;
+    pair_count: number | null;
+    signal_count: number | null;
+    universe: Record<string, number>;
+    readiness: {
+      hypothesis_id: string; title: string; family: string;
+      status: 'AVAILABLE' | 'PARTIAL' | 'REQUIRES_SOURCE';
+      explanation: string;
+      required_sources: string[]; available_sources: string[];
+    }[];
+    ingested: Record<string, unknown>;
+  } | null;
+  familias: {
+    family: string; hallazgos: number; urgentes: number;
+    materialidad_mm: number | null; prioridad_media: number | null;
+  }[];
+  severidades: { severity_band: string; hallazgos: number }[];
+  cobertura: {
+    proveedores: number; proveedores_en_universo: number; proveedores_con_nombre: number;
+    compradores: number; compradores_en_universo: number; compradores_con_nombre: number;
+  };
+  presupuesto: {
+    source_code: string; señales: number; con_entidad: number;
+    monto_mm: number | null; altas: number;
+  }[];
+  top: SpendFinding[];
+  semantics: string;
+}
+
+export interface SpendFinding {
+  finding_id: string;
+  family: string;
+  finding_type: string;
+  severity_band: string;
+  review_priority: number | null;
+  materiality_clp: number | null;
+  title: string | null;
+  summary: string | null;
+  supplier_id: string | null;
+  buyer_id: string | null;
+  pair_id: string | null;
+  supplier_label?: string | null;
+  buyer_label?: string | null;
+  supplier_entity_id?: string | null;
+  buyer_entity_id?: string | null;
+  total_count?: number;
+}
+
+export interface SpendActorDetail {
+  contract: 'ATLAS_OBS_SPEND_ACTOR_V1';
+  actor: {
+    actor_id: string; actor_role: 'BUYER' | 'SUPPLIER'; label: string | null;
+    entity_id: string | null; amount_12m: number | null;
+    order_count_12m: number | null; counterpart_count: number | null;
+    top_counterpart_id: string | null; top_counterpart_share: number | null;
+    hhi: number | null; concentration_percentile: number | null;
+    materiality_percentile: number | null; growth_ratio: number | null;
+    growth_percentile: number | null; active_months: number | null;
+    first_seen: string | null; last_seen: string | null;
+    review_priority: number | null;
+  };
+  contrapartes: {
+    pair_id: string; buyer_id: string; supplier_id: string;
+    buyer_label: string | null; supplier_label: string | null;
+    buyer_entity_id: string | null; supplier_entity_id: string | null;
+    amount_12m: number | null; order_count_12m: number | null;
+    buyer_share: number | null; supplier_share: number | null;
+    active_months: number | null; acceleration_ratio: number | null;
+    acceleration_percentile: number | null; price_signal_count: number | null;
+    convergence_count: number | null; review_priority: number | null;
+    flags: unknown[];
+  }[];
+  hallazgos: SpendFinding[];
+  semantics: string;
+}

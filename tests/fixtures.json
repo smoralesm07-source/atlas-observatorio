@@ -9,7 +9,7 @@
      "alert_id": "PAT-0039",
      "priority": "MUY ALTA",
      "scope_id": "Antofagasta",
-     "strength": 100.0,
+     "strength": 100,
      "scope_type": "REGION",
      "scope_label": "Antofagasta",
      "pattern_type": "OUTLIER_DENSIDAD_BRECHA"
@@ -21,7 +21,7 @@
      "alert_id": "PAT-0036",
      "priority": "MUY ALTA",
      "scope_id": "54",
-     "strength": 100.0,
+     "strength": 100,
      "scope_type": "SECTOR",
      "scope_label": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
      "pattern_type": "ACELERACION_ROS"
@@ -33,7 +33,7 @@
      "alert_id": "PAT-0009",
      "priority": "MUY ALTA",
      "scope_id": "10",
-     "strength": 100.0,
+     "strength": 100,
      "scope_type": "SECTOR",
      "scope_label": "Bancos",
      "pattern_type": "OUTLIER_INTENSIDAD_ROS"
@@ -45,7 +45,7 @@
      "alert_id": "PAT-0046",
      "priority": "MUY ALTA",
      "scope_id": "ENT-RUT-76082343-0",
-     "strength": 99.0,
+     "strength": 99,
      "scope_type": "ENTITY",
      "scope_label": "CLUB DEPORTES TEMUCO S.A.D.P.",
      "pattern_type": "RECURRENCIA_SANCIONATORIA"
@@ -55,13 +55,13 @@
    "by_family": [
     {
      "n": 18,
-     "peak": 99.0,
+     "peak": 99,
      "family": "SANCIONES",
      "urgent": 16
     },
     {
      "n": 18,
-     "peak": 100.0,
+     "peak": 100,
      "family": "SUPERVISIÓN",
      "urgent": 4
     },
@@ -73,19 +73,19 @@
     },
     {
      "n": 13,
-     "peak": 100.0,
+     "peak": 100,
      "family": "REPORTABILIDAD",
      "urgent": 6
     },
     {
      "n": 12,
-     "peak": 98.0,
+     "peak": 98,
      "family": "REDES",
      "urgent": 3
     },
     {
      "n": 10,
-     "peak": 100.0,
+     "peak": 100,
      "family": "TERRITORIO",
      "urgent": 7
     },
@@ -97,13 +97,13 @@
     },
     {
      "n": 2,
-     "peak": 82.0,
+     "peak": 82,
      "family": "CALIDAD",
      "urgent": 0
     },
     {
      "n": 1,
-     "peak": 93.0,
+     "peak": 93,
      "family": "INTELIGENCIA",
      "urgent": 1
     }
@@ -180,7 +180,7 @@
     {
      "n": 13858,
      "finding_type": "CONTEXTUAL_ANOMALY",
-     "avg_investigate": 34.0
+     "avg_investigate": 34
     },
     {
      "n": 587,
@@ -190,7 +190,7 @@
     {
      "n": 319,
      "finding_type": "SUPERVISORY_GAP",
-     "avg_investigate": 42.0
+     "avg_investigate": 42
     },
     {
      "n": 166,
@@ -205,7 +205,7 @@
     {
      "n": 5,
      "finding_type": "GOVERNED_AML_SIGNAL",
-     "avg_investigate": 58.0
+     "avg_investigate": 58
     }
    ]
   },
@@ -293,7 +293,7 @@
    "alert_id": "PAT-0001",
    "priority": "MUY ALTA",
    "scope_id": "1",
-   "strength": 100.0,
+   "strength": 100,
    "entity_ref": null,
    "scope_type": "SECTOR",
    "scope_label": "Administradoras de Fondos de Inversión",
@@ -311,7 +311,7 @@
    "alert_id": "PAT-0046",
    "priority": "MUY ALTA",
    "scope_id": "ENT-RUT-76082343-0",
-   "strength": 99.0,
+   "strength": 99,
    "entity_ref": {
     "rut": "76082343-0",
     "name": "CLUB DEPORTES TEMUCO S.A.D.P.",
@@ -345,7 +345,7 @@
    ],
    "entity_id": "ENT-RUT-97080000-K",
    "ipa3_band": "SIN_MARCA_SHADOW",
-   "ipa3_score": 0.0,
+   "ipa3_score": 0,
    "match_kind": "NOMBRE_INICIO",
    "match_rank": 0.6,
    "uaf_sector": "Bancos",
@@ -373,7 +373,7 @@
    ],
    "entity_id": "entity:press:d9cbe02fb4d6f16b5ae7e019",
    "ipa3_band": "SIN_MARCA_SHADOW",
-   "ipa3_score": 0.0,
+   "ipa3_score": 0,
    "match_kind": "NOMBRE_INICIO",
    "match_rank": 0.625,
    "uaf_sector": null,
@@ -488,7 +488,7 @@
    "source_code": "MERCADO_PUBLICO",
    "source_name": "Mercado Publico · compras del Estado",
    "source_class": "producer",
-   "coverage_share": 0.0,
+   "coverage_share": 0,
    "error_rate_24h": null,
    "entity_coverage": 0,
    "software_status": "healthy",
@@ -504,7 +504,7 @@
    "source_code": "OFAC",
    "source_name": "OFAC Sanctions",
    "source_class": "official_list",
-   "coverage_share": 0.0,
+   "coverage_share": 0,
    "error_rate_24h": null,
    "entity_coverage": 0,
    "software_status": "watch",
@@ -527,7 +527,7 @@
    "period": "2025",
    "igr_score": 92.72,
    "igr_level": "Muy alto",
-   "igr_confidence": 86.0,
+   "igr_confidence": 86,
    "layer_weights": {
     "predicate_direct": 0.55,
     "criminal_economy": 0.35,
@@ -538,16 +538,16 @@
      "label": "Delito base directo",
      "configured_weight": 0.55,
      "score": 95.5,
-     "coverage": 1.0,
+     "coverage": 1,
      "components": [
       {
        "id": "drug_family_fallback",
        "label": "delitos asociados a drogas",
-       "configured_weight": 1.0,
+       "configured_weight": 1,
        "score": 95.5,
-       "value": 331.0,
+       "value": 331,
        "intensity": 97.54,
-       "persistence": 100.0,
+       "persistence": 100,
        "trend": 82.44,
        "anomaly": 99.98,
        "years_observed": 6
@@ -565,11 +565,11 @@
        "label": "Receptación",
        "configured_weight": 0.25,
        "score": 90.23,
-       "value": 227.0,
+       "value": 227,
        "intensity": 98.12,
-       "persistence": 100.0,
+       "persistence": 100,
        "trend": 54.9,
-       "anomaly": 100.0,
+       "anomaly": 100,
        "years_observed": 6
       }
      ]
@@ -585,11 +585,11 @@
        "label": "Violencia",
        "configured_weight": 0.5,
        "score": 84.1,
-       "value": 190.0,
-       "intensity": 88.0,
-       "persistence": 92.0,
-       "trend": 61.0,
-       "anomaly": 95.0,
+       "value": 190,
+       "intensity": 88,
+       "persistence": 92,
+       "trend": 61,
+       "anomaly": 95,
        "years_observed": 6
       }
      ]
@@ -664,7 +664,7 @@
    "sii_absent": 35,
    "sii_coverage_pct": 78.03,
    "atypical_activity_subjects": 44,
-   "median_sales_band_rank": 7.0,
+   "median_sales_band_rank": 7,
    "top_region": "Metropolitana de Santiago",
    "top_region_share_pct": 37.86,
    "activities": [
@@ -717,7 +717,7 @@
     "region": "Metropolitana de Santiago",
     "commune": "Las Condes",
     "is_sanctioned": true,
-    "ipa3_score": 0.0,
+    "ipa3_score": 0,
     "ipa3_band": "SIN_MARCA_SHADOW",
     "source_count": 4,
     "alert_count": 0,
@@ -777,7 +777,7 @@
   "cobertura": {
    "comunas": 345,
    "con_universo": 335,
-   "confianza_media": 86.0,
+   "confianza_media": 86,
    "baja_confianza": 0,
    "anio": 2025
   },
@@ -786,7 +786,7 @@
     "region_name": "Metropolitana de Santiago",
     "comunas": 52,
     "igr_ponderado": 72.6,
-    "confianza_media": 86.0,
+    "confianza_media": 86,
     "igr_max": 92.7,
     "ctx_entities": 24745,
     "ctx_uaf": 4315,
@@ -796,8 +796,8 @@
    {
     "region_name": "Tarapacá",
     "comunas": 7,
-    "igr_ponderado": 52.0,
-    "confianza_media": 86.0,
+    "igr_ponderado": 52,
+    "confianza_media": 86,
     "igr_max": 87.6,
     "ctx_entities": 2774,
     "ctx_uaf": 2091,
@@ -808,7 +808,7 @@
     "region_name": "Antofagasta",
     "comunas": 9,
     "igr_ponderado": 51.3,
-    "confianza_media": 86.0,
+    "confianza_media": 86,
     "igr_max": 88.6,
     "ctx_entities": 720,
     "ctx_uaf": 74,
@@ -819,7 +819,7 @@
     "region_name": "Valparaíso",
     "comunas": 38,
     "igr_ponderado": 49.4,
-    "confianza_media": 86.0,
+    "confianza_media": 86,
     "igr_max": 88.8,
     "ctx_entities": 5077,
     "ctx_uaf": 416,
@@ -857,7 +857,7 @@
     "commune_code": "13401",
     "igr_score": 92.72,
     "igr_level": "Muy alto",
-    "igr_confidence": 86.0,
+    "igr_confidence": 86,
     "ctx_entities": 827,
     "ctx_uaf_observed": 23,
     "ctx_sanctioned": 0
@@ -869,7 +869,7 @@
     "commune_code": "13201",
     "igr_score": 92.07,
     "igr_level": "Muy alto",
-    "igr_confidence": 86.0,
+    "igr_confidence": 86,
     "ctx_entities": 612,
     "ctx_uaf_observed": 19,
     "ctx_sanctioned": 0
@@ -881,7 +881,7 @@
     "commune_code": "13112",
     "igr_score": 91.51,
     "igr_level": "Muy alto",
-    "igr_confidence": 86.0,
+    "igr_confidence": 86,
     "ctx_entities": 544,
     "ctx_uaf_observed": 2,
     "ctx_sanctioned": 0
@@ -942,8 +942,8 @@
     "uaf_sector_id": 36,
     "subject_count": 2244,
     "natural_person_subjects": 4,
-    "vulnerability_index": 75.0,
-    "risk_inherent_1_5": 4.0,
+    "vulnerability_index": 75,
+    "risk_inherent_1_5": 4,
     "key_role": "CANONICO",
     "ipf_mean": 26.38,
     "ipf_p90": 31.32,
@@ -1009,7 +1009,7 @@
     "sanctioned_subjects": 21,
     "sanction_events": 24,
     "sanction_rate_per_100": 4.97,
-    "sii_coverage_pct": 0.0,
+    "sii_coverage_pct": 0,
     "atypical_activity_subjects": 0,
     "top_region": null,
     "top_region_share_pct": null,
@@ -1035,8 +1035,8 @@
     "band_minima": 0,
     "sanctioned_subjects": 0,
     "sanction_events": 0,
-    "sanction_rate_per_100": 0.0,
-    "sii_coverage_pct": 100.0,
+    "sanction_rate_per_100": 0,
+    "sii_coverage_pct": 100,
     "atypical_activity_subjects": 91,
     "top_region": "Metropolitana de Santiago",
     "top_region_share_pct": 40.23,
@@ -1047,5 +1047,369 @@
    }
   ],
   "semantics": "Un sector con vulnerabilidad estructural alta no contiene entidades más culpables: contiene un modelo de negocio más expuesto. El indicador ordena dónde mirar, no a quién imputar."
+ },
+ "spendOverview": {
+  "corte": {
+   "ingested": {
+    "pairs": 3000,
+    "buyers": 2005,
+    "errores": [],
+    "findings": 6058,
+    "cap_pairs": 3000,
+    "suppliers": 3000,
+    "cap_actors": 3000
+   },
+   "universe": {
+    "pairs_total": 494867,
+    "buyers_total": 2005,
+    "findings_total": 6058,
+    "suppliers_total": 72802
+   },
+   "readiness": [
+    {
+     "title": "Concentración comprador → proveedor",
+     "family": "CONCENTRACION",
+     "status": "AVAILABLE",
+     "sort_order": 10,
+     "updated_at": "2026-09-05T00:50:27.417527+00:00",
+     "explanation": "Detecta compradores cuyo gasto se concentra inusualmente en pocos proveedores, usando participación del principal proveedor e HHI relativo a pares.",
+     "hypothesis_id": "H-CONC-BUYER",
+     "required_sources": [
+      "CHILECOMPRA_OC_DA"
+     ],
+     "available_sources": [
+      "CHILECOMPRA_OC_DA"
+     ]
+    },
+    {
+     "title": "Crecimiento abrupto en compras públicas",
+     "family": "TRAYECTORIA",
+     "status": "AVAILABLE",
+     "sort_order": 30,
+     "updated_at": "2026-09-05T00:50:27.417527+00:00",
+     "explanation": "Compara los últimos 6 meses con los 6 anteriores y prioriza aceleraciones excepcionales con materialidad.",
+     "hypothesis_id": "H-ACCEL-SUPPLIER",
+     "required_sources": [
+      "CHILECOMPRA_OC_DA"
+     ],
+     "available_sources": [
+      "CHILECOMPRA_OC_DA"
+     ]
+    },
+    {
+     "title": "Precios comparables atípicos",
+     "family": "PRECIOS",
+     "status": "PARTIAL",
+     "sort_order": 50,
+     "updated_at": "2026-09-05T00:50:27.417527+00:00",
+     "explanation": "Explota las señales comparables ya calculadas por licitación. La cobertura se ampliará al poblar más rutas de eventos y líneas.",
+     "hypothesis_id": "H-PRICE",
+     "required_sources": [
+      "CHILECOMPRA_LIC_DA"
+     ],
+     "available_sources": [
+      "CHILECOMPRA_LIC_DA"
+     ]
+    },
+    {
+     "title": "Posible fragmentación de compras",
+     "family": "COMPETENCIA",
+     "status": "REQUIRES_SOURCE",
+     "sort_order": 70,
+     "updated_at": "2026-09-05T00:50:27.417527+00:00",
+     "explanation": "Requiere fecha, producto/línea y orden a nivel evento para agrupar compras similares en ventanas cortas. La tabla route_event está actualmente sin poblar.",
+     "hypothesis_id": "H-FRAGMENT",
+     "required_sources": [
+      "CHILECOMPRA_OC_EVENTOS"
+     ],
+     "available_sources": []
+    }
+   ],
+   "pair_count": 494867,
+   "period_end": "2026-07-01",
+   "buyer_count": 2005,
+   "order_count": 1792479,
+   "snapshot_id": "OBS-2026-09-07T1225Z",
+   "generated_at": "2026-09-05T00:50:44.954486+00:00",
+   "period_start": "2025-08-01",
+   "refreshed_at": "2026-09-07T14:28:18.914712+00:00",
+   "signal_count": 1744,
+   "window_months": 12,
+   "supplier_count": 72802,
+   "source_coverage": {
+    "CHILECOMPRA_OC_DA": {
+     "orders": 4862575,
+     "last_month": "2026-07-01",
+     "first_month": "2024-01-01"
+    },
+    "CHILECOMPRA_LIC_DA": {
+     "orders": 310583,
+     "last_month": "2026-07-01",
+     "first_month": "2024-01-01"
+    }
+   },
+   "amount_total_clp": 19357682080363.26,
+   "source_snapshot_id": "PS-2026-07-V1"
+  },
+  "contract": "ATLAS_OBS_SPEND_V1",
+  "familias": [
+   {
+    "family": "TRAYECTORIA",
+    "urgentes": 1547,
+    "hallazgos": 2779,
+    "materialidad_mm": 3110.1,
+    "prioridad_media": 70
+   },
+   {
+    "family": "CONVERGENCIA",
+    "urgentes": 2632,
+    "hallazgos": 2725,
+    "materialidad_mm": 1760.9,
+    "prioridad_media": 78.2
+   },
+   {
+    "family": "PRECIOS",
+    "urgentes": 154,
+    "hallazgos": 551,
+    "materialidad_mm": 28.7,
+    "prioridad_media": 57.2
+   },
+   {
+    "family": "CONCENTRACION",
+    "urgentes": 3,
+    "hallazgos": 3,
+    "materialidad_mm": 2755.9,
+    "prioridad_media": 98.8
+   }
+  ],
+  "cobertura": {
+   "compradores": 2005,
+   "proveedores": 3000,
+   "compradores_con_nombre": 840,
+   "proveedores_con_nombre": 89,
+   "compradores_en_universo": 704,
+   "proveedores_en_universo": 88
+  },
+  "semantics": "Ejecución presupuestaria y compras públicas son universos distintos y no se suman: describen poblaciones diferentes, con grano y fuente diferentes. Un hallazgo de compras señala un patrón en la relación comprador-proveedor, no una irregularidad acreditada.",
+  "disponible": true,
+  "presupuesto": [
+   {
+    "altas": 244,
+    "monto_mm": 335.2,
+    "señales": 250,
+    "con_entidad": 90,
+    "source_code": "PRESUPUESTO_ABIERTO"
+   },
+   {
+    "altas": 0,
+    "monto_mm": null,
+    "señales": 50,
+    "con_entidad": 0,
+    "source_code": "CGR"
+   }
+  ],
+  "severidades": [
+   {
+    "hallazgos": 56,
+    "severity_band": "CRITICAL"
+   },
+   {
+    "hallazgos": 4280,
+    "severity_band": "HIGH"
+   },
+   {
+    "hallazgos": 1414,
+    "severity_band": "MEDIUM"
+   },
+   {
+    "hallazgos": 308,
+    "severity_band": "LOW"
+   }
+  ]
+ },
+ "spendFeed": [
+  {
+   "title": "Concentración inusual de gasto en proveedores",
+   "family": "CONCENTRACION",
+   "pair_id": null,
+   "summary": "El comprador concentra una proporción inusual de su gasto observado en su principal proveedor frente a otros compradores del mismo universo.",
+   "buyer_id": "61202016-7",
+   "finding_id": "PSF-07d6ec54189462bcd8379686a41a4ca1",
+   "buyer_label": null,
+   "supplier_id": null,
+   "total_count": 6058,
+   "finding_type": "BUYER_CONCENTRATION",
+   "severity_band": "CRITICAL",
+   "supplier_label": null,
+   "buyer_entity_id": null,
+   "materiality_clp": 1440842587562.68,
+   "review_priority": 99.2,
+   "supplier_entity_id": null
+  },
+  {
+   "title": "Concentración inusual de gasto en proveedores",
+   "family": "CONCENTRACION",
+   "pair_id": null,
+   "summary": "El comprador concentra una proporción inusual de su gasto observado en su principal proveedor frente a otros compradores del mismo universo.",
+   "buyer_id": "69201000-0",
+   "finding_id": "PSF-1b81c82a2578c77aab0919cf67c061a8",
+   "buyer_label": "I MUNICIPALIDAD DE RIO BUENO",
+   "supplier_id": null,
+   "total_count": 6058,
+   "finding_type": "BUYER_CONCENTRATION",
+   "severity_band": "CRITICAL",
+   "supplier_label": null,
+   "buyer_entity_id": "ENT-RUT-69201000-0",
+   "materiality_clp": 1256620290031.08,
+   "review_priority": 99,
+   "supplier_entity_id": null
+  },
+  {
+   "title": "Convergencia de señales independientes",
+   "family": "CONVERGENCIA",
+   "pair_id": "77536802-0::61605000-1",
+   "summary": "Coinciden dos o más dimensiones de revisión sobre la misma relación comprador–proveedor. La convergencia eleva prioridad analítica, no probabilidad de irregularidad.",
+   "buyer_id": "61605000-1",
+   "finding_id": "PSF-074659eda31f5b55f108e4b585e23348",
+   "buyer_label": "INSTITUTO DE SALUD PUBLICA DE CHILE",
+   "supplier_id": "77536802-0",
+   "total_count": 6058,
+   "finding_type": "CONVERGENCE",
+   "severity_band": "HIGH",
+   "supplier_label": null,
+   "buyer_entity_id": "ENT-RUT-61605000-1",
+   "materiality_clp": 908661217.45,
+   "review_priority": 84.8,
+   "supplier_entity_id": null
+  }
+ ],
+ "spendActor": {
+  "actor": {
+   "hhi": 0.042429,
+   "label": "INSTITUTO DE SALUD PUBLICA DE CHILE",
+   "actor_id": "61605000-1",
+   "entity_id": "ENT-RUT-61605000-1",
+   "last_seen": null,
+   "actor_role": "BUYER",
+   "amount_12m": 18130049673.47,
+   "first_seen": null,
+   "snapshot_id": "OBS-2026-09-07T1225Z",
+   "growth_ratio": null,
+   "refreshed_at": "2026-09-07T14:28:18.914712+00:00",
+   "active_months": null,
+   "order_count_12m": 1283,
+   "review_priority": 51.4,
+   "counterpart_count": 392,
+   "growth_percentile": null,
+   "top_counterpart_id": "96540690-5",
+   "top_counterpart_share": 0.15423,
+   "materiality_percentile": 0.918164,
+   "concentration_percentile": 0.296457
+  },
+  "contract": "ATLAS_OBS_SPEND_ACTOR_V1",
+  "hallazgos": [
+   {
+    "title": "Convergencia de señales independientes",
+    "family": "CONVERGENCIA",
+    "summary": "Coinciden dos o más dimensiones de revisión sobre la misma relación comprador–proveedor. La convergencia eleva prioridad analítica, no probabilidad de irregularidad.",
+    "finding_id": "PSF-074659eda31f5b55f108e4b585e23348",
+    "finding_type": "CONVERGENCE",
+    "severity_band": "HIGH",
+    "materiality_clp": 908661217.45,
+    "review_priority": 84.8
+   },
+   {
+    "title": "Precio adjudicado o estructura de precios atípica",
+    "family": "PRECIOS",
+    "summary": "Existen una o más señales de precios comparables que justifican revisión de las líneas adjudicadas y sus pares.",
+    "finding_id": "PSF-0b80ecad75d7e00d926da0b02804ac10",
+    "finding_type": "PRICE_ANOMALY",
+    "severity_band": "HIGH",
+    "materiality_clp": 892194079.56,
+    "review_priority": 84.8
+   },
+   {
+    "title": "Convergencia de señales independientes",
+    "family": "CONVERGENCIA",
+    "summary": "Coinciden dos o más dimensiones de revisión sobre la misma relación comprador–proveedor. La convergencia eleva prioridad analítica, no probabilidad de irregularidad.",
+    "finding_id": "PSF-53a25fa5e3fbd92333aac6bd80156fe3",
+    "finding_type": "CONVERGENCE",
+    "severity_band": "HIGH",
+    "materiality_clp": 170776284.77,
+    "review_priority": 84.8
+   }
+  ],
+  "semantics": "Concentración y aceleración describen la forma de la relación comercial, no su licitud. Un proveedor concentrado puede ser el único capaz de proveer ese bien.",
+  "contrapartes": [
+   {
+    "flags": [
+     "CONCENTRACION",
+     "PRECIO"
+    ],
+    "pair_id": "77536802-0::61605000-1",
+    "buyer_id": "61605000-1",
+    "amount_12m": 908661217.45,
+    "buyer_label": "INSTITUTO DE SALUD PUBLICA DE CHILE",
+    "buyer_share": 0.050119,
+    "supplier_id": "77536802-0",
+    "active_months": 10,
+    "supplier_label": null,
+    "supplier_share": 0.945944,
+    "buyer_entity_id": "ENT-RUT-61605000-1",
+    "order_count_12m": 38,
+    "review_priority": 84.8,
+    "convergence_count": 2,
+    "acceleration_ratio": 0.1943,
+    "price_signal_count": 1,
+    "supplier_entity_id": null,
+    "acceleration_percentile": 0.875605
+   },
+   {
+    "flags": [
+     "ACELERACION",
+     "PRECIO"
+    ],
+    "pair_id": "78436430-5::61605000-1",
+    "buyer_id": "61605000-1",
+    "amount_12m": 170776284.77,
+    "buyer_label": "INSTITUTO DE SALUD PUBLICA DE CHILE",
+    "buyer_share": 0.00942,
+    "supplier_id": "78436430-5",
+    "active_months": 10,
+    "supplier_label": null,
+    "supplier_share": 0.071957,
+    "buyer_entity_id": "ENT-RUT-61605000-1",
+    "order_count_12m": 21,
+    "review_priority": 84.8,
+    "convergence_count": 2,
+    "acceleration_ratio": 3.6441,
+    "price_signal_count": 1,
+    "supplier_entity_id": null,
+    "acceleration_percentile": 0.982015
+   },
+   {
+    "flags": [
+     "CONCENTRACION",
+     "PRECIO"
+    ],
+    "pair_id": "77647010-4::61605000-1",
+    "buyer_id": "61605000-1",
+    "amount_12m": 631849843.43,
+    "buyer_label": "INSTITUTO DE SALUD PUBLICA DE CHILE",
+    "buyer_share": 0.034851,
+    "supplier_id": "77647010-4",
+    "active_months": 10,
+    "supplier_label": null,
+    "supplier_share": 0.283228,
+    "buyer_entity_id": "ENT-RUT-61605000-1",
+    "order_count_12m": 60,
+    "review_priority": 84.8,
+    "convergence_count": 2,
+    "acceleration_ratio": 0.2941,
+    "price_signal_count": 1,
+    "supplier_entity_id": "ENT-RUT-77647010-4",
+    "acceleration_percentile": 0.882362
+   }
+  ]
  }
 }

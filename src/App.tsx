@@ -10,6 +10,7 @@ import { Ficha } from './views/Ficha';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
 import { Sectores } from './views/Sectores';
+import { GastoPublico } from './views/GastoPublico';
 import { Metodologia } from './views/Metodologia';
 
 export default function App() {
@@ -37,6 +38,14 @@ function Routed({ session }: { session: Session }) {
       {route.view === 'ficha' && <Ficha entityId={route.entityId} onNavigate={go} />}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
       {route.view === 'sectores' && <Sectores onNavigate={go} />}
+      {route.view === 'gasto' && <GastoPublico familiaInicial={route.familia} onNavigate={go} />}
+      {route.view === 'gastoActor' && (
+        <GastoPublico
+          key={`${route.role}|${route.actorId}`}
+          actor={{ id: route.actorId, role: route.role }}
+          onNavigate={go}
+        />
+      )}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
     </Shell>
