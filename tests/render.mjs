@@ -64,6 +64,9 @@ const RPC = {
   obs_spend_overview: F.spendOverview,
   obs_spend_finding_feed: F.spendFeed,
   obs_spend_actor_detail: F.spendActor,
+  obs_uaf_pulse: F.uafPulse,
+  obs_uaf_cohort: F.uafCohort,
+  obs_uaf_subject_dossier: F.uafDossier,
 };
 
 const SESSION = {
@@ -111,6 +114,18 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
     }
     // Sin filtro se conserva el total real del corte, para que el paginador se
     // dibuje de verdad en la prueba.
+  }
+  // La cohorte se resuelve en el servidor. El doble respeta el corte pedido
+  // para que la prueba verifique que cada cifra abre SU lista, no una fija.
+  if (fn === 'obs_uaf_cohort') {
+    let body = {};
+    try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
+    const cohorte = String(body.p_cohort || '');
+    if (cohorte === 'OSFL') payload = [];
+    else if (cohorte === 'REGION') {
+      payload = payload.filter((r) => r.region === body.p_value);
+      payload = payload.map((r) => ({ ...r, total_count: payload.length }));
+    }
   }
   // La ficha del actor solo conoce al comprador capturado en la fixture.
   if (fn === 'obs_spend_actor_detail') {
@@ -250,7 +265,19 @@ page.on('console', (m) => {
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 
 const checks = [
-  ['pulso', '#/pulso', ['Pulso del observatorio', '50.516', 'Anticipación']],
+  // Pulso: la composicion del padron, el ciclo de vida SII, el territorio con
+  // su IGR y la industria. Las senales NO deben estar desplegadas de entrada.
+  ['pulso', '#/pulso', ['Universo de sujetos obligados', '10.294', 'Con término de giro',
+    '445', 'Término de giro por año', 'Caracterización cruzada',
+    'Con antecedente sancionatorio', '372', 'Proveedores del Estado',
+    'Sujetos obligados por región', 'Tarapacá', 'En IGR muy alto',
+    'Sector UAF que obliga', 'Usuarios de Zonas Francas',
+    'Industria según el SII', 'Actividades Financieras y de Seguros',
+    'Antigüedad del padrón', '15,8',
+    // Los limites se declaran en la propia pantalla, no en la documentacion.
+    'no publica fecha de inscripción', 'Describe el entorno, nunca al sujeto',
+    // El entorno territorial se muestra, no se deja implícito en la tabla.
+    'Entorno territorial donde operan', 'Muy alto']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K',
      'Identidad sin resolver', 'sin RUT']],
@@ -335,6 +362,77 @@ for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y pad
   else console.log('ok   la ficha ofrece screening con RUT y tipo');
 }
 console.log('ok   pestañas de la ficha');
+
+// ── Pulso · las señales van replegadas ────────────────────────────────────
+// El analista pidió que la caracterización del universo no compita con la
+// persecución de casos. Las señales existen, pero sólo cuando se piden.
+{
+  await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const cerrado = await page.textContent('body');
+  if (cerrado.includes('Señales que piden mirada')) {
+    failed++; console.log('FAIL señales: llegan desplegadas sin que nadie las pida');
+  } else {
+    await page.getByRole('button', { name: /Señales activas/ }).click();
+    await page.waitForTimeout(420);
+    const abierto = await page.textContent('body');
+    const faltan = ['Señales que piden mirada', 'Ver todas las señales']
+      .filter((t) => !abierto.includes(t));
+    if (faltan.length) {
+      failed++; console.log(`FAIL señales: al desplegar falta ${JSON.stringify(faltan)}`);
+    } else console.log('ok   las señales se recogen y sólo se despliegan al pedirlas');
+  }
+}
+
+// ── Pulso · de la cifra a los nombres y al antecedente ────────────────────
+{
+  await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  await page.getByRole('button', { name: /Con término de giro/ }).click();
+  await page.waitForTimeout(450);
+  let body = await page.textContent('body');
+  const faltanLista = ['Sujetos con término de giro', 'PEHUEN SPA',
+                       'IMPORTADORA Y EXPORTADORA DENVER LIMITADA',
+                       'siguen inscritos en el registro UAF']
+    .filter((t) => !body.includes(t));
+  if (faltanLista.length) {
+    failed++; console.log(`FAIL cohorte: falta ${JSON.stringify(faltanLista)}`);
+  } else {
+    // Y de un nombre al antecedente que lo sostiene, con su enlace.
+    await page.getByRole('button', { name: /PEHUEN SPA/ }).click();
+    await page.waitForTimeout(420);
+    body = await page.textContent('body');
+    const link = await page.getByRole('link', { name: /Abrir documento original/ }).count();
+    const faltanEv = ['La UAF publicó fiscalización',
+                      'puede estar emitido bajo otra razón social del mismo contribuyente']
+      .filter((t) => !body.includes(t));
+    if (faltanEv.length || link === 0) {
+      failed++;
+      console.log(`FAIL antecedente: falta ${JSON.stringify(faltanEv)}${link === 0 ? ' y el enlace al documento' : ''}`);
+    } else console.log('ok   la cifra abre nombres y cada nombre abre su antecedente con enlace');
+    await page.screenshot({ path: `${OUT}/pulso-cohorte.png`, fullPage: true });
+  }
+  // Escape cierra la capa. Tambien deja el tablero listo para el bloque siguiente.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(260);
+  if ((await page.textContent('body')).includes('Sujetos con término de giro')) {
+    failed++; console.log('FAIL cohorte: Escape no cierra la capa');
+  } else console.log('ok   Escape cierra la lista y devuelve el tablero');
+}
+
+// ── Pulso · una cohorte vacía lo dice, no finge ───────────────────────────
+{
+  await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+  const osfl = page.getByRole('button', { name: /Organizaciones sin fines de lucro/ });
+  await osfl.scrollIntoViewIfNeeded();
+  await osfl.click();
+  await page.waitForTimeout(420);
+  const body = await page.textContent('body');
+  if (!body.includes('Sin sujetos en este corte')) {
+    failed++; console.log('FAIL cohorte vacía: no declara que el corte no tiene sujetos');
+  } else console.log('ok   una cohorte sin sujetos lo declara');
+}
 
 // Light theme must repaint, not invert.
 await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });

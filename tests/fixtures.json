@@ -1449,5 +1449,391 @@
     "acceleration_percentile": 0.882362
    }
   ]
+ },
+ "uafPulse": {
+  "igr_mix": [
+   {
+    "banda": "Muy alto",
+    "sujetos": 4141,
+    "igr_medio": 87.5
+   },
+   {
+    "banda": "Alto",
+    "sujetos": 2887,
+    "igr_medio": 72.9
+   },
+   {
+    "banda": "Medio",
+    "sujetos": 844,
+    "igr_medio": 55.5
+   },
+   {
+    "banda": "Bajo",
+    "sujetos": 187,
+    "igr_medio": 35.3
+   },
+   {
+    "banda": "Muy bajo",
+    "sujetos": 58,
+    "igr_medio": 21.6
+   },
+   {
+    "banda": "Sin IGR",
+    "sujetos": 2177,
+    "igr_medio": null
+   }
+  ],
+  "contract": "ATLAS_OBS_UAF_PULSE_V1",
+  "coverage": {
+   "press_note": "La prensa llega con título y fecha, sin URL ni resumen: el enlace al artículo no está ingerido.",
+   "sanction_note": "El padrón atribuye sanción a 213 sujetos; la resolución de identidad por RUT alcanza 372 con antecedente abrible. Miden cosas distintas.",
+   "press_has_links": false,
+   "supplier_capped": true,
+   "supplier_cap_note": "El corte de compras públicas publica 3.000 proveedores. Un sujeto sin marca puede tener contratos igualmente.",
+   "uaf_registration_date": false,
+   "uaf_registration_note": "El registro UAF no publica fecha de inscripción ni estado de vigencia, de modo que el eje temporal es el ciclo de vida ante el SII."
+  },
+  "universe": {
+   "total": 10294,
+   "activos": 7739,
+   "regiones": 20,
+   "juridicas": 7672,
+   "naturales": 2110,
+   "con_inicio": 7719,
+   "industrias": 21,
+   "organismos": 512,
+   "sin_perfil": 2110,
+   "terminados": 445,
+   "sectores_uaf": 50,
+   "con_territorio": 8175,
+   "antiguedad_media": 15.8
+  },
+  "by_region": [
+   {
+    "region": "Metropolitana de Santiago",
+    "sujetos": 4315,
+    "igr_banda": "Alto",
+    "igr_medio": 73.1,
+    "terminados": 135,
+    "en_igr_alto": 3519,
+    "proveedores": 17,
+    "sancionados": 286,
+    "en_igr_muy_alto": 1019
+   },
+   {
+    "region": "Tarapacá",
+    "sujetos": 2091,
+    "igr_banda": "Muy alto",
+    "igr_medio": 87.3,
+    "terminados": 215,
+    "en_igr_alto": 2090,
+    "proveedores": 4,
+    "sancionados": 8,
+    "en_igr_muy_alto": 2086
+   },
+   {
+    "region": "Valparaíso",
+    "sujetos": 416,
+    "igr_banda": "Muy alto",
+    "igr_medio": 74.1,
+    "terminados": 17,
+    "en_igr_alto": 321,
+    "proveedores": 1,
+    "sancionados": 13,
+    "en_igr_muy_alto": 284
+   },
+   {
+    "region": "Magallanes y de la Antártica Chilena",
+    "sujetos": 329,
+    "igr_banda": "Alto",
+    "igr_medio": 68.9,
+    "terminados": 28,
+    "en_igr_alto": 300,
+    "proveedores": 2,
+    "sancionados": 3,
+    "en_igr_muy_alto": 0
+   },
+   {
+    "region": "Biobío",
+    "sujetos": 159,
+    "igr_banda": "Muy alto",
+    "igr_medio": 81.0,
+    "terminados": 5,
+    "en_igr_alto": 144,
+    "proveedores": 0,
+    "sancionados": 6,
+    "en_igr_muy_alto": 128
+   }
+  ],
+  "by_sector": [
+   {
+    "sector": "Usuarios de Zonas Francas",
+    "sujetos": 2840,
+    "ipf_medio": 30.3,
+    "terminados": 259,
+    "sancionados": 18
+   },
+   {
+    "sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+    "sujetos": 2244,
+    "ipf_medio": 26.4,
+    "terminados": 82,
+    "sancionados": 36
+   },
+   {
+    "sector": "Corredores de Propiedades",
+    "sujetos": 1459,
+    "ipf_medio": 27.9,
+    "terminados": 40,
+    "sancionados": 13
+   },
+   {
+    "sector": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+    "sujetos": 538,
+    "ipf_medio": 28.0,
+    "terminados": 1,
+    "sancionados": 0
+   },
+   {
+    "sector": "Organismos públicos",
+    "sujetos": 512,
+    "ipf_medio": null,
+    "terminados": 16,
+    "sancionados": 5
+   }
+  ],
+  "crosscuts": {
+   "osfl": 11,
+   "prensa": 12,
+   "con_senal": 1548,
+   "proveedores": 28,
+   "sancionados_5y": 147,
+   "senales_totales": 1597,
+   "sancionados_padron": 213,
+   "antecedentes_prensa": 20,
+   "antecedentes_sancion": 581,
+   "sancionados_con_antecedente": 372
+  },
+  "lifecycle": {
+   "terminated_by_year": [
+    {
+     "n": 39,
+     "ano": 2026
+    },
+    {
+     "n": 70,
+     "ano": 2025
+    },
+    {
+     "n": 71,
+     "ano": 2024
+    },
+    {
+     "n": 111,
+     "ano": 2023
+    },
+    {
+     "n": 36,
+     "ano": 2022
+    }
+   ]
+  },
+  "semantics": "Caracterización descriptiva del padrón de sujetos obligados. El estado ante el SII describe el ciclo de vida tributario, no el cumplimiento de la obligación de reportar. El IGR describe la comuna donde opera el sujeto, nunca al sujeto.",
+  "by_industry": [
+   {
+    "sujetos": 2539,
+    "industria": "COMERCIO AL POR MAYOR Y AL POR MENOR; REPARACION DE VEHICULOS AUTOMOTORES Y MOTOCICLETAS",
+    "terminados": 69,
+    "sancionados": 21,
+    "banda_ventas_media": 6.5
+   },
+   {
+    "sujetos": 2300,
+    "industria": "ACTIVIDADES INMOBILIARIAS",
+    "terminados": 72,
+    "sancionados": 30,
+    "banda_ventas_media": 5.5
+   },
+   {
+    "sujetos": 1262,
+    "industria": "ACTIVIDADES FINANCIERAS Y DE SEGUROS",
+    "terminados": 33,
+    "sancionados": 237,
+    "banda_ventas_media": 6.7
+   },
+   {
+    "sujetos": 318,
+    "industria": "ADMINISTRACION PUBLICA Y DEFENSA; PLANES DE SEGURIDAD SOCIAL DE AFILIACION OBLIGATORIA",
+    "terminados": 7,
+    "sancionados": 2,
+    "banda_ventas_media": 2.5
+   },
+   {
+    "sujetos": 216,
+    "industria": "CONSTRUCCION",
+    "terminados": 4,
+    "sancionados": 2,
+    "banda_ventas_media": 5.7
+   }
+  ]
+ },
+ "uafCohort": [
+  {
+   "rut": "96806010-4",
+   "name": "PEHUEN SPA",
+   "region": "Metropolitana de Santiago",
+   "commune": "Santiago",
+   "is_osfl": false,
+   "workers": 0,
+   "ipf_band": "ALTA",
+   "entity_id": "ENT-RUT-96806010-4",
+   "has_press": false,
+   "igr_level": "Muy alto",
+   "igr_score": 88.58,
+   "ipf_score": 37.88,
+   "sales_band": "2",
+   "sii_status": "TERMINATED_AS_PUBLISHED",
+   "uaf_sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+   "alert_count": 2,
+   "total_count": 445,
+   "main_activity": "OTRAS ACTIVIDADES DE SERVICIOS DE APOYO A LAS EMPRESAS N.C.P.",
+   "activity_years": null,
+   "evidence_count": 1,
+   "sanction_count": 1,
+   "subject_nature": "PERSONA_JURIDICA",
+   "economic_sector": "ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO",
+   "is_state_supplier": false,
+   "sanction_last_date": "2020-10-07",
+   "supplier_amount_12m": null,
+   "press_evidence_count": 0,
+   "sii_termination_date": "2023-06-01",
+   "sanction_evidence_count": 1,
+   "sii_activity_start_date": null
+  },
+  {
+   "rut": "76299831-9",
+   "name": "BANFACTORING SPA",
+   "region": "Metropolitana de Santiago",
+   "commune": "Providencia",
+   "is_osfl": false,
+   "workers": 7,
+   "ipf_band": "ALTA",
+   "entity_id": "ENT-RUT-76299831-9",
+   "has_press": false,
+   "igr_level": "Alto",
+   "igr_score": 75.35,
+   "ipf_score": 34.97,
+   "sales_band": "8",
+   "sii_status": "TERMINATED_AS_PUBLISHED",
+   "uaf_sector": "Empresas de Factoraje (Factoring)",
+   "alert_count": 2,
+   "total_count": 445,
+   "main_activity": "OTRAS ACTIVIDADES DE SERVICIOS FINANCIEROS, EXCEPTO LAS DE SEGUROS Y FONDOS DE PENSIONES N.C.P.",
+   "activity_years": 13,
+   "evidence_count": 1,
+   "sanction_count": 1,
+   "subject_nature": "PERSONA_JURIDICA",
+   "economic_sector": "ACTIVIDADES FINANCIERAS Y DE SEGUROS",
+   "is_state_supplier": false,
+   "sanction_last_date": "2020-04-16",
+   "supplier_amount_12m": null,
+   "press_evidence_count": 0,
+   "sii_termination_date": "2026-07-22",
+   "sanction_evidence_count": 1,
+   "sii_activity_start_date": "2013-06-28"
+  },
+  {
+   "rut": "76068142-3",
+   "name": "IMPORTADORA Y EXPORTADORA DENVER LIMITADA",
+   "region": "Tarapacá",
+   "commune": "Iquique",
+   "is_osfl": false,
+   "workers": null,
+   "ipf_band": "MEDIA",
+   "entity_id": "ENT-RUT-76068142-3",
+   "has_press": false,
+   "igr_level": "Muy alto",
+   "igr_score": 87.57,
+   "ipf_score": 33.15,
+   "sales_band": null,
+   "sii_status": "TERMINATED_AS_PUBLISHED",
+   "uaf_sector": "Usuarios de Zonas Francas",
+   "alert_count": 2,
+   "total_count": 445,
+   "main_activity": null,
+   "activity_years": null,
+   "evidence_count": 1,
+   "sanction_count": 1,
+   "subject_nature": "PERSONA_JURIDICA",
+   "economic_sector": null,
+   "is_state_supplier": false,
+   "sanction_last_date": "2020-03-20",
+   "supplier_amount_12m": null,
+   "press_evidence_count": 0,
+   "sii_termination_date": "2023-07-31",
+   "sanction_evidence_count": 1,
+   "sii_activity_start_date": null
+  }
+ ],
+ "uafDossier": {
+  "subject": {
+   "rut": "96806010-4",
+   "name": "PEHUEN SPA",
+   "region": "Metropolitana de Santiago",
+   "commune": "Santiago",
+   "is_osfl": false,
+   "workers": 0,
+   "ipf_band": "ALTA",
+   "entity_id": "ENT-RUT-96806010-4",
+   "has_press": false,
+   "igr_level": "Muy alto",
+   "igr_score": 88.58,
+   "ipa3_band": "MEDIA",
+   "ipf_score": 37.88,
+   "ipa3_score": 41.31,
+   "rut_search": "968060104",
+   "sales_band": "2",
+   "sii_status": "TERMINATED_AS_PUBLISHED",
+   "uaf_sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+   "alert_count": 2,
+   "entity_type": "Persona jurídica",
+   "name_search": "pehuen spa",
+   "snapshot_id": "OBS-2026-09-07T1825Z",
+   "refreshed_at": "2026-09-07T19:40:24.893395+00:00",
+   "main_activity": "OTRAS ACTIVIDADES DE SERVICIOS DE APOYO A LAS EMPRESAS N.C.P.",
+   "activity_years": null,
+   "sanction_count": 1,
+   "subject_nature": "PERSONA_JURIDICA",
+   "economic_sector": "ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO",
+   "sales_band_rank": 2,
+   "territory_basis": "PADRON_ENTIDAD",
+   "termination_year": 2023,
+   "is_state_supplier": false,
+   "sanction_count_5y": 0,
+   "economic_subsector": "ACTIVIDADES DE SERVICIOS DE APOYO A LAS EMPRESAS N.C.P.",
+   "sanction_last_date": "2020-10-07",
+   "supplier_amount_12m": null,
+   "press_evidence_count": 0,
+   "sii_termination_date": "2023-06-01",
+   "supplier_order_count": null,
+   "sanction_evidence_count": 1,
+   "sii_activity_start_date": null
+  },
+  "contract": "ATLAS_OBS_UAF_DOSSIER_V1",
+  "evidence": [
+   {
+    "kind": "SANCION",
+    "summary": "La UAF publicó fiscalización para INMOBILIARIA PROHOGAR S.A..",
+    "has_link": true,
+    "headline": "La UAF publicó fiscalización para INMOBILIARIA PROHOGAR S.A..",
+    "amount_uf": null,
+    "amount_clp": null,
+    "event_date": "2020-10-07",
+    "document_url": "https://www.uaf.cl/media/archivos_sanciones/166-2019.pdf",
+    "source_label": "UAF",
+    "identity_status": "RESOLVED_CONSERVATIVE"
+   }
+  ],
+  "semantics": "El antecedente se muestra tal como lo publica su fuente. Un registro de prensa no es una sanción, y una sanción no es una imputación de lavado de activos."
  }
 }
