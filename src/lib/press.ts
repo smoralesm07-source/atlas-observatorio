@@ -206,16 +206,16 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
   return candidates.map(({ entity, score, kind }) => {
     const mentions = mentionsByEntity.get(entity.press_entity_id) ?? [];
     const articles = mentions
-      .map((mention) => {
+      .reduce<PressArticleMatch[]>((rows, mention) => {
         const article = articleById.get(mention.article_id);
-        if (!article) return null;
-        return {
+        if (!article) return rows;
+        rows.push({
           ...article,
           role: mention.role ?? null,
-          mention_confidence: mention.confidence ?? null,
-        } satisfies PressArticleMatch;
-      })
-      .filter((row): row is PressArticleMatch => row != null)
+          mention_confidence: Number.isFinite(mention.confidence) ? mention.confidence : null,
+        });
+        return rows;
+      }, [])
       .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
       .slice(0, 6);
 
