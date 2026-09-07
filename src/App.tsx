@@ -8,6 +8,8 @@ import { Senales } from './views/Senales';
 import { Entidades } from './views/Entidades';
 import { Ficha } from './views/Ficha';
 import { Fuentes } from './views/Fuentes';
+import { Territorio } from './views/Territorio';
+import { Sectores } from './views/Sectores';
 import { Metodologia } from './views/Metodologia';
 
 export default function App() {
@@ -33,6 +35,8 @@ function Routed({ session }: { session: Session }) {
         />
       )}
       {route.view === 'ficha' && <Ficha entityId={route.entityId} onNavigate={go} />}
+      {route.view === 'territorio' && <Territorio onNavigate={go} />}
+      {route.view === 'sectores' && <Sectores onNavigate={go} />}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
     </Shell>

@@ -129,6 +129,63 @@ Desde la ficha el screening es mejor que desde el buscador: ahí hay RUT y tipo
 de entidad, así que OpenSanctions puede cruzar por número tributario y no sólo
 por nombre.
 
+## Territorio: gobernar un indicador que vivía en el navegador
+
+El IGR es el indicador territorial de ATLAS. Su versión vigente es
+**IGR v2A (`IGR-2A-1.0.0`, efectiva el 26-08-2026)**: `100% amenaza territorial
+CEAD-LA`. La v4 que sigue almacenada en `aml_beta_territory_igr_snapshot_v4`
+está **retirada** y no se usa aquí; leerla habría resucitado una autoridad
+muerta, que es justamente lo que hace ilegible al ATLAS actual.
+
+En ATLAS el IGR v2A lo descarga el **navegador** desde un JSON crudo de GitHub y
+se muestra dentro de un **iframe**: sin read model, sin identidad de corte y sin
+RLS. El Observatorio lo trae desde la base con la extensión `http`, lo
+materializa en `obs_territory` con el mismo `snapshot_id` que el resto del corte
+y lo publica como contrato.
+
+El contrato del indicador excluye explícitamente del cálculo la vulnerabilidad
+sectorial, la densidad de sujetos obligados, la brecha de cobertura, ICR, IRAR,
+IPA, IVO y las sanciones de entidad. Esas cifras se publican **al lado** del IGR
+—las columnas se llaman `ctx_*`— y la interfaz dice que son descriptivas. La
+agregación regional es media comunal ponderada por confianza, de modo que una
+comuna mal cubierta no arrastra a su región, y la confianza se publica separada
+del score porque *menor cobertura no es menor riesgo*.
+
+La cobertura real se declara arriba, no en una nota al pie: hoy la capa de
+amenazas precedentes está materializada con delitos de drogas, y fraude,
+corrupción, delitos económicos, contrabando y crimen organizado **no** se
+presentan como si tuvieran cobertura territorial suficiente.
+
+Si la fuente CEAD no responde, la corrida no falla: `obs_refresh_territory`
+devuelve `-1`, conserva lo ya publicado y el corte lo declara en `row_counts`.
+
+## Sectores obligados
+
+`obs_sector` cruza el padrón UAF por sector con la vulnerabilidad estructural de
+referencia y los giros característicos observados. Tres indicadores distintos
+que la interfaz no deja confundir: la **vulnerabilidad** describe el modelo de
+negocio, el **IPF** ordena esfuerzo de fiscalización sobre inscritos, y la
+**tasa sancionatoria** describe lo que la UAF ha publicado.
+
+**IRAR-E** —el riesgo inherente sectorial— tiene fórmula gobernada pero sus
+insumos no están materializados. El Observatorio lo dice en lugar de mostrar un
+número inventado.
+
+## Color: una rampa secuencial, no el semáforo de las señales
+
+El nivel de IGR es una escala **ordenada de magnitud**, no un estado, así que no
+reutiliza los colores de prioridad de las señales: usa una rampa de un solo tono
+con luminosidad monótona, con pasos propios para cada tema —en superficie oscura
+la magnitud crece con la luminosidad, y no es una inversión automática de la
+rampa clara. Los pasos bajos no alcanzan 3:1 contra la superficie, de modo que
+todo uso lleva siempre el nombre del nivel como texto: el color nunca es la
+única codificación.
+
+Por la misma razón, los pesos de composición del índice se pintan con color
+constante: el semáforo por umbral leería un peso de 10% como «malo», y un peso
+no se juzga. Y los puntajes de capa usan la rampa del IGR, porque un 95 de
+amenaza pintado de verde diría lo contrario de lo que significa.
+
 ## Verificación
 
 - **Contratos y autorización**: en la base, simulando el rol `authenticated` con
@@ -142,6 +199,9 @@ por nombre.
 - **Cascada**: la prueba fuerza una consulta que el universo no conoce y
   verifica que el salto a listas internacionales ocurre solo, con su encuadre y
   con el estado real de cada fuente.
+- **Territorio y sector**: el detalle comunal se verifica descomponiendo capas y
+  componentes (intensidad, persistencia, tendencia, anomalía), y el sectorial
+  abriendo giros, bandas de IPF y distribución territorial.
 - **Agenda**: verificada programando el mismo comando cada minuto y leyendo
   `cron.job_run_details`: cinco corridas consecutivas exitosas, de 18 a 19 s.
 

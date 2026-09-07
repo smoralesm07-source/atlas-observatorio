@@ -53,6 +53,10 @@ const RPC = {
   obs_search_entities: F.search,
   obs_source_status: F.sources,
   obs_entity_detail: detail,
+  obs_territory_map: F.territoryMap,
+  obs_territory_detail: F.territoryDetail,
+  obs_sector_overview: F.sectorOverview,
+  obs_sector_detail: F.sectorDetail,
 };
 
 const SESSION = {
@@ -224,6 +228,13 @@ const checks = [
      'Identidad sin resolver', 'sin RUT']],
   ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica', 'Línea de tiempo', 'Sanción regulatoria']],
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio']],
+  // Territorio: el indicador vigente, su cobertura real y lo que queda fuera.
+  ['territorio', '#/territorio', ['Territorio', 'IGR-2A-1.0.0', 'San Bernardo',
+    'tráfico de sustancias', 'corrupción', 'ponderada por confianza',
+    'densidad de sujetos obligados', 'Muy alto']],
+  ['sectores', '#/sectores', ['Sectores obligados', 'Casas de Cambio', 'Notarios',
+    'Vulnerabilidad', 'IPF medio', 'no contiene entidades más culpables',
+    'sus insumos aún no están materializados']],
   ['metodologia', '#/metodologia', ['Metodología', 'Marcas', 'No es']],
 ];
 
@@ -274,6 +285,43 @@ const overflow = await m.evaluate(() => document.documentElement.scrollWidth - d
 await m.screenshot({ path: `${OUT}/movil.png`, fullPage: true });
 if (overflow > 2) { failed++; console.log(`FAIL móvil: desborde horizontal de ${overflow}px`); }
 else console.log('ok   móvil sin desborde');
+
+// ── Detalle territorial y sectorial: el análisis vive en el detalle, no en la
+// portada, así que se verifica que abra y muestre la descomposición.
+
+await page.goto(`${BASE}/#/territorio`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+await page.locator('table').getByText('San Bernardo', { exact: true }).first().click();
+await page.waitForTimeout(600);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/territorio-comuna.png`, fullPage: true });
+  const faltan = ['San Bernardo', 'Delito base directo', 'Economía criminal',
+                  'Persistencia', 'Anomalía', 'en el país', 'no imputan nada',
+                  'confianza']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL detalle comunal: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   el detalle comunal descompone capas y componentes');
+}
+
+await page.goto(`${BASE}/#/sectores`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+// El nombre también aparece como etiqueta dentro del gráfico de dispersión,
+// así que el clic se acota a la tabla.
+await page.locator('table').getByText('Casas de Cambio', { exact: true }).first().click();
+await page.waitForTimeout(600);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/sector-detalle.png`, fullPage: true });
+  const faltan = ['Casas de Cambio', 'Giros característicos', 'Distribución del IPF',
+                  'Observabilidad del sector', 'no constituye incumplimiento',
+                  'Dónde está el sector']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL detalle sectorial: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   el detalle sectorial abre giros, bandas y territorio');
+}
 
 // ── Cascada de búsqueda. Es la capacidad que distingue a Entidades: cuando el
 // universo observado no sabe nada, el Observatorio no se queda callado.

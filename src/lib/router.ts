@@ -5,6 +5,8 @@ export type Route =
   | { view: 'senales'; family?: string }
   | { view: 'entidades'; q?: string; region?: string }
   | { view: 'ficha'; entityId: string }
+  | { view: 'territorio' }
+  | { view: 'sectores' }
   | { view: 'fuentes' }
   | { view: 'metodologia' };
 
@@ -29,6 +31,10 @@ export function parseHash(hash: string): Route {
       return seg[1]
         ? { view: 'ficha', entityId: decodeURIComponent(seg[1]) }
         : { view: 'entidades' };
+    case 'territorio':
+      return { view: 'territorio' };
+    case 'sectores':
+      return { view: 'sectores' };
     case 'fuentes':
       return { view: 'fuentes' };
     case 'metodologia':
@@ -51,6 +57,10 @@ export function hrefFor(r: Route): string {
     }
     case 'ficha':
       return `#/entidad/${encodeURIComponent(r.entityId)}`;
+    case 'territorio':
+      return '#/territorio';
+    case 'sectores':
+      return '#/sectores';
     case 'fuentes':
       return '#/fuentes';
     case 'metodologia':

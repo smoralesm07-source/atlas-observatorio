@@ -9,6 +9,9 @@ lee los mismos datos gobernados a través de contratos propios.
 - Un **monitor global** del estado de las fuentes abiertas gobernadas.
 - Una **superficie de anticipación**: los patrones que se activan sobre el
   conjunto, ordenados por prioridad e intensidad.
+- Una lectura de **territorio** (IGR v2A, amenaza territorial CEAD-LA) y de
+  **sectores obligados** (padrón UAF, vulnerabilidad estructural, IPF), cada una
+  con su metodología a la vista y sus exclusiones declaradas.
 - Un **buscador de entidades en cascada**: busca en el universo observado y, si
   ahí no hay nada, sigue solo hacia sanciones internacionales, debarment y bases
   offshore. La identidad digital se resuelve bajo demanda.
