@@ -240,6 +240,43 @@ Las audiencias de lobby se excluyen del read model: 52.548 registros que llegan
 sin comprador, sin proveedor y sin monto. Publicarlas junto a señales con
 materialidad las habría hecho parecer equivalentes.
 
+## Conectar una fuente en silencio
+
+Un productor aparece en la ficha de una entidad sólo si su código está en
+`aml_entities.profile.fuentes`. Cuatro productores del catálogo nunca escribían
+ahí, y la razón era distinta en cada uno:
+
+| Fuente | Bloqueo real |
+|---|---|
+| **MERCADO_PUBLICO** | Ninguno. La resolución por RUT ya existía dentro del módulo de gasto y no se escribía de vuelta. **Conectada: 791 entidades.** |
+| **PRESUPUESTO_ABIERTO** | Ninguno. Mismo caso. **Conectada: 15 entidades.** |
+| **RADAR_CGR** | Identidad. Sus 61 eventos de enforcement traen `entity_name` pero **cero RUT**, así que no hay cruce exacto. Depende del productor, no de esta app. |
+| **RADAR_DELICTUAL** | Está mal catalogada. Es contexto comunal, no entidades: alimenta Territorio y nunca va a poblar `profile.fuentes`. |
+
+`obs_refresh_spend()` escribe ahora las filas `PRESENT` de las dos primeras y
+corrige su `obs_source_health`, porque `obs_refresh_all()` las evaluó antes de
+que existieran sus filas y las había dejado en silencio.
+
+### Alcance parcial: por qué «no consultada» y no «sin registro»
+
+Compras públicas publica los 3.000 actores de mayor prioridad, no los 72.802
+proveedores del universo. Con la regla anterior, una entidad fuera de ese tramo
+habría aparecido en su ficha como *sin registro* en Mercado Público — un
+veredicto de ausencia sobre algo que nunca miramos, y exactamente el error que
+esta herramienta existe para no cometer.
+
+`obs_source_health.scope_partial` marca esas fuentes y `obs_entity_detail()`
+degrada su veredicto por defecto a `NOT_CONSULTED`, el mismo trato que reciben
+las fuentes bajo demanda. La ejecución presupuestaria **no** lleva la marca:
+publica íntegra su propia población de señales, así que ahí la ausencia sí es
+ausencia. Verificado en la base: el Instituto de Salud Pública resuelve a
+`PRESENT` con 1.283 órdenes; Banco Bice, fuera del tramo, resuelve a
+`NOT_CONSULTED` y no a `ABSENT`.
+
+Por lo mismo, el recuento de cada fuente viaja con su unidad en
+`detail.unidad`. Llamar «eventos» a 1.283 órdenes de compra afirmaría algo que
+la fuente no dice.
+
 ## Color: una rampa secuencial, no el semáforo de las señales
 
 El nivel de IGR es una escala **ordenada de magnitud**, no un estado, así que no
@@ -295,11 +332,24 @@ que puede cometer esta herramienta.
 
 ## Lo que falta conectar
 
-`RADAR_CGR`, `RADAR_DELICTUAL`, `MERCADO_PUBLICO` y `PRESUPUESTO_ABIERTO` están
-declarados en el catálogo de fuentes pero todavía no aportan vínculos por
-entidad en la ficha: la interfaz los muestra honestamente como *en silencio* en
-lugar de omitirlos. (CGR y Presupuesto Abierto sí alimentan la sección de gasto
-público, con grano de organismo en vez de grano de entidad.) Conectarlos consiste en que sus productores escriban `entity_id` en el
+`RADAR_CGR` y `RADAR_DELICTUAL` siguen sin aportar vínculos por entidad, por las
+razones de la tabla anterior: la interfaz los muestra honestamente como *en
+silencio* en lugar de omitirlos. CGR alimenta igual la sección de gasto público,
+con grano de organismo en vez de grano de entidad.
+
+Las doce fuentes marcadas *sin señal* no están rotas: responden en vivo, y la
+cascada de Entidades lo demuestra en cada consulta. Su `data_status` nunca sale
+de `unknown` porque **nada persiste el resultado de una consulta**. El paso
+siguiente es un registro de consultas: cuando un analista corre el screening
+desde la ficha, guardar el resultado como fila `PRESENT` o `ABSENT` con su fecha.
+Eso convertiría «no consultada» en «consultada el 7 de septiembre, sin registro»
+y le daría a Fuentes un estado real.
+
+La excepción con bloqueo concreto es **OpenSanctions**: responde
+`credential_missing` porque falta `OPENSANCTIONS_API_KEY` en los secretos del
+proyecto. Mientras tanto el conector conmuta al *fallback* oficial directo
+—OFAC, ONU, UE, Reino Unido, BID y Banco Mundial— que es lo que hoy sostiene el
+screening. Los pasos para incorporar la credencial están en el README. Conectarlos consiste en que sus productores escriban `entity_id` en el
 perfil Fusion; el Observatorio los recoge en el corte siguiente sin cambios de
 código.
 

@@ -209,7 +209,7 @@ export function TerritoryStrip({
 /** Coverage meter used on the ficha: how much of the governed universe a
  *  source actually reaches. */
 export function Meter({
-  value, label, hint, tone,
+  value, label, hint, tone, valueLabel,
 }: {
   value: number;
   label: string;
@@ -217,13 +217,16 @@ export function Meter({
   /** Color fijo. Úsalo cuando el número sea una proporción o un peso: el
    *  semáforo por umbral leería un 10% como "malo", y un peso no se juzga. */
   tone?: string;
+  /** Texto del número. Úsalo cuando redondear a un decimal mienta: una
+   *  cobertura real pero diminuta se imprimiría "0%" y se leería como ninguna. */
+  valueLabel?: string;
 }) {
   const v = Math.max(0, Math.min(100, value));
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
         <span style={{ color: 'var(--ink-3)' }}>{label}</span>
-        <span className="num" style={{ fontWeight: 650 }}>{n1(value)}%</span>
+        <span className="num" style={{ fontWeight: 650 }}>{valueLabel ?? `${n1(value)}%`}</span>
       </div>
       <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-raised)', overflow: 'hidden' }}>
         <div

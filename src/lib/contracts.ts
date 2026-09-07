@@ -107,7 +107,19 @@ export interface CoverageRow {
   status: SourceStatus;
   record_count: number | null;
   last_event_at: string | null;
-  detail: { basis?: string; event_titles?: string[] };
+  detail: {
+    basis?: string;
+    event_titles?: string[];
+    /** Rótulo del recuento. Sin esto la ficha diría "eventos" a lo que son
+     *  órdenes de compra o señales de ejecución. */
+    unidad?: string;
+    roles?: string[];
+    alcance?: string;
+    monto_12m_clp?: number;
+    monto_clp?: number;
+    altas?: number;
+    prioridad_revision?: number;
+  };
 }
 
 export interface EntityEvent {
@@ -227,6 +239,9 @@ export interface SourceStatusRow {
   notes: string | null;
   entity_coverage: number;
   coverage_share: number | null;
+  /** El corte publica sólo parte del universo de esta fuente: la cobertura
+   *  mide nuestro recorte, no la fuente, y la ausencia no acredita ausencia. */
+  scope_partial: boolean;
 }
 
 /* ──────────────────────────────────────────────────────── territorio */

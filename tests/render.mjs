@@ -28,6 +28,10 @@ const detail = {
     { source_code: 'RADAR_SANCIONES', source_name: 'Radar Sanciones · eventos regulatorios', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'CMF / UAF / SCJ / CGR', source_data_status: 'fresh', status: 'PRESENT', record_count: 1, last_event_at: '2026-02-09T00:00:00+00:00', detail: { basis: 'EVENTOS_FECHADOS', event_titles: ['Sanción regulatoria'] } },
     { source_code: 'RADAR_UAF', source_name: 'Radar UAF · padron de sujetos obligados', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'UAF', source_data_status: 'fresh', status: 'PRESENT', record_count: 0, last_event_at: null, detail: { basis: 'PRESENCIA_DECLARADA' } },
     { source_code: 'RADAR_OSFL', source_name: 'Radar OSFL · organizaciones sin fines de lucro', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'Registro Civil / SII', source_data_status: 'fresh', status: 'ABSENT', record_count: null, last_event_at: null, detail: {} },
+    // Compras publicas: el recuento son ordenes, no eventos, y el corte declara
+    // su alcance parcial dentro de la propia fila.
+    { source_code: 'MERCADO_PUBLICO', source_name: 'Mercado Publico · compras del Estado', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'ChileCompra', source_data_status: 'fresh', status: 'PRESENT', record_count: 1283, last_event_at: null, detail: { basis: 'PRESENCIA_DECLARADA', unidad: 'órdenes en 12 meses', roles: ['Comprador'], alcance: 'Corte acotado a los 3.000 actores de mayor prioridad', monto_12m_clp: 18130049673.48, prioridad_revision: 51.4 } },
+    { source_code: 'PRESUPUESTO_ABIERTO', source_name: 'Presupuesto Abierto · ejecucion fiscal', source_class: 'producer', integration_mode: 'scheduled', authoritative_source: 'DIPRES', source_data_status: 'fresh', status: 'ABSENT', record_count: null, last_event_at: null, detail: {} },
     { source_code: 'OFAC', source_name: 'OFAC Sanctions', source_class: 'official_list', integration_mode: 'on_demand', authoritative_source: 'U.S. Department of the Treasury / OFAC', source_data_status: 'unknown', status: 'NOT_CONSULTED', record_count: null, last_event_at: null, detail: {} },
     { source_code: 'MAIGRET', source_name: 'Maigret full', source_class: 'osint_on_demand', integration_mode: 'on_demand', authoritative_source: 'https://github.com/soxoj/maigret', source_data_status: 'unknown', status: 'NOT_CONSULTED', record_count: null, last_event_at: null, detail: {} },
   ],
@@ -250,8 +254,15 @@ const checks = [
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K',
      'Identidad sin resolver', 'sin RUT']],
-  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica', 'Línea de tiempo', 'Sanción regulatoria']],
-  ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio']],
+  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica',
+    'Línea de tiempo', 'Sanción regulatoria']],
+  // Fuentes: una al dia, una de alcance parcial que dice por que su cobertura
+  // es baja, una en silencio y una bajo demanda.
+  ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio',
+    'Mercado Publico', 'Alcance parcial', 'nunca «sin registro»',
+    'Presupuesto Abierto', 'Bajo demanda',
+    // 15 de 50.516 redondea a "0%", que se leería como ninguna.
+    '<0,1%']],
   // Territorio: el indicador vigente, su cobertura real y lo que queda fuera.
   ['territorio', '#/territorio', ['Territorio', 'IGR-2A-1.0.0', 'San Bernardo',
     'tráfico de sustancias', 'corrupción', 'ponderada por confianza',
@@ -297,6 +308,21 @@ for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y pad
   await page.getByRole('button', { name: tab, exact: true }).click();
   await page.waitForTimeout(220);
   await page.screenshot({ path: `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`, fullPage: true });
+}
+{
+  // El recuento de una fuente lleva su propia unidad: llamar "eventos" a 1.283
+  // ordenes de compra afirmaria algo que la fuente no dice.
+  await page.getByRole('button', { name: 'Fuentes', exact: true }).click();
+  await page.waitForTimeout(260);
+  const body = await page.textContent('body');
+  const faltan = ['1.283 órdenes en 12 meses', 'Comprador',
+                  'Corte acotado a los 3.000 actores de mayor prioridad']
+    .filter((t) => !body.includes(t));
+  if (body.includes('1.283 eventos')) {
+    failed++; console.log('FAIL unidad de la fuente: rotula ordenes de compra como eventos');
+  } else if (faltan.length) {
+    failed++; console.log(`FAIL unidad de la fuente: falta ${JSON.stringify(faltan)}`);
+  } else console.log('ok   cada fuente rotula su recuento con su propia unidad');
 }
 {
   // La ficha ofrece el screening con el RUT, que el buscador no tiene.

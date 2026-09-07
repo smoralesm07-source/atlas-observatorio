@@ -109,11 +109,21 @@ create table if not exists public.obs_source_health (
   records_24h               bigint,
   error_rate_24h            numeric,
   notes                     text,
+  -- Una fuente cuyo corte publica solo una parte de su universo no puede
+  -- sostener un veredicto de ausencia: si no miramos a esa entidad, decir "sin
+  -- registro" seria afirmar algo que no comprobamos. La ficha lo lee y degrada
+  -- el veredicto a "no consultada".
+  scope_partial             boolean not null default false,
   snapshot_id               text not null,
   refreshed_at              timestamptz not null default now()
 );
+-- Idempotente para las bases que crearon la tabla antes de existir la columna.
+alter table public.obs_source_health
+  add column if not exists scope_partial boolean not null default false;
 comment on table public.obs_source_health is
   'Las fuentes gobernadas con su estado declarado, para que la interfaz pueda explicar por que una fuente esta en silencio.';
+comment on column public.obs_source_health.scope_partial is
+  'El corte publica solo parte del universo de esta fuente. La ausencia de una entidad no acredita ausencia de registro.';
 
 -- Search: an accent-insensitive trigram index for names, a prefix index for RUT.
 create index if not exists obs_entity_name_search_trgm
