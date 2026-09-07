@@ -1,0 +1,107 @@
+/* ATLAS Observatorio · design tokens
+   Dark-first: an operations monitor is read in a dim room for long stretches.
+   Light mode is a full repaint, not an inversion. */
+
+:root {
+  color-scheme: dark;
+
+  /* Ground */
+  --bg-abyss: #06090f;
+  --bg-canvas: #0a0f18;
+  --bg-panel: #10161f;
+  --bg-panel-2: #151d28;
+  --bg-raised: #1b2533;
+  --bg-input: #0d131c;
+
+  /* Lines */
+  --line: #1e2937;
+  --line-soft: #172130;
+  --line-strong: #2b3a4d;
+
+  /* Ink */
+  --ink: #e8eef6;
+  --ink-2: #9fb0c4;
+  --ink-3: #6b7f96;
+  --ink-4: #46586e;
+
+  /* Signal scale — priority is an ordered vocabulary, so the ramp is ordered. */
+  --sig-critical: #ff4d6d;
+  --sig-high: #ff8f3f;
+  --sig-medium: #ffc94d;
+  --sig-watch: #4cc9f0;
+  --sig-none: #55697f;
+
+  /* Semantic */
+  --present: #2dd4a7;
+  --absent: #5a6b80;
+  --unknown: #a78bfa;
+  --accent: #2dd4a7;
+  --accent-dim: #1a8a6d;
+  --accent-glow: rgba(45, 212, 167, 0.16);
+
+  /* Source classes */
+  --class-producer: #2dd4a7;
+  --class-official: #7dd3fc;
+  --class-connector: #c4b5fd;
+  --class-osint: #fbbf24;
+  --class-dataset: #f472b6;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 28px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 12px 48px rgba(0, 0, 0, 0.55);
+
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shell-w: 1440px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-abyss: #eef1f6;
+  --bg-canvas: #f6f8fb;
+  --bg-panel: #ffffff;
+  --bg-panel-2: #f8fafc;
+  --bg-raised: #eef2f7;
+  --bg-input: #ffffff;
+  --line: #dde4ed;
+  --line-soft: #e8edf4;
+  --line-strong: #c3cedd;
+  --ink: #0d1724;
+  --ink-2: #43556c;
+  --ink-3: #64748b;
+  --ink-4: #94a3b8;
+  --sig-critical: #d61f45;
+  --sig-high: #c2620a;
+  --sig-medium: #9a6b00;
+  --sig-watch: #0a7ea4;
+  --sig-none: #7b8aa0;
+  --present: #0d8f6f;
+  --absent: #8494a8;
+  --unknown: #7c3aed;
+  --accent: #0d8f6f;
+  --accent-dim: #0a6e56;
+  --accent-glow: rgba(13, 143, 111, 0.12);
+  --class-producer: #0d8f6f;
+  --class-official: #0369a1;
+  --class-connector: #6d28d9;
+  --class-osint: #b45309;
+  --class-dataset: #be185d;
+  --shadow-panel: 0 1px 2px rgba(15, 30, 50, 0.06), 0 8px 24px rgba(15, 30, 50, 0.07);
+  --shadow-pop: 0 16px 48px rgba(15, 30, 50, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

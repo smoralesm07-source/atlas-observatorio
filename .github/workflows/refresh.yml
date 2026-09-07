@@ -1,0 +1,69 @@
+name: Refrescar read models
+
+# The Observatorio publishes a snapshot; it never computes on the request path.
+# This job is the only writer of the obs_* tables.
+on:
+  schedule:
+    - cron: '25 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      snapshot_id:
+        description: 'Identificador del corte (opcional)'
+        required: false
+
+concurrency:
+  group: obs-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Materializar y publicar el corte
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SNAPSHOT_ID: ${{ inputs.snapshot_id }}
+        run: |
+          set -euo pipefail
+          body=$(jq -nc --arg s "${SNAPSHOT_ID:-}" \
+            'if $s == "" then {} else {p_snapshot_id: $s} end')
+
+          response=$(curl -sS -w '\n%{http_code}' \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/obs_refresh_all" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H 'Content-Type: application/json' \
+            -d "$body")
+
+          status=$(tail -n1 <<<"$response")
+          payload=$(sed '$d' <<<"$response")
+          echo "$payload" | jq . || echo "$payload"
+
+          if [ "$status" != "200" ]; then
+            echo "::error::obs_refresh_all respondió HTTP $status"
+            exit 1
+          fi
+
+          # A snapshot that is not READY must fail the run: a stale-but-honest
+          # read model is fine, a half-written one is not.
+          snapshot_status=$(jq -r '.status // (.[0].status) // "DESCONOCIDO"' <<<"$payload")
+          if [ "$snapshot_status" != "READY" ]; then
+            echo "::error::El corte terminó en estado $snapshot_status"
+            exit 1
+          fi
+
+          jq -r '(.row_counts // .[0].row_counts) | to_entries[] | "\(.key): \(.value)"' <<<"$payload" \
+            >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Reconstruir el índice de RUT
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          curl -sS -f -X POST "$SUPABASE_URL/rest/v1/rpc/obs_backfill_rut_search" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H 'Content-Type: application/json' -d '{}'
