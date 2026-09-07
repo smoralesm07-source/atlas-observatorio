@@ -11,9 +11,10 @@ function dateLabel(value: string | null): string {
   }).format(date);
 }
 
-function matchLabel(kind: PressMatch['match_kind']): string | null {
-  if (kind === 'APROXIMADA') return 'Coincidencia aproximada';
-  if (kind === 'RUT') return 'RUT coincidente';
+function matchLabel(match: PressMatch): string | null {
+  if (match.match_source === 'ARTICLE_TEXT') return 'Mención textual en noticia';
+  if (match.match_kind === 'APROXIMADA') return 'Coincidencia aproximada';
+  if (match.match_kind === 'RUT') return 'RUT coincidente';
   return null;
 }
 
@@ -38,11 +39,13 @@ export function PressMatches({ matches, loading }: { matches: PressMatch[]; load
                   <Badge tone="neutral">
                     {match.article_count} {match.article_count === 1 ? 'noticia' : 'noticias'}
                   </Badge>
-                  {matchLabel(match.match_kind) && <Badge tone="unknown">{matchLabel(match.match_kind)}</Badge>}
+                  {matchLabel(match) && <Badge tone="unknown">{matchLabel(match)}</Badge>}
                   {match.resolution_status === 'PRESS_ONLY' && (
                     <Badge
                       tone="unknown"
-                      title="La identidad fue detectada en prensa y todavía no está conciliada con una identidad canónica de Atlas."
+                      title={match.match_source === 'ARTICLE_TEXT'
+                        ? 'El nombre aparece en el texto indexado de una noticia, pero todavía no está conciliado con una identidad canónica de Atlas.'
+                        : 'La identidad fue detectada en prensa y todavía no está conciliada con una identidad canónica de Atlas.'}
                     >
                       Identidad sin resolver
                     </Badge>
