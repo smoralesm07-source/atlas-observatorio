@@ -44,6 +44,47 @@ const detail = {
     { mark_id: 'MK-SII-ADDR', mark_name: 'Amplitud del historial de domicilios', semantic_class: 'CONTEXT_MARK', primary_dimension: 'registral', score_group: 'REGISTRY', included_in_score: false, raw_intensity: 32.5, contribution: 0, confidence: 0.72, readiness: 'READY', evidence: {} },
   ],
   priority: { ipa3_score: 0, priority_band_shadow: 'SIN_MARCA_SHADOW', score_confidence_pct: null, coverage_index_pct: 90.4, dominant_mark_id: null, included_mark_count: 0, independent_group_count: 0, registry_group_score: 0, economic_group_score: 0, sanctions_group_score: 0, reconciliation_status: 'SII_ACTIVE', score_as_of: '2026-09-07', score_version: '0.4-shadow', semantics: 'PRIORIDAD_ANALITICA_NO_PROBABILIDAD_LAFT' },
+  // Perfil tributario y ciclo de vida: lo primero que mira un analista.
+  tax: {
+    commercial_year: 2024, current_status: 'ACTIVE_AS_PUBLISHED',
+    activity_start_date: '1979-03-16', termination_date: null,
+    first_activity_registration_date: '1979-03-16',
+    region: 'XIII REGION METROPOLITANA', province: 'SANTIAGO', commune: 'LAS CONDES',
+    main_activity: 'ACTIVIDADES BANCARIAS',
+    economic_sector: 'ACTIVIDADES FINANCIERAS Y DE SEGUROS',
+    economic_subsector: 'INTERMEDIACION MONETARIA', activity_count: 3,
+    activity_codes: '641901', activity_names: 'ACTIVIDADES BANCARIAS',
+    sales_band: '13', sales_band_rank: 13,
+    sales_band_uf: 'Más de 1.000.000 UF', size_label: 'Grande',
+    workers_numeric: 1793, taxpayer_type: 'PERSONA JURIDICA',
+    society_type: 'SOCIEDAD ANONIMA', ownership_edge_count: 12,
+    legal_entity_partner_count: 4, societies_as_partner_count: 2,
+    address_count: 9, current_address_count: 6,
+    signal_count: 1, signal_types: 'ADDRESS_HISTORY_BREADTH',
+    updated_at: '2026-09-01T00:00:00Z',
+  },
+  res: {
+    constitution_date: '1979-01-22', company_age_days: 17400,
+    observed_lifecycle_state: 'CONSTITUCION_Y_MODIFICACIONES', actuation_count: 6,
+    modification_count: 5, transformation_count: 0, merger_count: 0,
+    division_count: 0, dissolution_count: 0, last_change_date: '2021-04-19',
+    relationship_count: 11, coverage_note: null,
+    capital: 12000000000, registry_date: '1979-01-22',
+  },
+  lifecycle: [
+    { kind: 'CONSTITUCION_RES', fecha: '1979-01-22', etiqueta: 'Constitución de la sociedad',
+      fuente: 'Registro de Empresas y Sociedades',
+      detalle: 'CONSTITUCION_Y_MODIFICACIONES · 6 actuaciones registradas' },
+    { kind: 'INICIO_ACTIVIDADES', fecha: '1979-03-16', etiqueta: 'Inicio de actividades',
+      fuente: 'Servicio de Impuestos Internos', detalle: 'ACTIVIDADES BANCARIAS' },
+  ],
+  lifecycle_notes: {
+    uaf_registration_date: false,
+    uaf_registration_note: 'El registro de sujetos obligados no publica fecha de inscripción. Lo único fechado es cuándo el Observatorio observó a la entidad en el padrón.',
+    uaf_observed_at: '2026-08-25T22:51:15.680612+00:00',
+    res_coverage_note: 'El Registro de Empresas y Sociedades sólo cubre sociedades acogidas al régimen simplificado. Su ausencia no significa que la entidad no exista.',
+    sales_band_note: 'El tramo de ventas es el ordinal que publica el SII, expresado en UF anuales. El tramo más bajo significa ausencia de información, no ventas cero.',
+  },
   uaf: { uaf_sector_canonical: 'Bancos', subject_nature: 'LEGAL_ENTITY', sii_status: 'ACTIVO', sii_main_activity: 'Bancos', sii_sales_band: 'Grande 4', sii_workers: 2400, entity_age_years: 46, sanction_event_count: 1, sanction_event_count_5y: 1, sanction_last_event_date: '2026-02-09', ipf_score: 58.2, ipf_band: 'ALTA', ipf_percentile: 91.3, ipf_sector_percentile: 62.5, semantics: 'El IPF ordena esfuerzo de fiscalizacion; no es probabilidad de LA/FT.' },
   osfl: null,
   peers: [{ commercial_year: 2025, peer_level: 'SECTOR', peer_n: 22, sales_peer_percentile: 88.4, sales_band_code: 'G4', sales_band_delta: 0, workforce_ratio: 1.02, economic_sector: 'Intermediación financiera', main_activity_changed: false, region_changed: false }],
@@ -286,10 +327,23 @@ const checks = [
     // El entorno territorial se muestra, no se deja implícito en la tabla.
     'Entorno territorial donde operan', 'Muy alto']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
+  // El listado ya no dice sólo quién es la entidad: dice desde cuándo existe,
+  // a qué se dedica y de qué tamaño es.
   ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K',
-     'Identidad sin resolver', 'sin RUT']],
+     'Identidad sin resolver', 'sin RUT',
+     'desde 1979', 'Actividades Bancarias', 'Grande', 'Más de 1.000.000 UF', '1.793 trab.']],
+  // La ficha enmarca los hechos dentro del ciclo de vida, y declara que el
+  // padrón UAF no publica fecha de inscripción en vez de inventar un hito.
   ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica',
-    'Línea de tiempo', 'Sanción regulatoria']],
+    'Línea de tiempo',
+    // La sanción entra a la línea de tiempo con su materia, su regulador y su
+    // monto, no como el rótulo genérico del productor. El "165 UF" sólo lo
+    // imprime la línea de tiempo: la tabla de abajo usa un decimal.
+    'Incumplimiento de deberes de información', '165 UF',
+    'Constitución de la sociedad', 'Inicio de actividades',
+    'Registro de Empresas y Sociedades', 'Servicio de Impuestos Internos',
+    'Perfil tributario', 'Actividades Bancarias', 'Más de 1.000.000 UF', '1.793',
+    'no publica fecha de inscripción']],
   // Fuentes: una al dia, una de alcance parcial que dice por que su cobertura
   // es baja, una en silencio y una bajo demanda.
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio',

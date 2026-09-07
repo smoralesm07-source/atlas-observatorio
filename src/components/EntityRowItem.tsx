@@ -67,6 +67,34 @@ export function EntityRowItem({
             <span style={{ color: 'var(--ink-4)' }}>{MATCH_LABEL[e.match_kind]}</span>
           )}
         </div>
+
+        {/* Segunda línea: qué es la entidad según el SII. Va aparte de la
+            identidad porque responde otra pregunta — no quién es, sino desde
+            cuándo existe, a qué se dedica y de qué tamaño es. */}
+        {(e.tax_activity || e.tax_activity_start || e.tax_sales_band_uf) && (
+          <div className="row-meta" style={{ color: 'var(--ink-4)' }}>
+            {e.tax_activity_start && <span>desde {e.tax_activity_start.slice(0, 4)}</span>}
+            {e.tax_termination && (
+              <span style={{ color: 'var(--sig-high)', fontWeight: 600 }}>
+                término de giro {e.tax_termination.slice(0, 4)}
+              </span>
+            )}
+            {e.tax_activity && (
+              <span style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {titleCase(e.tax_activity)}
+              </span>
+            )}
+            {e.tax_size && <span>{e.tax_size}</span>}
+            {/* El tramo 1 es "sin información": mostrarlo como rango sugeriría
+                un tamaño que la fuente no informa. */}
+            {e.tax_sales_band_uf && e.tax_sales_band_rank !== 1 && (
+              <span>{e.tax_sales_band_uf}</span>
+            )}
+            {e.tax_workers != null && e.tax_workers > 0 && (
+              <span>{n(e.tax_workers)} trab.</span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="row-right">

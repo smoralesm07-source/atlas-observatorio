@@ -94,6 +94,19 @@ export interface EntityRow {
   sanction_count: number;
   match_kind: string;
   match_rank: number;
+  /* Perfil tributario del SII. Existe para 45.433 de las 50.516 entidades: una
+     entidad sin estos campos no es una entidad sin actividad, es una que el
+     corte tributario no alcanza. */
+  tax_status: string | null;
+  tax_activity: string | null;
+  tax_region: string | null;
+  tax_activity_start: string | null;
+  tax_termination: string | null;
+  tax_sales_band_rank: number | null;
+  tax_sales_band_uf: string | null;
+  tax_size: string | null;
+  tax_workers: number | null;
+  tax_economic_sector: string | null;
   total_count: number;
 }
 
@@ -197,6 +210,10 @@ export interface EntityDetail {
     semantics: string | null;
   } | null;
   uaf: Record<string, unknown> | null;
+  tax: TaxProfile | null;
+  res: ResProfile | null;
+  lifecycle: LifecycleMilestone[];
+  lifecycle_notes: LifecycleNotes;
   osfl: Record<string, unknown> | null;
   peers: {
     commercial_year: number;
@@ -667,4 +684,77 @@ export interface UafDossier {
   subject: UafSubjectRow | null;
   evidence: UafEvidenceRow[];
   semantics: string;
+}
+
+/* ------------------------------------------ perfil tributario y ciclo de vida
+
+   Lo primero que mira un analista sobre una entidad: desde cuándo existe, a qué
+   se dedica, dónde tributa, de qué tamaño es y si sigue operando. */
+
+export interface TaxProfile {
+  commercial_year: number | null;
+  current_status: string | null;
+  activity_start_date: string | null;
+  termination_date: string | null;
+  first_activity_registration_date: string | null;
+  region: string | null;
+  province: string | null;
+  commune: string | null;
+  main_activity: string | null;
+  economic_sector: string | null;
+  economic_subsector: string | null;
+  activity_count: number | null;
+  activity_codes: string | null;
+  activity_names: string | null;
+  sales_band: string | null;
+  sales_band_rank: number | null;
+  /** Rango en UF anuales. El tramo más bajo es ausencia de dato, no cero. */
+  sales_band_uf: string | null;
+  size_label: string | null;
+  workers_numeric: number | null;
+  taxpayer_type: string | null;
+  society_type: string | null;
+  ownership_edge_count: number | null;
+  legal_entity_partner_count: number | null;
+  societies_as_partner_count: number | null;
+  address_count: number | null;
+  current_address_count: number | null;
+  signal_count: number | null;
+  signal_types: string | null;
+  updated_at: string | null;
+}
+
+export interface ResProfile {
+  constitution_date: string | null;
+  company_age_days: number | null;
+  observed_lifecycle_state: string | null;
+  actuation_count: number | null;
+  modification_count: number | null;
+  transformation_count: number | null;
+  merger_count: number | null;
+  division_count: number | null;
+  dissolution_count: number | null;
+  last_change_date: string | null;
+  relationship_count: number | null;
+  coverage_note: string | null;
+  capital: number | null;
+  registry_date: string | null;
+}
+
+export type LifecycleKind = 'CONSTITUCION_RES' | 'INICIO_ACTIVIDADES' | 'TERMINO_GIRO';
+
+export interface LifecycleMilestone {
+  kind: LifecycleKind;
+  fecha: string;
+  etiqueta: string;
+  fuente: string;
+  detalle: string | null;
+}
+
+export interface LifecycleNotes {
+  uaf_registration_date: boolean;
+  uaf_registration_note: string;
+  uaf_observed_at: string | null;
+  res_coverage_note: string;
+  sales_band_note: string;
 }

@@ -163,36 +163,12 @@ function dedupeRoles(roles: string[], e: { is_uaf_observed: boolean; is_sanction
 /* ─────────────────────────────────────────────────────── panorama */
 
 function Panorama({ data, onNavigate }: { data: EntityDetail; onNavigate: (h: string) => void }) {
-  const events = [...data.events]
-    .sort((a, b) => (b.fecha ?? '').localeCompare(a.fecha ?? ''))
-    .slice(0, 14);
   const p = data.priority;
 
   return (
     <div className="grid grid-main">
       <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
-        <Panel title="Línea de tiempo observada" meta={`${n(data.events.length)} eventos`}>
-          {events.length === 0 ? (
-            <Empty
-              title="Sin eventos fechados"
-              hint="Las fuentes que reportan esta entidad no aportan eventos con fecha en este corte."
-            />
-          ) : (
-            <div className="timeline">
-              {events.map((ev, i) => (
-                <div className="tl-item" key={ev.event_id ?? i}>
-                  <div className="tl-when">{ev.fecha ? fecha(ev.fecha) : 'sin fecha'}</div>
-                  <div className="tl-what">{eventLabel(ev.tipo, ev.tipo_es)}</div>
-                  {ev.productor && (
-                    <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2 }}>
-                      {titleCase(ev.productor.replace(/_/g, ' '))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </Panel>
+        <LineaDeTiempo data={data} />
 
         {data.alerts.length > 0 && (
           <Panel title="Señales sobre esta entidad" pad={false}>
@@ -236,6 +212,8 @@ function Panorama({ data, onNavigate }: { data: EntityDetail; onNavigate: (h: st
       </div>
 
       <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
+        <PerfilTributario data={data} />
+
         {p && (
           <Panel title="Cómo se compone la prioridad">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
@@ -746,5 +724,223 @@ function ScoreTile({
       </div>
       {hint && <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>{hint}</div>}
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────── línea de tiempo
+
+   Un ciclo de vida se lee mejor cuando los hitos estructurales enmarcan a los
+   hechos puntuales: constituida en tal año, inicia actividades, y en medio las
+   sanciones y las menciones en prensa. Antes eran dos listas separadas y el
+   analista tenía que reconstruir el orden en su cabeza. */
+
+/* Los productores entregan estados en clave (CONSTITUCION_Y_MODIFICACIONES) y
+   actividades en mayúscula sostenida. Ninguna de las dos formas se lee bien
+   dentro de una frase. */
+function legible(v: string): string {
+  return titleCase(v.replace(/_/g, ' '));
+}
+
+type FilaTiempo = {
+  fecha: string | null;
+  titulo: string;
+  fuente: string | null;
+  detalle: string | null;
+  clase: 'hito' | 'sancion' | 'prensa' | 'evento';
+  url?: string | null;
+  monto?: number | null;
+};
+
+function LineaDeTiempo({ data }: { data: EntityDetail }) {
+  const filas: FilaTiempo[] = [];
+
+  for (const m of data.lifecycle ?? []) {
+    filas.push({
+      fecha: m.fecha,
+      titulo: m.etiqueta,
+      fuente: m.fuente,
+      detalle: m.detalle,
+      clase: 'hito',
+    });
+  }
+
+  for (const s of data.sanctions ?? []) {
+    filas.push({
+      fecha: s.event_date,
+      titulo: s.subject || 'Sanción registrada',
+      fuente: s.regulator,
+      detalle: s.laft_direct ? 'Materia vinculada a LA/FT según la fuente' : null,
+      clase: 'sancion',
+      monto: s.amount_uf,
+    });
+  }
+
+  // Los eventos del perfil ya incluyen la sanción como tipo, de modo que las
+  // que la ficha muestra con su regulador no se repiten aquí.
+  for (const ev of data.events ?? []) {
+    if (ev.productor === 'RADAR_SANCIONES') continue;
+    filas.push({
+      fecha: ev.fecha,
+      titulo: eventLabel(ev.tipo, ev.tipo_es),
+      fuente: ev.productor ? titleCase(ev.productor.replace(/_/g, ' ')) : null,
+      detalle: ev.titulo && ev.titulo !== ev.tipo ? ev.titulo : null,
+      clase: ev.productor === 'RADAR_PRENSA' ? 'prensa' : 'evento',
+    });
+  }
+
+  const fechadas = filas
+    .filter((f) => f.fecha)
+    .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  const sinFecha = filas.filter((f) => !f.fecha);
+  const hitos = data.lifecycle?.length ?? 0;
+
+  return (
+    <Panel
+      title="Línea de tiempo"
+      meta={hitos ? `${n(hitos)} hitos · ${n(fechadas.length - hitos)} hechos` : `${n(fechadas.length)} registros`}
+    >
+      {fechadas.length === 0 && sinFecha.length === 0 ? (
+        <Empty
+          title="Sin ciclo de vida observado"
+          hint="Ninguna fuente aporta fechas para esta entidad en este corte."
+        />
+      ) : (
+        <div className="timeline">
+          {fechadas.map((f, i) => (
+            <div className="tl-item" data-clase={f.clase} key={i}>
+              <div className="tl-when">{fecha(f.fecha)}</div>
+              <div className="tl-what">
+                {f.titulo}
+                {f.monto != null && (
+                  <span className="num" style={{ color: 'var(--sig-critical)', marginLeft: 8, fontWeight: 600 }}>
+                    {n(f.monto)} UF
+                  </span>
+                )}
+              </div>
+              {(f.fuente || f.detalle) && (
+                <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2, lineHeight: 1.5 }}>
+                  {[f.fuente, f.detalle && legible(f.detalle)].filter(Boolean).join(' · ')}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* El padrón UAF no publica fecha de inscripción. Ponerla en la línea de
+          tiempo con la fecha del scrape sería inventar un hito. */}
+      {data.entity.is_uaf_observed && (
+        <p style={{ margin: '14px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
+          Inscrita en el registro de sujetos obligados de la UAF.{' '}
+          {data.lifecycle_notes?.uaf_registration_note}
+        </p>
+      )}
+      {sinFecha.length > 0 && (
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--ink-4)' }}>
+          {n(sinFecha.length)} registro{sinFecha.length === 1 ? '' : 's'} sin fecha en origen, fuera de la secuencia.
+        </p>
+      )}
+    </Panel>
+  );
+}
+
+/* ─────────────────────────────────────────── perfil tributario
+
+   Lo primero que se pregunta un analista frente a una entidad: desde cuándo
+   existe, a qué se dedica, dónde tributa, de qué tamaño es y si sigue
+   operando. El corte tributario alcanza a 45.433 de las 50.516 entidades: para
+   el resto se dice que la fuente no la cubre, nunca que la entidad no opera. */
+
+function PerfilTributario({ data }: { data: EntityDetail }) {
+  const t = data.tax;
+  const r = data.res;
+
+  if (!t && !r) {
+    return (
+      <Panel title="Perfil tributario">
+        <Empty
+          title="Sin perfil tributario en el corte"
+          hint="El Servicio de Impuestos Internos no publica un perfil para esta entidad. La ausencia es de la fuente, no una afirmación sobre su actividad."
+        />
+      </Panel>
+    );
+  }
+
+  const terminada = Boolean(t?.termination_date);
+
+  return (
+    <Panel
+      title="Perfil tributario"
+      meta={t?.commercial_year ? `año comercial ${t.commercial_year}` : undefined}
+    >
+      {t && (
+        <>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            {t.size_label && <Badge tone="neutral">{t.size_label}</Badge>}
+            {terminada
+              ? <Badge tone="critical" dot>Con término de giro</Badge>
+              : t.current_status && <Badge tone="present">Activa ante el SII</Badge>}
+          </div>
+
+          <dl className="kv">
+            <dt>Inicio de actividades</dt>
+            <dd>{t.activity_start_date ? fecha(t.activity_start_date) : '—'}</dd>
+            {terminada && (
+              <>
+                <dt>Término de giro</dt>
+                <dd style={{ color: 'var(--sig-critical)' }}>{fecha(t.termination_date)}</dd>
+              </>
+            )}
+            <dt>Actividad principal</dt>
+            <dd>{t.main_activity ? titleCase(t.main_activity) : '—'}</dd>
+            {t.economic_sector && (
+              <>
+                <dt>Rubro económico</dt>
+                <dd>{titleCase(t.economic_sector)}</dd>
+              </>
+            )}
+            <dt>Región</dt>
+            <dd>{t.region ? titleCase(t.region) : '—'}{t.commune ? ` · ${titleCase(t.commune)}` : ''}</dd>
+            <dt>Ventas anuales</dt>
+            <dd>{t.sales_band_uf ?? '—'}</dd>
+            <dt>Trabajadores</dt>
+            <dd className="num">{t.workers_numeric == null ? '—' : n(t.workers_numeric)}</dd>
+            {t.society_type && (
+              <>
+                <dt>Tipo de sociedad</dt>
+                <dd>{titleCase(t.society_type)}</dd>
+              </>
+            )}
+          </dl>
+        </>
+      )}
+
+      {r?.constitution_date && (
+        <dl className="kv" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
+          <dt>Constitución</dt>
+          <dd>{fecha(r.constitution_date)}</dd>
+          {r.capital != null && (
+            <>
+              <dt>Capital declarado</dt>
+              <dd className="num">${n(r.capital)}</dd>
+            </>
+          )}
+          {r.relationship_count != null && r.relationship_count > 0 && (
+            <>
+              <dt>Vínculos societarios</dt>
+              <dd className="num">{n(r.relationship_count)}</dd>
+            </>
+          )}
+        </dl>
+      )}
+
+      {/* El tramo más bajo del SII significa "sin información", no ventas cero.
+          Sin esta nota, una entidad sin datos parecería una entidad sin ventas. */}
+      {t?.sales_band_rank === 1 && (
+        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
+          {data.lifecycle_notes?.sales_band_note}
+        </p>
+      )}
+    </Panel>
   );
 }

@@ -357,7 +357,17 @@
    "finding_count": 6,
    "is_sanctioned": true,
    "sanction_count": 1,
-   "is_uaf_observed": true
+   "is_uaf_observed": true,
+   "tax_status": "ACTIVE_AS_PUBLISHED",
+   "tax_activity": "ACTIVIDADES BANCARIAS",
+   "tax_region": "XIII REGION METROPOLITANA",
+   "tax_activity_start": "1979-03-16",
+   "tax_termination": null,
+   "tax_sales_band_rank": 13,
+   "tax_sales_band_uf": "Más de 1.000.000 UF",
+   "tax_size": "Grande",
+   "tax_workers": 1793,
+   "tax_economic_sector": "ACTIVIDADES FINANCIERAS Y DE SEGUROS"
   },
   {
    "rut": null,
@@ -385,7 +395,17 @@
    "finding_count": 0,
    "is_sanctioned": false,
    "sanction_count": 0,
-   "is_uaf_observed": false
+   "is_uaf_observed": false,
+   "tax_status": null,
+   "tax_activity": null,
+   "tax_region": null,
+   "tax_activity_start": null,
+   "tax_termination": null,
+   "tax_sales_band_rank": null,
+   "tax_sales_band_uf": null,
+   "tax_size": null,
+   "tax_workers": null,
+   "tax_economic_sector": null
   },
   {
    "rut": "97947000-2",
@@ -416,7 +436,17 @@
    "finding_count": 6,
    "is_sanctioned": true,
    "sanction_count": 1,
-   "is_uaf_observed": true
+   "is_uaf_observed": true,
+   "tax_status": null,
+   "tax_activity": null,
+   "tax_region": null,
+   "tax_activity_start": null,
+   "tax_termination": null,
+   "tax_sales_band_rank": null,
+   "tax_sales_band_uf": null,
+   "tax_size": null,
+   "tax_workers": null,
+   "tax_economic_sector": null
   },
   {
    "rut": "97004000-5",
@@ -445,7 +475,17 @@
    "finding_count": 4,
    "is_sanctioned": false,
    "sanction_count": 1,
-   "is_uaf_observed": true
+   "is_uaf_observed": true,
+   "tax_status": null,
+   "tax_activity": null,
+   "tax_region": null,
+   "tax_activity_start": null,
+   "tax_termination": null,
+   "tax_sales_band_rank": null,
+   "tax_sales_band_uf": null,
+   "tax_size": null,
+   "tax_workers": null,
+   "tax_economic_sector": null
   }
  ],
  "sources": [

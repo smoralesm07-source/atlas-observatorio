@@ -297,6 +297,18 @@ select.chip { appearance: none; padding-right: 26px;
 .tl-when { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
 .tl-what { font-size: 13px; font-weight: 550; margin-top: 2px; }
 
+/* Un hito estructural del ciclo de vida no es lo mismo que un hecho puntual:
+   el primero enmarca, el segundo ocurre dentro del marco. El punto de la línea
+   lo distingue sin necesidad de una leyenda. */
+.tl-item[data-clase='hito']::before {
+  width: 9px; height: 9px; left: -19px; top: 4px;
+  background: var(--bg-panel); border: 2px solid var(--accent);
+}
+.tl-item[data-clase='hito'] .tl-what { font-weight: 650; }
+.tl-item[data-clase='sancion']::before { background: var(--sig-critical); }
+.tl-item[data-clase='prensa']::before { background: var(--ink-3); }
+.tl-item[data-clase='evento']::before { background: var(--line-strong); }
+
 /* ───────────────────────────────────────────────── tables */
 
 .table { width: 100%; border-collapse: collapse; font-size: 12.5px; }

@@ -62,11 +62,19 @@ const ACRONYMS = new Set([
 ]);
 const PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'en', 'el', 'a', 'al', 'con', 'por']);
 
+/* Las regiones del SII llegan como "XIII REGION METROPOLITANA". Capitalizar sin
+   mirar convierte el numeral romano en "Xiii", que se lee como una errata. */
+const ROMAN = /^(?:X{0,3})(?:IX|IV|V?I{0,3})$/;
+
 export function titleCase(s: string | null | undefined): string {
   if (!s) return '';
   let first = true;
   return s.replace(/[\p{L}\p{N}.]+/gu, (word) => {
     const bare = word.replace(/\./g, '').toUpperCase();
+    if (bare.length > 0 && ROMAN.test(bare)) {
+      first = false;
+      return bare;
+    }
     if (ACRONYMS.has(bare)) {
       first = false;
       return word.toUpperCase();
