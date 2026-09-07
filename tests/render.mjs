@@ -39,7 +39,16 @@ const detail = {
     { finding_key: 'F1', finding_id: 'F1', finding_type: 'ENTITY_CONVERGENCE', title: 'Convergencia de cuatro fuentes sobre la misma entidad', region: 'Metropolitana de Santiago', commune: 'Las Condes', score_explore: 55.1, score_supervise: 61.4, score_investigate: 58.2, source_count: 4, evidence_count: 2, payload: {} },
   ],
   alerts: [F.alerts[1]],
-  sanctions: [{ sanction_id: 'SANC-1', event_date: '2026-02-09', regulator: 'CMF', subject: 'Incumplimiento de deberes de información', identity_status: 'RUT_EXACT', laft_direct: false, amount_uf: 165, payload: {} }],
+  // Dos sanciones para cubrir los dos caminos del enlace: un documento que
+  // apunta al acto y otro que el productor marca como parcial.
+  sanctions: [
+    { sanction_id: 'SANC-1', event_date: '2026-02-09', regulator: 'CMF', subject: 'Incumplimiento de deberes de información', identity_status: 'RUT_EXACT', laft_direct: false, amount_uf: 165, payload: {},
+      document_url: 'https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php?s567=5e69cbb724a4124c95', document_quality: 'VALID',
+      document_excerpt: 'La resolución CMF N°5624 individualiza a BANCO BICE.', resolution_ref: '5624' },
+    { sanction_id: 'SANC-2', event_date: '2023-07-10', regulator: 'CMF', subject: 'Deberes de información al mercado', identity_status: 'RESOLVED_CONSERVATIVE', laft_direct: false, amount_uf: 40, payload: {},
+      document_url: 'https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php?s567=9dc7541fb85176b049', document_quality: 'PARTIAL',
+      document_excerpt: null, resolution_ref: '4082' },
+  ],
   marks: [
     { mark_id: 'MK-SII-ADDR', mark_name: 'Amplitud del historial de domicilios', semantic_class: 'CONTEXT_MARK', primary_dimension: 'registral', score_group: 'REGISTRY', included_in_score: false, raw_intensity: 32.5, contribution: 0, confidence: 0.72, readiness: 'READY', evidence: {} },
   ],
@@ -84,6 +93,7 @@ const detail = {
     uaf_observed_at: '2026-08-25T22:51:15.680612+00:00',
     res_coverage_note: 'El Registro de Empresas y Sociedades sólo cubre sociedades acogidas al régimen simplificado. Su ausencia no significa que la entidad no exista.',
     sales_band_note: 'El tramo de ventas es el ordinal que publica el SII, expresado en UF anuales. El tramo más bajo significa ausencia de información, no ventas cero.',
+    sanction_document_note: 'El enlace lleva al documento tal como lo publica el regulador. Cuando la calidad es parcial, el documento puede cubrir más de un acto sancionatorio.',
   },
   uaf: { uaf_sector_canonical: 'Bancos', subject_nature: 'LEGAL_ENTITY', sii_status: 'ACTIVO', sii_main_activity: 'Bancos', sii_sales_band: 'Grande 4', sii_workers: 2400, entity_age_years: 46, sanction_event_count: 1, sanction_event_count_5y: 1, sanction_last_event_date: '2026-02-09', ipf_score: 58.2, ipf_band: 'ALTA', ipf_percentile: 91.3, ipf_sector_percentile: 62.5, semantics: 'El IPF ordena esfuerzo de fiscalizacion; no es probabilidad de LA/FT.' },
   osfl: null,
@@ -343,7 +353,12 @@ const checks = [
     'Constitución de la sociedad', 'Inicio de actividades',
     'Registro de Empresas y Sociedades', 'Servicio de Impuestos Internos',
     'Perfil tributario', 'Actividades Bancarias', 'Más de 1.000.000 UF', '1.793',
-    'no publica fecha de inscripción']],
+    'no publica fecha de inscripción',
+    'Documento', 'N° 5624', 'N° 4082', 'parcial',
+    // El estado de identidad de la radiografía llega en inglés desde el
+    // productor; la ficha lo dice en español y sin sonar a certeza.
+    'RUT, criterio conservador',
+    'puede cubrir más de un acto sancionatorio']],
   // Fuentes: una al dia, una de alcance parcial que dice por que su cobertura
   // es baja, una en silencio y una bajo demanda.
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio',
@@ -421,6 +436,20 @@ for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y pad
     .filter((t) => !body.includes(t));
   if (faltan.length) { failed++; console.log(`FAIL ficha screening: falta ${JSON.stringify(faltan)}`); }
   else console.log('ok   la ficha ofrece screening con RUT y tipo');
+}
+{
+  // Un enlace que se ve pero no lleva a ninguna parte sería peor que no
+  // ofrecerlo: la prueba comprueba el href, no el rótulo.
+  await page.getByRole('button', { name: 'Panorama', exact: true }).click();
+  await page.waitForTimeout(280);
+  const doc = page.getByRole('link', { name: /N° 5624/ });
+  const href = await doc.getAttribute('href');
+  const nueva = await doc.getAttribute('target');
+  if (!href || !href.startsWith('https://www.cmfchile.cl/')) {
+    failed++; console.log(`FAIL documento: el enlace no apunta al regulador (${href})`);
+  } else if (nueva !== '_blank') {
+    failed++; console.log('FAIL documento: el enlace se abre encima de la ficha');
+  } else console.log('ok   la sanción enlaza al documento del regulador');
 }
 console.log('ok   pestañas de la ficha');
 
