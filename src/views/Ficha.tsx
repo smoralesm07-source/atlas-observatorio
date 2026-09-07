@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
 import type { CoverageRow, EntityDetail } from '../lib/contracts';
 import { AlertCard } from '../components/AlertCard';
 import { Meter } from '../components/charts';
+import { WatchlistResults } from '../components/Watchlists';
+import { IdentidadDigital } from '../components/IdentidadDigital';
+import { looksLikePersonName, screenWatchlists, type WatchlistResult } from '../lib/connectors';
 import {
   Badge, Empty, ErrorBox, Loading, Panel, Semantics, SourceStatusBadge,
 } from '../components/primitives';
@@ -12,7 +15,7 @@ import {
   rutFormat, sourceClassLabel, sourceClassVar, titleCase,
 } from '../lib/format';
 
-type Tab = 'panorama' | 'fuentes' | 'senales' | 'marcas' | 'economia';
+type Tab = 'panorama' | 'fuentes' | 'senales' | 'marcas' | 'economia' | 'screening' | 'digital';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'panorama', label: 'Panorama' },
@@ -20,6 +23,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'senales', label: 'Señales y hallazgos' },
   { id: 'marcas', label: 'Marcas' },
   { id: 'economia', label: 'Economía y padrón' },
+  { id: 'screening', label: 'Screening internacional' },
+  { id: 'digital', label: 'Identidad digital' },
 ];
 
 export function Ficha({
@@ -125,6 +130,8 @@ export function Ficha({
       {tab === 'senales' && <SenalesTab data={data} onNavigate={onNavigate} />}
       {tab === 'marcas' && <Marcas data={data} />}
       {tab === 'economia' && <Economia data={data} />}
+      {tab === 'screening' && <Screening entity={e} />}
+      {tab === 'digital' && <Digital entity={e} />}
 
       <div style={{ marginTop: 24 }}>
         <Semantics>
@@ -608,6 +615,95 @@ function Economia({ data }: { data: EntityDetail }) {
         )}
       </div>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────── screening internacional */
+
+/** Desde la ficha el screening es mejor que desde el buscador: aquí hay RUT y
+ *  tipo de entidad, así que OpenSanctions puede cruzar por número tributario y
+ *  no sólo por nombre. */
+function Screening({ entity }: { entity: EntityDetail['entity'] }) {
+  const [state, setState] = useState<
+    { status: 'idle' } | { status: 'loading' } | { status: 'done'; result: WatchlistResult } | { status: 'error'; error: string }
+  >({ status: 'idle' });
+
+  const run = useCallback(async () => {
+    setState({ status: 'loading' });
+    try {
+      const result = await screenWatchlists({
+        name: entity.name,
+        rut: entity.rut,
+        entityType: entity.entity_type,
+      });
+      setState({ status: 'done', result });
+    } catch (e) {
+      setState({ status: 'error', error: (e as Error).message });
+    }
+  }, [entity.name, entity.rut, entity.entity_type]);
+
+  if (state.status === 'loading') {
+    return <Loading label="Consultando sanciones, debarment y bases offshore…" />;
+  }
+  if (state.status === 'error') {
+    return <ErrorBox error={state.error} onRetry={() => void run()} />;
+  }
+  if (state.status === 'done') {
+    return <WatchlistResults result={state.result} query={entity.name} />;
+  }
+
+  return (
+    <Panel title="Screening internacional bajo demanda">
+      <p style={{ marginTop: 0, color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.65 }}>
+        Las listas internacionales no se ingestan por lote: se consultan por entidad, en el
+        momento. Hasta que alguien pregunte, el Observatorio no afirma ni presencia ni
+        ausencia en OFAC, ONU, Unión Europea, Reino Unido, Banco Mundial, BID, OpenSanctions
+        ni ICIJ Offshore Leaks.
+      </p>
+      <dl className="kv" style={{ marginTop: 14 }}>
+        <dt>Se consultará por</dt>
+        <dd>
+          {titleCase(entity.name)}
+          {entity.rut ? ` · ${rutFormat(entity.rut)}` : ' · sin RUT'}
+          {entity.entity_type ? ` · ${entity.entity_type}` : ''}
+        </dd>
+      </dl>
+      <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => void run()}>
+        Consultar listas internacionales
+      </button>
+    </Panel>
+  );
+}
+
+/* ──────────────────────────────────────────────── identidad digital */
+
+function Digital({ entity }: { entity: EntityDetail['entity'] }) {
+  const [started, setStarted] = useState(false);
+  const person = looksLikePersonName(entity.name);
+
+  if (started) return <IdentidadDigital query={entity.name} />;
+
+  return (
+    <Panel title="Identidad digital bajo demanda">
+      <p style={{ marginTop: 0, color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.65 }}>
+        Atlas genera variantes de username a partir del nombre y busca evidencia pública en
+        plataformas. Es útil sobre personas naturales; sobre una razón social los aliases
+        derivados suelen ser ruido.
+      </p>
+      {!person && (
+        <div className="note" style={{ marginTop: 12 }}>
+          «{titleCase(entity.name)}» no tiene forma de nombre de persona. Puedes ejecutarlo
+          igualmente, pero interpreta el resultado con cuidado.
+        </div>
+      )}
+      <button
+        className="btn btn-primary"
+        style={{ maxWidth: 280 }}
+        onClick={() => setStarted(true)}
+      >
+        Resolver identidad digital
+      </button>
+    </Panel>
   );
 }
 

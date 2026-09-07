@@ -53,7 +53,40 @@ export function Metodologia() {
         </Panel>
       </div>
 
-      <div className="grid grid-2" style={{ marginBottom: 16 }}>
+      <Panel title="Cómo busca el Observatorio una entidad">
+        <p style={{ marginTop: 0, color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.65 }}>
+          La búsqueda no es una consulta, son tres capas con autoridad distinta. El
+          Observatorio recorre la primera siempre y sigue solo hacia la segunda cuando la
+          primera no sabe nada. La tercera se consulta cuando la pides.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
+          <Capa
+            n="1"
+            titulo="Universo observado"
+            que="Las 50 mil entidades que las fuentes gobernadas reportan: padrón UAF, actividad SII, universo OSFL, eventos sancionatorios y menciones de prensa."
+            vale="Es la única capa con identidad trabajada. Un resultado aquí tiene RUT, territorio, historia y prioridad analítica —salvo los que llevan el marcador «identidad sin resolver»."
+          />
+          <Capa
+            n="2"
+            titulo="Listas internacionales y bases offshore"
+            que="OFAC, ONU, Unión Europea, Reino Unido, Banco Mundial, BID, OpenSanctions e ICIJ Offshore Leaks, consultadas en vivo."
+            vale="Devuelve candidatos por nombre, no coincidencias acreditadas. Nada se persiste ni promueve identidad. Los homónimos y las transliteraciones son frecuentes: la atribución la decide el analista contra la fuente original."
+          />
+          <Capa
+            n="3"
+            titulo="Identidad digital"
+            que="El nombre se resuelve en variantes de username explicables, se barren plataformas con varios motores y se profundizan los mejores candidatos."
+            vale="Mide convergencia técnica, no identidad. Un alias con señal es una hipótesis para corroborar contra contenido, bio, ubicación y enlaces cruzados."
+          />
+        </div>
+        <div className="note" style={{ marginTop: 16 }}>
+          Las capas nunca se mezclan en una misma lista. Un candidato de OFAC y una entidad
+          del padrón UAF no son objetos comparables, y presentarlos juntos invitaría a
+          tratarlos igual.
+        </div>
+      </Panel>
+
+      <div className="grid grid-2" style={{ margin: '16px 0' }}>
         <Panel title="Estados de fuente · qué afirma cada uno">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
             <StatusRow tone="present" label="Con registro">
@@ -141,6 +174,28 @@ export function Metodologia() {
           pública; padrón UAF no es universo económico; mención en prensa no es hecho
           acreditado.
         </Semantics>
+      </div>
+    </div>
+  );
+}
+
+function Capa({ n, titulo, que, vale }: { n: string; titulo: string; que: string; vale: string }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '30px minmax(0,1fr)', gap: 14, alignItems: 'start' }}>
+      <div
+        className="num"
+        style={{
+          width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center',
+          background: 'var(--accent-glow)', color: 'var(--accent)', fontWeight: 700,
+          border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
+        }}
+      >
+        {n}
+      </div>
+      <div>
+        <div style={{ fontWeight: 650, fontSize: 13.5, letterSpacing: '-0.012em' }}>{titulo}</div>
+        <p style={{ margin: '5px 0 0', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.6 }}>{que}</p>
+        <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>{vale}</p>
       </div>
     </div>
   );

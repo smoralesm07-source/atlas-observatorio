@@ -99,6 +99,36 @@ introduce un mecanismo nuevo, no necesita secretos y no expone una operación de
 escritura por la API pública. CI queda como vigilante: comprueba frescura, el
 estado del último intento y que la agenda siga activa.
 
+## La cascada de búsqueda
+
+ATLAS resolvía una entidad recorriendo `canónico → prensa sin reconciliar →
+OSINT externo`. El Observatorio conserva esa capacidad y la simplifica, porque
+las observaciones de prensa ya viven en `aml_entities` y por tanto en
+`obs_entity`: ahí se distinguen con el marcador *identidad sin resolver* en vez
+de necesitar una etapa aparte.
+
+Quedan tres capas, con autoridad explícitamente distinta:
+
+1. **Universo observado** — `obs_search_entities`. Automática.
+2. **Listas internacionales** — `aml-entity-global-watchlists-live`. Se dispara
+   sola cuando la capa 1 devuelve cero, o a petición.
+3. **Identidad digital** — `aml-digital-identity-resolver-live` y
+   `aml-digital-identity-deep`. Siempre a petición.
+
+Las funciones de borde ya existían y las usa ATLAS: el Observatorio las consume
+tal cual, sin reimplementarlas. Son la misma autoridad y los mismos guardrails.
+
+La regla que ordena la presentación es que **las capas no se mezclan**. Un
+candidato por nombre en OFAC y una entidad del padrón UAF no son objetos
+comparables; ponerlos en una misma lista invitaría a tratarlos igual. Cada capa
+declara qué fuentes respondieron, cuáles no y por qué —«no respondió», «sin
+credencial», «cuota agotada»— para que el silencio de una fuente nunca se lea
+como ausencia de riesgo.
+
+Desde la ficha el screening es mejor que desde el buscador: ahí hay RUT y tipo
+de entidad, así que OpenSanctions puede cruzar por número tributario y no sólo
+por nombre.
+
 ## Verificación
 
 - **Contratos y autorización**: en la base, simulando el rol `authenticated` con
@@ -109,6 +139,9 @@ estado del último intento y que la agenda siga activa.
   y los tres estados de acceso. Incluye una guarda de regresión contra el
   defecto de autenticación: si vuelve a aparecer un campo de contraseña en la
   pantalla de ingreso, la prueba falla.
+- **Cascada**: la prueba fuerza una consulta que el universo no conoce y
+  verifica que el salto a listas internacionales ocurre solo, con su encuadre y
+  con el estado real de cada fuente.
 - **Agenda**: verificada programando el mismo comando cada minuto y leyendo
   `cron.job_run_details`: cinco corridas consecutivas exitosas, de 18 a 19 s.
 

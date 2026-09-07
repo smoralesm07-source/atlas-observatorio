@@ -9,8 +9,9 @@ lee los mismos datos gobernados a través de contratos propios.
 - Un **monitor global** del estado de las fuentes abiertas gobernadas.
 - Una **superficie de anticipación**: los patrones que se activan sobre el
   conjunto, ordenados por prioridad e intensidad.
-- Un **buscador de entidades** por nombre o RUT que responde, de inmediato, qué
-  información tiene el observatorio sobre esa entidad y desde qué fuente.
+- Un **buscador de entidades en cascada**: busca en el universo observado y, si
+  ahí no hay nada, sigue solo hacia sanciones internacionales, debarment y bases
+  offshore. La identidad digital se resuelve bajo demanda.
 - Una **ficha de observación** que distingue tres estados por fuente: con
   registro, sin registro y no consultada.
 
@@ -35,14 +36,18 @@ Reglas que sostienen el diseño:
 2. **Una pantalla consume un contrato, no una tabla.** Los cinco contratos son
    `obs_pulse`, `obs_search_entities`, `obs_entity_detail`, `obs_alert_feed` y
    `obs_source_status`.
-3. **La autorización no se degrada.** La identidad la acredita Microsoft Entra,
+3. **Las capas no se mezclan.** Universo observado, listas internacionales e
+   identidad digital tienen autoridad distinta y se presentan por separado. Lo
+   externo es siempre candidato: no se persiste, no crea identidad canónica y no
+   modifica la prioridad analítica de ninguna entidad.
+4. **La autorización no se degrada.** La identidad la acredita Microsoft Entra,
    igual que ATLAS. Todos los contratos son `SECURITY INVOKER` y las tablas
    `obs_*` tienen RLS contra la misma lista `aml_allowed_users`. Un usuario
    autenticado fuera de la lista lee cero filas y ve una pantalla que se lo dice;
    `anon` no tiene privilegio de ejecución sobre ningún contrato.
-4. **La ausencia de una fuente es ausencia, nunca un cero.** Una fuente no
+5. **La ausencia de una fuente es ausencia, nunca un cero.** Una fuente no
    consultada jamás se presenta como una fuente que no encontró nada.
-5. **Universos distintos permanecen explícitos.** Ejecución presupuestaria no es
+6. **Universos distintos permanecen explícitos.** Ejecución presupuestaria no es
    compra pública; padrón UAF no es universo económico.
 
 ### Aditivo sobre el proyecto existente
