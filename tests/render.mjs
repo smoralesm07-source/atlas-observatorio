@@ -57,6 +57,9 @@ const RPC = {
   obs_territory_detail: F.territoryDetail,
   obs_sector_overview: F.sectorOverview,
   obs_sector_detail: F.sectorDetail,
+  obs_spend_overview: F.spendOverview,
+  obs_spend_finding_feed: F.spendFeed,
+  obs_spend_actor_detail: F.spendActor,
 };
 
 const SESSION = {
@@ -89,6 +92,27 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
     let body = {};
     try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
     if (String(body.p_q || '').toLowerCase().includes('fodich')) payload = [];
+  }
+  // El listado de hallazgos filtra en el servidor: si el doble no respeta el
+  // filtro, la prueba del filtro no probaría nada.
+  if (fn === 'obs_spend_finding_feed') {
+    let body = {};
+    try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
+    if (body.p_family || body.p_severity) {
+      if (body.p_family) payload = payload.filter((r) => r.family === body.p_family);
+      if (body.p_severity) payload = payload.filter((r) => r.severity_band === body.p_severity);
+      // total_count viaja en cada fila: si no se recalcula, el paginador
+      // anunciaría 6.058 resultados sobre un filtro que devuelve uno.
+      payload = payload.map((r) => ({ ...r, total_count: payload.length }));
+    }
+    // Sin filtro se conserva el total real del corte, para que el paginador se
+    // dibuje de verdad en la prueba.
+  }
+  // La ficha del actor solo conoce al comprador capturado en la fixture.
+  if (fn === 'obs_spend_actor_detail') {
+    let body = {};
+    try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
+    payload = body.p_actor_id === F.spendActor.actor.actor_id ? F.spendActor : null;
   }
 
   await route.fulfill({
@@ -235,6 +259,23 @@ const checks = [
   ['sectores', '#/sectores', ['Sectores obligados', 'Casas de Cambio', 'Notarios',
     'Vulnerabilidad', 'IPF medio', 'no contiene entidades más culpables',
     'sus insumos aún no están materializados']],
+  // Gasto público: los dos universos separados, los topes declarados y las
+  // hipótesis que hoy no tienen fuente.
+  ['gasto', '#/gasto', ['Gasto público y compras', 'Compras públicas',
+    'Ejecución presupuestaria', 'no se suman', 'PS-2026-07-V1', '494.867',
+    'Requiere fuente', 'CHILECOMPRA_OC_EVENTOS', 'Presupuesto Abierto',
+    'audiencias de lobby', 'no el libro mayor completo',
+    '6.058 en el filtro actual', '89 de 3.000']],
+  ['gasto-actor', '#/gasto/comprador/61605000-1',
+    ['Instituto de Salud Publica de Chile', '61.605.000-1', 'Contrapartes',
+     'de 392 en el universo', 'no es dependencia sobre sus ventas totales',
+     'Percentil de materialidad', 'a quién mirar primero',
+     // El HHI es pequeño: con un decimal se imprimiría «0» y parecería faltante.
+     'HHI 0,042',
+     // Las marcas del par llegan sin tildes desde el productor.
+     'Concentración', 'Aceleración',
+     // La trayectoria no existe para compradores: se dice, no se deja en guiones.
+     'sólo para proveedores']],
   ['metodologia', '#/metodologia', ['Metodología', 'Marcas', 'No es']],
 ];
 
@@ -321,6 +362,43 @@ await page.waitForTimeout(600);
     .filter((t) => !body.includes(t));
   if (faltan.length) { failed++; console.log(`FAIL detalle sectorial: falta ${JSON.stringify(faltan)}`); }
   else console.log('ok   el detalle sectorial abre giros, bandas y territorio');
+}
+
+// ── Gasto público: el filtro por familia viaja en la URL y el listado enlaza
+// al actor por RUT, que es el único identificador que la fuente publica.
+
+await page.goto(`${BASE}/#/gasto`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+await page.locator('table').getByText('Convergencia', { exact: true }).first().click();
+await page.waitForTimeout(700);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/gasto-familia.png`, fullPage: true });
+  const faltan = ['Convergencia de señales independientes', '1 en el filtro actual']
+    .filter((t) => !body.includes(t));
+  const sobra = body.includes('Concentración inusual de gasto en proveedores');
+  if (faltan.length || sobra) {
+    failed++;
+    console.log(`FAIL filtro de familia: falta ${JSON.stringify(faltan)}${sobra ? ' y no filtró' : ''}`);
+  } else console.log('ok   el filtro por familia acota el listado y viaja en la URL');
+  if (!page.url().includes('familia=CONVERGENCIA')) {
+    failed++; console.log('FAIL filtro de familia: no quedó en la URL');
+  }
+}
+
+// Un proveedor sin razón social debe seguir siendo navegable por su RUT, y un
+// actor fuera del corte debe decirlo en vez de mostrar una ficha vacía.
+await page.goto(`${BASE}/#/gasto/proveedor/77536802-0`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/gasto-fuera-de-corte.png`, fullPage: true });
+  const faltan = ['77.536.802-0', 'no está en el corte publicado',
+                  'no significa que no tenga compras públicas']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL actor fuera de corte: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   un actor fuera del corte lo declara, no finge vacío');
 }
 
 // ── Cascada de búsqueda. Es la capacidad que distingue a Entidades: cuando el

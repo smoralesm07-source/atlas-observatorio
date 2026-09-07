@@ -12,6 +12,9 @@ lee los mismos datos gobernados a través de contratos propios.
 - Una lectura de **territorio** (IGR v2A, amenaza territorial CEAD-LA) y de
   **sectores obligados** (padrón UAF, vulnerabilidad estructural, IPF), cada una
   con su metodología a la vista y sus exclusiones declaradas.
+- Una lectura de **gasto público y compras**: patrones de concentración,
+  trayectoria, precios y convergencia sobre la relación comprador–proveedor en
+  ChileCompra, junto a —y nunca sumada con— la ejecución presupuestaria.
 - Un **buscador de entidades en cascada**: busca en el universo observado y, si
   ahí no hay nada, sigue solo hacia sanciones internacionales, debarment y bases
   offshore. La identidad digital se resuelve bajo demanda.
@@ -27,8 +30,10 @@ lee los mismos datos gobernados a través de contratos propios.
 ## Arquitectura
 
 ```
-FUENTES GOBERNADAS  →  obs_refresh_all()  →  read models obs_*  →  contratos RPC  →  app
-   (tablas Fusion)      (pg_cron, cada 6 h)   (corte versionado)   (SECURITY INVOKER)
+FUENTES GOBERNADAS  →  obs_refresh_full()  →  read models obs_*  →  contratos RPC  →  app
+   (tablas Fusion)      (pg_cron, cada 6 h)    (corte versionado)   (SECURITY INVOKER)
+        ↑
+  pipeline de compras del proyecto core, vía puente servidor a servidor
 ```
 
 Reglas que sostienen el diseño:
@@ -36,9 +41,11 @@ Reglas que sostienen el diseño:
 1. **Calcular, publicar, mostrar.** Ninguna pantalla reconstruye universos en el
    navegador. El trabajo pesado ocurre en `obs_refresh_all()` y se publica como
    un corte con identidad (`snapshot_id`, `row_counts`, `published_at`).
-2. **Una pantalla consume un contrato, no una tabla.** Los cinco contratos son
-   `obs_pulse`, `obs_search_entities`, `obs_entity_detail`, `obs_alert_feed` y
-   `obs_source_status`.
+2. **Una pantalla consume un contrato, no una tabla.** Los contratos son
+   `obs_pulse`, `obs_search_entities`, `obs_entity_detail`, `obs_alert_feed`,
+   `obs_source_status`, `obs_territory_map`, `obs_territory_detail`,
+   `obs_sector_overview`, `obs_sector_detail`, `obs_spend_overview`,
+   `obs_spend_finding_feed` y `obs_spend_actor_detail`.
 3. **Las capas no se mezclan.** Universo observado, listas internacionales e
    identidad digital tienen autoridad distinta y se presentan por separado. Lo
    externo es siempre candidato: no se persiste, no crea identidad canónica y no
@@ -51,7 +58,8 @@ Reglas que sostienen el diseño:
 5. **La ausencia de una fuente es ausencia, nunca un cero.** Una fuente no
    consultada jamás se presenta como una fuente que no encontró nada.
 6. **Universos distintos permanecen explícitos.** Ejecución presupuestaria no es
-   compra pública; padrón UAF no es universo económico.
+   compra pública; padrón UAF no es universo económico. La pantalla de gasto
+   público los separa en dos bloques y nunca los agrega en una sola cifra.
 
 ### Aditivo sobre el proyecto existente
 
@@ -59,6 +67,11 @@ Los read models viven en el mismo proyecto Supabase que las tablas gobernadas,
 porque ahí está el universo de entidades y así la materialización es SQL puro,
 sin ETL entre proyectos ni credenciales cruzadas. Las migraciones sólo **crean**
 objetos con prefijo `obs_`: no alteran, renombran ni eliminan nada de ATLAS.
+
+La única excepción son las métricas de compras públicas, que las calcula el
+pipeline de perfilado en el proyecto core de ATLAS. Lo que el Observatorio
+agrega allí está en `supabase/core-project/`: una función de sólo lectura y un
+índice. Nada más, y nada existente se modifica.
 
 ## Puesta en marcha
 
@@ -107,8 +120,11 @@ se ejecuta desde CI: la materialización tarda unos 25 s y PostgREST corta a los
 
 ```sql
 set statement_timeout to '600s';
-select public.obs_refresh_all();
+select public.obs_refresh_full();
 ```
+
+`obs_refresh_full()` materializa el universo, el territorio, los sectores y el
+corte de compras bajo un mismo `snapshot_id`.
 
 `.github/workflows/vigilancia.yml` no refresca: vigila. Cada seis horas
 comprueba que el corte vigente no haya envejecido, que el último intento no haya
@@ -119,3 +135,15 @@ detiene en silencio es peor que uno que falla ruidosamente.
 
 `supabase/migrations/` contiene, en orden, las migraciones que crean el
 observatorio. Son idempotentes en su mayoría y todas aditivas.
+
+`supabase/core-project/` **no se aplica aquí**: contiene lo que el puente de
+compras necesita en el proyecto core de ATLAS, versionado para que el mecanismo
+quede completo en un solo repositorio.
+
+### Secretos del puente
+
+El puente hacia el pipeline de compras usa tres secretos en Vault del proyecto
+del Observatorio —`obs_bridge_url`, `obs_bridge_apikey` y `obs_bridge_token`— y
+el mismo `obs_bridge_token` en Vault del proyecto core. Ninguno llega al
+navegador: `obs_bridge_fetch()` es `SECURITY DEFINER` y sólo `service_role`
+puede ejecutarla.
