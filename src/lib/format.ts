@@ -175,6 +175,12 @@ const IDENTITY_LABEL: Record<string, string> = {
   NAME_MATCH: 'Coincidencia por nombre',
   NAME_CANDIDATE: 'Candidata por nombre',
   UNRESOLVED: 'Sin resolver',
+  // La radiografía de sanciones entrega su propio vocabulario, en inglés.
+  // Un vínculo conservador puede venir emitido bajo otra razón social del
+  // mismo RUT, así que el rótulo lo dice en vez de sonar a certeza.
+  RESOLVED_SOURCE: 'RUT en la fuente',
+  RESOLVED_CONSERVATIVE: 'RUT, criterio conservador',
+  RESOLVED_EXACT_NAME: 'Nombre exacto',
 };
 export const identityLabel = (s: string | null | undefined) =>
   !s ? '—' : IDENTITY_LABEL[s.toUpperCase()] ?? titleCase(s.replace(/_/g, ' '));
