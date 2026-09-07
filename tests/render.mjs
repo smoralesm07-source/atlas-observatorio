@@ -98,7 +98,8 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
   if (fn === 'obs_search_entities') {
     let body = {};
     try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
-    if (String(body.p_q || '').toLowerCase().includes('fodich')) payload = [];
+    const q = String(body.p_q || '').toLowerCase();
+    if (q.includes('fodich') || q.includes('zarahemla')) payload = [];
   }
   // El listado de hallazgos filtra en el servidor: si el doble no respeta el
   // filtro, la prueba del filtro no probaría nada.
@@ -214,6 +215,12 @@ const DEEP = {
     },
   },
 };
+
+// Radar Prensa se publica como JSON en un repo externo. Sin este doble la
+// prueba saldria a la red y su resultado cambiaria con el indice del dia.
+await ctx.route('**/raw.githubusercontent.com/**/atlas_prensa.json', (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json',
+                  body: JSON.stringify(F.pressBridge) }));
 
 await ctx.route('**/functions/v1/aml-entity-global-watchlists-live', (route) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(WATCHLIST) }));
@@ -544,10 +551,27 @@ await page.waitForTimeout(900);
   else console.log('ok   las tres capas se ofrecen sobre una consulta conocida');
 }
 
-// 2. Consulta desconocida: debe saltar sola a listas internacionales y mostrar
-//    el candidato exacto de OFAC junto a su encuadre.
+// 2. Una mención en prensa detiene el salto automático: el Observatorio ya
+//    tiene algo que mostrar, así que no gasta una consulta externa sin que
+//    nadie se lo pida. La capa sigue ofrecida, pero no se dispara sola.
 await page.fill('#obs-search', 'Vinko Fodich');
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1800);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/cascada-prensa.png`, fullPage: true });
+  const faltan = ['Radar Prensa', 'Investigación por presunto fraude en zona franca']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) {
+    failed++; console.log(`FAIL prensa: falta ${JSON.stringify(faltan)}`);
+  } else if (body.includes('Coincidencia exacta de nombre')) {
+    failed++; console.log('FAIL prensa: la cascada externa se disparó pese a haber coincidencia en prensa');
+  } else console.log('ok   una coincidencia en prensa detiene el salto automático');
+}
+
+// 3. Consulta que nadie registra, ni el universo ni la prensa: ahí sí debe
+//    saltar sola a listas internacionales y mostrar el candidato con encuadre.
+await page.fill('#obs-search', 'Zarahemla Quispe');
+await page.waitForTimeout(2200);
 {
   const body = await page.textContent('body');
   await page.screenshot({ path: `${OUT}/cascada-internacional.png`, fullPage: true });

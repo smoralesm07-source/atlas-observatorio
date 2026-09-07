@@ -1835,5 +1835,77 @@
    }
   ],
   "semantics": "El antecedente se muestra tal como lo publica su fuente. Un registro de prensa no es una sanción, y una sanción no es una imputación de lavado de activos."
+ },
+ "pressBridge": {
+  "generated_at": "2026-09-06T00:00:00Z",
+  "entities": [
+   {
+    "press_entity_id": "PRESS-ENT-0001",
+    "name": "Vinko Fodich",
+    "normalized_name": "vinko fodich",
+    "entity_type": "PERSONA",
+    "nature": "PERSONA_NATURAL",
+    "ruts": [],
+    "aliases": [
+     "V. Fodich"
+    ],
+    "first_seen": "2025-11-02",
+    "last_seen": "2026-08-14",
+    "article_count": 2,
+    "mention_count": 3,
+    "media": [
+     "La Tercera"
+    ],
+    "roles": [
+     "mencionado"
+    ],
+    "confidence": 0.68,
+    "requires_validation": true,
+    "resolution_status": "SOURCE_NATIVE",
+    "source": "RADAR_PRENSA"
+   }
+  ],
+  "mentions": [
+   {
+    "mention_id": "PM-1",
+    "press_entity_id": "PRESS-ENT-0001",
+    "article_id": "ART-1",
+    "role": "mencionado",
+    "mentions": 2,
+    "confidence": 0.68,
+    "requires_validation": true
+   },
+   {
+    "mention_id": "PM-2",
+    "press_entity_id": "PRESS-ENT-0001",
+    "article_id": "ART-2",
+    "role": "mencionado",
+    "mentions": 1,
+    "confidence": 0.61,
+    "requires_validation": true
+   }
+  ],
+  "articles": [
+   {
+    "id": "ART-1",
+    "date": "2026-08-14",
+    "title": "Investigación por presunto fraude en zona franca",
+    "media": "La Tercera",
+    "url": "https://ejemplo.cl/nota-1",
+    "summary": "La fiscalía indaga operaciones de comercio exterior.",
+    "region": "Tarapacá",
+    "commune": "Iquique"
+   },
+   {
+    "id": "ART-2",
+    "date": "2025-11-02",
+    "title": "Cambios en la propiedad de una corredora",
+    "media": "Diario Financiero",
+    "url": "https://ejemplo.cl/nota-2",
+    "summary": "La operación quedó inscrita este mes.",
+    "region": null,
+    "commune": null
+   }
+  ]
  }
 }
