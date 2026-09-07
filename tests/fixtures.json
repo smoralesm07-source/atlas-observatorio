@@ -513,5 +513,539 @@
    "last_source_record_at": null,
    "last_successful_ingest_at": null
   }
- ]
+ ],
+ "territoryDetail": {
+  "contract": "ATLAS_OBS_TERRITORY_DETAIL_V1",
+  "territorio": {
+   "territory_id": "CL-13401",
+   "region_code": "13",
+   "region_name": "Metropolitana de Santiago",
+   "commune_code": "13401",
+   "commune_name": "San Bernardo",
+   "commune_search": "san bernardo",
+   "year": 2025,
+   "period": "2025",
+   "igr_score": 92.72,
+   "igr_level": "Muy alto",
+   "igr_confidence": 86.0,
+   "layer_weights": {
+    "predicate_direct": 0.55,
+    "criminal_economy": 0.35,
+    "criminogenic_context": 0.1
+   },
+   "layers": {
+    "predicate_direct": {
+     "label": "Delito base directo",
+     "configured_weight": 0.55,
+     "score": 95.5,
+     "coverage": 1.0,
+     "components": [
+      {
+       "id": "drug_family_fallback",
+       "label": "delitos asociados a drogas",
+       "configured_weight": 1.0,
+       "score": 95.5,
+       "value": 331.0,
+       "intensity": 97.54,
+       "persistence": 100.0,
+       "trend": 82.44,
+       "anomaly": 99.98,
+       "years_observed": 6
+      }
+     ]
+    },
+    "criminal_economy": {
+     "label": "Economía criminal y facilitadores",
+     "configured_weight": 0.35,
+     "score": 89.39,
+     "coverage": 0.6,
+     "components": [
+      {
+       "id": "reception",
+       "label": "Receptación",
+       "configured_weight": 0.25,
+       "score": 90.23,
+       "value": 227.0,
+       "intensity": 98.12,
+       "persistence": 100.0,
+       "trend": 54.9,
+       "anomaly": 100.0,
+       "years_observed": 6
+      }
+     ]
+    },
+    "criminogenic_context": {
+     "label": "Contexto criminógeno",
+     "configured_weight": 0.1,
+     "score": 84.1,
+     "coverage": 0.8,
+     "components": [
+      {
+       "id": "violence",
+       "label": "Violencia",
+       "configured_weight": 0.5,
+       "score": 84.1,
+       "value": 190.0,
+       "intensity": 88.0,
+       "persistence": 92.0,
+       "trend": 61.0,
+       "anomaly": 95.0,
+       "years_observed": 6
+      }
+     ]
+    }
+   },
+   "interpretation": "Amenaza territorial muy alta, sostenida en el tiempo y con anomalía marcada respecto de comunas comparables.",
+   "score_version": "1.0.0",
+   "ctx_entities": 827,
+   "ctx_uaf_observed": 23,
+   "ctx_sanctioned": 0,
+   "ctx_alerted": 1,
+   "ctx_findings": 412,
+   "snapshot_id": "OBS-2026-09-07T0157Z",
+   "refreshed_at": "2026-09-07T10:00:00Z"
+  },
+  "posicion": {
+   "igr_region": 72.6,
+   "comunas_region": 52,
+   "posicion_en_region": 1,
+   "posicion_nacional": 1,
+   "comunas_pais": 345
+  },
+  "entidades": [
+   {
+    "entity_id": "ENT-RUT-76082343-0",
+    "rut": "76082343-0",
+    "name": "CLUB DEPORTES TEMUCO S.A.D.P.",
+    "entity_type": "Persona jurídica",
+    "uaf_sector": null,
+    "is_uaf_observed": false,
+    "is_sanctioned": true,
+    "ipa3_score": 61.2,
+    "source_count": 3,
+    "alert_count": 1,
+    "finding_count": 4
+   }
+  ],
+  "sectores": [
+   {
+    "uaf_sector": "Corredores de Propiedades",
+    "n": 9
+   },
+   {
+    "uaf_sector": "Casas de Cambio",
+    "n": 3
+   }
+  ],
+  "semantics": "Las entidades listadas están domiciliadas en esta comuna. El IGR describe la amenaza del territorio y no se atribuye a ninguna de ellas: estar aquí no es un indicio sobre la entidad."
+ },
+ "sectorDetail": {
+  "contract": "ATLAS_OBS_SECTOR_DETAIL_V1",
+  "sector": {
+   "uaf_sector_canonical": "Casas de Cambio",
+   "uaf_sector_id": 14,
+   "subject_count": 346,
+   "natural_person_subjects": 76,
+   "vulnerability_index": 83.25,
+   "risk_inherent_1_5": 4.33,
+   "key_role": "CANONICO",
+   "ipf_mean": 28.63,
+   "ipf_p90": 31.26,
+   "band_muy_alta": 14,
+   "band_alta": 13,
+   "band_media": 90,
+   "band_baja": 88,
+   "band_minima": 141,
+   "sanctioned_subjects": 20,
+   "sanction_events": 22,
+   "sanction_rate_per_100": 6.36,
+   "sii_active": 270,
+   "sii_terminated": 41,
+   "sii_absent": 35,
+   "sii_coverage_pct": 78.03,
+   "atypical_activity_subjects": 44,
+   "median_sales_band_rank": 7.0,
+   "top_region": "Metropolitana de Santiago",
+   "top_region_share_pct": 37.86,
+   "activities": [
+    {
+     "activity_name": "Casas de cambio y operadores de divisas",
+     "registered_count": 118,
+     "universe_count": 190,
+     "concentration": 0.62,
+     "sector_support": 0.34,
+     "coherence": 0.88
+    },
+    {
+     "activity_name": "Transferencia de fondos",
+     "registered_count": 44,
+     "universe_count": 130,
+     "concentration": 0.34,
+     "sector_support": 0.13,
+     "coherence": 0.71
+    }
+   ]
+  },
+  "comparacion": {
+   "vulnerabilidad_media": 69.3,
+   "ipf_medio": 27.4,
+   "tasa_media": 1.42,
+   "sectores": 50
+  },
+  "territorio": [
+   {
+    "region": "Metropolitana de Santiago",
+    "n": 131,
+    "sancionadas": 12
+   },
+   {
+    "region": "Tarapacá",
+    "n": 58,
+    "sancionadas": 4
+   },
+   {
+    "region": "Antofagasta",
+    "n": 31,
+    "sancionadas": 1
+   }
+  ],
+  "entidades": [
+   {
+    "entity_id": "ENT-RUT-97080000-K",
+    "rut": "97080000-K",
+    "name": "BANCO BICE",
+    "region": "Metropolitana de Santiago",
+    "commune": "Las Condes",
+    "is_sanctioned": true,
+    "ipa3_score": 0.0,
+    "ipa3_band": "SIN_MARCA_SHADOW",
+    "source_count": 4,
+    "alert_count": 0,
+    "finding_count": 6
+   }
+  ],
+  "semantics": "Los giros característicos miden el padrón vigente, no son una tabla normativa de correspondencias. Una entidad puede declarar un giro atípico para su sector sin que eso constituya incumplimiento."
+ },
+ "territoryMap": {
+  "contract": "ATLAS_OBS_TERRITORY_V1",
+  "metodologia": {
+   "indicador": "IGR",
+   "version": "IGR-2A-1.0.0",
+   "vigente_desde": "2026-08-26",
+   "formula": "IGR v2A = 100% amenaza territorial CEAD-LA",
+   "capas": {
+    "amenazas_precedentes_la": 0.55,
+    "economia_criminal_facilitadores": 0.35,
+    "contexto_criminogeno": 0.1
+   },
+   "caracterizacion": {
+    "intensidad": 0.4,
+    "persistencia": 0.25,
+    "tendencia": 0.2,
+    "anomalia": 0.15
+   },
+   "unidad_base": "comuna",
+   "agregacion_regional": "media comunal ponderada por confianza CEAD",
+   "cobertura_delitos_base": {
+    "estado": "DRUG_DOMINANT",
+    "materializadas": [
+     "tráfico de sustancias",
+     "microtráfico",
+     "elaboración o producción"
+    ],
+    "no_materializadas": [
+     "fraude y estafa",
+     "corrupción",
+     "delitos económicos y financieros",
+     "contrabando",
+     "crimen organizado"
+    ]
+   },
+   "excluido_del_indice": [
+    "vulnerabilidad sectorial",
+    "materialidad económica SII",
+    "densidad de sujetos obligados",
+    "brecha de cobertura regulatoria",
+    "ICR",
+    "IRAR",
+    "IPA",
+    "IVO",
+    "sanciones de entidad",
+    "reportabilidad"
+   ]
+  },
+  "cobertura": {
+   "comunas": 345,
+   "con_universo": 335,
+   "confianza_media": 86.0,
+   "baja_confianza": 0,
+   "anio": 2025
+  },
+  "regiones": [
+   {
+    "region_name": "Metropolitana de Santiago",
+    "comunas": 52,
+    "igr_ponderado": 72.6,
+    "confianza_media": 86.0,
+    "igr_max": 92.7,
+    "ctx_entities": 24745,
+    "ctx_uaf": 4315,
+    "ctx_sancionadas": 156,
+    "ctx_con_senal": 24
+   },
+   {
+    "region_name": "Tarapacá",
+    "comunas": 7,
+    "igr_ponderado": 52.0,
+    "confianza_media": 86.0,
+    "igr_max": 87.6,
+    "ctx_entities": 2774,
+    "ctx_uaf": 2091,
+    "ctx_sancionadas": 0,
+    "ctx_con_senal": 1
+   },
+   {
+    "region_name": "Antofagasta",
+    "comunas": 9,
+    "igr_ponderado": 51.3,
+    "confianza_media": 86.0,
+    "igr_max": 88.6,
+    "ctx_entities": 720,
+    "ctx_uaf": 74,
+    "ctx_sancionadas": 1,
+    "ctx_con_senal": 0
+   },
+   {
+    "region_name": "Valparaíso",
+    "comunas": 38,
+    "igr_ponderado": 49.4,
+    "confianza_media": 86.0,
+    "igr_max": 88.8,
+    "ctx_entities": 5077,
+    "ctx_uaf": 416,
+    "ctx_sancionadas": 7,
+    "ctx_con_senal": 3
+   }
+  ],
+  "niveles": [
+   {
+    "igr_level": "Muy alto",
+    "comunas": 53
+   },
+   {
+    "igr_level": "Alto",
+    "comunas": 34
+   },
+   {
+    "igr_level": "Medio",
+    "comunas": 50
+   },
+   {
+    "igr_level": "Bajo",
+    "comunas": 143
+   },
+   {
+    "igr_level": "Muy bajo",
+    "comunas": 65
+   }
+  ],
+  "comunas_top": [
+   {
+    "territory_id": "CL-13401",
+    "region_name": "Metropolitana de Santiago",
+    "commune_name": "San Bernardo",
+    "commune_code": "13401",
+    "igr_score": 92.72,
+    "igr_level": "Muy alto",
+    "igr_confidence": 86.0,
+    "ctx_entities": 827,
+    "ctx_uaf_observed": 23,
+    "ctx_sanctioned": 0
+   },
+   {
+    "territory_id": "CL-13201",
+    "region_name": "Metropolitana de Santiago",
+    "commune_name": "Puente Alto",
+    "commune_code": "13201",
+    "igr_score": 92.07,
+    "igr_level": "Muy alto",
+    "igr_confidence": 86.0,
+    "ctx_entities": 612,
+    "ctx_uaf_observed": 19,
+    "ctx_sanctioned": 0
+   },
+   {
+    "territory_id": "CL-13112",
+    "region_name": "Metropolitana de Santiago",
+    "commune_name": "La Pintana",
+    "commune_code": "13112",
+    "igr_score": 91.51,
+    "igr_level": "Muy alto",
+    "igr_confidence": 86.0,
+    "ctx_entities": 544,
+    "ctx_uaf_observed": 2,
+    "ctx_sanctioned": 0
+   }
+  ],
+  "semantics": "El IGR describe amenaza territorial, no la conducta de las entidades domiciliadas ahí. No es probabilidad de LA/FT y no se transfiere a ninguna entidad. La confianza se publica aparte: menor cobertura no es menor riesgo."
+ },
+ "sectorOverview": {
+  "contract": "ATLAS_OBS_SECTOR_V1",
+  "metodologia": {
+   "vulnerabilidad": "Vulnerabilidad estructural del sector: media simple de seis dimensiones (efectivo, opacidad, internacionalidad, velocidad, terceros, complejidad jurídica), escala 1-5 adaptada a 0-100. Describe el sector, nunca la conducta de una entidad inscrita.",
+   "ipf": "Índice de Priorización Fiscalizadora. Ordena esfuerzo de fiscalización sobre inscritos. No es probabilidad de LA/FT ni imputación de incumplimiento.",
+   "tasa_sancionatoria": "Describe lo que la UAF ha publicado, no la conducta agregada del sector.",
+   "irar_e": {
+    "estado": "FORMULA_GOBERNADA_SIN_MATERIALIZAR",
+    "formula": "IRAR-E = 0,40 vulnerabilidad estructural + 0,30 materialidad + 0,30 amenaza",
+    "nota": "ATLAS declara la fórmula pero sus insumos aún no están materializados. El Observatorio no la presenta como si existiera."
+   }
+  },
+  "totales": {
+   "sectores": 50,
+   "inscritos": 10294,
+   "sancionados": 213,
+   "eventos": 243,
+   "vulnerabilidad_media": 69.3,
+   "cobertura_sii_media": 90.5
+  },
+  "sectores": [
+   {
+    "uaf_sector_canonical": "Usuarios de Zonas Francas",
+    "uaf_sector_id": 52,
+    "subject_count": 2840,
+    "natural_person_subjects": 253,
+    "vulnerability_index": 83.25,
+    "risk_inherent_1_5": 4.33,
+    "key_role": "CANONICO",
+    "ipf_mean": 30.25,
+    "ipf_p90": 34.51,
+    "band_muy_alta": 31,
+    "band_alta": 236,
+    "band_media": 1000,
+    "band_baja": 970,
+    "band_minima": 603,
+    "sanctioned_subjects": 18,
+    "sanction_events": 21,
+    "sanction_rate_per_100": 0.74,
+    "sii_coverage_pct": 91.09,
+    "atypical_activity_subjects": 835,
+    "top_region": "Tarapacá",
+    "top_region_share_pct": 70.49,
+    "sii_active": null,
+    "sii_terminated": null,
+    "sii_absent": null,
+    "median_sales_band_rank": null
+   },
+   {
+    "uaf_sector_canonical": "Empresas Dedicadas a la Gestión Inmobiliaria",
+    "uaf_sector_id": 36,
+    "subject_count": 2244,
+    "natural_person_subjects": 4,
+    "vulnerability_index": 75.0,
+    "risk_inherent_1_5": 4.0,
+    "key_role": "CANONICO",
+    "ipf_mean": 26.38,
+    "ipf_p90": 31.32,
+    "band_muy_alta": 11,
+    "band_alta": 59,
+    "band_media": 177,
+    "band_baja": 517,
+    "band_minima": 1480,
+    "sanctioned_subjects": 33,
+    "sanction_events": 35,
+    "sanction_rate_per_100": 1.56,
+    "sii_coverage_pct": 99.82,
+    "atypical_activity_subjects": 511,
+    "top_region": "Metropolitana de Santiago",
+    "top_region_share_pct": 85.78,
+    "sii_active": null,
+    "sii_terminated": null,
+    "sii_absent": null,
+    "median_sales_band_rank": null
+   },
+   {
+    "uaf_sector_canonical": "Casas de Cambio",
+    "uaf_sector_id": 14,
+    "subject_count": 346,
+    "natural_person_subjects": 76,
+    "vulnerability_index": 83.25,
+    "risk_inherent_1_5": 4.33,
+    "key_role": "CANONICO",
+    "ipf_mean": 28.63,
+    "ipf_p90": 31.26,
+    "band_muy_alta": 14,
+    "band_alta": 13,
+    "band_media": 90,
+    "band_baja": 88,
+    "band_minima": 141,
+    "sanctioned_subjects": 20,
+    "sanction_events": 22,
+    "sanction_rate_per_100": 6.36,
+    "sii_coverage_pct": 78.03,
+    "atypical_activity_subjects": 44,
+    "top_region": "Metropolitana de Santiago",
+    "top_region_share_pct": 37.86,
+    "sii_active": null,
+    "sii_terminated": null,
+    "sii_absent": null,
+    "median_sales_band_rank": null
+   },
+   {
+    "uaf_sector_canonical": "Notarios",
+    "uaf_sector_id": 45,
+    "subject_count": 483,
+    "natural_person_subjects": 483,
+    "vulnerability_index": 66.75,
+    "risk_inherent_1_5": 3.67,
+    "key_role": "CANONICO",
+    "ipf_mean": 26.96,
+    "ipf_p90": 26.2,
+    "band_muy_alta": 20,
+    "band_alta": 0,
+    "band_media": 1,
+    "band_baja": 0,
+    "band_minima": 462,
+    "sanctioned_subjects": 21,
+    "sanction_events": 24,
+    "sanction_rate_per_100": 4.97,
+    "sii_coverage_pct": 0.0,
+    "atypical_activity_subjects": 0,
+    "top_region": null,
+    "top_region_share_pct": null,
+    "sii_active": null,
+    "sii_terminated": null,
+    "sii_absent": null,
+    "median_sales_band_rank": null
+   },
+   {
+    "uaf_sector_canonical": "Organismos públicos",
+    "uaf_sector_id": null,
+    "subject_count": 512,
+    "natural_person_subjects": 0,
+    "vulnerability_index": null,
+    "risk_inherent_1_5": null,
+    "key_role": null,
+    "ipf_mean": null,
+    "ipf_p90": null,
+    "band_muy_alta": 0,
+    "band_alta": 0,
+    "band_media": 0,
+    "band_baja": 0,
+    "band_minima": 0,
+    "sanctioned_subjects": 0,
+    "sanction_events": 0,
+    "sanction_rate_per_100": 0.0,
+    "sii_coverage_pct": 100.0,
+    "atypical_activity_subjects": 91,
+    "top_region": "Metropolitana de Santiago",
+    "top_region_share_pct": 40.23,
+    "sii_active": null,
+    "sii_terminated": null,
+    "sii_absent": null,
+    "median_sales_band_rank": null
+   }
+  ],
+  "semantics": "Un sector con vulnerabilidad estructural alta no contiene entidades más culpables: contiene un modelo de negocio más expuesto. El indicador ordena dónde mirar, no a quién imputar."
+ }
 }

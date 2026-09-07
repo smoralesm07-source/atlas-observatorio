@@ -208,7 +208,16 @@ export function TerritoryStrip({
 
 /** Coverage meter used on the ficha: how much of the governed universe a
  *  source actually reaches. */
-export function Meter({ value, label, hint }: { value: number; label: string; hint?: string }) {
+export function Meter({
+  value, label, hint, tone,
+}: {
+  value: number;
+  label: string;
+  hint?: string;
+  /** Color fijo. Úsalo cuando el número sea una proporción o un peso: el
+   *  semáforo por umbral leería un 10% como "malo", y un peso no se juzga. */
+  tone?: string;
+}) {
   const v = Math.max(0, Math.min(100, value));
   return (
     <div>
@@ -220,12 +229,187 @@ export function Meter({ value, label, hint }: { value: number; label: string; hi
         <div
           style={{
             height: '100%', width: `${v}%`, borderRadius: 3,
-            background: v >= 66 ? 'var(--present)' : v >= 33 ? 'var(--sig-medium)' : 'var(--sig-high)',
+            background: tone ?? (v >= 66 ? 'var(--present)' : v >= 33 ? 'var(--sig-medium)' : 'var(--sig-high)'),
             transition: 'width .5s cubic-bezier(.22,.61,.36,1)',
           }}
         />
       </div>
       {hint && <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 4 }}>{hint}</div>}
+    </div>
+  );
+}
+
+/** Relación entre dos medidas sobre las mismas entidades. No es un eje doble:
+ *  ambas dimensiones describen al mismo objeto y el punto es la unidad. */
+export function Scatter<T>({
+  rows, x, y, size, label, xLabel, yLabel, onPick, height = 340, highlight,
+  highlightLabel, baseLabel,
+}: {
+  rows: T[];
+  x: (r: T) => number | null;
+  y: (r: T) => number | null;
+  size: (r: T) => number;
+  label: (r: T) => string;
+  xLabel: string;
+  yLabel: string;
+  onPick?: (r: T) => void;
+  height?: number;
+  highlight?: (r: T) => boolean;
+  /** Si el color distingue puntos, la leyenda es obligatoria: el color nunca
+   *  puede ser la unica codificacion sin decir que significa. */
+  highlightLabel?: string;
+  baseLabel?: string;
+}) {
+  const pts = rows
+    .map((r) => ({ r, xv: x(r), yv: y(r), sv: size(r) }))
+    .filter((p): p is { r: T; xv: number; yv: number; sv: number } =>
+      p.xv != null && p.yv != null && Number.isFinite(p.xv) && Number.isFinite(p.yv));
+
+  if (pts.length === 0) return null;
+
+  const pad = { t: 22, r: 74, b: 34, l: 46 };
+  const w = 620;
+  const h = height;
+  const xs = pts.map((p) => p.xv);
+  const ys = pts.map((p) => p.yv);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const sMax = Math.max(1, ...pts.map((p) => p.sv));
+
+  const px = (v: number) => pad.l + ((v - x0) / (x1 - x0 || 1)) * (w - pad.l - pad.r);
+  const py = (v: number) => h - pad.b - ((v - y0) / (y1 - y0 || 1)) * (h - pad.t - pad.b);
+  const pr = (v: number) => 4 + Math.sqrt(Math.max(0, v) / sMax) * 13;
+
+  // Etiquetar sólo los extremos: un número sobre cada punto es ilegible.
+  const labelled = new Set(
+    [...pts].sort((a, b) => b.sv - a.sv).slice(0, 3)
+      .concat([...pts].sort((a, b) => b.yv - a.yv).slice(0, 2))
+      .concat([...pts].sort((a, b) => b.xv - a.xv).slice(0, 2))
+      .map((p) => label(p.r)),
+  );
+
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      style={{ width: '100%', height: 'auto', overflow: 'visible' }}
+      role="img"
+      aria-label={`Dispersión de ${xLabel} contra ${yLabel}`}
+    >
+      {ticks.map((t) => {
+        const yv = y0 + t * (y1 - y0);
+        return (
+          <g key={`gy${t}`}>
+            <line x1={pad.l} x2={w - pad.r} y1={py(yv)} y2={py(yv)}
+              stroke="var(--line-soft)" strokeWidth="1" />
+            <text x={pad.l - 7} y={py(yv) + 3.5} textAnchor="end"
+              style={{ fontSize: 9.5, fill: 'var(--ink-4)' }} className="num">
+              {n1(yv)}
+            </text>
+          </g>
+        );
+      })}
+      {ticks.map((t) => {
+        const xv = x0 + t * (x1 - x0);
+        return (
+          <text key={`gx${t}`} x={px(xv)} y={h - pad.b + 15} textAnchor="middle"
+            style={{ fontSize: 9.5, fill: 'var(--ink-4)' }} className="num">
+            {n1(xv)}
+          </text>
+        );
+      })}
+
+      <text x={w / 2} y={h - 3} textAnchor="middle"
+        style={{ fontSize: 10, fill: 'var(--ink-3)', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 650 }}>
+        {xLabel}
+      </text>
+      <text x={11} y={h / 2} textAnchor="middle" transform={`rotate(-90 11 ${h / 2})`}
+        style={{ fontSize: 10, fill: 'var(--ink-3)', letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 650 }}>
+        {yLabel}
+      </text>
+
+      {highlight && highlightLabel && (
+        <g transform={`translate(${w - pad.r + 6} ${pad.t})`}>
+          <circle cx="5" cy="0" r="5" fill="var(--sig-critical)" fillOpacity="0.5"
+            stroke="var(--sig-critical)" strokeWidth="1.5" />
+          <text x="14" y="3.5" style={{ fontSize: 9.5, fill: 'var(--ink-2)' }}>
+            {highlightLabel}
+          </text>
+          <circle cx="5" cy="17" r="5" fill="var(--accent)" fillOpacity="0.28"
+            stroke="var(--accent)" strokeWidth="1.5" />
+          <text x="14" y="20.5" style={{ fontSize: 9.5, fill: 'var(--ink-2)' }}>
+            {baseLabel ?? 'Resto'}
+          </text>
+        </g>
+      )}
+      {pts.map((p, i) => {
+        const hot = highlight?.(p.r);
+        return (
+          <g key={i} onClick={onPick ? () => onPick(p.r) : undefined}
+            style={{ cursor: onPick ? 'pointer' : 'default' }}>
+            <circle
+              cx={px(p.xv)} cy={py(p.yv)} r={pr(p.sv)}
+              fill={hot ? 'var(--sig-critical)' : 'var(--accent)'}
+              fillOpacity={hot ? 0.5 : 0.28}
+              stroke={hot ? 'var(--sig-critical)' : 'var(--accent)'}
+              strokeWidth="1.5"
+            >
+              <title>{`${label(p.r)}\n${xLabel}: ${n1(p.xv)}\n${yLabel}: ${n1(p.yv)}`}</title>
+            </circle>
+            {labelled.has(label(p.r)) && (() => {
+              // Anclar segun la cercania al borde, o la etiqueta se sale del lienzo.
+              const cx = px(p.xv);
+              const anchor = cx > w - 150 ? 'end' : cx < 150 ? 'start' : 'middle';
+              const dx = anchor === 'end' ? 6 : anchor === 'start' ? -6 : 0;
+              const txt = label(p.r);
+              return (
+                <text
+                  x={cx + dx} y={py(p.yv) - pr(p.sv) - 5} textAnchor={anchor}
+                  style={{ fontSize: 10, fill: 'var(--ink-2)', pointerEvents: 'none' }}
+                >
+                  {txt.length > 28 ? txt.slice(0, 27) + '\u2026' : txt}
+                </text>
+              );
+            })()}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/** Distribución sobre una escala ordenada. Cada tramo lleva su nombre y su
+ *  conteo: el color de la rampa nunca es la única codificación. */
+export function OrderedDistribution({
+  rows, total,
+}: {
+  rows: { label: string; value: number; step: number }[];
+  total: number;
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', gap: 2 }}>
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            title={`${r.label}: ${n(r.value)}`}
+            style={{
+              width: `${(r.value / Math.max(1, total)) * 100}%`,
+              background: `var(--igr-${r.step})`,
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 11 }}>
+        {rows.map((r) => (
+          <span key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+            <i style={{ width: 9, height: 9, borderRadius: 2, background: `var(--igr-${r.step})`, flexShrink: 0 }} />
+            <span style={{ color: 'var(--ink-2)' }}>{r.label}</span>
+            <b className="num">{n(r.value)}</b>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

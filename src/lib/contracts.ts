@@ -228,3 +228,200 @@ export interface SourceStatusRow {
   entity_coverage: number;
   coverage_share: number | null;
 }
+
+/* ──────────────────────────────────────────────────────── territorio */
+
+export interface IgrComponent {
+  id: string;
+  label: string;
+  configured_weight: number;
+  score: number;
+  value?: number;
+  intensity?: number;
+  persistence?: number;
+  trend?: number;
+  anomaly?: number;
+  years_observed?: number;
+}
+
+export interface IgrLayer {
+  label: string;
+  configured_weight: number;
+  score: number;
+  coverage: number;
+  components: IgrComponent[];
+}
+
+export interface TerritoryRow {
+  territory_id: string;
+  region_code: string | null;
+  region_name: string;
+  commune_code: string | null;
+  commune_name: string;
+  year: number | null;
+  period: string | null;
+  igr_score: number | null;
+  igr_level: string | null;
+  igr_confidence: number | null;
+  layer_weights: Record<string, number>;
+  layers: Record<string, IgrLayer>;
+  interpretation: string | null;
+  score_version: string | null;
+  ctx_entities: number;
+  ctx_uaf_observed: number;
+  ctx_sanctioned: number;
+  ctx_alerted: number;
+  ctx_findings: number;
+  snapshot_id: string;
+  refreshed_at: string;
+}
+
+export interface TerritoryMap {
+  contract: 'ATLAS_OBS_TERRITORY_V1';
+  metodologia: {
+    indicador: string;
+    version: string;
+    vigente_desde: string;
+    formula: string;
+    capas: Record<string, number>;
+    caracterizacion: Record<string, number>;
+    unidad_base: string;
+    agregacion_regional: string;
+    cobertura_delitos_base: {
+      estado: string;
+      materializadas: string[];
+      no_materializadas: string[];
+    };
+    excluido_del_indice: string[];
+  };
+  cobertura: {
+    comunas: number;
+    con_universo: number;
+    confianza_media: number | null;
+    baja_confianza: number;
+    anio: number | null;
+  };
+  regiones: {
+    region_name: string;
+    comunas: number;
+    igr_ponderado: number | null;
+    confianza_media: number | null;
+    igr_max: number | null;
+    ctx_entities: number;
+    ctx_uaf: number;
+    ctx_sancionadas: number;
+    ctx_con_senal: number;
+  }[];
+  niveles: { igr_level: string; comunas: number }[];
+  comunas_top: {
+    territory_id: string;
+    region_name: string;
+    commune_name: string;
+    commune_code: string | null;
+    igr_score: number | null;
+    igr_level: string | null;
+    igr_confidence: number | null;
+    ctx_entities: number;
+    ctx_uaf_observed: number;
+    ctx_sanctioned: number;
+  }[];
+  semantics: string;
+}
+
+export interface TerritoryDetail {
+  contract: 'ATLAS_OBS_TERRITORY_DETAIL_V1';
+  territorio: TerritoryRow;
+  posicion: {
+    igr_region: number | null;
+    comunas_region: number;
+    posicion_en_region: number;
+    posicion_nacional: number;
+    comunas_pais: number;
+  };
+  entidades: {
+    entity_id: string; rut: string | null; name: string;
+    entity_type: string | null; uaf_sector: string | null;
+    is_uaf_observed: boolean; is_sanctioned: boolean;
+    ipa3_score: number | null; source_count: number;
+    alert_count: number; finding_count: number;
+  }[];
+  sectores: { uaf_sector: string; n: number }[];
+  semantics: string;
+}
+
+/* ─────────────────────────────────────────────────────────── sector */
+
+export interface SectorRow {
+  uaf_sector_canonical: string;
+  uaf_sector_id: number | null;
+  subject_count: number;
+  natural_person_subjects: number | null;
+  vulnerability_index: number | null;
+  risk_inherent_1_5: number | null;
+  key_role: string | null;
+  ipf_mean: number | null;
+  ipf_p90: number | null;
+  band_muy_alta: number | null;
+  band_alta: number | null;
+  band_media: number | null;
+  band_baja: number | null;
+  band_minima: number | null;
+  sanctioned_subjects: number | null;
+  sanction_events: number | null;
+  sanction_rate_per_100: number | null;
+  sii_active: number | null;
+  sii_terminated: number | null;
+  sii_absent: number | null;
+  sii_coverage_pct: number | null;
+  atypical_activity_subjects: number | null;
+  median_sales_band_rank: number | null;
+  top_region: string | null;
+  top_region_share_pct: number | null;
+  activities?: {
+    activity_name: string;
+    registered_count: number;
+    universe_count: number;
+    concentration: number;
+    sector_support: number | null;
+    coherence: number | null;
+  }[];
+}
+
+export interface SectorOverview {
+  contract: 'ATLAS_OBS_SECTOR_V1';
+  metodologia: {
+    vulnerabilidad: string;
+    ipf: string;
+    tasa_sancionatoria: string;
+    irar_e: { estado: string; formula: string; nota: string };
+  };
+  totales: {
+    sectores: number;
+    inscritos: number;
+    sancionados: number;
+    eventos: number;
+    vulnerabilidad_media: number | null;
+    cobertura_sii_media: number | null;
+  };
+  sectores: SectorRow[];
+  semantics: string;
+}
+
+export interface SectorDetail {
+  contract: 'ATLAS_OBS_SECTOR_DETAIL_V1';
+  sector: SectorRow;
+  comparacion: {
+    vulnerabilidad_media: number | null;
+    ipf_medio: number | null;
+    tasa_media: number | null;
+    sectores: number;
+  };
+  territorio: { region: string; n: number; sancionadas: number }[];
+  entidades: {
+    entity_id: string; rut: string | null; name: string;
+    region: string | null; commune: string | null;
+    is_sanctioned: boolean; ipa3_score: number | null; ipa3_band: string | null;
+    source_count: number; alert_count: number; finding_count: number;
+  }[];
+  semantics: string;
+}

@@ -53,6 +53,10 @@ const RPC = {
   obs_search_entities: F.search,
   obs_source_status: F.sources,
   obs_entity_detail: detail,
+  obs_territory_map: F.territoryMap,
+  obs_territory_detail: F.territoryDetail,
+  obs_sector_overview: F.sectorOverview,
+  obs_sector_detail: F.sectorDetail,
 };
 
 const SESSION = {
@@ -77,12 +81,104 @@ const ctx = await browser.newContext({ viewport: { width: 1500, height: 1000 }, 
 await ctx.route('**/rest/v1/rpc/**', async (route) => {
   const fn = new URL(route.request().url()).pathname.split('/').pop();
   if (!(fn in RPC)) return route.fulfill({ status: 404, body: '{}' });
+
+  // Una consulta que el universo no conoce debe devolver vacío, para que la
+  // cascada hacia fuentes externas se dispare de verdad.
+  let payload = RPC[fn];
+  if (fn === 'obs_search_entities') {
+    let body = {};
+    try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
+    if (String(body.p_q || '').toLowerCase().includes('fodich')) payload = [];
+  }
+
   await route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify(RPC[fn]),
+    body: JSON.stringify(payload),
   });
 });
+// Conectores bajo demanda. El Observatorio los invoca, no los implementa, así
+// que la prueba verifica la orquestación y el encuadre, no la fuente externa.
+const WATCHLIST = {
+  ok: true,
+  mode: 'LIVE_NO_PERSIST',
+  entity: { name: 'Vinko Fodich', rut: null, entity_type: null },
+  sources: {
+    OFAC: {
+      status: 'fresh', source: 'OFAC', checked_at: new Date().toISOString(),
+      records: [{
+        source_code: 'OFAC', source_record_id: 'ofac:SDN:12345:vinko fodich',
+        signal_type: 'international_watchlist_candidate', signal_status: 'possible_match',
+        match_method: 'ofac_official_primary_csv', match_confidence: 0.99,
+        title: 'Posible coincidencia en fuente internacional oficial',
+        summary: 'OFAC SDN · individuo', related_entity_name: 'VINKO FODICH',
+        relationship_type: 'POSIBLE_COINCIDENCIA_LISTA_INTERNACIONAL', event_date: null,
+        source_url: 'https://ofac.treasury.gov/sanctions-list-service',
+        evidence: { ofac_id: '12345', list: 'SDN', official_direct: true, identity_guardrail: 'candidate_requires_analyst_review' },
+      }],
+    },
+    UN_SANCTIONS: { status: 'fresh', source: 'UN_SANCTIONS', records: [], checked_at: new Date().toISOString() },
+    EU_SANCTIONS: { status: 'degraded', source: 'EU_SANCTIONS', records: [], checked_at: new Date().toISOString(), error: 'HTTP_503' },
+    OPENSANCTIONS: { status: 'credential_missing', source: 'OPENSANCTIONS', records: [], checked_at: new Date().toISOString() },
+    ICIJ_OFFSHORE: {
+      status: 'fresh', source: 'ICIJ_OFFSHORE', checked_at: new Date().toISOString(),
+      records: [{
+        source_code: 'ICIJ_OFFSHORE', source_record_id: 'icij:80000123',
+        signal_type: 'offshore_database_candidate', signal_status: 'possible_match',
+        match_method: 'icij_reconciliation_name', match_confidence: 0.71,
+        title: 'Posible coincidencia en ICIJ Offshore Leaks',
+        summary: 'Vinko Fodich Ltd · candidato entity', related_entity_name: 'Vinko Fodich Ltd',
+        relationship_type: 'POSIBLE_COINCIDENCIA_OFFSHORE', event_date: null,
+        source_url: 'https://offshoreleaks.icij.org/nodes/80000123',
+        evidence: { icij_node_id: '80000123', query_type: 'entity' },
+      }],
+    },
+  },
+  routing: {
+    opensanctions_status: 'credential_missing', fallback_used: true,
+    fallback_reason: 'credential_missing',
+    direct_sources: ['UN_SANCTIONS', 'OFAC', 'EU_SANCTIONS', 'UK_SANCTIONS', 'IDB_SANCTIONS', 'WORLD_BANK'],
+  },
+  guardrails: { persisted: false, score_mutation: false, identity_promotion: false },
+};
+
+const IDENTITY = {
+  ok: true,
+  analytics: { generated_aliases: 9, aliases_with_profiles: 2, multi_engine_profiles: 3, strong_aliases: 1, profiles: 5 },
+  candidate_aliases: [
+    { alias: 'vinkofodich', rule: 'first_last_compact', profiles: 4, evidence_strength: 55, engines: ['maigret', 'sherlock'] },
+    { alias: 'v.fodich', rule: 'first_dot_last', profiles: 1, evidence_strength: 25, engines: ['maigret'] },
+  ],
+  records: [
+    { source_url: 'https://github.com/vinkofodich', title: 'GitHub', evidence: { platform: 'GitHub', username: 'vinkofodich', engines: ['maigret', 'sherlock'] } },
+    { source_url: 'https://x.com/vinkofodich', title: 'X', evidence: { platform: 'X', username: 'vinkofodich', engines: ['maigret'] } },
+  ],
+  guardrails: { identity_assertion: false },
+};
+
+const DEEP = {
+  ok: true,
+  records: [],
+  derived: {
+    intelligence: {
+      summary: { corroborated_attributes: 2, link_pivots: 1, alias_candidates: 1 },
+      attributes: [
+        { field: 'Ubicación declarada', value: 'Santiago, Chile', source_count: 3, corroborated: true },
+        { field: 'Correo público', value: 'v.fodich@example.org', source_count: 2, corroborated: true },
+      ],
+      links: [{ url: 'https://vinkofodich.example.org', host: 'vinkofodich.example.org', source_count: 2 }],
+      alias_candidates: [{ alias: 'vfodich', source_count: 2, corroborated: true }],
+    },
+  },
+};
+
+await ctx.route('**/functions/v1/aml-entity-global-watchlists-live', (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(WATCHLIST) }));
+await ctx.route('**/functions/v1/aml-digital-identity-resolver-live', (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(IDENTITY) }));
+await ctx.route('**/functions/v1/aml-digital-identity-deep', (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DEEP) }));
+
 await ctx.route('**/auth/v1/**', (route) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: SESSION.user, session: SESSION }) }));
 
@@ -102,6 +198,21 @@ await ctx.addInitScript((s) => {
 }, SESSION);
 
 const page = await ctx.newPage();
+// Un bundle construido sin las variables de entorno muestra la pantalla de
+// configuración y haría fallar todas las comprobaciones por la misma causa.
+// Decirlo una vez es más útil que once fallos idénticos.
+{
+  const probe = await ctx.newPage();
+  await probe.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await probe.waitForTimeout(300);
+  if ((await probe.textContent('body')).includes('Configuración incompleta')) {
+    console.log('FAIL entorno: el bundle se construyó sin VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY.');
+    console.log('     Copia .env.example a .env y reconstruye antes de correr esta prueba.');
+    await browser.close();
+    process.exit(1);
+  }
+  await probe.close();
+}
 // The webfont stylesheet is unreachable offline and the stack falls back, so
 // that one failure must not mask a real error.
 const benign = (t) => /fonts\.(googleapis|gstatic)\.com/.test(t) || t.includes('ERR_CONNECTION_RESET');
@@ -117,6 +228,13 @@ const checks = [
      'Identidad sin resolver', 'sin RUT']],
   ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica', 'Línea de tiempo', 'Sanción regulatoria']],
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio']],
+  // Territorio: el indicador vigente, su cobertura real y lo que queda fuera.
+  ['territorio', '#/territorio', ['Territorio', 'IGR-2A-1.0.0', 'San Bernardo',
+    'tráfico de sustancias', 'corrupción', 'ponderada por confianza',
+    'densidad de sujetos obligados', 'Muy alto']],
+  ['sectores', '#/sectores', ['Sectores obligados', 'Casas de Cambio', 'Notarios',
+    'Vulnerabilidad', 'IPF medio', 'no contiene entidades más culpables',
+    'sus insumos aún no están materializados']],
   ['metodologia', '#/metodologia', ['Metodología', 'Marcas', 'No es']],
 ];
 
@@ -133,10 +251,21 @@ for (const [name, hash, expect] of checks) {
 
 // Ficha tabs must switch without a reload.
 await page.goto(`${BASE}/#/entidad/ENT-RUT-97080000-K`, { waitUntil: 'networkidle' });
-for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y padrón']) {
+for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y padrón',
+                   'Screening internacional', 'Identidad digital']) {
   await page.getByRole('button', { name: tab, exact: true }).click();
   await page.waitForTimeout(220);
   await page.screenshot({ path: `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`, fullPage: true });
+}
+{
+  // La ficha ofrece el screening con el RUT, que el buscador no tiene.
+  await page.getByRole('button', { name: 'Screening internacional', exact: true }).click();
+  await page.waitForTimeout(300);
+  const body = await page.textContent('body');
+  const faltan = ['97.080.000-K', 'Consultar listas internacionales', 'no afirma ni presencia ni']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL ficha screening: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   la ficha ofrece screening con RUT y tipo');
 }
 console.log('ok   pestañas de la ficha');
 
@@ -156,6 +285,89 @@ const overflow = await m.evaluate(() => document.documentElement.scrollWidth - d
 await m.screenshot({ path: `${OUT}/movil.png`, fullPage: true });
 if (overflow > 2) { failed++; console.log(`FAIL móvil: desborde horizontal de ${overflow}px`); }
 else console.log('ok   móvil sin desborde');
+
+// ── Detalle territorial y sectorial: el análisis vive en el detalle, no en la
+// portada, así que se verifica que abra y muestre la descomposición.
+
+await page.goto(`${BASE}/#/territorio`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+await page.locator('table').getByText('San Bernardo', { exact: true }).first().click();
+await page.waitForTimeout(600);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/territorio-comuna.png`, fullPage: true });
+  const faltan = ['San Bernardo', 'Delito base directo', 'Economía criminal',
+                  'Persistencia', 'Anomalía', 'en el país', 'no imputan nada',
+                  'confianza']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL detalle comunal: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   el detalle comunal descompone capas y componentes');
+}
+
+await page.goto(`${BASE}/#/sectores`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+// El nombre también aparece como etiqueta dentro del gráfico de dispersión,
+// así que el clic se acota a la tabla.
+await page.locator('table').getByText('Casas de Cambio', { exact: true }).first().click();
+await page.waitForTimeout(600);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/sector-detalle.png`, fullPage: true });
+  const faltan = ['Casas de Cambio', 'Giros característicos', 'Distribución del IPF',
+                  'Observabilidad del sector', 'no constituye incumplimiento',
+                  'Dónde está el sector']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL detalle sectorial: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   el detalle sectorial abre giros, bandas y territorio');
+}
+
+// ── Cascada de búsqueda. Es la capacidad que distingue a Entidades: cuando el
+// universo observado no sabe nada, el Observatorio no se queda callado.
+
+await page.goto(`${BASE}/#/entidades`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(400);
+
+// 1. Consulta conocida: las tres capas se ofrecen, sin consultar las externas.
+await page.fill('#obs-search', 'banco');
+await page.waitForTimeout(900);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/cascada-capas.png`, fullPage: true });
+  const faltan = ['Universo observado', 'Listas internacionales', 'Identidad digital', 'Banco Bice']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL capas: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   las tres capas se ofrecen sobre una consulta conocida');
+}
+
+// 2. Consulta desconocida: debe saltar sola a listas internacionales y mostrar
+//    el candidato exacto de OFAC junto a su encuadre.
+await page.fill('#obs-search', 'Vinko Fodich');
+await page.waitForTimeout(2000);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/cascada-internacional.png`, fullPage: true });
+  const faltan = ['OFAC', 'Coincidencia exacta de nombre', 'ICIJ Offshore Leaks',
+                  'continuó', 'candidato', 'Sin credencial']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL cascada: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   salto automático a listas internacionales con encuadre');
+}
+
+// 3. Identidad digital sobre el mismo nombre.
+await page.getByRole('button', { name: /Identidad digital/ }).click();
+await page.waitForTimeout(2200);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/cascada-digital.png`, fullPage: true });
+  const faltan = ['vinkofodich', 'Matriz de corroboración', 'Santiago, Chile',
+                  'Enlaces pivote', 'nombre+apellido']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL identidad digital: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   identidad digital resuelve aliases y corrobora');
+}
 
 // ── Access states. Authenticating is not authorization, so each outcome has to
 // reach the user as its own screen.
