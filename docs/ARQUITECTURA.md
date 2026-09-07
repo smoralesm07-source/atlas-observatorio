@@ -37,7 +37,8 @@ elimina, y ninguna ruta actual cambia de comportamiento.
 1. **Calcular, publicar, mostrar.** El trabajo pesado ocurre una vez cada seis
    horas en `obs_refresh_all()`. Ninguna pantalla lo repite. Un corte declara
    `snapshot_id`, `row_counts` y `published_at`; si no termina en `READY`, no se
-   publica y el job falla.
+   publica. La función es transaccional: una corrida cancelada a mitad de camino
+   deja intacto el corte anterior, verificado provocando una cancelación real.
 2. **Una pantalla consume un contrato.** `obs_pulse`, `obs_search_entities`,
    `obs_entity_detail`, `obs_alert_feed`, `obs_source_status`. Cambiar la forma
    de un contrato exige una versión nueva; las tablas `obs_*` no son API.
@@ -68,13 +69,62 @@ Es la operación primaria, así que tiene su propio diseño:
 - Resuelven todas las formas de escribir un RUT: `97.080.000-K`, `97080000-K`,
   `97080000-k`, `97080000` y prefijos parciales.
 
+## Identidad: Entra, no contraseñas
+
+ATLAS autentica con Microsoft Entra (`signInWithOAuth({ provider: 'azure' })`).
+Las cuentas del padrón no tienen contraseña: `encrypted_password` está en NULL.
+Una pantalla de correo y contraseña habría sido inutilizable para los usuarios
+reales, así que el Observatorio usa exactamente el mismo flujo, con
+`detectSessionInUrl` activo para recibir la sesión de vuelta desde el redirect.
+
+De ahí que existan tres pantallas y no dos: sin sesión, sesión sin habilitación,
+y sesión habilitada. Autenticarse no es autorizarse, y la interfaz lo dice en
+lugar de dejar que el analista choque contra un error de permisos.
+
+## Por qué la agenda vive en la base y no en CI
+
+`obs_refresh_all()` tarda unos 25 s sobre 50 mil entidades. PostgREST conecta
+como el rol `authenticator`, que impone `statement_timeout` de 8 s, y ese límite
+lo hereda `service_role`. Un job de CI que llamara la RPC habría fallado en cada
+corrida.
+
+Fijar el timeout dentro de la función tampoco sirve: el temporizador se arma
+cuando la sentencia de nivel superior empieza y no se re-arma al cambiar el
+ajuste a mitad de ejecución. Se verificó ejecutando la función bajo una sesión
+con límite de 8 s: se canceló igual.
+
+La materialización es trabajo interno de la base, así que la agenda es de la
+base. `pg_cron` ya sostiene los demás refrescos de ATLAS, de modo que esto no
+introduce un mecanismo nuevo, no necesita secretos y no expone una operación de
+escritura por la API pública. CI queda como vigilante: comprueba frescura, el
+estado del último intento y que la agenda siga activa.
+
 ## Verificación
 
 - **Contratos y autorización**: en la base, simulando el rol `authenticated` con
   los claims de un analista habilitado y de uno que no lo está.
 - **Render**: `tests/render.mjs` levanta el bundle construido, intercepta las
   llamadas RPC con payloads reales capturados de los contratos vivos, y recorre
-  las seis vistas, las pestañas de la ficha, el tema claro y el ancho de teléfono.
+  las seis vistas, las pestañas de la ficha, el tema claro, el ancho de teléfono
+  y los tres estados de acceso. Incluye una guarda de regresión contra el
+  defecto de autenticación: si vuelve a aparecer un campo de contraseña en la
+  pantalla de ingreso, la prueba falla.
+- **Agenda**: verificada programando el mismo comando cada minuto y leyendo
+  `cron.job_run_details`: cinco corridas consecutivas exitosas, de 18 a 19 s.
+
+## Relevancia de la búsqueda
+
+La similitud trigram por sí sola premiaba nombres cortos y genéricos: buscar
+«banco» devolvía primero «Bancos», una mención de prensa sin RUT y con una sola
+fuente, por delante de BANCO BICE, que tiene RUT, cuatro fuentes y un evento
+sancionatorio. El orden agrupa la similitud en tramos de 0,1 y, dentro de cada
+tramo, decide la fuerza de la identidad: primero la resuelta con RUT, luego la
+respaldada por más fuentes.
+
+2.973 entidades del universo llegan desde prensa sin identidad resuelta a un
+RUT. No se ocultan —la mención existe— pero llevan el marcador *identidad sin
+resolver*, porque tratarlas como entidades identificadas sería el error más caro
+que puede cometer esta herramienta.
 
 ## Lo que falta conectar
 

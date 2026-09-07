@@ -63,7 +63,11 @@ export function Ficha({
         <div style={{ minWidth: 0, flex: '1 1 340px' }}>
           <h1 className="ficha-title">{titleCase(e.name)}</h1>
           <div className="ficha-sub">
-            <span className="mono" style={{ color: 'var(--ink)' }}>{rutFormat(e.rut)}</span>
+            {e.rut ? (
+              <span className="mono" style={{ color: 'var(--ink)' }}>{rutFormat(e.rut)}</span>
+            ) : (
+              <span style={{ color: 'var(--ink-3)' }}>sin RUT</span>
+            )}
             {e.entity_type && <span>{e.entity_type}</span>}
             {e.region && <span>{e.region}{e.commune ? ` · ${e.commune}` : ''}</span>}
             {data.identity.method && (
@@ -76,6 +80,14 @@ export function Ficha({
 
           <div className="ficha-flags">
             {e.is_sanctioned && <Badge tone="critical" dot>Con evento sancionatorio</Badge>}
+            {!e.rut && (
+              <Badge
+                tone="unknown"
+                title="Aparece en una fuente pero su identidad no se resolvió a un RUT."
+              >
+                Identidad sin resolver
+              </Badge>
+            )}
             {e.is_uaf_observed && <Badge tone="present">Sujeto obligado UAF</Badge>}
             {e.uaf_sector && <Badge tone="neutral">{titleCase(e.uaf_sector)}</Badge>}
             {dedupeRoles(e.roles, e).map((r) => (

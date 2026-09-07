@@ -72,6 +72,15 @@ export function Metodologia() {
             Esta distinción es el corazón del diseño: la ausencia de una fuente es
             ausencia de dato, nunca un cero.
           </div>
+
+          <h4 style={{ margin: '20px 0 10px', fontSize: 12.5 }}>Identidad sin resolver</h4>
+          <p style={{ margin: 0, color: 'var(--ink-2)', fontSize: 12.5, lineHeight: 1.6 }}>
+            Algunas entidades llegan desde prensa como un nombre que nunca se resolvió a
+            un RUT. Se muestran porque la mención existe, pero llevan el marcador{' '}
+            <em>identidad sin resolver</em>: pueden ser una razón social real, un nombre
+            genérico o una entidad distinta que se llama parecido. No las trates como
+            identificadas hasta que otra fuente las confirme.
+          </p>
         </Panel>
 
         <Panel title="Índices · qué ordenan y qué no">

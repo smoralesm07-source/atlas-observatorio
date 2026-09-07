@@ -86,6 +86,17 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
 await ctx.route('**/auth/v1/**', (route) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: SESSION.user, session: SESSION }) }));
 
+// Authenticating is not authorization: the app reads its own allowlist row to
+// tell "enabled" from "authenticated but not enabled". allowlist controls which
+// answer the stub gives.
+let allowlist = { role: 'viewer', enabled: true };
+await ctx.route('**/rest/v1/aml_allowed_users**', (route) =>
+  route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(allowlist ? [allowlist] : []),
+  }));
+
 await ctx.addInitScript((s) => {
   localStorage.setItem('atlas-observatorio-auth', JSON.stringify(s));
 }, SESSION);
@@ -102,7 +113,8 @@ page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 const checks = [
   ['pulso', '#/pulso', ['Pulso del observatorio', '50.516', 'Anticipación']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
-  ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K']],
+  ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K',
+     'Identidad sin resolver', 'sin RUT']],
   ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica', 'Línea de tiempo', 'Sanción regulatoria']],
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio']],
   ['metodologia', '#/metodologia', ['Metodología', 'Marcas', 'No es']],
@@ -144,6 +156,46 @@ const overflow = await m.evaluate(() => document.documentElement.scrollWidth - d
 await m.screenshot({ path: `${OUT}/movil.png`, fullPage: true });
 if (overflow > 2) { failed++; console.log(`FAIL móvil: desborde horizontal de ${overflow}px`); }
 else console.log('ok   móvil sin desborde');
+
+// ── Access states. Authenticating is not authorization, so each outcome has to
+// reach the user as its own screen.
+
+// Authenticated, but not on the allowlist.
+allowlist = null;
+// The page is already at #/pulso, and goto to an identical URL does not reload,
+// so the allowlist would never be re-read. Reload explicitly.
+await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+{
+  const body = await page.textContent('body');
+  await page.screenshot({ path: `${OUT}/acceso-pendiente.png`, fullPage: true });
+  if (!body.includes('Acceso pendiente de habilitación')) {
+    failed++; console.log('FAIL acceso pendiente: no se muestra la pantalla de habilitación');
+  } else if (body.includes('Pulso del observatorio')) {
+    failed++; console.log('FAIL acceso pendiente: se filtró contenido del observatorio');
+  } else console.log('ok   acceso pendiente de habilitación');
+}
+allowlist = { role: 'viewer', enabled: true };
+
+// Signed out. ATLAS authenticates with Microsoft Entra, so a password field
+// here would be a regression: these accounts have no password.
+const out = await browser.newContext({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 2 });
+await out.route('**/rest/v1/**', (route) => route.fulfill({ status: 200, body: '[]' }));
+const anon = await out.newPage();
+await anon.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+await anon.waitForTimeout(400);
+{
+  const body = await anon.textContent('body');
+  const passwordFields = await anon.locator('input[type="password"]').count();
+  await anon.screenshot({ path: `${OUT}/ingreso.png`, fullPage: true });
+  if (!body.includes('Ingresar con Microsoft')) {
+    failed++; console.log('FAIL ingreso: falta el acceso con Microsoft');
+  } else if (passwordFields > 0) {
+    failed++; console.log(`FAIL ingreso: hay ${passwordFields} campo(s) de contraseña; ATLAS usa Entra`);
+  } else console.log('ok   ingreso con Microsoft, sin campo de contraseña');
+}
+await out.close();
 
 await browser.close();
 if (errors.length) { console.log('\nErrores de consola:'); errors.forEach((e) => console.log('  ' + e)); }

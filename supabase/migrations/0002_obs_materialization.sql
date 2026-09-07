@@ -24,6 +24,11 @@ returns public.obs_snapshot
 language plpgsql
 security definer
 set search_path = public, pg_temp
+-- Esta funcion NO se puede invocar por PostgREST: el rol authenticator impone
+-- statement_timeout de 8 s y la materializacion completa tarda unos 25 s. Fijar
+-- el limite dentro de la funcion no sirve, porque el temporizador se arma al
+-- comenzar la sentencia de nivel superior y no se re-arma al cambiar el ajuste
+-- a mitad de ejecucion. La agenda vive en pg_cron (migracion 0004).
 as $$
 declare
   v_snapshot text := coalesce(p_snapshot_id,
@@ -62,6 +67,23 @@ begin
   from public.aml_entities e;
 
   create unique index on _obs_ent (entity_id);
+
+  -- Eventos agregados por (entidad, productor) una sola vez. Calcularlos dentro
+  -- de un lateral, por cada uno de los ~95 mil pares entidad-fuente, re-recorria
+  -- el JSON del perfil una vez por par.
+  create temp table _obs_ev on commit drop as
+  select ae.entity_id,
+         e->>'productor' as source_code,
+         count(*) n,
+         max((e->>'fecha')::timestamptz) last_at,
+         (array_agg(distinct e->>'tipo_es')
+            filter (where e->>'tipo_es' is not null))[1:4] titles
+  from public.aml_entities ae,
+       lateral jsonb_array_elements(coalesce(ae.profile->'eventos','[]'::jsonb)) e
+  where e->>'productor' is not null
+  group by 1, 2;
+
+  create unique index on _obs_ev (entity_id, source_code);
 
   truncate public.obs_entity_source;
   delete from public.obs_entity;
@@ -116,14 +138,8 @@ begin
       'basis', case when ev.n > 0 then 'EVENTOS_FECHADOS' else 'PRESENCIA_DECLARADA' end))
   from _obs_ent t
   cross join lateral unnest(t.sources) as src(source_code)
-  left join lateral (
-    select count(*) n,
-           max((e->>'fecha')::timestamptz) last_at,
-           (array_agg(distinct e->>'tipo_es') filter (where e->>'tipo_es' is not null))[1:4] titles
-    from public.aml_entities ae,
-         lateral jsonb_array_elements(coalesce(ae.profile->'eventos','[]'::jsonb)) e
-    where ae.entity_id = t.entity_id and e->>'productor' = src.source_code
-  ) ev on true;
+  left join _obs_ev ev
+    on ev.entity_id = t.entity_id and ev.source_code = src.source_code;
 
   ---------------------------------------------------------------- alerts
   delete from public.obs_alert;

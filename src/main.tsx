@@ -6,7 +6,10 @@ import './styles/app.css';
 const root = document.getElementById('root');
 if (!root) throw new Error('Falta el nodo #root.');
 
-if (!window.location.hash) window.location.hash = '#/pulso';
+// The Entra redirect can come back with the session in the URL hash. Setting a
+// default route before supabase-js has read it would throw the session away.
+const carriesSession = /access_token|error_description|provider_token/.test(window.location.hash);
+if (!window.location.hash && !carriesSession) window.location.hash = '#/pulso';
 
 createRoot(root).render(
   <StrictMode>

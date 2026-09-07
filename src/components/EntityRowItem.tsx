@@ -38,10 +38,22 @@ export function EntityRowItem({
           {e.is_sanctioned && <Badge tone="critical" dot>Sancionada</Badge>}
           {e.is_uaf_observed && <Badge tone="present">Sujeto obligado</Badge>}
           {e.match_kind === 'RUT_EXACTO' && <Badge tone="neutral">RUT exacto</Badge>}
+          {!e.rut && (
+            <Badge
+              tone="unknown"
+              title="La entidad aparece en una fuente pero su identidad no se resolvió a un RUT. Puede ser una mención genérica, no necesariamente una entidad registrada."
+            >
+              Identidad sin resolver
+            </Badge>
+          )}
         </div>
 
         <div className="row-meta">
-          <span className="rut">{rutFormat(e.rut)}</span>
+          {e.rut ? (
+            <span className="rut">{rutFormat(e.rut)}</span>
+          ) : (
+            <span style={{ color: 'var(--ink-4)' }}>sin RUT</span>
+          )}
           {e.entity_type && <span>{e.entity_type}</span>}
           {e.region && <span>{e.region}{e.commune ? ` · ${e.commune}` : ''}</span>}
           {e.uaf_sector && <span>{titleCase(e.uaf_sector)}</span>}

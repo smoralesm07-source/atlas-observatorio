@@ -1,0 +1,85 @@
+name: Vigilar frescura del corte
+
+# El refresco lo ejecuta pg_cron dentro de la base: tarda ~25 s y PostgREST
+# corta a los 8 s, así que una llamada RPC desde CI fallaría siempre.
+# Este job no refresca, vigila: avisa si el corte vigente envejece o si el
+# último intento terminó en FAILED. Un planificador que se detiene en silencio
+# es peor que uno que falla ruidosamente.
+
+on:
+  schedule:
+    - cron: '55 */6 * * *'   # después de la ventana de refresco (:25)
+  workflow_dispatch:
+
+concurrency:
+  group: obs-vigilancia
+  cancel-in-progress: false
+
+env:
+  MAX_HORAS: '9'   # cadencia de 6 h más un margen de una ventana
+
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar el estado del corte
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          respuesta=$(curl -sS -w '\n%{http_code}' \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/obs_refresh_status" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H 'Content-Type: application/json' -d '{}')
+
+          codigo=$(tail -n1 <<<"$respuesta")
+          cuerpo=$(sed '$d' <<<"$respuesta")
+
+          if [ "$codigo" != "200" ]; then
+            echo "::error::obs_refresh_status respondió HTTP $codigo"
+            echo "$cuerpo"
+            exit 1
+          fi
+
+          # PostgREST devuelve el objeto para funciones escalares, pero un array
+          # si alguna vez pasa a SETOF. Normalizar evita que jq falle.
+          estado=$(jq -c 'if type == "array" then .[0] else . end' <<<"$cuerpo")
+          jq . <<<"$estado"
+
+          intento_estado=$(jq -r '.ultimo_intento.status // "DESCONOCIDO"' <<<"$estado")
+          antiguedad=$(jq -r '.vigente.antiguedad_horas // 9999' <<<"$estado")
+          corte=$(jq -r '.vigente.snapshot_id // "ninguno"' <<<"$estado")
+          agenda=$(jq -r '.agenda.active // false' <<<"$estado")
+
+          {
+            echo "| Comprobación | Valor |"
+            echo "| --- | --- |"
+            echo "| Corte vigente | \`$corte\` |"
+            echo "| Antigüedad | ${antiguedad} h |"
+            echo "| Último intento | $intento_estado |"
+            echo "| Agenda activa | $agenda |"
+            jq -r '.vigente.row_counts | to_entries[] | "| \(.key) | \(.value) |"' <<<"$estado"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          fallo=0
+
+          if [ "$intento_estado" = "FAILED" ]; then
+            echo "::error::El último intento de materialización falló: $(jq -r '.ultimo_intento.error_detail // "sin detalle"' <<<"$estado")"
+            fallo=1
+          fi
+
+          if [ "$agenda" != "true" ]; then
+            echo "::error::La agenda atlas-observatorio-refresh no está activa en pg_cron"
+            fallo=1
+          fi
+
+          if jq -e --argjson max "$MAX_HORAS" '(.vigente.antiguedad_horas // 9999) > $max' >/dev/null <<<"$estado"; then
+            echo "::error::El corte vigente tiene ${antiguedad} h, por sobre el máximo de ${MAX_HORAS} h"
+            fallo=1
+          fi
+
+          exit $fallo

@@ -124,6 +124,7 @@ begin
         when v_is_rut and e.rut_search = v_rut then 'RUT_EXACTO'
         when v_is_rut then 'RUT_PARCIAL'
         when v_norm = '' then 'SIN_CONSULTA'
+        when e.name_search = v_norm then 'NOMBRE_EXACTO'
         when e.name_search like v_norm || '%' then 'NOMBRE_INICIO'
         when e.name_search like '%' || v_norm || '%' then 'NOMBRE_CONTIENE'
         else 'NOMBRE_APROXIMADO'
@@ -157,10 +158,18 @@ begin
   order by
     case c.match_kind
       when 'RUT_EXACTO' then 0 when 'RUT_PARCIAL' then 1
-      when 'NOMBRE_INICIO' then 2 when 'NOMBRE_CONTIENE' then 3
-      when 'NOMBRE_APROXIMADO' then 4 else 5 end,
-    c.sim desc,
+      when 'NOMBRE_EXACTO' then 2 when 'NOMBRE_INICIO' then 3
+      when 'NOMBRE_CONTIENE' then 4 when 'NOMBRE_APROXIMADO' then 5
+      else 6 end,
+    -- Trigram similarity alone rewarded short generic names: "banco" returned
+    -- "Bancos", a press mention with no RUT and one source, above BANCO BICE,
+    -- which has a RUT, four sources and a sanction. Bucketing the score and
+    -- letting identity strength decide inside the bucket fixes the ordering
+    -- without discarding fuzzy matching.
+    round(c.sim::numeric, 1) desc,
+    (c.rut is not null) desc,
     c.source_count desc,
+    c.sim desc,
     c.ipa3_score desc nulls last,
     c.name
   limit v_limit offset v_off;

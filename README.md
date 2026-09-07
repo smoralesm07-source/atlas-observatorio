@@ -24,7 +24,7 @@ lee los mismos datos gobernados a través de contratos propios.
 
 ```
 FUENTES GOBERNADAS  →  obs_refresh_all()  →  read models obs_*  →  contratos RPC  →  app
-   (tablas Fusion)      (una sola escritura)   (corte versionado)   (SECURITY INVOKER)
+   (tablas Fusion)      (pg_cron, cada 6 h)   (corte versionado)   (SECURITY INVOKER)
 ```
 
 Reglas que sostienen el diseño:
@@ -35,9 +35,10 @@ Reglas que sostienen el diseño:
 2. **Una pantalla consume un contrato, no una tabla.** Los cinco contratos son
    `obs_pulse`, `obs_search_entities`, `obs_entity_detail`, `obs_alert_feed` y
    `obs_source_status`.
-3. **La autorización no se degrada.** Todos los contratos son `SECURITY INVOKER`
-   y las tablas `obs_*` tienen RLS contra la misma lista `aml_allowed_users` que
-   ya gobierna ATLAS. Un usuario autenticado fuera de la lista lee cero filas.
+3. **La autorización no se degrada.** La identidad la acredita Microsoft Entra,
+   igual que ATLAS. Todos los contratos son `SECURITY INVOKER` y las tablas
+   `obs_*` tienen RLS contra la misma lista `aml_allowed_users`. Un usuario
+   autenticado fuera de la lista lee cero filas y ve una pantalla que se lo dice;
    `anon` no tiene privilegio de ejecución sobre ningún contrato.
 4. **La ausencia de una fuente es ausencia, nunca un cero.** Una fuente no
    consultada jamás se presenta como una fuente que no encontró nada.
@@ -59,8 +60,13 @@ cp .env.example .env     # apunta al proyecto Supabase que hospeda los obs_*
 npm run dev
 ```
 
-El acceso usa las cuentas que ya existen en ATLAS. Iniciar sesión acredita
-identidad; lo que se puede leer lo decide la política de la base de datos.
+El acceso usa las cuentas que ya existen en ATLAS: se entra con Microsoft
+Entra, no con contraseña. Iniciar sesión acredita identidad; lo que se puede
+leer lo decide la política de la base de datos.
+
+La URL de retorno de Entra debe estar registrada como *redirect URL* en Supabase
+Auth. Por defecto la app usa su propio origen y ruta base, así que basta con
+registrar la URL donde quede publicada.
 
 ### Variables
 
@@ -69,10 +75,12 @@ identidad; lo que se puede leer lo decide la política de la base de datos.
 | `VITE_SUPABASE_URL` | variable de repositorio | proyecto que hospeda los `obs_*` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | variable de repositorio | clave publicable del cliente |
 | `VITE_BASE` | variable de repositorio (opcional) | subruta si se sirve en `/atlas-observatorio/` |
-| `SUPABASE_URL` | secreto | refresco programado |
-| `SUPABASE_SERVICE_ROLE_KEY` | secreto | única credencial que escribe los `obs_*` |
+| `VITE_AUTH_REDIRECT_TO` | variable de repositorio (opcional) | fuerza la URL de retorno de Entra |
+| `SUPABASE_URL` | secreto | vigilancia de frescura |
+| `SUPABASE_SERVICE_ROLE_KEY` | secreto | vigilancia de frescura |
 
-La clave de servicio nunca llega al navegador: sólo la usa el job de refresco.
+La clave de servicio nunca llega al navegador. El refresco **no** la necesita:
+lo ejecuta `pg_cron` dentro de la base.
 
 ## Operación
 
@@ -84,9 +92,20 @@ La clave de servicio nunca llega al navegador: sólo la usa el job de refresco.
 | `node tests/render.mjs` | verifica que las vistas rendericen los contratos |
 | `node scripts/capture-fixtures.mjs` | recaptura los fixtures desde los contratos vivos |
 
-El corte se republica cada seis horas (`.github/workflows/refresh.yml`) y puede
-lanzarse a mano desde Actions. Un corte que no termine en `READY` falla el job:
-un read model desactualizado pero honesto es aceptable, uno a medio escribir no.
+El corte se republica cada seis horas mediante `pg_cron`, dentro de la base. No
+se ejecuta desde CI: la materialización tarda unos 25 s y PostgREST corta a los
+8 s, así que una llamada RPC desde un job fallaría siempre (ver
+`docs/ARQUITECTURA.md`). Para forzar un corte a mano, desde el editor SQL:
+
+```sql
+set statement_timeout to '600s';
+select public.obs_refresh_all();
+```
+
+`.github/workflows/vigilancia.yml` no refresca: vigila. Cada seis horas
+comprueba que el corte vigente no haya envejecido, que el último intento no haya
+terminado en `FAILED` y que la agenda siga activa. Un planificador que se
+detiene en silencio es peor que uno que falla ruidosamente.
 
 ## Base de datos
 
