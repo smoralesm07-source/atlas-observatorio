@@ -12,6 +12,7 @@ import { Territorio } from './views/Territorio';
 import { Sectores } from './views/Sectores';
 import { GastoPublico } from './views/GastoPublico';
 import { Metodologia } from './views/Metodologia';
+import { Infrastructure } from './views/Infrastructure';
 
 export default function App() {
   return <AuthGate>{(session) => <Routed session={session} />}</AuthGate>;
@@ -47,6 +48,7 @@ function Routed({ session }: { session: Session }) {
         />
       )}
       {route.view === 'fuentes' && <Fuentes />}
+      {route.view === 'infra' && <Infrastructure />}
       {route.view === 'metodologia' && <Metodologia />}
     </Shell>
   );
