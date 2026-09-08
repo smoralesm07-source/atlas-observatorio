@@ -10,7 +10,6 @@ import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primit
 import { fecha, n, n1, titleCase } from '../lib/format';
 import { AlertCard } from '../components/AlertCard';
 import { CohortDrawer, type CohortRequest } from '../components/CohortDrawer';
-import { SectorHealthBox } from '../components/SectorHealthBox';
 
 /* EL PULSO
    ────────
@@ -91,9 +90,7 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
      de prioridad A— no es un residuo: son sectores que el ACTECO sólo pondera,
      nunca gatilla, y contarlos como "cubiertos" inflaría la cobertura. */
   const st = scr?.totales ?? null;
-  const padronSinGatillante = st
-    ? Math.max(0, st.padron_total - st.inscritos_cubiertos - st.sujetos_otro_modo)
-    : 0;
+
   /* Concentración: la cifra que cambia la lectura de todo el tablero. Tres
      sectores de cincuenta explican la mayor parte del volumen reportado, y el
      contraste con los tres sectores más numerosos del padrón es la lectura. */
@@ -256,28 +253,46 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
               <ScreeningCoverageCards
                 cards={[
                   {
-                    id: 'ACTECO',
-                    label: 'Universo construible',
-                    value: st.inscritos_cubiertos,
-                    color: 'var(--accent)',
-                    hint: `${st.sectores} sectores`,
-                    description: 'Padrón UAF en sectores donde se puede construir universo desde el giro SII',
+                    id: 'BRECHA',
+                    title: 'BRECHA DE\nPADRÓN',
+                    label: 'Sectores sin inscriptos',
+                    value: t?.sectores_sin_inscritos ?? 0,
+                    color: 'var(--sig-critical)',
+                    subtitle: 'Categorías canónicas de la Ley 19.913 que no tienen inscritos en el padrón vigente.',
+                    sections: [
+                      {
+                        heading: 'Significa',
+                        items: ['Universo SII sin cobertura UAF', 'Sectores económicos sin inscriptos'],
+                      },
+                    ],
                   },
                   {
-                    id: 'REGISTRO',
-                    label: 'Exige registro sectorial',
-                    value: st.sujetos_otro_modo,
-                    color: 'var(--unknown)',
-                    hint: `${st.sectores_otro_modo} sectores`,
-                    description: 'Inscritos en sectores que requieren registro externo',
+                    id: 'VIGILANCIA',
+                    title: 'VIGILANCIA\nSECTORIAL',
+                    label: 'Baja reportabilidad o rezago',
+                    value: t?.sectores_silenciosos ?? 0,
+                    color: 'var(--sig-watch)',
+                    subtitle: 'Menos de 1 ROS por cada 100 inscritos en 2025 o al menos dos años sin reportes.',
+                    sections: [
+                      {
+                        heading: 'Comportamiento',
+                        items: ['Baja intensidad de reportes', 'Rezago en la reportabilidad'],
+                      },
+                    ],
                   },
                   {
-                    id: 'SIN_GATILLANTE',
-                    label: 'Sin gatillante de prioridad A',
-                    value: padronSinGatillante,
-                    color: 'var(--ink-4)',
-                    hint: 'el giro sólo pondera',
-                    description: 'Padrón en sectores donde el ACTECO no gatilla screening',
+                    id: 'SILENCIO',
+                    title: 'SILENCIO\n2021-2025',
+                    label: 'Sin ROS en toda la serie',
+                    value: t?.sujetos_en_silencio ?? 0,
+                    color: 'var(--sig-high)',
+                    subtitle: 'Inscritos en sectores que no registraron ningún ROS entre 2021 y 2025.',
+                    sections: [
+                      {
+                        heading: 'Observación',
+                        items: ['Cero reportes en cinco años', `${n(t?.sujetos_en_silencio ?? 0)} sujetos en silencio`],
+                      },
+                    ],
                   },
                 ]}
               />
@@ -285,32 +300,6 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
           )}
         </Panel>
       </div>
-
-      {/* ── 3b. Salud de cobertura y reporte por sector ────────── */}
-      {rep?.disponible && (
-        <Panel
-          title="Cobertura y reporte por sector"
-          meta={`padrón UAF · ${rep.corte.periodo}`}
-          pad={false}
-        >
-          <SectorHealthBox
-            sectores={rep.sectores}
-            sectoresBase={{
-              silenciosos: rep.totales?.sectores_silenciosos ?? 0,
-              sin_inscritos: rep.totales?.sectores_sin_inscritos ?? 0,
-              sujetos_silencio: rep.totales?.sujetos_en_silencio ?? 0,
-            }}
-            onSectorPick={(sector, title) => {
-              open({
-                cohort: 'SECTOR',
-                value: sector,
-                title,
-                hint: 'inscritos del sector ordenados por reportabilidad',
-              });
-            }}
-          />
-        </Panel>
-      )}
 
       {/* ── 4. Quién sostiene el volumen reportado ─────────────────────── */}
       {rep?.disponible && (
