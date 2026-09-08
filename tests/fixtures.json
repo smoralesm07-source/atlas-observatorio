@@ -2844,7 +2844,9 @@
    "press_evidence_count": 0,
    "sii_termination_date": "2023-06-01",
    "sanction_evidence_count": 1,
-   "sii_activity_start_date": null
+   "sii_activity_start_date": null,
+   "attention_motive": "SANCION_HISTORICA",
+   "ipf_percentile": 98.01
   },
   {
    "rut": "76299831-9",
@@ -2876,7 +2878,9 @@
    "press_evidence_count": 0,
    "sii_termination_date": "2026-07-22",
    "sanction_evidence_count": 1,
-   "sii_activity_start_date": "2013-06-28"
+   "sii_activity_start_date": "2013-06-28",
+   "attention_motive": "SANCION_HISTORICA",
+   "ipf_percentile": 95.36
   },
   {
    "rut": "76068142-3",
@@ -2908,10 +2912,13 @@
    "press_evidence_count": 0,
    "sii_termination_date": "2023-07-31",
    "sanction_evidence_count": 1,
-   "sii_activity_start_date": null
+   "sii_activity_start_date": null,
+   "attention_motive": "SANCION_HISTORICA",
+   "ipf_percentile": 91.76
   }
  ],
  "uafDossier": {
+  "contract": "ATLAS_OBS_UAF_DOSSIER_V2",
   "subject": {
    "rut": "96806010-4",
    "name": "PEHUEN SPA",
@@ -2925,7 +2932,7 @@
    "igr_level": "Muy alto",
    "igr_score": 88.58,
    "ipa3_band": "MEDIA",
-   "ipf_score": 37.88,
+   "ipf_score": 37.87,
    "ipa3_score": 41.31,
    "rut_search": "968060104",
    "sales_band": "2",
@@ -2934,28 +2941,41 @@
    "alert_count": 2,
    "entity_type": "Persona jurídica",
    "name_search": "pehuen spa",
-   "snapshot_id": "OBS-2026-09-07T1825Z",
-   "refreshed_at": "2026-09-07T19:40:24.893395+00:00",
+   "snapshot_id": "OBS-2026-09-08T1225Z",
+   "refreshed_at": "2026-09-08T12:25:00.076937+00:00",
    "main_activity": "OTRAS ACTIVIDADES DE SERVICIOS DE APOYO A LAS EMPRESAS N.C.P.",
+   "sales_band_uf": "0,01 a 200 UF",
    "activity_years": null,
+   "attention_rank": 2,
+   "ipf_percentile": 98.01,
    "sanction_count": 1,
    "subject_nature": "PERSONA_JURIDICA",
    "economic_sector": "ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO",
    "sales_band_rank": 2,
+   "sales_band_size": "Micro",
    "territory_basis": "PADRON_ENTIDAD",
+   "attention_motive": "SANCION_HISTORICA",
+   "sii_signal_count": 1,
    "termination_year": 2023,
    "is_state_supplier": false,
    "sanction_count_5y": 0,
    "economic_subsector": "ACTIVIDADES DE SERVICIOS DE APOYO A LAS EMPRESAS N.C.P.",
    "sanction_last_date": "2020-10-07",
+   "sii_region_changed": false,
+   "activity_peer_share": 0.0073,
+   "ipf_credibility_pct": 100.0,
    "supplier_amount_12m": null,
+   "activity_atypicality": 0.9927,
+   "ownership_edge_count": 0,
    "press_evidence_count": 0,
+   "sii_activity_changed": false,
    "sii_termination_date": "2023-06-01",
    "supplier_order_count": null,
    "sanction_evidence_count": 1,
-   "sii_activity_start_date": null
+   "sii_activity_start_date": null,
+   "evidence_count": 1,
+   "total_count": 445
   },
-  "contract": "ATLAS_OBS_UAF_DOSSIER_V1",
   "evidence": [
    {
     "kind": "SANCION",
@@ -2970,7 +2990,24 @@
     "identity_status": "RESOLVED_CONSERVATIVE"
    }
   ],
-  "semantics": "El antecedente se muestra tal como lo publica su fuente. Un registro de prensa no es una sanción, y una sanción no es una imputación de lavado de activos."
+  "peers": {
+   "sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+   "con_ipf": 2244,
+   "ipf_p90": 31.3,
+   "sujetos": 2244,
+   "terminados": 82,
+   "en_atencion": 594,
+   "ipf_mediana": 26.0,
+   "sancionados": 36,
+   "ventas_rank_max": 13,
+   "antiguedad_mediana": 11.0,
+   "ventas_rank_mediana": 6.0
+  },
+  "position": {
+   "ipf_percentil_sector": 98.7,
+   "antiguedad_percentil_sector": null
+  },
+  "semantics": "El antecedente se muestra tal como lo publica su fuente. Un registro de prensa no es una sanción, y una sanción no es una imputación de lavado de activos. La comparación con los pares describe la posición del sujeto dentro de su sector obligado y no imputa incumplimiento: estar sobre la mediana del IPF ordena revisión, no concluye nada."
  },
  "pressBridge": {
   "generated_at": "2026-09-06T00:00:00Z",

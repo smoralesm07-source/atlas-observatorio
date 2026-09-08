@@ -516,10 +516,19 @@ console.log('ok   pestañas de la ficha');
   let body = await page.textContent('body');
   const faltanLista = ['Sujetos con término de giro', 'PEHUEN SPA',
                        'IMPORTADORA Y EXPORTADORA DENVER LIMITADA',
-                       'siguen inscritos en el registro UAF']
+                       'siguen inscritos en el registro UAF',
+                       // La lista trae herramientas y el motivo por fila, no
+                       // solo nombres: quien abre 445 sujetos necesita ordenar
+                       // y saber por que esta cada uno. El buscador se verifica
+                       // por selector: un placeholder no es textContent.
+                       'Relevancia', 'Antecedentes', 'Antigüedad',
+                       'Sanción histórica', 'en pantalla',
+                       'con motivo', 'con sanción']
     .filter((t) => !body.includes(t));
-  if (faltanLista.length) {
-    failed++; console.log(`FAIL cohorte: falta ${JSON.stringify(faltanLista)}`);
+  const buscador = await page.locator('.drawer-find input').count();
+  if (faltanLista.length || buscador === 0) {
+    failed++;
+    console.log(`FAIL cohorte: falta ${JSON.stringify(faltanLista)}${buscador === 0 ? ' y el buscador de la lista' : ''}`);
   } else {
     // Y de un nombre al antecedente que lo sostiene, con su enlace.
     await page.getByRole('button', { name: /PEHUEN SPA/ }).click();
@@ -527,12 +536,46 @@ console.log('ok   pestañas de la ficha');
     body = await page.textContent('body');
     const link = await page.getByRole('link', { name: /Abrir documento original/ }).count();
     const faltanEv = ['La UAF publicó fiscalización',
-                      'puede estar emitido bajo otra razón social del mismo contribuyente']
+                      'puede estar emitido bajo otra razón social del mismo contribuyente',
+                      // La ficha ya no es una tira de texto: el indice viene con
+                      // la referencia de sus pares, el tramo de ventas legible y
+                      // las senales del perfil.
+                      'Índices, contra sus pares',
+                      'IPF · prioridad fiscalizadora',
+                      'mediana de 2.244 pares',
+                      'percentil', 'de su sector',
+                      'calculado con 100% de los insumos',
+                      'IGR de la comuna donde opera',
+                      'Describe el entorno de la comuna, nunca al sujeto',
+                      'Perfil tributario', 'Ventas declaradas', '0,01 a 200 UF',
+                      'Posición por ventas', 'bajo la mediana de su sector',
+                      'Señales del perfil', 'Giro atípico',
+                      'no imputa incumplimiento',
+                      'Antecedentes', 'Término de giro',
+                      'Empresas Dedicadas a la Gestión Inmobiliaria']
       .filter((t) => !body.includes(t));
     if (faltanEv.length || link === 0) {
       failed++;
       console.log(`FAIL antecedente: falta ${JSON.stringify(faltanEv)}${link === 0 ? ' y el enlace al documento' : ''}`);
     } else console.log('ok   la cifra abre nombres y cada nombre abre su antecedente con enlace');
+
+    // El ordinal del SII es un codigo interno: "Ventas 2" no significa nada
+    // para quien lee. La ficha debe mostrar el rango en UF, nunca el ordinal.
+    if (/Ventas\s+2(?!\d)/.test(body) || body.includes('Ventas declaradas2')) {
+      failed++; console.log('FAIL ficha: el tramo de ventas se imprime como ordinal crudo');
+    } else console.log('ok   el tramo de ventas se publica en UF, no como ordinal');
+
+    // Ordenar y filtrar operan sobre lo cargado, y la barra lo declara.
+    await page.getByRole('button', { name: /^IPF$/ }).click();
+    await page.waitForTimeout(200);
+    await page.locator('.drawer-find input').fill('banfactoring');
+    await page.waitForTimeout(260);
+    const filtrado = await page.textContent('body');
+    if (!filtrado.includes('BANFACTORING SPA') || filtrado.includes('PEHUEN SPA')) {
+      failed++; console.log('FAIL cohorte: el filtro no acota la lista cargada');
+    } else console.log('ok   el filtro acota la lista sin ir al servidor');
+    await page.locator('.drawer-find input').fill('');
+    await page.waitForTimeout(220);
     await shot(page, `${OUT}/pulso-cohorte.png`);
   }
   // Escape cierra la capa. Tambien deja el tablero listo para el bloque siguiente.
@@ -577,6 +620,45 @@ for (const [ruta, nombre] of [['#/entidades', 'movil'], ['#/pulso', 'movil-pulso
   if (overflow > 2) {
     failed++; console.log(`FAIL móvil ${ruta}: desborde horizontal de ${overflow}px`);
   } else console.log(`ok   móvil sin desborde · ${ruta}`);
+}
+
+// ── La ficha del sujeto a ancho de teléfono ───────────────────────────────
+// La capa cambia de retícula bajo 760 px: el indicador de IPF pasa a su propia
+// fila y el mosaico del perfil se reordena. Se comprueba con la ficha
+// desplegada, no sólo con la lista cerrada, porque el desborde aparece dentro.
+{
+  const f = await ctx.newPage();
+  await f.setViewportSize({ width: 390, height: 844 });
+  await f.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
+  await f.waitForTimeout(500);
+  const chip = f.getByRole('button', { name: /Con término de giro/ }).first();
+  await chip.scrollIntoViewIfNeeded();
+  await chip.click();
+  await f.waitForTimeout(450);
+  await f.getByRole('button', { name: /PEHUEN SPA/ }).click();
+  await f.waitForTimeout(500);
+
+  const cuerpo = await f.textContent('body');
+  const faltan = ['Índices, contra sus pares', 'Perfil tributario',
+                  'Ventas declaradas', '0,01 a 200 UF', 'Antecedentes']
+    .filter((t) => !cuerpo.includes(t));
+
+  // El desborde se mide sobre la capa, que es la que scrollea: el documento
+  // esta congelado mientras la ficha esta abierta.
+  const desborde = await f.evaluate(() => {
+    const el = document.querySelector('.drawer');
+    if (!el) return -1;
+    return Math.max(
+      el.scrollWidth - el.clientWidth,
+      document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  });
+  await shot(f, `${OUT}/ficha-movil.png`);
+
+  if (faltan.length || desborde > 2) {
+    failed++;
+    console.log(`FAIL ficha móvil: falta ${JSON.stringify(faltan)}${desborde > 2 ? ` y desborda ${desborde}px` : ''}`);
+  } else console.log('ok   la ficha del sujeto no desborda a ancho de teléfono');
+  await f.close();
 }
 
 // ── Detalle territorial y sectorial: el análisis vive en el detalle, no en la
