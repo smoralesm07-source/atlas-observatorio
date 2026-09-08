@@ -10,6 +10,7 @@ export type Route =
   | { view: 'gasto'; familia?: string }
   | { view: 'gastoActor'; actorId: string; role: 'BUYER' | 'SUPPLIER' }
   | { view: 'fuentes' }
+  | { view: 'infra' }
   | { view: 'metodologia' };
 
 /** Hash routing: the app is a static bundle, so it must survive a hard reload
@@ -38,8 +39,6 @@ export function parseHash(hash: string): Route {
     case 'sectores':
       return { view: 'sectores' };
     case 'gasto':
-      // #/gasto/comprador/<rut> y #/gasto/proveedor/<rut> abren la ficha del
-      // actor; el RUT es el identificador porque la fuente casi no trae nombre.
       if (seg[1] === 'comprador' && seg[2]) {
         return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'BUYER' };
       }
@@ -49,6 +48,9 @@ export function parseHash(hash: string): Route {
       return { view: 'gasto', familia: params.get('familia') ?? undefined };
     case 'fuentes':
       return { view: 'fuentes' };
+    case 'infraestructura':
+    case 'infra':
+      return { view: 'infra' };
     case 'metodologia':
       return { view: 'metodologia' };
     default:
@@ -79,6 +81,8 @@ export function hrefFor(r: Route): string {
       return `#/gasto/${r.role === 'BUYER' ? 'comprador' : 'proveedor'}/${encodeURIComponent(r.actorId)}`;
     case 'fuentes':
       return '#/fuentes';
+    case 'infra':
+      return '#/infraestructura';
     case 'metodologia':
       return '#/metodologia';
     default:
