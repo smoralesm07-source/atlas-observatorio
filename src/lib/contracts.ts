@@ -640,8 +640,52 @@ export interface UafNationalSeries {
   corte: string | null;
 }
 
+/**
+ * Gatillante ACTECO: un codigo del SII cuya presencia caracteriza empiricamente
+ * a un sector obligado. La correspondencia se mide sobre los propios inscritos,
+ * no se escribe a mano.
+ */
+export interface UafScreeningActeco {
+  acteco: string;
+  glosa: string;
+  /** RUT del SII con este codigo que no figuran en el padron UAF. Exacto por codigo. */
+  universo: number | null;
+  sii_total: number | null;
+  inscritos_con_codigo: number | null;
+  /** Fraccion de inscritos del sector que declara el codigo (0..1). */
+  cobertura_max: number | null;
+  pureza_max: number | null;
+  lift_max: number | null;
+  /** BAJO | MEDIO | ALTO. Un codigo amplio arrastra entidades ajenas al sector. */
+  riesgo: string | null;
+  /** Un mismo codigo puede caracterizar a mas de un sector. */
+  sectores: string[];
+}
+
+/** Brecha por sector: padron inscrito contra universo observable en el SII. */
+export interface UafScreeningSector {
+  etiqueta: string;
+  uaf_sector: string | null;
+  inscritos: number | null;
+  /** Suma de los universos de sus gatillantes. Bruta: un RUT con dos giros cuenta dos veces. */
+  universo_bruto: number | null;
+  gatillantes: number;
+  cobertura_max: number | null;
+  riesgo: string | null;
+  actecos: string[];
+}
+
+/** Sector cuyo universo potencial no se puede construir desde ACTECO. */
+export interface UafScreeningMode {
+  uaf_sector: string;
+  mode: 'ACTECO' | 'REGISTRO_EXTERNO' | 'NO_EVALUABLE_SII_PJ';
+  external_source: string | null;
+  note: string | null;
+  inscritos: number;
+}
+
 export interface UafPulse {
-  contract: 'ATLAS_OBS_UAF_PULSE_V2';
+  contract: 'ATLAS_OBS_UAF_PULSE_V3';
   snapshot: {
     snapshot_id: string;
     generated_at: string;
@@ -725,6 +769,36 @@ export interface UafPulse {
       sujetos_en_silencio: number;
       ros_top3: number;
     } | null;
+  };
+  screening: {
+    disponible: boolean;
+    corte: {
+      sii_periodo: string;
+      sii_dataset: string;
+      uaf_corte: string;
+      /** Linea base declarada por Radar_SII, no materializada RUT a RUT aqui. */
+      universo_declarado: number;
+      universo_estado: string;
+      universo_nota: string;
+      fuente: string;
+      fuente_url: string;
+    };
+    totales: {
+      gatillantes: number;
+      sectores: number;
+      universo_bruto: number | null;
+      universo_top4: number | null;
+      universo_riesgo_alto: number | null;
+      inscritos_cubiertos: number;
+      sectores_otro_modo: number;
+      sujetos_otro_modo: number;
+      padron_total: number;
+      gatillantes_b: number;
+    } | null;
+    actecos: UafScreeningActeco[];
+    sectores: UafScreeningSector[];
+    modos: UafScreeningMode[];
+    semantics: string;
   };
   by_region: {
     region: string;

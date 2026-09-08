@@ -4,7 +4,7 @@ import { hrefFor } from '../lib/router';
 import type {
   Pulse, UafAttentionRow, UafMotive, UafPulse, UafReportingSector,
 } from '../lib/contracts';
-import { Bars, Columns, OrderedDistribution, StateBar } from '../components/charts';
+import { Bars, Columns, GapBars, OrderedDistribution, StateBar } from '../components/charts';
 import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
 import { fecha, n, n1, titleCase } from '../lib/format';
 import { AlertCard } from '../components/AlertCard';
@@ -69,6 +69,23 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
     () => ordenarSectores(rep?.sectores ?? [], 'padron').slice(0, 3),
     [rep],
   );
+  const scr = data?.screening;
+  const [brechaOrden, setBrechaOrden] = useState<'brecha' | 'razon'>('brecha');
+
+  /* La brecha por sector se ordena de dos maneras que responden preguntas
+     distintas: por tamaño del universo (dónde hay más que mirar) y por razón
+     contra el padrón (dónde el padrón cubre proporcionalmente menos). */
+  const brechaSectores = useMemo(() => {
+    const rows = [...(scr?.sectores ?? [])];
+    if (brechaOrden === 'razon') {
+      const r = (x: (typeof rows)[number]) =>
+        (x.inscritos ?? 0) > 0 ? (x.universo_bruto ?? 0) / (x.inscritos ?? 1) : -1;
+      rows.sort((a, b) => r(b) - r(a));
+    } else {
+      rows.sort((a, b) => (b.universo_bruto ?? 0) - (a.universo_bruto ?? 0));
+    }
+    return rows;
+  }, [scr, brechaOrden]);
 
   if (loading) return <Loading label="Leyendo el padrón de sujetos obligados…" />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
@@ -83,6 +100,18 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const igrAlto = data.by_region.reduce((a, r) => a + r.en_igr_alto, 0);
   const serieActiva = SERIES.find((s) => s.key === serie) ?? SERIES[0];
   const serieDatos = rep?.nacional?.[serie];
+
+  /* Reparto del padrón por modo de screening. El resto —sectores sin gatillante
+     de prioridad A— no es un residuo: son sectores que el ACTECO sólo pondera,
+     nunca gatilla, y contarlos como "cubiertos" inflaría la cobertura. */
+  const st = scr?.totales ?? null;
+  const padronSinGatillante = st
+    ? Math.max(0, st.padron_total - st.inscritos_cubiertos - st.sujetos_otro_modo)
+    : 0;
+  const concentracionScr =
+    st?.universo_bruto && st.universo_top4
+      ? (st.universo_top4 / st.universo_bruto) * 100
+      : null;
 
   /* Concentración: la cifra que cambia la lectura de todo el tablero. Tres
      sectores de cincuenta explican la mayor parte del volumen reportado, y el
@@ -237,19 +266,185 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
               { key: 'SIN_PERFIL_SII', label: 'Sin perfil SII', value: u.sin_perfil, color: 'var(--unknown)' },
             ]}
           />
-          <div className="callout" style={{ marginTop: 16 }}>
-            <div>
-              <b>El estado ante el SII no mide cumplimiento.</b>{' '}
-              Un término de giro es una condición tributaria: describe el cierre del giro,
-              no una conclusión LA/FT ni una baja del registro. Y {n(u.sin_perfil)} sujetos
-              sin perfil de persona jurídica son personas naturales inscritas, no una brecha.
+          {/* El padrón se lee como cobertura, no como total: sólo una parte de
+              sus sectores admite que se construya el universo observable desde
+              el giro declarado ante el SII. */}
+          {scr?.disponible && st && (
+            <div style={{ marginTop: 18 }}>
+              <div className="panel-sub">Qué parte del padrón admite screening por giro</div>
+              <StateBar
+                total={st.padron_total}
+                rows={[
+                  {
+                    key: 'ACTECO',
+                    label: 'Universo construible',
+                    value: st.inscritos_cubiertos,
+                    color: 'var(--accent)',
+                    hint: `${st.sectores} sectores`,
+                  },
+                  {
+                    key: 'REGISTRO',
+                    label: 'Exige registro sectorial',
+                    value: st.sujetos_otro_modo,
+                    color: 'var(--unknown)',
+                    hint: `${st.sectores_otro_modo} sectores`,
+                  },
+                  {
+                    key: 'SIN_GATILLANTE',
+                    label: 'Sin gatillante de prioridad A',
+                    value: padronSinGatillante,
+                    color: 'var(--ink-4)',
+                    hint: 'el giro sólo pondera',
+                  },
+                ]}
+              />
             </div>
-          </div>
-          <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-            {data.coverage.uaf_registration_note}
-          </p>
+          )}
         </Panel>
       </div>
+
+      {/* ── 3b. Brecha de screening: quién podría estar obligado ────────── */}
+      {scr?.disponible && st && (
+        <Panel
+          title="Potenciales sujetos obligados"
+          meta={`SII ${scr.corte.sii_periodo} · padrón UAF ${fecha(scr.corte.uaf_corte)}`}
+          pad={false}
+          actions={
+            <div className="seg">
+              <button data-on={brechaOrden === 'brecha'} onClick={() => setBrechaOrden('brecha')}>
+                Tamaño del universo
+              </button>
+              <button data-on={brechaOrden === 'razon'} onClick={() => setBrechaOrden('razon')}>
+                Razón contra el padrón
+              </button>
+            </div>
+          }
+        >
+          <div style={{ padding: '14px 18px 4px', display: 'grid', gap: 14 }}>
+            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.6 }}>
+              El padrón dice quién está inscrito. El SII observa quién declara un giro
+              alcanzado por la Ley 19.913. Cruzar ambos deja a la vista las entidades que
+              se comportan como sujetos obligados sin figurar en el corte público del
+              registro: un universo de <b>screening</b>, no una lista de infractores.
+            </p>
+
+            <div className="stat-row">
+              <Stat
+                label="Universo consolidado"
+                value={n(scr.corte.universo_declarado)}
+                tone="var(--accent)"
+                hint="RUT distintos · línea base declarada, no navegable aquí"
+              />
+              <Stat
+                label="Gatillantes de prioridad A"
+                value={n(st.gatillantes)}
+                tone="var(--sig-medium)"
+                hint={`códigos ACTECO sobre ${n(st.sectores)} sectores obligados`}
+              />
+              <Stat
+                label="Padrón en esos sectores"
+                value={n(st.inscritos_cubiertos)}
+                tone="var(--present)"
+                hint="inscritos contra los que se mide la brecha"
+              />
+              <Stat
+                label="Universo de riesgo alto"
+                value={
+                  st.universo_bruto && st.universo_riesgo_alto
+                    ? `${n1((st.universo_riesgo_alto / st.universo_bruto) * 100)}%`
+                    : '—'
+                }
+                tone="var(--sig-high)"
+                hint="proviene de códigos amplios, con más falso positivo"
+              />
+            </div>
+
+            {concentracionScr != null && (
+              <div className="callout accent">
+                <div>
+                  <b>Cuatro códigos explican el {n1(concentracionScr)}% del universo observable.</b>{' '}
+                  De {n(st.universo_bruto ?? 0)} observaciones RUT×código,{' '}
+                  {n(st.universo_top4 ?? 0)} vienen de corretaje de propiedades, arriendo de
+                  vehículos, venta de automóviles y joyería. Dos de esos cuatro son los
+                  códigos con mayor riesgo de falso positivo del conjunto: la brecha más
+                  grande y la más incierta son la misma.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="panel-sub-bar">
+            Brecha por sector · padrón inscrito contra RUT del SII con giro alcanzado
+            <em>
+              dos sectores que comparten un gatillante repiten el mismo universo; el
+              riesgo de la fila es el del peor de sus códigos
+            </em>
+          </div>
+          <GapBars
+            rows={brechaSectores.map((b) => ({
+              key: b.etiqueta,
+              label: titleCase(b.etiqueta),
+              inscritos: b.inscritos,
+              universo: b.universo_bruto,
+              riesgo: b.riesgo,
+              meta: b.actecos.join(' · '),
+            }))}
+            onPick={(k) => {
+              const row = brechaSectores.find((b) => b.etiqueta === k);
+              if (row?.uaf_sector) {
+                open({
+                  cohort: 'SECTOR',
+                  value: row.uaf_sector,
+                  title: titleCase(row.uaf_sector),
+                  hint: 'inscritos del sector; el universo potencial no se navega desde aquí',
+                });
+              }
+            }}
+          />
+
+          <div className="panel-sub-bar">
+            Sectores cuyo universo no se puede construir desde el giro declarado
+          </div>
+          <div style={{ padding: '14px 18px 4px' }}>
+            <div className="mode-strip">
+              {scr.modos.map((m) => (
+                <div key={m.uaf_sector} className="mode-card">
+                  <h4>{titleCase(m.uaf_sector)}</h4>
+                  <span className="mode-src">{m.external_source ?? 'registro sectorial'}</span>
+                  <p>
+                    <b className="mode-n num">{n(m.inscritos)}</b>{' '}
+                    <span style={{ color: 'var(--ink-4)' }}>inscritos</span>
+                  </p>
+                  {m.note && <p style={{ marginTop: 6 }}>{m.note}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ padding: '16px 18px 4px', display: 'grid', gap: 10 }}>
+            <div className="callout">
+              <div>
+                <b>Un giro alcanzado no prueba la obligación.</b>{' '}
+                {scr.semantics}
+              </div>
+            </div>
+            <p style={{ margin: 0, fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
+              {scr.corte.universo_nota} Ausencia del corte público UAF no equivale a no
+              inscrita: el padrón que el Observatorio lee es una publicación, no el registro
+              vivo de la UAF. {data.coverage.uaf_registration_note}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
+                {scr.corte.fuente} · {scr.corte.sii_dataset}
+              </span>
+              <a className="ev-link" style={{ marginTop: 0, fontSize: 11.5 }}
+                href={scr.corte.fuente_url} target="_blank" rel="noreferrer">
+                Nómina de personas jurídicas SII →
+              </a>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       {/* ── 4. Quién sostiene el volumen reportado ─────────────────────── */}
       {rep?.disponible && (
@@ -787,6 +982,23 @@ function Kpi({
       {share && <div className="kpi-share">{share}</div>}
       {foot && <div className="kpi-foot">{foot}</div>}
     </button>
+  );
+}
+
+/* Cifra de contexto sin destino: a diferencia de un KPI del padrón, el universo
+   de screening no se navega —no está materializado RUT a RUT— y ofrecerlo como
+   botón prometería una lista que no existe. */
+function Stat({
+  label, value, hint, tone,
+}: {
+  label: string; value: string; hint: string; tone: string;
+}) {
+  return (
+    <div className="stat" style={{ ['--stat-tone' as string]: tone }}>
+      <span className="stat-label">{label}</span>
+      <b className="stat-value num" style={{ color: tone }}>{value}</b>
+      <span className="stat-hint">{hint}</span>
+    </div>
   );
 }
 

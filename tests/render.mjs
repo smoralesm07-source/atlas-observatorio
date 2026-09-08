@@ -135,6 +135,14 @@ const SESSION = {
   },
 };
 
+/* Las capturas son diagnostico, no aserciones, pero un timeout las convierte
+   en un fallo que no dice nada del producto. El Pulso pasa de 6.000 px de alto
+   y se captura a 2x: son ~13.000 px fisicos, y el tiempo crece con la pagina.
+   Se les da un plazo acorde en vez de dejarlas contra el limite por defecto. */
+const SHOT_TIMEOUT = 120000;
+const shot = (target, path) =>
+  target.screenshot({ path, fullPage: true, timeout: SHOT_TIMEOUT });
+
 const errors = [];
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROME ?? undefined });
 const ctx = await browser.newContext({ viewport: { width: 1500, height: 1000 }, deviceScaleFactor: 2 });
@@ -345,6 +353,18 @@ const checks = [
     'Industria según el SII', 'Actividades Financieras y de Seguros',
     'Término de giro por año', 'Caracterización cruzada',
     'Con antecedente sancionatorio', '372', 'Proveedores del Estado',
+    // Brecha de screening: el universo SII que declara un giro alcanzado por la
+    // Ley 19.913 y no figura en el padron. Reemplaza a la nota en prosa que
+    // ocupaba el pie del estado registral.
+    'Potenciales sujetos obligados', '79.449', 'Gatillantes de prioridad A', '23',
+    'Qué parte del padrón admite screening por giro', 'Universo construible',
+    'Exige registro sectorial', 'Sin gatillante de prioridad A',
+    'Cuatro códigos explican', 'Brecha por sector',
+    'Corredores de Propiedades', '25.062',
+    'Sectores cuyo universo no se puede construir desde el giro declarado',
+    'Aduanas / administración de Zona Franca', 'Poder Judicial',
+    'escala logarítmica', 'Un giro alcanzado no prueba la obligación',
+    'Nómina de personas jurídicas SII',
     // Los limites se declaran en la propia pantalla, no en la documentacion.
     'no publica fecha de inscripción', 'Describe el entorno, nunca al sujeto',
     'no existe ROS por sujeto', 'no prueba incumplimiento',
@@ -412,7 +432,7 @@ for (const [name, hash, expect] of checks) {
   await page.waitForTimeout(500);
   const body = await page.textContent('body');
   const missing = expect.filter((t) => !body.includes(t));
-  await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
+  await shot(page, `${OUT}/${name}.png`);
   if (missing.length) { failed++; console.log(`FAIL ${name}: falta ${JSON.stringify(missing)}`); }
   else console.log(`ok   ${name}`);
 }
@@ -423,7 +443,7 @@ for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y pad
                    'Screening internacional', 'Identidad digital']) {
   await page.getByRole('button', { name: tab, exact: true }).click();
   await page.waitForTimeout(220);
-  await page.screenshot({ path: `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`, fullPage: true });
+  await shot(page, `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`);
 }
 {
   // El recuento de una fuente lleva su propia unidad: llamar "eventos" a 1.283
@@ -513,7 +533,7 @@ console.log('ok   pestañas de la ficha');
       failed++;
       console.log(`FAIL antecedente: falta ${JSON.stringify(faltanEv)}${link === 0 ? ' y el enlace al documento' : ''}`);
     } else console.log('ok   la cifra abre nombres y cada nombre abre su antecedente con enlace');
-    await page.screenshot({ path: `${OUT}/pulso-cohorte.png`, fullPage: true });
+    await shot(page, `${OUT}/pulso-cohorte.png`);
   }
   // Escape cierra la capa. Tambien deja el tablero listo para el bloque siguiente.
   await page.keyboard.press('Escape');
@@ -541,18 +561,23 @@ console.log('ok   pestañas de la ficha');
 await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
 await page.click('[title*="modo claro"]');
 await page.waitForTimeout(400);
-await page.screenshot({ path: `${OUT}/pulso-claro.png`, fullPage: true });
+await shot(page, `${OUT}/pulso-claro.png`);
 console.log('ok   tema claro');
 
-// Mobile must not scroll horizontally.
+// Mobile must not scroll horizontally. El Pulso entra a la comprobacion porque
+// es la pantalla mas ancha: barras, tablas y el cuadro de brecha por sector.
 const m = await ctx.newPage();
 await m.setViewportSize({ width: 390, height: 844 });
-await m.goto(`${BASE}/#/entidades`, { waitUntil: 'networkidle' });
-await m.waitForTimeout(400);
-const overflow = await m.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-await m.screenshot({ path: `${OUT}/movil.png`, fullPage: true });
-if (overflow > 2) { failed++; console.log(`FAIL móvil: desborde horizontal de ${overflow}px`); }
-else console.log('ok   móvil sin desborde');
+for (const [ruta, nombre] of [['#/entidades', 'movil'], ['#/pulso', 'movil-pulso']]) {
+  await m.goto(`${BASE}/${ruta}`, { waitUntil: 'networkidle' });
+  await m.waitForTimeout(500);
+  const overflow = await m.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  await shot(m, `${OUT}/${nombre}.png`);
+  if (overflow > 2) {
+    failed++; console.log(`FAIL móvil ${ruta}: desborde horizontal de ${overflow}px`);
+  } else console.log(`ok   móvil sin desborde · ${ruta}`);
+}
 
 // ── Detalle territorial y sectorial: el análisis vive en el detalle, no en la
 // portada, así que se verifica que abra y muestre la descomposición.
@@ -564,7 +589,7 @@ await page.locator('table').getByText('San Bernardo', { exact: true }).first().c
 await page.waitForTimeout(600);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/territorio-comuna.png`, fullPage: true });
+  await shot(page, `${OUT}/territorio-comuna.png`);
   const faltan = ['San Bernardo', 'Delito base directo', 'Economía criminal',
                   'Persistencia', 'Anomalía', 'en el país', 'no imputan nada',
                   'confianza']
@@ -582,7 +607,7 @@ await page.locator('table').getByText('Casas de Cambio', { exact: true }).first(
 await page.waitForTimeout(600);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/sector-detalle.png`, fullPage: true });
+  await shot(page, `${OUT}/sector-detalle.png`);
   const faltan = ['Casas de Cambio', 'Giros característicos', 'Distribución del IPF',
                   'Observabilidad del sector', 'no constituye incumplimiento',
                   'Dónde está el sector']
@@ -601,7 +626,7 @@ await page.locator('table').getByText('Convergencia', { exact: true }).first().c
 await page.waitForTimeout(700);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/gasto-familia.png`, fullPage: true });
+  await shot(page, `${OUT}/gasto-familia.png`);
   const faltan = ['Convergencia de señales independientes', '1 en el filtro actual']
     .filter((t) => !body.includes(t));
   const sobra = body.includes('Concentración inusual de gasto en proveedores');
@@ -620,7 +645,7 @@ await page.goto(`${BASE}/#/gasto/proveedor/77536802-0`, { waitUntil: 'networkidl
 await page.waitForTimeout(600);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/gasto-fuera-de-corte.png`, fullPage: true });
+  await shot(page, `${OUT}/gasto-fuera-de-corte.png`);
   const faltan = ['77.536.802-0', 'no está en el corte publicado',
                   'no significa que no tenga compras públicas']
     .filter((t) => !body.includes(t));
@@ -640,7 +665,7 @@ await page.fill('#obs-search', 'banco');
 await page.waitForTimeout(900);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/cascada-capas.png`, fullPage: true });
+  await shot(page, `${OUT}/cascada-capas.png`);
   const faltan = ['Universo observado', 'Listas internacionales', 'Identidad digital', 'Banco Bice']
     .filter((t) => !body.includes(t));
   if (faltan.length) { failed++; console.log(`FAIL capas: falta ${JSON.stringify(faltan)}`); }
@@ -654,7 +679,7 @@ await page.fill('#obs-search', 'Vinko Fodich');
 await page.waitForTimeout(1800);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/cascada-prensa.png`, fullPage: true });
+  await shot(page, `${OUT}/cascada-prensa.png`);
   const faltan = ['Radar Prensa', 'Investigación por presunto fraude en zona franca']
     .filter((t) => !body.includes(t));
   if (faltan.length) {
@@ -670,7 +695,7 @@ await page.fill('#obs-search', 'Zarahemla Quispe');
 await page.waitForTimeout(2200);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/cascada-internacional.png`, fullPage: true });
+  await shot(page, `${OUT}/cascada-internacional.png`);
   const faltan = ['OFAC', 'Coincidencia exacta de nombre', 'ICIJ Offshore Leaks',
                   'continuó', 'candidato', 'Sin credencial']
     .filter((t) => !body.includes(t));
@@ -683,7 +708,7 @@ await page.getByRole('button', { name: /Identidad digital/ }).click();
 await page.waitForTimeout(2200);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/cascada-digital.png`, fullPage: true });
+  await shot(page, `${OUT}/cascada-digital.png`);
   const faltan = ['vinkofodich', 'Matriz de corroboración', 'Santiago, Chile',
                   'Enlaces pivote', 'nombre+apellido']
     .filter((t) => !body.includes(t));
@@ -703,7 +728,7 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 {
   const body = await page.textContent('body');
-  await page.screenshot({ path: `${OUT}/acceso-pendiente.png`, fullPage: true });
+  await shot(page, `${OUT}/acceso-pendiente.png`);
   if (!body.includes('Acceso pendiente de habilitación')) {
     failed++; console.log('FAIL acceso pendiente: no se muestra la pantalla de habilitación');
   } else if (body.includes('Pulso del observatorio')) {
@@ -722,7 +747,7 @@ await anon.waitForTimeout(400);
 {
   const body = await anon.textContent('body');
   const passwordFields = await anon.locator('input[type="password"]').count();
-  await anon.screenshot({ path: `${OUT}/ingreso.png`, fullPage: true });
+  await shot(anon, `${OUT}/ingreso.png`);
   if (!body.includes('Ingresar con Microsoft')) {
     failed++; console.log('FAIL ingreso: falta el acceso con Microsoft');
   } else if (passwordFields > 0) {
