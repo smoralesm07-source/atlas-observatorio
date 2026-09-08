@@ -7,7 +7,7 @@ import { Pulso } from './views/Pulso';
 import { Osfl } from './views/Osfl';
 import { Senales } from './views/Senales';
 import { Entidades } from './views/Entidades';
-import { Ficha } from './views/Ficha';
+import { EntityExpediente } from './views/EntityExpediente';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
 import { Sectores } from './views/Sectores';
@@ -37,7 +37,7 @@ function Routed({ session }: { session: Session }) {
           onNavigate={go}
         />
       )}
-      {route.view === 'ficha' && <Ficha entityId={route.entityId} onNavigate={go} />}
+      {route.view === 'ficha' && <EntityExpediente entityId={route.entityId} onNavigate={go} />}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
       {route.view === 'sectores' && <Sectores onNavigate={go} />}
       {route.view === 'gasto' && <GastoPublico familiaInicial={route.familia} onNavigate={go} />}
