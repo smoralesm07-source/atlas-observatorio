@@ -1,0 +1,29 @@
+/* Correcciones transversales de interfaz.
+   Se importa al final para evitar que reglas antiguas vuelvan a introducir
+   marcos de foco de color acento sobre contenedores de gran tamaño. */
+
+/* El selector global :focus-visible de app.css podía dibujar un contorno
+   turquesa alrededor de vistas, paneles o filas que reciben foco por código.
+   El foco sigue siendo visible en controles reales, pero sin marcos exteriores
+   que puedan confundirse con parte de la interfaz. */
+*:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--line-strong) !important;
+}
+
+/* Explorar / Pulso: los atajos de cohorte ya no forman parte de esta vista. */
+.view-pulso .pulse-quick {
+  display: none !important;
+}
