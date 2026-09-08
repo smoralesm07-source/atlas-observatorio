@@ -558,19 +558,96 @@ export interface SpendActorDetail {
 
 /* ---------------------------------------------------------------- Pulso UAF
 
-   El Pulso caracteriza el padron de sujetos obligados. Su eje temporal es el
-   ciclo de vida ante el SII, porque no existe fecha de inscripcion UAF en
-   ninguna fuente, y su lectura territorial es contexto comunal: el IGR
-   describe donde opera el sujeto, nunca al sujeto. */
+   El Pulso caracteriza el padron de sujetos obligados y su reportabilidad.
+   Su eje temporal interno es el ciclo de vida ante el SII, porque no existe
+   fecha de inscripcion UAF en ninguna fuente; su lectura territorial es
+   contexto comunal —el IGR describe donde opera el sujeto, nunca al sujeto—;
+   y su lectura de reportabilidad es SECTORIAL y agregada, porque no existe
+   ROS por sujeto en ninguna fuente disponible. */
 
 export type UafCohort =
   | 'TODOS' | 'ACTIVO' | 'TERMINO_GIRO' | 'SIN_PERFIL_SII'
   | 'OSFL' | 'PROVEEDOR_ESTADO' | 'SANCIONADO' | 'PRENSA' | 'CON_SENAL'
   | 'IGR_ALTO' | 'IGR_MUY_ALTO'
-  | 'REGION' | 'SECTOR' | 'INDUSTRIA' | 'TERMINO_ANO';
+  | 'REGION' | 'SECTOR' | 'INDUSTRIA' | 'TERMINO_ANO'
+  | 'ATENCION' | 'MOTIVO' | 'IPF_ALTO' | 'GIRO_ATIPICO'
+  | 'CAMBIO_ACTIVIDAD' | 'SIN_TERRITORIO' | 'SECTOR_SIN_ROS';
+
+/** Motivo de revisión de mayor precedencia. Ordena trabajo; no imputa nada. */
+export type UafMotive =
+  | 'SANCION_RECIENTE' | 'SANCION_HISTORICA' | 'TERMINO_GIRO' | 'IPF_ALTA'
+  | 'SECTOR_SIN_ROS' | 'GIRO_ATIPICO' | 'SIN_TERRITORIO';
+
+export interface UafAttentionRow {
+  rut: string;
+  entity_id: string | null;
+  name: string;
+  uaf_sector: string | null;
+  economic_sector: string | null;
+  main_activity: string | null;
+  region: string | null;
+  commune: string | null;
+  igr_level: string | null;
+  sii_status: string | null;
+  sii_termination_date: string | null;
+  motivo: UafMotive;
+  orden: number;
+  ipf_score: number | null;
+  ipf_band: string | null;
+  sanction_evidence_count: number;
+  sanction_last_date: string | null;
+  press_evidence_count: number;
+  alert_count: number;
+  activity_atypicality: number | null;
+  is_state_supplier: boolean;
+  workers: number | null;
+  sales_band: string | null;
+}
+
+export interface UafReportingSector {
+  sector_official: string;
+  /** Nulo = categoría canónica de la ley sin ningún inscrito en el padrón. */
+  sector_canonical: string | null;
+  etiqueta: string;
+  /** Padrón operativo vigente (30-06-2026). */
+  padron_sujetos: number | null;
+  sancionados: number | null;
+  en_atencion: number | null;
+  ipf_medio: number | null;
+  /** Padrón del Informe Estadístico (31-12-2025). Otro corte, otro número. */
+  registered_so_2025: number | null;
+  ros_2021: number | null;
+  ros_2022: number | null;
+  ros_2023: number | null;
+  ros_2024: number | null;
+  ros_2025: number | null;
+  ros_total_2021_2025: number | null;
+  ros_per_100_so_2025: number | null;
+  delta_ros_2025_vs_2024_pct: number | null;
+  /** Verdadero: con inscritos y cero ROS 2021-2025. Nulo: no aplica. */
+  silence_5y: boolean | null;
+  indicios_total_2021_2025: number | null;
+  /** ROS con indicios LA/FT sobre ROS enviados, 2021-2025. */
+  icr_pct: number | null;
+  has_conversion: boolean;
+}
+
+export interface UafNationalSeries {
+  puntos: { periodo: string; valor: number | null }[];
+  unidad: string | null;
+  categoria: string | null;
+  fuente: string | null;
+  corte: string | null;
+}
 
 export interface UafPulse {
-  contract: 'ATLAS_OBS_UAF_PULSE_V1';
+  contract: 'ATLAS_OBS_UAF_PULSE_V2';
+  snapshot: {
+    snapshot_id: string;
+    generated_at: string;
+    published_at: string | null;
+    status: string;
+  } | null;
   universe: {
     total: number;
     activos: number;
@@ -585,6 +662,16 @@ export interface UafPulse {
     sectores_uaf: number;
     industrias: number;
     antiguedad_media: number | null;
+    con_ipf: number;
+    ipf_medio: number | null;
+    ipf_p90: number | null;
+    ipf_alto: number;
+    giro_atipico: number;
+    cambio_actividad: number;
+    cambio_region: number;
+    estructura_amplia: number;
+    trabajadores: number | null;
+    en_atencion: number;
   } | null;
   crosscuts: {
     osfl: number;
@@ -600,13 +687,52 @@ export interface UafPulse {
     antecedentes_sancion: number;
     antecedentes_prensa: number;
   } | null;
-  lifecycle: { terminated_by_year: { ano: number; n: number }[] };
+  ipf_bands: { banda: string; sujetos: number; ipf_medio: number | null }[];
+  attention: {
+    total: number;
+    motivos: { motivo: UafMotive; orden: number; sujetos: number; con_ipf_alto: number }[];
+    top: UafAttentionRow[];
+  };
+  lifecycle: {
+    terminated_by_year: { ano: number; n: number }[];
+    started_by_year: { ano: number; n: number }[];
+  };
+  sanctions: {
+    by_year: { ano: number; eventos: number; sujetos: number; monto_uf: number | null; con_documento: number }[];
+    eventos: number;
+    con_documento: number;
+    monto_uf: number | null;
+    ultimo: string | null;
+  };
+  reporting: {
+    disponible: boolean;
+    corte: {
+      periodo: string;
+      padron_referencia: number;
+      padron_referencia_corte: string;
+      fuente: string;
+      fuente_url: string;
+    };
+    nacional: Record<string, UafNationalSeries>;
+    sectores: UafReportingSector[];
+    totales: {
+      ros_2025: number | null;
+      ros_5y: number | null;
+      indicios_5y: number | null;
+      ros_2025_max: number | null;
+      sectores_silenciosos: number;
+      sectores_sin_inscritos: number;
+      sujetos_en_silencio: number;
+      ros_top3: number;
+    } | null;
+  };
   by_region: {
     region: string;
     sujetos: number;
     terminados: number;
     sancionados: number;
     proveedores: number;
+    en_atencion: number;
     igr_medio: number | null;
     igr_banda: string | null;
     en_igr_muy_alto: number;
@@ -617,6 +743,7 @@ export interface UafPulse {
     sujetos: number;
     terminados: number;
     sancionados: number;
+    en_atencion: number;
     ipf_medio: number | null;
   }[];
   by_industry: {
@@ -635,6 +762,10 @@ export interface UafPulse {
     sanction_note: string;
     uaf_registration_date: boolean;
     uaf_registration_note: string;
+    reporting_level: string;
+    reporting_note: string;
+    silence_note: string;
+    denominator_note: string;
   };
   semantics: string;
 }

@@ -452,3 +452,169 @@ select.chip { appearance: none; padding-right: 26px;
 .ev-sum { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); line-height: 1.55; }
 .ev-link { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--accent); }
 .ev-nolink { display: inline-block; margin-top: 8px; font-size: 11.5px; color: var(--ink-4); font-style: italic; }
+
+/* ───────────────────────────────────────────────── pulso · tablero denso
+
+   El Pulso es la primera pantalla del turno: tiene que responder de un vistazo
+   de qué está hecho el padrón, cuánto reporta y a quién hay que mirar hoy.
+   Por eso su cabecera es una banda de mando y no un título suelto. */
+
+.pulse-command {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px 24px; align-items: start;
+  padding: 20px 22px 16px; margin-bottom: 16px;
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background:
+    radial-gradient(680px 260px at 3% 0%, var(--accent-glow), transparent 70%),
+    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+  box-shadow: var(--shadow-panel);
+}
+.pulse-kicker {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+}
+.pulse-command h1 {
+  margin: 8px 0 0; font-size: 27px; font-weight: 700; letter-spacing: -0.032em;
+}
+.pulse-command .view-lede { margin-top: 8px; }
+
+.pulse-meta { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.pulse-meta-item {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--bg-panel); font-size: 11px; color: var(--ink-3);
+}
+.pulse-meta-item b { color: var(--ink-2); font-weight: 600; }
+.pulse-meta-item i {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--present); flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--present) 16%, transparent);
+}
+
+.pulse-quick {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 7px;
+  padding-top: 14px; border-top: 1px solid var(--line-soft);
+}
+.pulse-quick .chip { font-size: 11.5px; padding: 5px 12px; }
+.pulse-quick .chip b { font-family: var(--mono); font-weight: 650; color: var(--ink); }
+
+/* KPI: la cifra manda, el riel de color la clasifica y el pie la explica. */
+.kpi-row {
+  display: grid; gap: 12px; margin-bottom: 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+@media (max-width: 1180px) { .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px)  { .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.kpi {
+  position: relative; overflow: hidden; text-align: left; width: 100%;
+  padding: 15px 16px 16px 19px; font: inherit; color: inherit;
+  background: var(--bg-panel); border: 1px solid var(--line);
+  border-radius: var(--radius); cursor: pointer;
+  transition: border-color 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.kpi::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--kpi-tone, var(--accent));
+}
+.kpi:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.kpi-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.kpi-label {
+  font-size: 10.5px; font-weight: 650; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.kpi-glyph {
+  display: grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0;
+  border-radius: 8px; color: var(--kpi-tone, var(--accent));
+  background: color-mix(in srgb, var(--kpi-tone, var(--accent)) 13%, transparent);
+}
+.kpi-value {
+  margin-top: 9px; font-size: 28px; font-weight: 700;
+  letter-spacing: -0.038em; line-height: 1;
+}
+.kpi-share { margin-top: 7px; font-size: 11.5px; color: var(--ink-2); font-weight: 600; }
+.kpi-foot { margin-top: 3px; font-size: 11px; color: var(--ink-4); line-height: 1.4; }
+
+/* Fichas de estado bajo una barra de composición. */
+.state-card {
+  padding: 11px 12px; text-align: left; font: inherit; color: inherit; width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--bg-panel-2); transition: border-color 0.15s var(--ease);
+}
+button.state-card { cursor: pointer; }
+button.state-card:hover { border-color: var(--line-strong); }
+
+/* Motivo de revisión: vocabulario ordenado, así que el color va ordenado. */
+.motive {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 650;
+  border: 1px solid transparent;
+}
+.motive i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.motive[data-m='SANCION_RECIENTE']  { color: var(--sig-critical); background: color-mix(in srgb, var(--sig-critical) 13%, transparent); border-color: color-mix(in srgb, var(--sig-critical) 32%, transparent); }
+.motive[data-m='SANCION_HISTORICA'] { color: var(--sig-high);     background: color-mix(in srgb, var(--sig-high) 13%, transparent);     border-color: color-mix(in srgb, var(--sig-high) 30%, transparent); }
+.motive[data-m='TERMINO_GIRO']      { color: var(--sig-high);     background: color-mix(in srgb, var(--sig-high) 11%, transparent);     border-color: color-mix(in srgb, var(--sig-high) 26%, transparent); }
+.motive[data-m='IPF_ALTA']          { color: var(--sig-medium);   background: color-mix(in srgb, var(--sig-medium) 13%, transparent);   border-color: color-mix(in srgb, var(--sig-medium) 30%, transparent); }
+.motive[data-m='SECTOR_SIN_ROS']    { color: var(--unknown);      background: color-mix(in srgb, var(--unknown) 12%, transparent);      border-color: color-mix(in srgb, var(--unknown) 30%, transparent); }
+.motive[data-m='GIRO_ATIPICO']      { color: var(--sig-watch);    background: color-mix(in srgb, var(--sig-watch) 12%, transparent);    border-color: color-mix(in srgb, var(--sig-watch) 28%, transparent); }
+.motive[data-m='SIN_TERRITORIO']    { color: var(--ink-2);        background: var(--bg-raised);                                         border-color: var(--line-strong); }
+
+/* Control segmentado para elegir qué serie se está mirando. */
+.seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-panel-2); }
+.seg button {
+  border: 0; background: transparent; cursor: pointer; border-radius: 999px;
+  padding: 5px 12px; font-size: 11.5px; font-weight: 600; color: var(--ink-3);
+  transition: all 0.14s var(--ease); white-space: nowrap;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[data-on='true'] { background: var(--bg-raised); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+
+/* Aviso que no es un error: una condición del corte que hay que leer. */
+.callout {
+  display: flex; gap: 11px; align-items: flex-start;
+  padding: 12px 15px; border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--sig-medium) 30%, transparent);
+  background: color-mix(in srgb, var(--sig-medium) 8%, var(--bg-panel));
+  font-size: 12px; color: var(--ink-2); line-height: 1.55;
+}
+.callout b { color: var(--ink); }
+.callout.accent {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+}
+
+/* Fila de intensidad sectorial: padrón a la izquierda, reporte a la derecha,
+   y entre medio la barra que los relaciona. */
+.rep-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 78px 96px 74px;
+  gap: 4px 14px; align-items: center; width: 100%; text-align: left;
+  padding: 10px 18px; border: 0; border-bottom: 1px solid var(--line-soft);
+  background: transparent; cursor: pointer; font: inherit; color: inherit;
+  transition: background 0.13s var(--ease);
+}
+.rep-row:hover { background: var(--bg-panel-2); }
+.rep-name { font-size: 12.5px; font-weight: 570; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rep-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rep-sub { grid-column: 1 / 2; font-size: 11px; color: var(--ink-4); }
+.rep-bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--bg-raised); overflow: hidden; margin-top: 2px; }
+.rep-bar span { display: block; height: 100%; border-radius: 2px; }
+@media (max-width: 720px) {
+  .rep-row { grid-template-columns: minmax(0, 1fr) 70px; }
+  .rep-row .rep-hide { display: none; }
+}
+
+.pulse-grid-wide { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+@media (max-width: 1180px) { .pulse-grid-wide { grid-template-columns: minmax(0, 1fr); } }
+
+@media (max-width: 900px) {
+  .pulse-command { grid-template-columns: minmax(0, 1fr); }
+  .pulse-meta { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+}
+
+/* En una pantalla estrecha la cabecera del panel deja de ser una sola línea:
+   el control segmentado baja completo en vez de empujar el ancho del documento. */
+@media (max-width: 760px) {
+  .panel-head { flex-wrap: wrap; }
+  .panel-head .meta { width: 100%; }
+  .seg { flex-wrap: wrap; width: 100%; }
+  .seg button { flex: 1 1 auto; }
+}

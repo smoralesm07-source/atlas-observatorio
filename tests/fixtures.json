@@ -1491,52 +1491,21 @@
   ]
  },
  "uafPulse": {
-  "igr_mix": [
-   {
-    "banda": "Muy alto",
-    "sujetos": 4141,
-    "igr_medio": 87.5
-   },
-   {
-    "banda": "Alto",
-    "sujetos": 2887,
-    "igr_medio": 72.9
-   },
-   {
-    "banda": "Medio",
-    "sujetos": 844,
-    "igr_medio": 55.5
-   },
-   {
-    "banda": "Bajo",
-    "sujetos": 187,
-    "igr_medio": 35.3
-   },
-   {
-    "banda": "Muy bajo",
-    "sujetos": 58,
-    "igr_medio": 21.6
-   },
-   {
-    "banda": "Sin IGR",
-    "sujetos": 2177,
-    "igr_medio": null
-   }
-  ],
-  "contract": "ATLAS_OBS_UAF_PULSE_V1",
-  "coverage": {
-   "press_note": "La prensa llega con título y fecha, sin URL ni resumen: el enlace al artículo no está ingerido.",
-   "sanction_note": "El padrón atribuye sanción a 213 sujetos; la resolución de identidad por RUT alcanza 372 con antecedente abrible. Miden cosas distintas.",
-   "press_has_links": false,
-   "supplier_capped": true,
-   "supplier_cap_note": "El corte de compras públicas publica 3.000 proveedores. Un sujeto sin marca puede tener contratos igualmente.",
-   "uaf_registration_date": false,
-   "uaf_registration_note": "El registro UAF no publica fecha de inscripción ni estado de vigencia, de modo que el eje temporal es el ciclo de vida ante el SII."
+  "contract": "ATLAS_OBS_UAF_PULSE_V2",
+  "snapshot": {
+   "status": "READY",
+   "snapshot_id": "OBS-2026-09-08T0625Z",
+   "generated_at": "2026-09-08T06:25:00.086369+00:00",
+   "published_at": "2026-09-08T06:25:00.086369+00:00"
   },
   "universe": {
    "total": 10294,
    "activos": 7739,
+   "con_ipf": 9782,
+   "ipf_p90": 32.7,
+   "ipf_alto": 515,
    "regiones": 20,
+   "ipf_medio": 28.0,
    "juridicas": 7672,
    "naturales": 2110,
    "con_inicio": 7719,
@@ -1544,107 +1513,19 @@
    "organismos": 512,
    "sin_perfil": 2110,
    "terminados": 445,
+   "en_atencion": 2728,
+   "giro_atipico": 1894,
    "sectores_uaf": 50,
+   "trabajadores": 936205,
+   "cambio_region": 34,
    "con_territorio": 8175,
-   "antiguedad_media": 15.8
+   "antiguedad_media": 15.8,
+   "cambio_actividad": 891,
+   "estructura_amplia": 410
   },
-  "by_region": [
-   {
-    "region": "Metropolitana de Santiago",
-    "sujetos": 4315,
-    "igr_banda": "Alto",
-    "igr_medio": 73.1,
-    "terminados": 135,
-    "en_igr_alto": 3519,
-    "proveedores": 17,
-    "sancionados": 286,
-    "en_igr_muy_alto": 1019
-   },
-   {
-    "region": "Tarapacá",
-    "sujetos": 2091,
-    "igr_banda": "Muy alto",
-    "igr_medio": 87.3,
-    "terminados": 215,
-    "en_igr_alto": 2090,
-    "proveedores": 4,
-    "sancionados": 8,
-    "en_igr_muy_alto": 2086
-   },
-   {
-    "region": "Valparaíso",
-    "sujetos": 416,
-    "igr_banda": "Muy alto",
-    "igr_medio": 74.1,
-    "terminados": 17,
-    "en_igr_alto": 321,
-    "proveedores": 1,
-    "sancionados": 13,
-    "en_igr_muy_alto": 284
-   },
-   {
-    "region": "Magallanes y de la Antártica Chilena",
-    "sujetos": 329,
-    "igr_banda": "Alto",
-    "igr_medio": 68.9,
-    "terminados": 28,
-    "en_igr_alto": 300,
-    "proveedores": 2,
-    "sancionados": 3,
-    "en_igr_muy_alto": 0
-   },
-   {
-    "region": "Biobío",
-    "sujetos": 159,
-    "igr_banda": "Muy alto",
-    "igr_medio": 81.0,
-    "terminados": 5,
-    "en_igr_alto": 144,
-    "proveedores": 0,
-    "sancionados": 6,
-    "en_igr_muy_alto": 128
-   }
-  ],
-  "by_sector": [
-   {
-    "sector": "Usuarios de Zonas Francas",
-    "sujetos": 2840,
-    "ipf_medio": 30.3,
-    "terminados": 259,
-    "sancionados": 18
-   },
-   {
-    "sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
-    "sujetos": 2244,
-    "ipf_medio": 26.4,
-    "terminados": 82,
-    "sancionados": 36
-   },
-   {
-    "sector": "Corredores de Propiedades",
-    "sujetos": 1459,
-    "ipf_medio": 27.9,
-    "terminados": 40,
-    "sancionados": 13
-   },
-   {
-    "sector": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
-    "sujetos": 538,
-    "ipf_medio": 28.0,
-    "terminados": 1,
-    "sancionados": 0
-   },
-   {
-    "sector": "Organismos públicos",
-    "sujetos": 512,
-    "ipf_medio": null,
-    "terminados": 16,
-    "sancionados": 5
-   }
-  ],
   "crosscuts": {
    "osfl": 11,
-   "prensa": 12,
+   "prensa": 11,
    "con_senal": 1548,
    "proveedores": 28,
    "sancionados_5y": 147,
@@ -1654,7 +1535,239 @@
    "antecedentes_sancion": 581,
    "sancionados_con_antecedente": 372
   },
+  "ipf_bands": [
+   {
+    "banda": "MINIMA",
+    "sujetos": 4636,
+    "ipf_medio": 24.5
+   },
+   {
+    "banda": "BAJA",
+    "sujetos": 3086,
+    "ipf_medio": 29.5
+   },
+   {
+    "banda": "MEDIA",
+    "sujetos": 1545,
+    "ipf_medio": 32.2
+   },
+   {
+    "banda": "SIN_IPF",
+    "sujetos": 512,
+    "ipf_medio": null
+   },
+   {
+    "banda": "ALTA",
+    "sujetos": 411,
+    "ipf_medio": 36.7
+   },
+   {
+    "banda": "MUY_ALTA",
+    "sujetos": 104,
+    "ipf_medio": 44.0
+   }
+  ],
+  "attention": {
+   "total": 2728,
+   "motivos": [
+    {
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "sujetos": 147,
+     "con_ipf_alto": 128
+    },
+    {
+     "orden": 2,
+     "motivo": "SANCION_HISTORICA",
+     "sujetos": 225,
+     "con_ipf_alto": 13
+    },
+    {
+     "orden": 3,
+     "motivo": "TERMINO_GIRO",
+     "sujetos": 440,
+     "con_ipf_alto": 69
+    },
+    {
+     "orden": 4,
+     "motivo": "IPF_ALTA",
+     "sujetos": 305,
+     "con_ipf_alto": 305
+    },
+    {
+     "orden": 5,
+     "motivo": "SECTOR_SIN_ROS",
+     "sujetos": 70,
+     "con_ipf_alto": 0
+    },
+    {
+     "orden": 6,
+     "motivo": "GIRO_ATIPICO",
+     "sujetos": 1533,
+     "con_ipf_alto": 0
+    },
+    {
+     "orden": 7,
+     "motivo": "SIN_TERRITORIO",
+     "sujetos": 8,
+     "con_ipf_alto": 0
+    }
+   ],
+   "top": [
+    {
+     "rut": "76362513-3",
+     "name": "GESTORA LA AVANZADA S.A.",
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "region": "Metropolitana de Santiago",
+     "commune": "Santiago",
+     "workers": 11,
+     "ipf_band": "ALTA",
+     "entity_id": "ENT-RUT-76362513-3",
+     "igr_level": "Muy alto",
+     "ipf_score": 38.53,
+     "sales_band": "7",
+     "sii_status": "ACTIVE_AS_PUBLISHED",
+     "uaf_sector": "Administradoras de Fondos de Inversión",
+     "alert_count": 1,
+     "main_activity": "ACTIVIDADES DE AGENCIAS DE COBRO",
+     "economic_sector": "ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO",
+     "is_state_supplier": false,
+     "sanction_last_date": "2023-06-15",
+     "activity_atypicality": 0.981,
+     "press_evidence_count": 0,
+     "sii_termination_date": null,
+     "sanction_evidence_count": 5
+    },
+    {
+     "rut": "76360942-1",
+     "name": "CASINO LUCKIA ARICA S.A.",
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "region": "Arica y Parinacota",
+     "commune": "Arica",
+     "workers": 193,
+     "ipf_band": "MUY_ALTA",
+     "entity_id": "ENT-RUT-76360942-1",
+     "igr_level": "Muy alto",
+     "ipf_score": 41.42,
+     "sales_band": "11",
+     "sii_status": "ACTIVE_AS_PUBLISHED",
+     "uaf_sector": "Casinos de Juego",
+     "alert_count": 1,
+     "main_activity": "ACTIVIDADES DE CASINOS DE JUEGOS",
+     "economic_sector": "ACTIVIDADES ARTISTICAS, DE ENTRETENIMIENTO Y RECREATIVAS",
+     "is_state_supplier": false,
+     "sanction_last_date": "2024-07-24",
+     "activity_atypicality": 0.04,
+     "press_evidence_count": 0,
+     "sii_termination_date": null,
+     "sanction_evidence_count": 4
+    },
+    {
+     "rut": "84056200-K",
+     "name": "BESALCO INMOBILIARIA S A",
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "region": "Metropolitana de Santiago",
+     "commune": "Las Condes",
+     "workers": 70,
+     "ipf_band": "MUY_ALTA",
+     "entity_id": "ENT-RUT-84056200-K",
+     "igr_level": "Alto",
+     "ipf_score": 49.15,
+     "sales_band": "13",
+     "sii_status": "ACTIVE_AS_PUBLISHED",
+     "uaf_sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+     "alert_count": 1,
+     "main_activity": "COMPRA, VENTA Y ALQUILER (EXCEPTO AMOBLADOS) DE INMUEBLES",
+     "economic_sector": "ACTIVIDADES INMOBILIARIAS",
+     "is_state_supplier": false,
+     "sanction_last_date": "2023-11-07",
+     "activity_atypicality": 0.234,
+     "press_evidence_count": 0,
+     "sii_termination_date": null,
+     "sanction_evidence_count": 3
+    },
+    {
+     "rut": "99599120-9",
+     "name": "LATIN GAMING OSORNO S.A.",
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "region": "Los Lagos",
+     "commune": "Osorno",
+     "workers": 268,
+     "ipf_band": "MUY_ALTA",
+     "entity_id": "ENT-RUT-99599120-9",
+     "igr_level": "Muy alto",
+     "ipf_score": 43.71,
+     "sales_band": "11",
+     "sii_status": "ACTIVE_AS_PUBLISHED",
+     "uaf_sector": "Casinos de Juego",
+     "alert_count": 1,
+     "main_activity": "ACTIVIDADES DE CASINOS DE JUEGOS",
+     "economic_sector": "ACTIVIDADES ARTISTICAS, DE ENTRETENIMIENTO Y RECREATIVAS",
+     "is_state_supplier": false,
+     "sanction_last_date": "2024-02-01",
+     "activity_atypicality": 0.04,
+     "press_evidence_count": 0,
+     "sii_termination_date": null,
+     "sanction_evidence_count": 3
+    },
+    {
+     "rut": "76580707-7",
+     "name": "CHL ADMINISTRADORA S.A.",
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "region": "Metropolitana de Santiago",
+     "commune": "Vitacura",
+     "workers": 9,
+     "ipf_band": "ALTA",
+     "entity_id": "ENT-RUT-76580707-7",
+     "igr_level": "Medio",
+     "ipf_score": 39.26,
+     "sales_band": "8",
+     "sii_status": "ACTIVE_AS_PUBLISHED",
+     "uaf_sector": "Administradoras de Fondos de Inversión",
+     "alert_count": 1,
+     "main_activity": "ADMINISTRADORAS DE FONDOS DE INVERSION",
+     "economic_sector": "ACTIVIDADES FINANCIERAS Y DE SEGUROS",
+     "is_state_supplier": false,
+     "sanction_last_date": "2024-11-12",
+     "activity_atypicality": 0.2405,
+     "press_evidence_count": 0,
+     "sii_termination_date": null,
+     "sanction_evidence_count": 3
+    },
+    {
+     "rut": "96530900-4",
+     "name": "BCI ASSET MANAGEMENT ADMINISTRADORA GENERAL DE FONDOS S.A.",
+     "orden": 1,
+     "motivo": "SANCION_RECIENTE",
+     "region": "Metropolitana de Santiago",
+     "commune": "Las Condes",
+     "workers": 189,
+     "ipf_band": "MUY_ALTA",
+     "entity_id": "ENT-RUT-96530900-4",
+     "igr_level": "Alto",
+     "ipf_score": 52.33,
+     "sales_band": "13",
+     "sii_status": "ACTIVE_AS_PUBLISHED",
+     "uaf_sector": "Administradoras Generales de Fondos",
+     "alert_count": 1,
+     "main_activity": "FONDOS Y SOCIEDADES DE INVERSION Y ENTIDADES FINANCIERAS SIMILARES",
+     "economic_sector": "ACTIVIDADES FINANCIERAS Y DE SEGUROS",
+     "is_state_supplier": false,
+     "sanction_last_date": "2025-04-14",
+     "activity_atypicality": 0.8947,
+     "press_evidence_count": 0,
+     "sii_termination_date": null,
+     "sanction_evidence_count": 2
+    }
+   ]
+  },
   "lifecycle": {
+   "started_by_year": [],
    "terminated_by_year": [
     {
      "n": 39,
@@ -1675,10 +1788,630 @@
     {
      "n": 36,
      "ano": 2022
+    },
+    {
+     "n": 47,
+     "ano": 2021
+    },
+    {
+     "n": 31,
+     "ano": 2020
+    },
+    {
+     "n": 21,
+     "ano": 2019
     }
    ]
   },
-  "semantics": "Caracterización descriptiva del padrón de sujetos obligados. El estado ante el SII describe el ciclo de vida tributario, no el cumplimiento de la obligación de reportar. El IGR describe la comuna donde opera el sujeto, nunca al sujeto.",
+  "sanctions": {
+   "ultimo": "2026-08-18",
+   "eventos": 581,
+   "monto_uf": 5850,
+   "con_documento": 581,
+   "by_year": [
+    {
+     "ano": 2020,
+     "eventos": 84,
+     "sujetos": 77,
+     "monto_uf": 190,
+     "con_documento": 84
+    },
+    {
+     "ano": 2021,
+     "eventos": 41,
+     "sujetos": 33,
+     "monto_uf": null,
+     "con_documento": 41
+    },
+    {
+     "ano": 2022,
+     "eventos": 65,
+     "sujetos": 50,
+     "monto_uf": 2440,
+     "con_documento": 65
+    },
+    {
+     "ano": 2023,
+     "eventos": 104,
+     "sujetos": 90,
+     "monto_uf": 295,
+     "con_documento": 104
+    },
+    {
+     "ano": 2024,
+     "eventos": 138,
+     "sujetos": 110,
+     "monto_uf": 625,
+     "con_documento": 138
+    },
+    {
+     "ano": 2025,
+     "eventos": 98,
+     "sujetos": 88,
+     "monto_uf": 1370,
+     "con_documento": 98
+    },
+    {
+     "ano": 2026,
+     "eventos": 50,
+     "sujetos": 41,
+     "monto_uf": 930,
+     "con_documento": 50
+    }
+   ]
+  },
+  "reporting": {
+   "disponible": true,
+   "corte": {
+    "fuente": "Informe Estadístico UAF 2025",
+    "periodo": "2021-2025",
+    "fuente_url": "https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf",
+    "padron_referencia": 9911,
+    "padron_referencia_corte": "2025-12-31"
+   },
+   "totales": {
+    "ros_5y": 73283,
+    "ros_2025": 21828,
+    "ros_top3": 16711,
+    "indicios_5y": 4380,
+    "ros_2025_max": 14103,
+    "sujetos_en_silencio": 78,
+    "sectores_silenciosos": 10,
+    "sectores_sin_inscritos": 6
+   },
+   "nacional": {
+    "ros_recibidos": {
+     "corte": "2025-12-31",
+     "fuente": "https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf",
+     "unidad": "reportes",
+     "categoria": "INTELIGENCIA_FINANCIERA",
+     "puntos": [
+      {
+       "valor": 9738.0,
+       "periodo": "2021"
+      },
+      {
+       "valor": 11400.0,
+       "periodo": "2022"
+      },
+      {
+       "valor": 12900.0,
+       "periodo": "2023"
+      },
+      {
+       "valor": 17417.0,
+       "periodo": "2024"
+      },
+      {
+       "valor": 21828.0,
+       "periodo": "2025"
+      }
+     ]
+    },
+    "roe_recibidos_miles": {
+     "corte": "2025-12-31",
+     "fuente": "https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf",
+     "unidad": "miles de reportes",
+     "categoria": "INTELIGENCIA_FINANCIERA",
+     "puntos": [
+      {
+       "valor": 2966.0,
+       "periodo": "2021"
+      },
+      {
+       "valor": 2848.0,
+       "periodo": "2022"
+      },
+      {
+       "valor": 2458.0,
+       "periodo": "2023"
+      },
+      {
+       "valor": 1817.0,
+       "periodo": "2024"
+      },
+      {
+       "valor": 1620.0,
+       "periodo": "2025"
+      }
+     ]
+    },
+    "acciones_supervision": {
+     "corte": "2025-12-31",
+     "fuente": "https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf",
+     "unidad": "acciones",
+     "categoria": "SUPERVISION",
+     "puntos": [
+      {
+       "valor": 233.0,
+       "periodo": "2021"
+      },
+      {
+       "valor": 157.0,
+       "periodo": "2022"
+      },
+      {
+       "valor": 159.0,
+       "periodo": "2023"
+      },
+      {
+       "valor": 163.0,
+       "periodo": "2024"
+      },
+      {
+       "valor": 172.0,
+       "periodo": "2025"
+      }
+     ]
+    },
+    "entidades_reportantes_total": {
+     "corte": "2025-12-31",
+     "fuente": "https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf",
+     "unidad": "personas y entidades",
+     "categoria": "PADRON",
+     "puntos": [
+      {
+       "valor": 8137.0,
+       "periodo": "2021"
+      },
+      {
+       "valor": 8379.0,
+       "periodo": "2022"
+      },
+      {
+       "valor": 8729.0,
+       "periodo": "2023"
+      },
+      {
+       "valor": 9136.0,
+       "periodo": "2024"
+      },
+      {
+       "valor": 9911.0,
+       "periodo": "2025"
+      }
+     ]
+    },
+    "ros_con_indicios_laft": {
+     "corte": "2025-12-31",
+     "fuente": "https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf",
+     "unidad": "reportes",
+     "categoria": "INTELIGENCIA_FINANCIERA",
+     "puntos": [
+      {
+       "valor": 1132.0,
+       "periodo": "2025"
+      }
+     ]
+    }
+   },
+   "sectores": [
+    {
+     "icr_pct": 4.2,
+     "etiqueta": "Usuarios de Zonas Francas",
+     "ros_2021": 7,
+     "ros_2022": 3,
+     "ros_2023": 6,
+     "ros_2024": 1,
+     "ros_2025": 7,
+     "ipf_medio": 30.3,
+     "silence_5y": false,
+     "en_atencion": 1120,
+     "sancionados": 18,
+     "has_conversion": true,
+     "padron_sujetos": 2840,
+     "sector_official": "Usuarios de Zonas Francas",
+     "sector_canonical": "Usuarios de Zonas Francas",
+     "registered_so_2025": 2783,
+     "ros_per_100_so_2025": 0.25,
+     "ros_total_2021_2025": 24,
+     "indicios_total_2021_2025": 1,
+     "delta_ros_2025_vs_2024_pct": 600.0
+    },
+    {
+     "icr_pct": 2.6,
+     "etiqueta": "Empresas Dedicadas a la Gestión Inmobiliaria",
+     "ros_2021": 16,
+     "ros_2022": 26,
+     "ros_2023": 25,
+     "ros_2024": 19,
+     "ros_2025": 28,
+     "ipf_medio": 26.4,
+     "silence_5y": false,
+     "en_atencion": 594,
+     "sancionados": 36,
+     "has_conversion": true,
+     "padron_sujetos": 2244,
+     "sector_official": "Empresas Dedicadas a la Gestión Inmobiliaria",
+     "sector_canonical": "Empresas Dedicadas a la Gestión Inmobiliaria",
+     "registered_so_2025": 2134,
+     "ros_per_100_so_2025": 1.31,
+     "ros_total_2021_2025": 114,
+     "indicios_total_2021_2025": 3,
+     "delta_ros_2025_vs_2024_pct": 47.4
+    },
+    {
+     "icr_pct": 11.1,
+     "etiqueta": "Corredores de Propiedades",
+     "ros_2021": 1,
+     "ros_2022": 4,
+     "ros_2023": 0,
+     "ros_2024": 2,
+     "ros_2025": 11,
+     "ipf_medio": 27.9,
+     "silence_5y": false,
+     "en_atencion": 210,
+     "sancionados": 13,
+     "has_conversion": true,
+     "padron_sujetos": 1459,
+     "sector_official": "Corredores de Propiedades",
+     "sector_canonical": "Corredores de Propiedades",
+     "registered_so_2025": 1413,
+     "ros_per_100_so_2025": 0.78,
+     "ros_total_2021_2025": 18,
+     "indicios_total_2021_2025": 2,
+     "delta_ros_2025_vs_2024_pct": 450.0
+    },
+    {
+     "icr_pct": 0.6,
+     "etiqueta": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+     "ros_2021": 0,
+     "ros_2022": 0,
+     "ros_2023": 10,
+     "ros_2024": 52,
+     "ros_2025": 101,
+     "ipf_medio": 28.0,
+     "silence_5y": false,
+     "en_atencion": 86,
+     "sancionados": 0,
+     "has_conversion": true,
+     "padron_sujetos": 538,
+     "sector_official": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+     "sector_canonical": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+     "registered_so_2025": 413,
+     "ros_per_100_so_2025": 24.46,
+     "ros_total_2021_2025": 163,
+     "indicios_total_2021_2025": 1,
+     "delta_ros_2025_vs_2024_pct": 94.2
+    },
+    {
+     "icr_pct": 9.1,
+     "etiqueta": "Organismos públicos",
+     "ros_2021": 189,
+     "ros_2022": 114,
+     "ros_2023": 154,
+     "ros_2024": 140,
+     "ros_2025": 335,
+     "ipf_medio": null,
+     "silence_5y": false,
+     "en_atencion": 106,
+     "sancionados": 5,
+     "has_conversion": true,
+     "padron_sujetos": 512,
+     "sector_official": "Instituciones Públicas",
+     "sector_canonical": "Organismos públicos",
+     "registered_so_2025": 508,
+     "ros_per_100_so_2025": 65.94,
+     "ros_total_2021_2025": 932,
+     "indicios_total_2021_2025": 85,
+     "delta_ros_2025_vs_2024_pct": 139.3
+    },
+    {
+     "icr_pct": 1.1,
+     "etiqueta": "Notarios",
+     "ros_2021": 46,
+     "ros_2022": 33,
+     "ros_2023": 43,
+     "ros_2024": 100,
+     "ros_2025": 135,
+     "ipf_medio": 27.0,
+     "silence_5y": false,
+     "en_atencion": 21,
+     "sancionados": 21,
+     "has_conversion": true,
+     "padron_sujetos": 483,
+     "sector_official": "Notarios",
+     "sector_canonical": "Notarios",
+     "registered_so_2025": 497,
+     "ros_per_100_so_2025": 27.16,
+     "ros_total_2021_2025": 357,
+     "indicios_total_2021_2025": 4,
+     "delta_ros_2025_vs_2024_pct": 35.0
+    },
+    {
+     "icr_pct": 4.6,
+     "etiqueta": "Casas de Cambio",
+     "ros_2021": 88,
+     "ros_2022": 104,
+     "ros_2023": 279,
+     "ros_2024": 152,
+     "ros_2025": 179,
+     "ipf_medio": 28.6,
+     "silence_5y": false,
+     "en_atencion": 84,
+     "sancionados": 21,
+     "has_conversion": true,
+     "padron_sujetos": 346,
+     "sector_official": "Casas de Cambio",
+     "sector_canonical": "Casas de Cambio",
+     "registered_so_2025": 336,
+     "ros_per_100_so_2025": 53.27,
+     "ros_total_2021_2025": 802,
+     "indicios_total_2021_2025": 37,
+     "delta_ros_2025_vs_2024_pct": 17.8
+    },
+    {
+     "icr_pct": 0.0,
+     "etiqueta": "Agentes de Aduana",
+     "ros_2021": 1,
+     "ros_2022": 0,
+     "ros_2023": 0,
+     "ros_2024": 0,
+     "ros_2025": 1,
+     "ipf_medio": 27.4,
+     "silence_5y": false,
+     "en_atencion": 2,
+     "sancionados": 2,
+     "has_conversion": true,
+     "padron_sujetos": 277,
+     "sector_official": "Agentes de Aduana",
+     "sector_canonical": "Agentes de Aduana",
+     "registered_so_2025": 274,
+     "ros_per_100_so_2025": 0.36,
+     "ros_total_2021_2025": 2,
+     "indicios_total_2021_2025": 0,
+     "delta_ros_2025_vs_2024_pct": null
+    },
+    {
+     "icr_pct": 1.2,
+     "etiqueta": "Empresas de Transferencia de Dinero",
+     "ros_2021": 654,
+     "ros_2022": 522,
+     "ros_2023": 542,
+     "ros_2024": 568,
+     "ros_2025": 852,
+     "ipf_medio": 29.5,
+     "silence_5y": false,
+     "en_atencion": 84,
+     "sancionados": 13,
+     "has_conversion": true,
+     "padron_sujetos": 183,
+     "sector_official": "Empresas de Transferencia de Dinero",
+     "sector_canonical": "Empresas de Transferencia de Dinero",
+     "registered_so_2025": 172,
+     "ros_per_100_so_2025": 495.35,
+     "ros_total_2021_2025": 3138,
+     "indicios_total_2021_2025": 39,
+     "delta_ros_2025_vs_2024_pct": 50.0
+    },
+    {
+     "icr_pct": null,
+     "etiqueta": "Organizaciones Deportivas Profesionales regidas por la Ley N° 20.019",
+     "ros_2021": 0,
+     "ros_2022": 0,
+     "ros_2023": 0,
+     "ros_2024": 0,
+     "ros_2025": 0,
+     "ipf_medio": 27.9,
+     "silence_5y": true,
+     "en_atencion": 30,
+     "sancionados": 7,
+     "has_conversion": true,
+     "padron_sujetos": 30,
+     "sector_official": "Organizaciones Deportivas Profesionales regidas por Ley 20.019",
+     "sector_canonical": "Organizaciones Deportivas Profesionales regidas por la Ley N° 20.019",
+     "registered_so_2025": 30,
+     "ros_per_100_so_2025": 0.0,
+     "ros_total_2021_2025": 0,
+     "indicios_total_2021_2025": 0,
+     "delta_ros_2025_vs_2024_pct": null
+    },
+    {
+     "icr_pct": 5.4,
+     "etiqueta": "Bancos",
+     "ros_2021": 4811,
+     "ros_2022": 5881,
+     "ros_2023": 7676,
+     "ros_2024": 10630,
+     "ros_2025": 14103,
+     "ipf_medio": 28.4,
+     "silence_5y": false,
+     "en_atencion": 12,
+     "sancionados": 12,
+     "has_conversion": true,
+     "padron_sujetos": 18,
+     "sector_official": "Bancos",
+     "sector_canonical": "Bancos",
+     "registered_so_2025": 17,
+     "ros_per_100_so_2025": 82958.82,
+     "ros_total_2021_2025": 43101,
+     "indicios_total_2021_2025": 2339,
+     "delta_ros_2025_vs_2024_pct": 32.7
+    },
+    {
+     "icr_pct": null,
+     "etiqueta": "ADMINISTRADORAS DE FONDOS MUTUOS",
+     "ros_2021": null,
+     "ros_2022": null,
+     "ros_2023": null,
+     "ros_2024": null,
+     "ros_2025": null,
+     "ipf_medio": null,
+     "silence_5y": null,
+     "en_atencion": null,
+     "sancionados": null,
+     "has_conversion": true,
+     "padron_sujetos": null,
+     "sector_official": "ADMINISTRADORAS DE FONDOS MUTUOS",
+     "sector_canonical": null,
+     "registered_so_2025": null,
+     "ros_per_100_so_2025": null,
+     "ros_total_2021_2025": null,
+     "indicios_total_2021_2025": 0,
+     "delta_ros_2025_vs_2024_pct": null
+    }
+   ]
+  },
+  "by_region": [
+   {
+    "region": "Metropolitana de Santiago",
+    "sujetos": 4315,
+    "igr_banda": "Alto",
+    "igr_medio": 73.1,
+    "terminados": 135,
+    "en_atencion": 1359,
+    "en_igr_alto": 3519,
+    "proveedores": 17,
+    "sancionados": 286,
+    "en_igr_muy_alto": 1019
+   },
+   {
+    "region": "Tarapacá",
+    "sujetos": 2091,
+    "igr_banda": "Muy alto",
+    "igr_medio": 87.3,
+    "terminados": 215,
+    "en_atencion": 666,
+    "en_igr_alto": 2090,
+    "proveedores": 4,
+    "sancionados": 8,
+    "en_igr_muy_alto": 2086
+   },
+   {
+    "region": "Valparaíso",
+    "sujetos": 416,
+    "igr_banda": "Muy alto",
+    "igr_medio": 74.1,
+    "terminados": 17,
+    "en_atencion": 108,
+    "en_igr_alto": 321,
+    "proveedores": 1,
+    "sancionados": 13,
+    "en_igr_muy_alto": 284
+   },
+   {
+    "region": "Magallanes y de la Antártica Chilena",
+    "sujetos": 329,
+    "igr_banda": "Alto",
+    "igr_medio": 68.9,
+    "terminados": 28,
+    "en_atencion": 246,
+    "en_igr_alto": 300,
+    "proveedores": 2,
+    "sancionados": 3,
+    "en_igr_muy_alto": 0
+   },
+   {
+    "region": "Biobío",
+    "sujetos": 159,
+    "igr_banda": "Muy alto",
+    "igr_medio": 81.0,
+    "terminados": 5,
+    "en_atencion": 34,
+    "en_igr_alto": 144,
+    "proveedores": 0,
+    "sancionados": 6,
+    "en_igr_muy_alto": 128
+   },
+   {
+    "region": "Coquimbo",
+    "sujetos": 132,
+    "igr_banda": "Muy alto",
+    "igr_medio": 85.8,
+    "terminados": 2,
+    "en_atencion": 32,
+    "en_igr_alto": 129,
+    "proveedores": 0,
+    "sancionados": 3,
+    "en_igr_muy_alto": 129
+   }
+  ],
+  "by_sector": [
+   {
+    "sector": "Usuarios de Zonas Francas",
+    "sujetos": 2840,
+    "ipf_medio": 30.3,
+    "terminados": 259,
+    "en_atencion": 1120,
+    "sancionados": 18
+   },
+   {
+    "sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+    "sujetos": 2244,
+    "ipf_medio": 26.4,
+    "terminados": 82,
+    "en_atencion": 594,
+    "sancionados": 36
+   },
+   {
+    "sector": "Corredores de Propiedades",
+    "sujetos": 1459,
+    "ipf_medio": 27.9,
+    "terminados": 40,
+    "en_atencion": 210,
+    "sancionados": 13
+   },
+   {
+    "sector": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+    "sujetos": 538,
+    "ipf_medio": 28.0,
+    "terminados": 1,
+    "en_atencion": 86,
+    "sancionados": 0
+   },
+   {
+    "sector": "Organismos públicos",
+    "sujetos": 512,
+    "ipf_medio": null,
+    "terminados": 16,
+    "en_atencion": 106,
+    "sancionados": 5
+   },
+   {
+    "sector": "Notarios",
+    "sujetos": 483,
+    "ipf_medio": 27.0,
+    "terminados": 0,
+    "en_atencion": 21,
+    "sancionados": 21
+   },
+   {
+    "sector": "Casas de Cambio",
+    "sujetos": 346,
+    "ipf_medio": 28.6,
+    "terminados": 26,
+    "en_atencion": 84,
+    "sancionados": 21
+   },
+   {
+    "sector": "Empresas de Factoraje (Factoring)",
+    "sujetos": 195,
+    "ipf_medio": 25.3,
+    "terminados": 1,
+    "en_atencion": 46,
+    "sancionados": 30
+   }
+  ],
   "by_industry": [
    {
     "sujetos": 2539,
@@ -1714,8 +2447,75 @@
     "terminados": 4,
     "sancionados": 2,
     "banda_ventas_media": 5.7
+   },
+   {
+    "sujetos": 162,
+    "industria": "ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO",
+    "terminados": 10,
+    "sancionados": 4,
+    "banda_ventas_media": 6.5
+   },
+   {
+    "sujetos": 142,
+    "industria": "ACTIVIDADES PROFESIONALES, CIENTIFICAS Y TECNICAS",
+    "terminados": 2,
+    "sancionados": 10,
+    "banda_ventas_media": 4.8
+   },
+   {
+    "sujetos": 101,
+    "industria": "ACTIVIDADES DE ATENCION DE LA SALUD HUMANA Y DE ASISTENCIA SOCIAL",
+    "terminados": 0,
+    "sancionados": 0,
+    "banda_ventas_media": 5.2
    }
-  ]
+  ],
+  "igr_mix": [
+   {
+    "banda": "Muy alto",
+    "sujetos": 4141,
+    "igr_medio": 87.5
+   },
+   {
+    "banda": "Alto",
+    "sujetos": 2887,
+    "igr_medio": 72.9
+   },
+   {
+    "banda": "Medio",
+    "sujetos": 844,
+    "igr_medio": 55.5
+   },
+   {
+    "banda": "Bajo",
+    "sujetos": 187,
+    "igr_medio": 35.3
+   },
+   {
+    "banda": "Muy bajo",
+    "sujetos": 58,
+    "igr_medio": 21.6
+   },
+   {
+    "banda": "Sin IGR",
+    "sujetos": 2177,
+    "igr_medio": null
+   }
+  ],
+  "coverage": {
+   "press_note": "La prensa llega con título y fecha, sin URL ni resumen: el enlace al artículo no está ingerido.",
+   "silence_note": "Silencio sectorial no prueba incumplimiento. El ROS se emite ante una operación sospechosa y no tiene periodicidad mínima.",
+   "sanction_note": "El padrón atribuye sanción a 213 sujetos; la resolución de identidad por RUT alcanza 372 con antecedente abrible. Miden cosas distintas.",
+   "reporting_note": "La reportabilidad es sectorial y agregada: no existe ROS por sujeto en ninguna fuente disponible, de modo que ningún ROS se atribuye aquí a una entidad.",
+   "press_has_links": false,
+   "reporting_level": "SECTOR",
+   "supplier_capped": true,
+   "denominator_note": "La intensidad usa el padrón del Informe Estadístico al 31-12-2025 (9.911). El padrón operativo del Observatorio corta al 30-06-2026 (10.294) y se muestra aparte.",
+   "supplier_cap_note": "El corte de compras públicas publica 3.000 proveedores. Un sujeto sin marca puede tener contratos igualmente.",
+   "uaf_registration_date": false,
+   "uaf_registration_note": "El registro UAF no publica fecha de inscripción ni estado de vigencia, de modo que el eje temporal es el ciclo de vida ante el SII."
+  },
+  "semantics": "Caracterización descriptiva del padrón de sujetos obligados y de su reportabilidad sectorial publicada. El estado ante el SII describe el ciclo de vida tributario, no el cumplimiento de la obligación de reportar. El IGR describe la comuna donde opera el sujeto, nunca al sujeto. El motivo de atención ordena revisión y no imputa incumplimiento."
  },
  "uafCohort": [
   {
