@@ -12,7 +12,6 @@ const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
   { label: 'Sectores', route: { view: 'sectores' }, match: ['sectores'] },
   { label: 'Gasto público', route: { view: 'gasto' }, match: ['gasto', 'gastoActor'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
-  { label: 'Infra', route: { view: 'infra' }, match: ['infra'] },
   { label: 'Metodología', route: { view: 'metodologia' }, match: ['metodologia'] },
 ];
 
