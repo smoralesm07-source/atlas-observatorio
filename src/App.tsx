@@ -4,6 +4,7 @@ import { AuthGate } from './components/Auth';
 import { Shell } from './components/Shell';
 import { useRoute } from './lib/router';
 import { Pulso } from './views/Pulso';
+import { Osfl } from './views/Osfl';
 import { Senales } from './views/Senales';
 import { Entidades } from './views/Entidades';
 import { Ficha } from './views/Ficha';
@@ -26,6 +27,7 @@ function Routed({ session }: { session: Session }) {
   return (
     <Shell route={route} session={session}>
       {route.view === 'pulso' && <Pulso onNavigate={go} />}
+      {route.view === 'osfl' && <Osfl onNavigate={go} />}
       {route.view === 'senales' && <Senales family={route.family} onNavigate={go} />}
       {route.view === 'entidades' && (
         <Entidades
