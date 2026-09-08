@@ -5,6 +5,7 @@ import type {
   Pulse, UafAttentionRow, UafMotive, UafPulse, UafReportingSector,
 } from '../lib/contracts';
 import { Bars, Columns, OrderedDistribution, StateBar } from '../components/charts';
+import { ScreeningCoverageCards } from '../components/ScreeningCoverageCards';
 import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
 import { fecha, n, n1, titleCase } from '../lib/format';
 import { AlertCard } from '../components/AlertCard';
@@ -252,29 +253,31 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
           {scr?.disponible && st && (
             <div style={{ marginTop: 18 }}>
               <div className="panel-sub">Qué parte del padrón admite screening por giro</div>
-              <StateBar
-                total={st.padron_total}
-                rows={[
+              <ScreeningCoverageCards
+                cards={[
                   {
-                    key: 'ACTECO',
+                    id: 'ACTECO',
                     label: 'Universo construible',
                     value: st.inscritos_cubiertos,
                     color: 'var(--accent)',
                     hint: `${st.sectores} sectores`,
+                    description: 'Padrón UAF en sectores donde se puede construir universo desde el giro SII',
                   },
                   {
-                    key: 'REGISTRO',
+                    id: 'REGISTRO',
                     label: 'Exige registro sectorial',
                     value: st.sujetos_otro_modo,
                     color: 'var(--unknown)',
                     hint: `${st.sectores_otro_modo} sectores`,
+                    description: 'Inscritos en sectores que requieren registro externo',
                   },
                   {
-                    key: 'SIN_GATILLANTE',
+                    id: 'SIN_GATILLANTE',
                     label: 'Sin gatillante de prioridad A',
                     value: padronSinGatillante,
                     color: 'var(--ink-4)',
                     hint: 'el giro sólo pondera',
+                    description: 'Padrón en sectores donde el ACTECO no gatilla screening',
                   },
                 ]}
               />
