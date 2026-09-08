@@ -1,12 +1,28 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
-import type { CoverageRow, EntityDetail } from '../lib/contracts';
+import type {
+  BudgetSignalRow, CoverageRow, EntityDossier, SpendActorBlock,
+} from '../lib/contracts';
 import { Badge, Empty, ErrorBox, Loading } from '../components/primitives';
-import { bandLabel, fecha, n, n1, rutFormat, titleCase } from '../lib/format';
+import { WatchlistResults } from '../components/Watchlists';
+import { IdentidadDigital } from '../components/IdentidadDigital';
+import {
+  bandLabel, fecha, n, n1, pct, rutFormat, taxStatusLabel, titleCase,
+} from '../lib/format';
+import {
+  looksLikePersonName, screenWatchlists, type WatchlistResult,
+} from '../lib/connectors';
 import { searchPress, type PressMatch } from '../lib/press';
 
-type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'compras' | 'registros' | 'historico' | 'fuentes';
+/* EntityDossier es obs_entity_detail más compras públicas (con sus métricas de
+   concentración), ejecución fiscal/CGR/lobby y registro OSFL. Es un superconjunto
+   aditivo: todo lo que este archivo ya leía de EntityDetail sigue existiendo. */
+type EntityDetail = EntityDossier;
+
+type Tab =
+  | 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'compras' | 'fiscal'
+  | 'registros' | 'historico' | 'fuentes' | 'screening' | 'digital';
 type GlyphName = 'sales' | 'people' | 'activity' | 'public' | 'sanction' | 'uaf' | 'osfl' | 'res' | 'press' | 'sii' | 'alert' | 'copy' | 'external';
 type TimelineKind = 'tax' | 'sanction' | 'press' | 'purchase' | 'event';
 
@@ -38,9 +54,15 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'uaf', label: 'UAF' },
   { id: 'sanciones', label: 'Sanciones' },
   { id: 'compras', label: 'Compras públicas' },
+  // Ejecución presupuestaria, auditoría CGR y audiencias de lobby son un
+  // universo distinto al de compras públicas: nunca se agregan en una sola
+  // cifra, así que viven en su propia pestaña.
+  { id: 'fiscal', label: 'Presupuesto y CGR' },
   { id: 'registros', label: 'OSFL / RES' },
   { id: 'historico', label: 'Histórico' },
   { id: 'fuentes', label: 'Fuentes' },
+  { id: 'screening', label: 'Screening internacional' },
+  { id: 'digital', label: 'Identidad digital' },
 ];
 
 function compactRut(value: string | null | undefined): string {
@@ -246,7 +268,12 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const [tab, setTab] = useState<Tab>('resumen');
   const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
   const [copied, setCopied] = useState(false);
-  const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_detail', { p_entity_id: entityId });
+  const [watch, setWatch] = useState<
+    { status: 'idle' } | { status: 'loading' } | { status: 'done'; result: WatchlistResult }
+    | { status: 'error'; error: string }
+  >({ status: 'idle' });
+  const [digitalStarted, setDigitalStarted] = useState(false);
+  const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_dossier', { p_entity_id: entityId });
 
   useEffect(() => {
     let cancelled = false;
@@ -269,6 +296,19 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
 
   const timeline = useMemo(() => data ? timelineFor(data, press.matches) : [], [data, press.matches]);
   const articles = useMemo(() => pressArticles(press.matches), [press.matches]);
+
+  const runWatchlists = useCallback(async () => {
+    if (!data) return;
+    setWatch({ status: 'loading' });
+    try {
+      const result = await screenWatchlists({
+        name: data.entity.name, rut: data.entity.rut, entityType: data.entity.entity_type,
+      });
+      setWatch({ status: 'done', result });
+    } catch (e) {
+      setWatch({ status: 'error', error: (e as Error).message });
+    }
+  }, [data]);
 
   if (loading) return <Loading label="Construyendo expediente analítico…" />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
@@ -336,7 +376,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
 
         <div className="entity360-score" data-has-score={score != null && score > 0}>
           <div className="entity360-score-label">IPA3 · prioridad analítica</div>
-          <div className="entity360-score-value">{score == null ? '—' : n1(score)}<small>/100</small></div>
+          <div className="entity360-score-value">{score == null || Number(score) === 0 ? '—' : n1(score)}<small>/100</small></div>
           <div className="entity360-score-track"><i style={{ width: `${scorePct}%` }} /></div>
           <div className="entity360-score-foot">{scoreBand || 'Sin banda materializada'}</div>
         </div>
@@ -360,9 +400,12 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
       {tab === 'uaf' && <UafTab data={data} uaf={uaf} coverage={uafCoverage} />}
       {tab === 'sanciones' && <SancionesTab data={data} />}
       {tab === 'compras' && <ComprasTab data={data} coverage={purchase} onNavigate={onNavigate} />}
+      {tab === 'fiscal' && <FiscalTab rows={data.budget} />}
       {tab === 'registros' && <RegistrosTab data={data} osfl={osfl} res={res} osflCoverage={osflCoverage} resCoverage={resCoverage} />}
       {tab === 'historico' && <HistoricoTab rows={timeline} />}
       {tab === 'fuentes' && <FuentesTab coverage={data.coverage} />}
+      {tab === 'screening' && <ScreeningTab entity={entity} watch={watch} run={() => void runWatchlists()} />}
+      {tab === 'digital' && <DigitalTab entity={entity} started={digitalStarted} onStart={() => setDigitalStarted(true)} />}
 
       <div className="entity360-semantics"><strong>Lectura analítica.</strong> Esta vista reúne evidencia observada y prioriza revisión. Presencia, ausencia, score o coincidencia de prensa no acreditan por sí solos una conducta ilícita. Corte <span className="mono">{entity.snapshot_id}</span> · actualizado {fecha(entity.refreshed_at)}.</div>
     </div>
@@ -411,7 +454,7 @@ function BaseCard({ data }: { data: EntityDetail }) {
     <dt>Razón social</dt><dd>{titleCase(data.entity.name)}</dd>
     <dt>RUT</dt><dd className="mono">{data.entity.rut ? rutFormat(data.entity.rut) : '—'}</dd>
     <dt>Tipo</dt><dd>{data.entity.entity_type ?? text(tax.taxpayer_type) ?? '—'}</dd>
-    <dt>Régimen / estado</dt><dd>{text(tax.current_status) ? titleCase(String(tax.current_status).replace(/_/g, ' ')) : '—'}</dd>
+    <dt>Régimen / estado</dt><dd>{taxStatusLabel(text(tax.current_status))}</dd>
     <dt>Domicilio</dt><dd>{[text(tax.commune) ?? data.entity.commune, text(tax.region) ?? data.entity.region].filter(Boolean).map((v) => titleCase(String(v))).join(', ') || '—'}</dd>
     <dt>Inicio actividades</dt><dd>{fecha(text(tax.activity_start_date))}</dd>
     {text(res.constitution_date) && <><dt>Constitución RES</dt><dd>{fecha(text(res.constitution_date))}</dd></>}
@@ -443,7 +486,7 @@ function RegistryCard({ data, pressStatus, pressCount, registry, purchase }: {
 }) {
   const pressTone = pressStatus === 'loading' ? 'unknown' : pressCount > 0 ? 'present' : coverageStatus(registry.press);
   return <Card title="Presencia en registros" meta="estado del corte vigente"><div className="entity360-registry-grid">
-    <RegistryTile icon="sii" label="SII" status={coverageStatus(registry.sii)} value={coverageLabel(registry.sii)} detail={data.entity.tax_status ? titleCase(data.entity.tax_status.replace(/_/g, ' ')) : 'Perfil tributario'} />
+    <RegistryTile icon="sii" label="SII" status={coverageStatus(registry.sii)} value={coverageLabel(registry.sii)} detail={data.entity.tax_status ? taxStatusLabel(data.entity.tax_status) : 'Perfil tributario'} />
     <RegistryTile icon="uaf" label="UAF" status={coverageStatus(registry.uaf)} value={coverageLabel(registry.uaf)} detail={data.entity.uaf_sector ? titleCase(data.entity.uaf_sector) : 'Padrón de SO'} />
     <RegistryTile icon="osfl" label="OSFL" status={coverageStatus(registry.osfl)} value={coverageLabel(registry.osfl)} detail="Registro Civil / SII" />
     <RegistryTile icon="res" label="RES / Empresa en un Día" status={coverageStatus(registry.res)} value={coverageLabel(registry.res)} detail="Registro de Empresas y Sociedades" />
@@ -480,7 +523,7 @@ function TributarioTab({ data, activities, history }: { data: EntityDetail; acti
   const tax = record(data.tax);
   const workers = numberValue(tax.workers_numeric);
   return <div className="entity360-tabgrid entity360-tabgrid-tax"><Card title="Perfil tributario" meta="Servicio de Impuestos Internos"><dl className="entity360-kv entity360-kv-wide">
-    <dt>Estado</dt><dd>{text(tax.current_status) ? titleCase(String(tax.current_status).replace(/_/g, ' ')) : '—'}</dd>
+    <dt>Estado</dt><dd>{taxStatusLabel(text(tax.current_status))}</dd>
     <dt>Inicio de actividades</dt><dd>{fecha(text(tax.activity_start_date))}</dd>
     <dt>Término de giro</dt><dd>{fecha(text(tax.termination_date))}</dd>
     <dt>Tipo de contribuyente</dt><dd>{text(tax.taxpayer_type) ? titleCase(String(tax.taxpayer_type)) : '—'}</dd>
@@ -514,11 +557,119 @@ function SancionesTab({ data }: { data: EntityDetail }) {
 function ComprasTab({ data, coverage, onNavigate }: { data: EntityDetail; coverage: CoverageRow | undefined; onNavigate: (hash: string) => void }) {
   const present = coverage?.status === 'PRESENT';
   const amount = coverage?.detail?.monto_12m_clp ?? coverage?.detail?.monto_clp ?? null;
-  return <div className="entity360-tabgrid entity360-tabgrid-2"><Card title="Presencia en Mercado Público" meta="ChileCompra">{present ? <div className="entity360-purchase-large"><div className="entity360-purchase-metric"><span>Registros observados</span><strong>{n(coverage?.record_count)}</strong></div><div className="entity360-purchase-metric"><span>Monto observado</span><strong>{formatClp(amount)}</strong></div><div className="entity360-purchase-metric"><span>Último evento</span><strong>{fecha(coverage?.last_event_at)}</strong></div>{data.entity.rut && <button className="entity360-primary-action" onClick={() => onNavigate(`#/gasto/proveedor/${encodeURIComponent(data.entity.rut as string)}`)}>Profundizar en Gasto público →</button>}</div> : <Empty title={coverageLabel(coverage)} hint="No se muestran rankings o compradores si el actor no está materializado en el productor de compras." />}</Card><Card title="Qué puede analizar Atlas" meta="cuando el actor está materializado"><div className="entity360-feature-list"><span>Concentración comprador–proveedor</span><span>Aceleración de montos y órdenes</span><span>Participación dentro del gasto observado</span><span>Convergencia de hallazgos de compras</span></div></Card></div>;
+  const spend: SpendActorBlock | null = data.spend;
+  return <div className="entity360-tabgrid entity360-tabgrid-2"><Card title="Presencia en Mercado Público" meta="ChileCompra">{present ? <div className="entity360-purchase-large"><div className="entity360-purchase-metric"><span>Registros observados</span><strong>{n(coverage?.record_count)}</strong></div><div className="entity360-purchase-metric"><span>Monto observado</span><strong>{formatClp(amount)}</strong></div><div className="entity360-purchase-metric"><span>Último evento</span><strong>{fecha(coverage?.last_event_at)}</strong></div>{data.entity.rut && <button className="entity360-primary-action" onClick={() => onNavigate(`#/gasto/proveedor/${encodeURIComponent(data.entity.rut as string)}`)}>Profundizar en Gasto público →</button>}</div> : <Empty title={coverageLabel(coverage)} hint="No se muestran rankings o compradores si el actor no está materializado en el productor de compras." />}</Card>
+    {/* Concentración comprador–proveedor: se calcula por RUT contra el actor de
+        obs_spend_actor, que es un cruce independiente del recuento crudo de la
+        fuente. Un actor sin RUT (o fuera del corte de mayor prioridad) queda
+        declarado como tal, nunca como un cero. */}
+    <Card title="Concentración y prioridad de revisión" meta="obs_spend_actor · ventana de 12 meses">{spend ? <dl className="entity360-kv entity360-kv-wide">
+      <dt>Rol</dt><dd>{spend.actor_role === 'SUPPLIER' ? 'Proveedor del Estado' : spend.actor_role === 'BUYER' ? 'Comprador público' : spend.actor_role}</dd>
+      <dt>Contrapartes</dt><dd className="mono">{n(spend.counterpart_count)}</dd>
+      <dt>Mayor contraparte</dt><dd>{spend.top_counterpart_share == null ? '—' : pct(spend.top_counterpart_share * 100)}</dd>
+      <dt>Concentración (HHI)</dt><dd>{spend.hhi == null ? '—' : `${n1(spend.hhi * 100)}/100`}</dd>
+      <dt>Variación de monto</dt><dd>{spend.growth_ratio == null ? '—' : `×${n1(spend.growth_ratio)}`}</dd>
+      <dt>Meses activos</dt><dd className="mono">{n(spend.active_months)}</dd>
+      <dt>Ventana observada</dt><dd>{fecha(spend.first_seen)} → {fecha(spend.last_seen)}</dd>
+      <dt>Prioridad de revisión</dt><dd className="mono">{spend.review_priority == null ? '—' : n1(spend.review_priority)}</dd>
+    </dl> : <Empty title="Sin actor materializado en obs_spend_actor" hint="El RUT de la entidad no cruza con el corte de proveedores y compradores de mayor prioridad. No implica ausencia total en ChileCompra: el corte es acotado." />}
+    <div className="entity360-card-footnote">La concentración describe la distribución de la relación comprador–proveedor, no una irregularidad por sí sola.</div>
+    </Card></div>;
+}
+
+/* ─────────────────────────────────────────── presupuesto, CGR y lobby
+
+   Ejecución presupuestaria, auditoría CGR y audiencias de lobby son un
+   universo distinto al de compras públicas: nunca se agregan en una sola
+   cifra, así que se presentan en su propia pestaña con su propia fuente. */
+
+function FiscalTab({ rows }: { rows: BudgetSignalRow[] }) {
+  return <Card title={`Presupuesto, auditoría y lobby · ${n(rows.length)}`} meta="DIPRES · CGR · InfoLobby">
+    {rows.length ? <div className="entity360-full-table-wrap"><table className="entity360-full-table"><thead><tr><th>Fecha</th><th>Fuente</th><th>Materia</th><th>Monto</th><th>Fuente</th></tr></thead><tbody>{rows.map((row) => <tr key={row.evidence_id}>
+      <td className="mono">{fecha(row.event_date)}</td>
+      <td>{row.source_code ?? '—'}</td>
+      <td className="entity360-cell-clip" title={row.title ?? undefined}>{row.title ?? row.signal_code ?? '—'}{row.summary && <><br /><span style={{ color: 'var(--ink-4)' }}>{row.summary}</span></>}</td>
+      <td className="mono">{row.amount_clp == null ? '—' : formatClp(row.amount_clp)}</td>
+      <td>{row.source_url ? <a className="entity360-inline-link" href={row.source_url} target="_blank" rel="noreferrer">Ver fuente ↗</a> : '—'}</td>
+    </tr>)}</tbody></table></div> : <Empty title="Sin señales fiscales o de auditoría" hint="Ni DIPRES, ni Contraloría, ni InfoLobby reportan a esta entidad en el corte vigente." />}
+    <div className="entity360-card-footnote">Compras públicas y ejecución presupuestaria son universos distintos y no se suman.</div>
+  </Card>;
+}
+
+function ScreeningTab({ entity, watch, run }: {
+  entity: EntityDetail['entity'];
+  watch: { status: 'idle' } | { status: 'loading' } | { status: 'done'; result: WatchlistResult } | { status: 'error'; error: string };
+  run: () => void;
+}) {
+  if (watch.status === 'loading') return <Loading label="Consultando sanciones, debarment y bases offshore…" />;
+  if (watch.status === 'error') return <ErrorBox error={watch.error} onRetry={run} />;
+  if (watch.status === 'done') return <WatchlistResults result={watch.result} query={entity.name} />;
+  return (
+    <Card title="Screening internacional bajo demanda" meta="OFAC · ONU · UE · Reino Unido · Banco Mundial · BID · OpenSanctions · ICIJ">
+      <p style={{ marginTop: 0, color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.65 }}>
+        Las listas internacionales no se ingestan por lote: se consultan por entidad, en el
+        momento. Hasta que alguien pregunte, el Observatorio no afirma ni presencia ni
+        ausencia en ninguna de ellas.
+      </p>
+      <dl className="entity360-kv entity360-kv-wide">
+        <dt>Se consultará por</dt>
+        <dd>{titleCase(entity.name)}{entity.rut ? ` · ${rutFormat(entity.rut)}` : ' · sin RUT'}{entity.entity_type ? ` · ${entity.entity_type}` : ''}</dd>
+      </dl>
+      <button className="entity360-primary-action" style={{ maxWidth: 300, marginTop: 12 }} onClick={run}>
+        Consultar listas internacionales
+      </button>
+    </Card>
+  );
+}
+
+function DigitalTab({ entity, started, onStart }: {
+  entity: EntityDetail['entity'];
+  started: boolean;
+  onStart: () => void;
+}) {
+  const person = looksLikePersonName(entity.name);
+  if (started) return <IdentidadDigital query={entity.name} />;
+  return (
+    <Card title="Identidad digital bajo demanda" meta="OSINT sobre plataformas públicas">
+      <p style={{ marginTop: 0, color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.65 }}>
+        Atlas genera variantes de username a partir del nombre y busca evidencia pública en
+        plataformas. Es útil sobre personas naturales; sobre una razón social los alias
+        derivados suelen ser ruido.
+      </p>
+      {!person && (
+        <div className="entity360-card-message">
+          «{titleCase(entity.name)}» no tiene forma de nombre de persona. Puedes ejecutarlo
+          igualmente, pero interpreta el resultado con cuidado.
+        </div>
+      )}
+      <button className="entity360-primary-action" style={{ maxWidth: 300, marginTop: 12 }} onClick={onStart}>
+        Resolver identidad digital
+      </button>
+    </Card>
+  );
 }
 
 function RegistrosTab({ data, osfl, res, osflCoverage, resCoverage }: { data: EntityDetail; osfl: Record<string, unknown>; res: Record<string, unknown>; osflCoverage: CoverageRow | undefined; resCoverage: CoverageRow | undefined }) {
-  return <div className="entity360-tabgrid entity360-tabgrid-2"><Card title="OSFL" meta="Registro Civil / SII">{osflCoverage?.status === 'PRESENT' || Object.keys(osfl).length ? <dl className="entity360-kv entity360-kv-wide"><dt>Estado</dt><dd><Badge tone="present">Registro materializado</Badge></dd><dt>Confirmación</dt><dd>{text(osfl.confirmation_level) ? titleCase(String(osfl.confirmation_level).replace(/_/g, ' ')) : '—'}</dd><dt>Actividad</dt><dd>{text(osfl.profile_activity_group) ? titleCase(String(osfl.profile_activity_group)) : text(osfl.main_activity) ?? '—'}</dd><dt>Estado actual</dt><dd>{text(osfl.current_status) ?? '—'}</dd><dt>Tramo ventas</dt><dd>{text(osfl.sales_band) ?? '—'}</dd></dl> : <Empty title={coverageLabel(osflCoverage)} hint="No se interpreta la ausencia como inexistencia de la persona jurídica." />}</Card><Card title="RES / Empresa en un Día" meta="Registro de Empresas y Sociedades">{resCoverage?.status === 'PRESENT' || Object.keys(res).length ? <dl className="entity360-kv entity360-kv-wide"><dt>Estado</dt><dd><Badge tone="present">Registro materializado</Badge></dd><dt>Constitución</dt><dd>{fecha(text(res.constitution_date))}</dd><dt>Capital declarado</dt><dd>{numberValue(res.capital) == null ? '—' : formatClp(numberValue(res.capital))}</dd><dt>Vínculos societarios</dt><dd className="mono">{numberValue(res.relationship_count) == null ? '—' : n(numberValue(res.relationship_count))}</dd></dl> : <Empty title={coverageLabel(resCoverage)} hint={data.lifecycle_notes?.res_coverage_note ?? 'El RES sólo cubre sociedades acogidas al régimen simplificado.'} />}</Card></div>;
+  // Ley 21.440 y el Registro 19.862 responden preguntas distintas de la mera
+  // presencia en el padrón: si la organización opera bajo el régimen OSFL vigente
+  // y si figura entre las que reciben transferencias públicas. El dato ya llega
+  // en el mismo perfil OSFL; antes no se mostraba.
+  const registry = data.osfl_registry;
+  return <div className="entity360-tabgrid entity360-tabgrid-2"><Card title="OSFL" meta="Registro Civil / SII">{osflCoverage?.status === 'PRESENT' || Object.keys(osfl).length ? <>
+    <dl className="entity360-kv entity360-kv-wide"><dt>Estado</dt><dd><Badge tone="present">Registro materializado</Badge></dd><dt>Confirmación</dt><dd>{text(osfl.confirmation_level) ? titleCase(String(osfl.confirmation_level).replace(/_/g, ' ')) : '—'}</dd><dt>Actividad</dt><dd>{text(osfl.profile_activity_group) ? titleCase(String(osfl.profile_activity_group)) : text(osfl.main_activity) ?? '—'}</dd><dt>Estado actual</dt><dd>{text(osfl.current_status) ?? '—'}</dd><dt>Tramo ventas</dt><dd>{text(osfl.sales_band) ?? '—'}</dd></dl>
+    <div className="entity360-chipset" style={{ marginTop: 10 }}>
+      {osfl.law21440_active === true && <Badge tone="present">Ley 21.440 vigente</Badge>}
+      {osfl.registro19862 === true && <Badge tone="present">Registro 19.862</Badge>}
+      {osfl.fatf_r8_candidate === true && <Badge tone="unknown">Candidata Recomendación 8 GAFI</Badge>}
+      {registry?.public_funds && <Badge tone="present">Recibió fondos públicos</Badge>}
+    </div>
+    {registry && (registry.transfer_count ?? 0) > 0 && (
+      <dl className="entity360-kv entity360-kv-wide" style={{ marginTop: 10 }}>
+        <dt>Transferencias públicas</dt><dd className="mono">{n(registry.transfer_count)}</dd>
+        <dt>Monto acumulado</dt><dd>{formatClp(registry.transfer_amount_clp)}</dd>
+      </dl>
+    )}
+  </> : <Empty title={coverageLabel(osflCoverage)} hint="No se interpreta la ausencia como inexistencia de la persona jurídica." />}</Card><Card title="RES / Empresa en un Día" meta="Registro de Empresas y Sociedades">{resCoverage?.status === 'PRESENT' || Object.keys(res).length ? <dl className="entity360-kv entity360-kv-wide"><dt>Estado</dt><dd><Badge tone="present">Registro materializado</Badge></dd><dt>Constitución</dt><dd>{fecha(text(res.constitution_date))}</dd><dt>Capital declarado</dt><dd>{numberValue(res.capital) == null ? '—' : formatClp(numberValue(res.capital))}</dd><dt>Vínculos societarios</dt><dd className="mono">{numberValue(res.relationship_count) == null ? '—' : n(numberValue(res.relationship_count))}</dd></dl> : <Empty title={coverageLabel(resCoverage)} hint={data.lifecycle_notes?.res_coverage_note ?? 'El RES sólo cubre sociedades acogidas al régimen simplificado.'} />}</Card></div>;
 }
 
 function HistoricoTab({ rows }: { rows: TimelineRow[] }) {
@@ -526,7 +677,27 @@ function HistoricoTab({ rows }: { rows: TimelineRow[] }) {
 }
 
 function FuentesTab({ coverage }: { coverage: CoverageRow[] }) {
-  return <Card title="Cobertura de fuentes" meta={`${n(coverage.length)} fuentes configuradas`}><div className="entity360-source-grid">{coverage.map((row) => <div className="entity360-source" data-status={coverageStatus(row)} key={row.source_code}><i /><div><strong>{row.source_name}</strong><span>{row.authoritative_source ?? row.source_code}</span></div><Badge tone={coverageStatus(row)}>{coverageLabel(row)}</Badge></div>)}</div></Card>;
+  // El recuento de una fuente lleva su propia unidad: 1.283 órdenes de compra
+  // no son 1.283 eventos. detail.unidad y detail.alcance llegan del propio
+  // productor y se muestran tal cual, nunca reinterpretados.
+  return <Card title="Cobertura de fuentes" meta={`${n(coverage.length)} fuentes configuradas`}><div className="entity360-source-grid">{coverage.map((row) => {
+    const unidad = text(row.detail?.unidad) ?? 'eventos';
+    const alcance = text(row.detail?.alcance);
+    const roles = Array.isArray(row.detail?.roles) ? (row.detail?.roles as unknown[]).map(String) : [];
+    return <div className="entity360-source" data-status={coverageStatus(row)} key={row.source_code} title={alcance ?? undefined}>
+      <i />
+      <div>
+        <strong>{row.source_name}</strong>
+        <span>{row.authoritative_source ?? row.source_code}</span>
+        {roles.length > 0 && <span>{roles.join(' · ')}</span>}
+        {row.record_count != null && row.record_count > 0 && (
+          <span className="mono">{n(row.record_count)} {unidad}</span>
+        )}
+        {alcance && <span>{alcance}</span>}
+      </div>
+      <Badge tone={coverageStatus(row)}>{coverageLabel(row)}</Badge>
+    </div>;
+  })}</div></Card>;
 }
 
 function Kpi({ icon, label, value, sub, tone = 'neutral', compact = false }: { icon: GlyphName; label: string; value: string; sub: string; tone?: 'neutral' | 'present' | 'critical'; compact?: boolean }) {

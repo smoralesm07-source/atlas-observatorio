@@ -473,32 +473,19 @@ const checks = [
      'de prensa sin razón social']],
   // La ficha enmarca los hechos dentro del ciclo de vida, y declara que el
   // padrón UAF no publica fecha de inscripción en vez de inventar un hito.
-  // La ficha abre en el dossier: qué es esta entidad, qué la caracteriza
-  // tributariamente, qué le pasó y por qué la estamos mirando.
-  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice',
-    // Cinco preguntas, cinco respuestas, con la ausencia dicha en palabras.
-    'Sujeto obligado', 'Inscrita en el padrón', 'Sanciones', 'Prensa',
-    'Proveedor del Estado', 'Sin fines de lucro', 'Sin registro',
-    'nunca que no se haya mirado',
-    // La línea de tiempo, con el documento oficial en la fila que lo tiene y
-    // el "sin documento" declarado en la que no.
-    'Línea de tiempo', 'Incumplimiento de deberes de información', '165 UF',
-    'Ver resolución', 'sin documento', 'sin fecha',
-    'Observada en el padrón de sujetos obligados',
-    'Comprador público', 'Inicio de actividades',
-    // El perfil tributario completo: desde cuándo existe, a qué se dedica,
-    // dónde tributa, de qué tamaño es y con cuánta gente.
-    'Perfil tributario', 'Giro vigente', 'Actividades Bancarias',
-    'Más de 1.000.000 UF', '1.793', 'Actividades económicas declaradas',
-    'Tramo de ventas', 'Trabajadores', 'Sector económico', 'Subsector',
-    'Domicilios registrados', 'Las Condes',
-    // Un cero numérico se leería como bajo riesgo: la ausencia de cálculo no
-    // es un cero, y la ficha lo dice con todas sus letras.
-    'Por qué aparece', 'Prioridad no calculada en este corte',
-    'No es probabilidad de LA/FT',
-    // Los dos universos, separados y nunca sumados.
-    'Compras públicas', 'Ejecución fiscal, auditoría y lobby',
-    'Informe de auditoría con observaciones', 'no se suman']],
+  // La ficha vive en EntityExpediente (Entidad 360), que consume
+  // obs_entity_dossier: obs_entity_detail más compras públicas, presupuesto y
+  // CGR, registro OSFL y una línea de tiempo, todo aditivo sobre el contrato
+  // que la vista ya leía. La carga inicial abre en "Resumen": lo que prueba
+  // aquí es sólo lo visible sin cambiar de pestaña.
+  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Entidad 360',
+    'IPA3 · prioridad analítica', '97.080.000-K',
+    'Ficha base', 'Actividades Bancarias',
+    // Sanciones con su documento, ya en el resumen.
+    'Sanciones y fiscalizaciones', 'CMF', 'N° 5624',
+    // Las pestañas están todas presentes, aunque su contenido se pruebe aparte.
+    'Compras públicas', 'Presupuesto y CGR',
+    'Screening internacional', 'Identidad digital']],
   // Fuentes: una al dia, una de alcance parcial que dice por que su cobertura
   // es baja, una en silencio y una bajo demanda.
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio',
@@ -546,9 +533,9 @@ for (const [name, hash, expect] of checks) {
 
 // Ficha tabs must switch without a reload.
 await page.goto(`${BASE}/#/entidad/ENT-RUT-97080000-K`, { waitUntil: 'networkidle' });
-for (const tab of ['Panorama', 'Fuentes', 'Señales y hallazgos', 'Marcas',
-                   'Economía y padrón', 'Screening internacional',
-                   'Identidad digital', 'Dossier']) {
+for (const tab of ['Tributario', 'UAF', 'Sanciones', 'Compras públicas',
+                   'Presupuesto y CGR', 'OSFL / RES', 'Histórico', 'Fuentes',
+                   'Screening internacional', 'Identidad digital']) {
   await page.getByRole('button', { name: tab, exact: true }).click();
   await page.waitForTimeout(220);
   await shot(page, `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`);
@@ -581,7 +568,7 @@ for (const tab of ['Panorama', 'Fuentes', 'Señales y hallazgos', 'Marcas',
 {
   // Un enlace que se ve pero no lleva a ninguna parte sería peor que no
   // ofrecerlo: la prueba comprueba el href, no el rótulo.
-  await page.getByRole('button', { name: 'Panorama', exact: true }).click();
+  await page.getByRole('button', { name: 'Resumen', exact: true }).click();
   await page.waitForTimeout(280);
   const doc = page.getByRole('link', { name: /N° 5624/ });
   const href = await doc.getAttribute('href');
@@ -591,6 +578,40 @@ for (const tab of ['Panorama', 'Fuentes', 'Señales y hallazgos', 'Marcas',
   } else if (nueva !== '_blank') {
     failed++; console.log('FAIL documento: el enlace se abre encima de la ficha');
   } else console.log('ok   la sanción enlaza al documento del regulador');
+}
+{
+  // El perfil tributario completo vive en su propia pestaña.
+  await page.getByRole('button', { name: 'Tributario', exact: true }).click();
+  await page.waitForTimeout(260);
+  const body = await page.textContent('body');
+  const faltan = ['Perfil tributario', 'Actividades Bancarias',
+                  'Más de 1.000.000 UF', '1.793']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL tributario: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   el perfil tributario completo se muestra en su pestaña');
+}
+{
+  // La concentración comprador–proveedor cruza por RUT contra obs_spend_actor,
+  // no sólo el conteo crudo que ya traía la fuente.
+  await page.getByRole('button', { name: 'Compras públicas', exact: true }).click();
+  await page.waitForTimeout(260);
+  const body = await page.textContent('body');
+  const faltan = ['Concentración y prioridad de revisión', 'Contrapartes',
+                  'Concentración (HHI)', 'no una irregularidad']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL compras: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   compras públicas muestra la concentración por RUT, no sólo el conteo crudo');
+}
+{
+  // Ejecución presupuestaria, auditoría CGR y lobby son un universo distinto
+  // al de compras públicas y nunca se suman en una sola cifra.
+  await page.getByRole('button', { name: 'Presupuesto y CGR', exact: true }).click();
+  await page.waitForTimeout(260);
+  const body = await page.textContent('body');
+  const faltan = ['Informe de auditoría con observaciones', 'no se suman']
+    .filter((t) => !body.includes(t));
+  if (faltan.length) { failed++; console.log(`FAIL fiscal: falta ${JSON.stringify(faltan)}`); }
+  else console.log('ok   presupuesto y CGR vive separado de compras públicas');
 }
 console.log('ok   pestañas de la ficha');
 
