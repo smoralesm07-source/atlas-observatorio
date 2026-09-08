@@ -6,6 +6,7 @@ import type {
 } from '../lib/contracts';
 import { Bars, Columns, OrderedDistribution, StateBar } from '../components/charts';
 import { ScreeningCoverageCards } from '../components/ScreeningCoverageCards';
+import { SectorGroupDrawer } from '../components/SectorGroupDrawer';
 import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
 import { fecha, n, n1, titleCase } from '../lib/format';
 import { AlertCard } from '../components/AlertCard';
@@ -53,12 +54,55 @@ const SERIES: { key: string; label: string; unit: string; lede: string; accent: 
     accent: 'var(--unknown)' },
 ];
 
+/* Tres lecturas de la brecha de screening, cada una sobre un criterio propio.
+   Un sector puede figurar en más de una: sin inscritos y baja reportabilidad
+   no se excluyen entre sí en distintos cortes. */
+type ScreeningGroupId = 'BRECHA' | 'VIGILANCIA' | 'SILENCIO';
+
+const SCREENING_GROUP_META: Record<ScreeningGroupId, { title: string; color: string; note: string }> = {
+  BRECHA:     { title: 'BRECHA DE\nPADRÓN',      color: 'var(--sig-critical)', note: 'sectores sin inscritos' },
+  VIGILANCIA: { title: 'VIGILANCIA\nSECTORIAL',  color: 'var(--sig-watch)',    note: 'baja reportabilidad o rezago' },
+  SILENCIO:   { title: 'SILENCIO\n2021-2025',    color: 'var(--sig-high)',     note: 'sin ROS en toda la serie' },
+};
+
+function lastRosYear(s: UafReportingSector): number | null {
+  if ((s.ros_2025 ?? 0) > 0) return 2025;
+  if ((s.ros_2024 ?? 0) > 0) return 2024;
+  if ((s.ros_2023 ?? 0) > 0) return 2023;
+  if ((s.ros_2022 ?? 0) > 0) return 2022;
+  if ((s.ros_2021 ?? 0) > 0) return 2021;
+  return null;
+}
+
+function subjectCount(s: UafReportingSector): number {
+  return s.padron_sujetos ?? s.registered_so_2025 ?? 0;
+}
+
+function lowOrStale(s: UafReportingSector): boolean {
+  if (!s.sector_canonical || s.silence_5y === true) return false;
+  const intensity = s.ros_per_100_so_2025;
+  const last = lastRosYear(s);
+  const low = intensity != null && intensity < 1;
+  const stale = last != null && last <= 2023;
+  return low || stale;
+}
+
+function screeningRowMetric(s: UafReportingSector, kind: ScreeningGroupId): string {
+  if (kind === 'BRECHA') return '0 inscritos';
+  if (kind === 'SILENCIO') return `${n(subjectCount(s))} inscritos · 0 ROS/5 años`;
+  const last = lastRosYear(s);
+  if (last != null && last <= 2023) return `${n(subjectCount(s))} inscritos · último ROS ${last}`;
+  if (s.ros_per_100_so_2025 != null) return `${n(subjectCount(s))} inscritos · ${n1(s.ros_per_100_so_2025)} ROS/100`;
+  return `${n(subjectCount(s))} inscritos · baja actividad reportada`;
+}
+
 export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const { data, error, loading, reload } = useRpc<UafPulse>('obs_uaf_pulse', {});
   const [cohort, setCohort] = useState<CohortRequest | null>(null);
   const [serie, setSerie] = useState(SERIES[0].key);
   const [repOrden, setRepOrden] = useState<'padron' | 'intensidad' | 'volumen'>('padron');
   const [signalsOpen, setSignalsOpen] = useState(false);
+  const [screeningGroup, setScreeningGroup] = useState<ScreeningGroupId | null>(null);
 
   const rep = data?.reporting;
   const sectoresRep = useMemo(() => ordenarSectores(rep?.sectores ?? [], repOrden), [rep, repOrden]);
@@ -71,6 +115,25 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
     [rep],
   );
   const scr = data?.screening;
+
+  const screeningGroups = useMemo(() => {
+    const sectors = rep?.sectores ?? [];
+    const BRECHA = sectors
+      .filter((s) => s.sector_canonical == null)
+      .sort((a, b) => a.sector_official.localeCompare(b.sector_official, 'es'));
+    const SILENCIO = sectors
+      .filter((s) => s.sector_canonical != null && s.silence_5y === true)
+      .sort((a, b) => subjectCount(b) - subjectCount(a));
+    const VIGILANCIA = sectors
+      .filter(lowOrStale)
+      .sort((a, b) => {
+        const aLast = lastRosYear(a) ?? 9999;
+        const bLast = lastRosYear(b) ?? 9999;
+        if (aLast !== bLast) return aLast - bLast;
+        return (a.ros_per_100_so_2025 ?? Number.POSITIVE_INFINITY) - (b.ros_per_100_so_2025 ?? Number.POSITIVE_INFINITY);
+      });
+    return { BRECHA, VIGILANCIA, SILENCIO } satisfies Record<ScreeningGroupId, UafReportingSector[]>;
+  }, [rep]);
 
   if (loading) return <Loading label="Leyendo el padrón de sujetos obligados…" />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
@@ -251,48 +314,32 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
             <div style={{ marginTop: 18 }}>
               <div className="panel-sub">Qué parte del padrón admite screening por giro</div>
               <ScreeningCoverageCards
+                activeId={screeningGroup}
+                onOpen={(id) => setScreeningGroup(id as ScreeningGroupId)}
                 cards={[
                   {
                     id: 'BRECHA',
-                    title: 'BRECHA DE\nPADRÓN',
-                    label: 'Sectores sin inscriptos',
-                    value: t?.sectores_sin_inscritos ?? 0,
-                    color: 'var(--sig-critical)',
+                    title: SCREENING_GROUP_META.BRECHA.title,
+                    label: 'Sectores sin inscritos',
+                    value: screeningGroups.BRECHA.length,
+                    color: SCREENING_GROUP_META.BRECHA.color,
                     subtitle: 'Categorías canónicas de la Ley 19.913 que no tienen inscritos en el padrón vigente.',
-                    sections: [
-                      {
-                        heading: 'Significa',
-                        items: ['Universo SII sin cobertura UAF', 'Sectores económicos sin inscriptos'],
-                      },
-                    ],
                   },
                   {
                     id: 'VIGILANCIA',
-                    title: 'VIGILANCIA\nSECTORIAL',
+                    title: SCREENING_GROUP_META.VIGILANCIA.title,
                     label: 'Baja reportabilidad o rezago',
-                    value: t?.sectores_silenciosos ?? 0,
-                    color: 'var(--sig-watch)',
+                    value: screeningGroups.VIGILANCIA.length,
+                    color: SCREENING_GROUP_META.VIGILANCIA.color,
                     subtitle: 'Menos de 1 ROS por cada 100 inscritos en 2025 o al menos dos años sin reportes.',
-                    sections: [
-                      {
-                        heading: 'Comportamiento',
-                        items: ['Baja intensidad de reportes', 'Rezago en la reportabilidad'],
-                      },
-                    ],
                   },
                   {
                     id: 'SILENCIO',
-                    title: 'SILENCIO\n2021-2025',
+                    title: SCREENING_GROUP_META.SILENCIO.title,
                     label: 'Sin ROS en toda la serie',
-                    value: t?.sujetos_en_silencio ?? 0,
-                    color: 'var(--sig-high)',
+                    value: screeningGroups.SILENCIO.length,
+                    color: SCREENING_GROUP_META.SILENCIO.color,
                     subtitle: 'Inscritos en sectores que no registraron ningún ROS entre 2021 y 2025.',
-                    sections: [
-                      {
-                        heading: 'Observación',
-                        items: ['Cero reportes en cinco años', `${n(t?.sujetos_en_silencio ?? 0)} sujetos en silencio`],
-                      },
-                    ],
                   },
                 ]}
               />
@@ -300,6 +347,29 @@ export function Pulso({ onNavigate }: { onNavigate: (hash: string) => void }) {
           )}
         </Panel>
       </div>
+
+      {screeningGroup && (
+        <SectorGroupDrawer
+          request={{
+            id: screeningGroup,
+            title: SCREENING_GROUP_META[screeningGroup].title,
+            color: SCREENING_GROUP_META[screeningGroup].color,
+            note: SCREENING_GROUP_META[screeningGroup].note,
+            sectors: screeningGroups[screeningGroup],
+            metric: (s) => screeningRowMetric(s, screeningGroup),
+          }}
+          onClose={() => setScreeningGroup(null)}
+          onSectorPick={(sector, title) => {
+            setScreeningGroup(null);
+            open({
+              cohort: 'SECTOR',
+              value: sector,
+              title,
+              hint: 'inscritos del sector ordenados por reportabilidad',
+            });
+          }}
+        />
+      )}
 
       {/* ── 4. Quién sostiene el volumen reportado ─────────────────────── */}
       {rep?.disponible && (
