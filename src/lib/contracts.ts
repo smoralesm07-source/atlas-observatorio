@@ -866,8 +866,67 @@ export interface UafSubjectRow {
   alert_count: number;
   ipf_score: number | null;
   ipf_band: string | null;
+  /** Motivo de mayor precedencia por el que el sujeto entra a revision. */
+  attention_motive: UafMotive | null;
+  /** Posicion del IPF dentro del padron completo, 0..100. */
+  ipf_percentile: number | null;
   evidence_count: number;
   total_count: number;
+}
+
+/** La ficha devuelve la fila completa del sujeto, no la proyeccion de la lista:
+ *  trae los campos que explican POR QUE el indice quedo donde quedo. */
+export interface UafDossierSubject extends UafSubjectRow {
+  entity_type: string | null;
+  economic_subsector: string | null;
+  territory_basis: string | null;
+  sales_band_rank: number | null;
+  termination_year: number | null;
+  sanction_count_5y: number;
+  supplier_order_count: number | null;
+  ipa3_score: number | null;
+  ipa3_band: string | null;
+  /** Cuan infrecuente es su giro entre los pares del sector, 0..1. */
+  activity_atypicality: number | null;
+  /** Fraccion del sector que declara el mismo giro, 0..1. */
+  activity_peer_share: number | null;
+  sii_activity_changed: boolean | null;
+  sii_region_changed: boolean | null;
+  sii_signal_count: number | null;
+  ownership_edge_count: number | null;
+  /** Cuanto del IPF se calculo con datos presentes: un 40 % es un indice
+   *  sostenido por poco, y la ficha lo dice junto al numero. */
+  ipf_credibility_pct: number | null;
+  attention_rank: number | null;
+  /** Rango en UF resuelto desde el ordinal del SII. El tramo 1 es ausencia de
+   *  informacion, no ventas cero. */
+  sales_band_uf: string | null;
+  sales_band_size: string | null;
+  snapshot_id: string | null;
+  refreshed_at: string | null;
+}
+
+/** Referencia del sector obligado al que pertenece el sujeto. Ausente cuando el
+ *  sector tiene un solo inscrito: no hay mediana de la que hablar. */
+export interface UafDossierPeers {
+  sector: string | null;
+  sujetos: number;
+  con_ipf: number;
+  ipf_mediana: number | null;
+  ipf_p90: number | null;
+  antiguedad_mediana: number | null;
+  ventas_rank_mediana: number | null;
+  ventas_rank_max: number | null;
+  sancionados: number;
+  terminados: number;
+  en_atencion: number;
+}
+
+/** Posicion del sujeto dentro de su sector, en percentil sobre los pares que
+ *  tienen la medida. Nula cuando el sector no da para comparar. */
+export interface UafDossierPosition {
+  ipf_percentil_sector: number | null;
+  antiguedad_percentil_sector: number | null;
 }
 
 export interface UafEvidenceRow {
@@ -885,9 +944,11 @@ export interface UafEvidenceRow {
 }
 
 export interface UafDossier {
-  contract: 'ATLAS_OBS_UAF_DOSSIER_V1';
-  subject: UafSubjectRow | null;
+  contract: 'ATLAS_OBS_UAF_DOSSIER_V2';
+  subject: UafDossierSubject | null;
   evidence: UafEvidenceRow[];
+  peers: UafDossierPeers | null;
+  position: UafDossierPosition | null;
   semantics: string;
 }
 

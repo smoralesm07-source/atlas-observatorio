@@ -681,3 +681,73 @@ export function GapBars({
     </div>
   );
 }
+
+/* ──────────────────────────────────────── una medida contra su referencia
+
+   Un índice suelto no se lee. "IPF 52" sólo significa algo junto a la mediana
+   de su sector: si sus pares están en 28, ese 52 es la lectura; si están en 60,
+   no lo es. La barra lleva la marca de referencia encima, de modo que la
+   comparación se ve sin tener que recordar el otro número.
+
+   La referencia se dibuja sólo si existe: un sector de un inscrito no tiene
+   mediana, y una marca inventada en el centro mentiría. */
+
+export function RefMeter({
+  value, max = 100, label, valueLabel, tone,
+  refValue, refLabel, hint, percentile,
+}: {
+  value: number | null;
+  max?: number;
+  label: string;
+  valueLabel?: string;
+  tone?: string;
+  refValue?: number | null;
+  refLabel?: string;
+  hint?: string;
+  /** Posición dentro del sector, 0..100. Se imprime aparte del valor. */
+  percentile?: number | null;
+}) {
+  const safeMax = Math.max(1, max);
+  const pos = (v: number) => Math.max(0, Math.min(100, (v / safeMax) * 100));
+  const has = value != null;
+  const color = tone ?? 'var(--accent)';
+
+  return (
+    <div className="refmeter">
+      <div className="refmeter-top">
+        <span className="refmeter-label">{label}</span>
+        <span className="refmeter-value num" style={{ color: has ? color : 'var(--ink-4)' }}>
+          {valueLabel ?? (has ? n1(value) : 'sin medir')}
+        </span>
+      </div>
+      <div className="refmeter-track">
+        {has && (
+          <span
+            className="refmeter-fill"
+            style={{ width: `${pos(value)}%`, background: color }}
+          />
+        )}
+        {refValue != null && (
+          <span
+            className="refmeter-ref"
+            style={{ left: `${pos(refValue)}%` }}
+            title={`${refLabel ?? 'referencia'}: ${n1(refValue)}`}
+          />
+        )}
+      </div>
+      <div className="refmeter-foot">
+        {refValue != null && (
+          <span>
+            {refLabel ?? 'mediana del sector'} <b className="num">{n1(refValue)}</b>
+          </span>
+        )}
+        {percentile != null && (
+          <span>
+            percentil <b className="num">{n1(percentile)}</b> de su sector
+          </span>
+        )}
+        {hint && <span className="refmeter-hint">{hint}</span>}
+      </div>
+    </div>
+  );
+}

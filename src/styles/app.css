@@ -817,3 +817,273 @@ button.gap-row:focus-visible { outline: 2px solid var(--accent); outline-offset:
   font-weight: 500;
   color: var(--ink-4);
 }
+
+/* ── la ficha del sujeto dentro de la capa de cohorte ────────────────────── */
+
+.drawer-tools {
+  display: grid;
+  gap: 10px;
+  padding: 12px 20px 13px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-panel-2);
+}
+
+.drawer-find { position: relative; display: flex; }
+.drawer-find input {
+  width: 100%;
+  padding: 8px 30px 8px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.drawer-find input::placeholder { color: var(--ink-4); }
+.drawer-find input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.drawer-find button {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--ink-4); cursor: pointer; font-size: 15px;
+}
+.drawer-find button:hover { color: var(--ink); background: var(--bg-raised); }
+
+.seg-sm button { padding: 4px 10px; font-size: 11.5px; }
+
+.drawer-mix {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-size: 11px; color: var(--ink-4);
+}
+.drawer-mix span { display: flex; align-items: center; gap: 5px; }
+.drawer-mix i { width: 7px; height: 7px; border-radius: 2px; background: var(--ink-4); }
+.drawer-mix i[data-t='motivo']  { background: var(--sig-critical); }
+.drawer-mix i[data-t='sancion'] { background: var(--sig-high); }
+.drawer-mix i[data-t='termino'] { background: var(--unknown); }
+.drawer-mix i[data-t='ipf']     { background: var(--sig-medium); }
+
+/* ── fila del sujeto ─────────────────────────────────────────────────────── */
+
+.subject { border-bottom: 1px solid var(--line-soft); }
+.subject[data-open='true'] { background: var(--bg-panel-2); }
+
+.subject-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 20px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.subject-head:hover { background: var(--bg-raised); }
+.subject-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.subject-main { min-width: 0; display: grid; gap: 5px; }
+.subject-name {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  line-height: 1.35; overflow-wrap: anywhere;
+}
+.subject-meta {
+  display: flex; flex-wrap: wrap; gap: 3px 12px;
+  font-size: 11.5px; color: var(--ink-3);
+}
+.subject-meta .rut { font-family: var(--mono); font-size: 11px; color: var(--ink-4); }
+
+.subject-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  font-size: 10.5px; font-weight: 560; line-height: 1.6;
+  border-radius: 999px;
+  color: var(--chip-tone, var(--ink-2));
+  background: color-mix(in srgb, var(--chip-tone, var(--ink-4)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-tone, var(--ink-4)) 28%, transparent);
+  white-space: nowrap;
+}
+
+/* Micro-indicador del IPF: el número, su barra y su banda. Sustituye al texto
+   «IPF Alta», que obligaba a recordar la escala para leerlo. */
+.subject-ipf {
+  display: grid; gap: 3px; justify-items: end; width: 92px; flex-shrink: 0;
+}
+.subject-ipf-num { font-size: 15px; font-weight: 680; letter-spacing: -0.03em; line-height: 1; }
+.subject-ipf-bar {
+  display: block; width: 100%; height: 4px; border-radius: 2px;
+  background: var(--bg-raised); overflow: hidden;
+}
+.subject-ipf-bar i { display: block; height: 100%; border-radius: 2px; }
+.subject-ipf-band { font-size: 10px; color: var(--ink-4); white-space: nowrap; }
+
+.subject-caret { color: var(--ink-4); font-size: 11px; }
+
+/* ── el desplegable ──────────────────────────────────────────────────────── */
+
+.dossier {
+  padding: 4px 20px 18px;
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.dossier-id { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.state-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px 3px 8px;
+  font-size: 11px; font-weight: 620;
+  border-radius: 999px;
+  color: var(--pill);
+  background: color-mix(in srgb, var(--pill) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pill) 34%, transparent);
+}
+.state-pill::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--pill);
+}
+
+.dossier-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+}
+
+.dossier-block {
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-panel);
+}
+.dossier-block h4 {
+  margin: 0 0 11px;
+  font-size: 10.5px; font-weight: 640;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink-4);
+  display: flex; align-items: center; gap: 8px;
+}
+.dossier-count {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--bg-raised); color: var(--ink-3);
+}
+.dossier-note {
+  margin: 10px 0 0; font-size: 11px; color: var(--ink-4); line-height: 1.5;
+}
+.dossier-act {
+  margin: 11px 0 0; font-size: 12px; color: var(--ink-3); line-height: 1.5;
+}
+.dossier-act b { color: var(--ink-2); font-weight: 600; }
+.dossier-signals { grid-column: 1 / -1; }
+.dossier-cta { justify-self: start; }
+
+/* ── medida contra su referencia ─────────────────────────────────────────── */
+
+.refmeter-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; margin-bottom: 6px;
+}
+.refmeter-label { font-size: 11.5px; color: var(--ink-3); min-width: 0; }
+.refmeter-value {
+  font-size: 13px; font-weight: 660; letter-spacing: -0.02em;
+  text-align: right; white-space: nowrap; flex-shrink: 0;
+}
+/* La pista no recorta: la marca de referencia sobresale a proposito para
+   distinguirse del relleno cuando cae dentro de el. */
+.refmeter-track {
+  position: relative; height: 7px; border-radius: 4px;
+  background: var(--bg-raised); margin: 3px 0;
+}
+.refmeter-fill {
+  display: block; height: 100%; border-radius: 4px;
+  transition: width .5s cubic-bezier(.22,.61,.36,1);
+}
+/* La marca de referencia va encima de la barra, no al lado: comparar exige
+   verlas en el mismo eje. */
+.refmeter-ref {
+  position: absolute; top: -3px; bottom: -3px; width: 2px;
+  background: var(--ink-1);
+  box-shadow: 0 0 0 1.5px var(--bg-panel);
+  border-radius: 1px;
+  transform: translateX(-1px);
+}
+.refmeter-foot {
+  display: flex; flex-wrap: wrap; gap: 3px 14px;
+  margin-top: 6px; font-size: 10.5px; color: var(--ink-4);
+}
+.refmeter-foot b { color: var(--ink-3); font-weight: 620; }
+.refmeter-hint { font-style: italic; }
+
+/* ── mosaico del perfil tributario ───────────────────────────────────────── */
+
+.tile-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+}
+.tile {
+  padding: 9px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+}
+.tile-label {
+  display: block; font-size: 10px; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--ink-4); font-weight: 600;
+}
+.tile-value {
+  display: block; font-size: 15px; font-weight: 660;
+  letter-spacing: -0.02em; margin: 4px 0 2px; color: var(--ink-1);
+  line-height: 1.2; overflow-wrap: anywhere;
+}
+.tile-foot { display: block; font-size: 10px; color: var(--ink-4); line-height: 1.4; }
+
+/* ── antecedentes en riel cronológico ────────────────────────────────────── */
+
+.ev-rail { list-style: none; margin: 0; padding: 0 0 0 16px; position: relative; }
+.ev-rail::before {
+  content: ''; position: absolute; left: 4px; top: 5px; bottom: 5px;
+  width: 1px; background: var(--line);
+}
+.ev-node { position: relative; padding: 0 0 15px; }
+.ev-node:last-child { padding-bottom: 0; }
+.ev-node::before {
+  content: ''; position: absolute; left: -16px; top: 4px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--bg-panel); border: 2px solid var(--ink-4);
+}
+.ev-node[data-kind='SANCION']::before { border-color: var(--sig-critical); }
+.ev-node[data-kind='PRENSA']::before  { border-color: var(--sig-watch, var(--accent)); }
+.ev-amount {
+  font-size: 11px; font-weight: 640; color: var(--sig-high);
+  padding: 1px 6px; border-radius: 5px;
+  background: color-mix(in srgb, var(--sig-high) 12%, transparent);
+}
+
+@media (max-width: 760px) {
+  .subject-head { grid-template-columns: minmax(0, 1fr) auto; row-gap: 10px; padding: 13px 14px; }
+  .subject-ipf { width: auto; justify-items: start; grid-column: 1; }
+  .subject-ipf-bar { width: 92px; }
+  .subject-caret { grid-column: 2; grid-row: 1; align-self: start; }
+  .dossier { padding: 4px 14px 18px; }
+  .drawer-tools { padding: 12px 14px 13px; }
+}
+
+/* Composición del sector al que pertenece: da escala a la comparación. */
+.peer-mix {
+  display: flex; flex-wrap: wrap; gap: 5px 14px;
+  margin-top: 13px; padding-top: 11px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 10.5px; color: var(--ink-4);
+}
+.peer-mix b { color: var(--ink-2); font-weight: 640; }
+.dossier-corte {
+  font-size: 10px; font-family: var(--mono); color: var(--ink-4);
+  margin-left: auto; white-space: nowrap;
+}
