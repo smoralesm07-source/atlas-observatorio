@@ -5,6 +5,7 @@ import { Shell } from './components/Shell';
 import { useRoute } from './lib/router';
 import { Pulso } from './views/Pulso';
 import { Osfl } from './views/Osfl';
+import { Fintech } from './views/Fintech';
 import { Senales } from './views/Senales';
 import { Entidades } from './views/Entidades';
 import { EntityExpediente } from './views/EntityExpediente';
@@ -28,6 +29,7 @@ function Routed({ session }: { session: Session }) {
     <Shell route={route} session={session}>
       {route.view === 'pulso' && <Pulso onNavigate={go} />}
       {route.view === 'osfl' && <Osfl onNavigate={go} />}
+      {route.view === 'fintech' && <Fintech onNavigate={go} />}
       {route.view === 'senales' && <Senales family={route.family} onNavigate={go} />}
       {route.view === 'entidades' && (
         <Entidades
