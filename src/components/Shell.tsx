@@ -106,7 +106,7 @@ export function Shell({
         </div>
       </header>
 
-      <main className="main">{children}</main>
+      <main className={`main view-${route.view}`}>{children}</main>
     </div>
   );
 }
