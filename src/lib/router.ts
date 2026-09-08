@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 export type Route =
   | { view: 'pulso' }
+  | { view: 'osfl' }
   | { view: 'senales'; family?: string }
   | { view: 'entidades'; q?: string; region?: string }
   | { view: 'ficha'; entityId: string }
@@ -21,6 +22,8 @@ export function parseHash(hash: string): Route {
   const seg = path.split('/').filter(Boolean);
 
   switch (seg[0]) {
+    case 'osfl':
+      return { view: 'osfl' };
     case 'senales':
       return { view: 'senales', family: params.get('familia') ?? undefined };
     case 'entidades':
@@ -56,6 +59,8 @@ export function parseHash(hash: string): Route {
 
 export function hrefFor(r: Route): string {
   switch (r.view) {
+    case 'osfl':
+      return '#/osfl';
     case 'senales':
       return r.family ? `#/senales?familia=${encodeURIComponent(r.family)}` : '#/senales';
     case 'entidades': {
