@@ -45,7 +45,8 @@ Reglas que sostienen el diseño:
    `obs_pulse`, `obs_search_entities`, `obs_entity_detail`, `obs_alert_feed`,
    `obs_source_status`, `obs_territory_map`, `obs_territory_detail`,
    `obs_sector_overview`, `obs_sector_detail`, `obs_spend_overview`,
-   `obs_spend_finding_feed` y `obs_spend_actor_detail`.
+   `obs_spend_finding_feed`, `obs_spend_actor_detail`, `obs_uaf_pulse`,
+   `obs_uaf_cohort` y `obs_uaf_subject_dossier`.
 3. **Las capas no se mezclan.** Universo observado, listas internacionales e
    identidad digital tienen autoridad distinta y se presentan por separado. Lo
    externo es siempre candidato: no se persiste, no crea identidad canónica y no
@@ -60,6 +61,44 @@ Reglas que sostienen el diseño:
 6. **Universos distintos permanecen explícitos.** Ejecución presupuestaria no es
    compra pública; padrón UAF no es universo económico. La pantalla de gasto
    público los separa en dos bloques y nunca los agrega en una sola cifra.
+
+### El Pulso y la reportabilidad sectorial
+
+El **Pulso** caracteriza el padrón de sujetos obligados —10.294 inscritos al
+corte 30-06-2026— y responde cuatro preguntas en el orden en que las hace un
+analista: de qué está hecho el padrón, cuánto reporta el universo obligado y
+quién sostiene ese volumen, qué sujetos piden revisión hoy y por qué, y dónde
+operan.
+
+La reportabilidad es el único bloque que no nace de una tabla gobernada. No
+existe ROS por sujeto en ninguna fuente disponible: la tabla de observaciones
+de reporte está vacía y su vista de comportamiento devuelve `NOT_MATERIALIZED`
+para los 10.294. Lo que sí existe es el agregado **sectorial** que la UAF
+publica cada año en su Informe Estadístico, que Radar_UAF ya captura y versiona.
+La migración `0010` lo trae como referencia con procedencia declarada —fuente,
+método de captura y fecha de corte por cada valor— en dos tablas:
+
+| Tabla | Qué guarda |
+| --- | --- |
+| `obs_uaf_reporting_national` | serie nacional por métrica y período: ROS, ROE, acciones de supervisión, padrón, ROS con indicios LA/FT |
+| `obs_uaf_reporting_sector` | ROS por sector y año 2021-2025, intensidad por 100 inscritos, silencio quinquenal e índice de convertibilidad |
+
+Tres condiciones que la pantalla declara en vez de esconder:
+
+- **La reportabilidad es sectorial.** Ningún ROS se atribuye a una entidad.
+- **Silencio no es incumplimiento.** El ROS se emite ante una operación
+  sospechosa y no tiene periodicidad mínima: un sector sin ROS puede no haber
+  tenido nada que reportar. Diez sectores no registran ninguno en cinco años.
+- **Los denominadores no se mezclan.** La intensidad usa el padrón del Informe
+  Estadístico al 31-12-2025 (9.911); el padrón operativo corta al 30-06-2026
+  (10.294). Se muestran por separado.
+
+El **motivo de atención** (`obs_uaf_subject.attention_motive`) es la otra pieza
+nueva: una sola razón por sujeto, la de mayor precedencia, para que la cola de
+revisión no repita al mismo nombre. Ordena trabajo de fiscalización y no imputa
+incumplimiento ni riesgo LA/FT. La precedencia es sanción reciente, sanción
+histórica, término de giro, IPF alta, sector sin ROS, giro atípico y ausencia de
+territorio observado.
 
 ### Aditivo sobre el proyecto existente
 

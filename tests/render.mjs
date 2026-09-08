@@ -313,18 +313,31 @@ page.on('console', (m) => {
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 
 const checks = [
-  // Pulso: la composicion del padron, el ciclo de vida SII, el territorio con
-  // su IGR y la industria. Las senales NO deben estar desplegadas de entrada.
-  ['pulso', '#/pulso', ['Universo de sujetos obligados', '10.294', 'Con término de giro',
-    '445', 'Término de giro por año', 'Caracterización cruzada',
-    'Con antecedente sancionatorio', '372', 'Proveedores del Estado',
-    'Sujetos obligados por región', 'Tarapacá', 'En IGR muy alto',
+  // Pulso: la composicion del padron, lo que el universo obligado reporta,
+  // la cola de revision con su motivo, el territorio y la industria. Las
+  // senales de patron NO deben estar desplegadas de entrada.
+  ['pulso', '#/pulso', ['Pulso del universo obligado', '10.294',
+    // Composicion y estado registral.
+    'Con término de giro', '445', 'Sin perfil SII', '2.110',
+    'Estado registral ante el SII', 'Activos con SII', '7.739',
+    // Reportabilidad publicada: la pregunta que el Pulso no respondia.
+    'Lo que el universo obligado reporta', '21.828', 'sin publicar',
+    'Quién sostiene la reportabilidad', 'Tres sectores explican',
+    'sectores no registran ningún ROS', 'sin ROS 5 años',
+    'Informe Estadístico UAF',
+    // Cola de revision, con el motivo de mayor precedencia por sujeto.
+    'Piden revisión', '2.728', 'Sujetos que piden revisión',
+    'Sanción últimos 5 años', 'Casino Luckia Arica S.A.', 'Motivo de revisión',
+    // Prioridad fiscalizadora, territorio e industria.
+    'Prioridad fiscalizadora (IPF)', 'Muy alta',
+    'Sujetos obligados por región', 'Tarapacá',
     'Sector UAF que obliga', 'Usuarios de Zonas Francas',
     'Industria según el SII', 'Actividades Financieras y de Seguros',
-    'Antigüedad del padrón', '15,8',
+    'Término de giro por año', 'Caracterización cruzada',
+    'Con antecedente sancionatorio', '372', 'Proveedores del Estado',
     // Los limites se declaran en la propia pantalla, no en la documentacion.
     'no publica fecha de inscripción', 'Describe el entorno, nunca al sujeto',
-    // El entorno territorial se muestra, no se deja implícito en la tabla.
+    'no existe ROS por sujeto', 'no prueba incumplimiento',
     'Entorno territorial donde operan', 'Muy alto']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   // El listado ya no dice sólo quién es la entidad: dice desde cuándo existe,
@@ -434,7 +447,7 @@ console.log('ok   pestañas de la ficha');
   if (cerrado.includes('Señales que piden mirada')) {
     failed++; console.log('FAIL señales: llegan desplegadas sin que nadie las pida');
   } else {
-    await page.getByRole('button', { name: /Señales activas/ }).click();
+    await page.getByRole('button', { name: /Señales de patrón sobre el padrón/ }).click();
     await page.waitForTimeout(420);
     const abierto = await page.textContent('body');
     const faltan = ['Señales que piden mirada', 'Ver todas las señales']
@@ -449,7 +462,7 @@ console.log('ok   pestañas de la ficha');
 {
   await page.goto(`${BASE}/#/pulso`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /Con término de giro/ }).click();
+  await page.getByRole('button', { name: /Con término de giro/ }).first().click();
   await page.waitForTimeout(450);
   let body = await page.textContent('body');
   const faltanLista = ['Sujetos con término de giro', 'PEHUEN SPA',

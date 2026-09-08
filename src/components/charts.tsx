@@ -416,3 +416,180 @@ export function OrderedDistribution({
     </div>
   );
 }
+
+/* ─────────────────────────────────────────────── series anuales publicadas
+
+   Columnas verticales para una serie oficial corta. La columna es la forma
+   correcta cuando el eje es un año discreto y el analista compara alturas
+   entre períodos, no una tendencia continua. Un período sin publicar se dibuja
+   como contorno vacío y se rotula: un hueco no puede parecer un cero. */
+
+export function Columns({
+  data,
+  height = 210,
+  format = (v: number) => n(v),
+  onPick,
+  accent = 'var(--accent)',
+}: {
+  data: { label: string; value: number | null; ghost?: boolean; note?: string }[];
+  height?: number;
+  format?: (v: number) => string;
+  onPick?: (label: string) => void;
+  accent?: string;
+}) {
+  const peak = Math.max(1, ...data.map((d) => d.value ?? 0));
+  const gid = useId();
+  return (
+    <div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))`,
+          gap: 10,
+          alignItems: 'end',
+          height,
+          padding: '18px 0 0',
+          position: 'relative',
+        }}
+      >
+        {/* Rejilla de referencia: tres líneas, ni una más. */}
+        {[0.25, 0.5, 0.75, 1].map((t) => (
+          <div
+            key={t}
+            aria-hidden
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: `${t * 100}%`,
+              borderTop: '1px dashed var(--line-soft)', pointerEvents: 'none',
+            }}
+          />
+        ))}
+        {data.map((d) => {
+          const h = d.value == null ? 0.14 : Math.max(0.03, d.value / peak);
+          const body = (
+            <>
+              <span
+                style={{
+                  fontSize: 11.5, fontWeight: 650, marginBottom: 6,
+                  color: d.ghost || d.value == null ? 'var(--ink-4)' : 'var(--ink)',
+                }}
+                className="num"
+              >
+                {d.value == null ? '—' : format(d.value)}
+              </span>
+              <span
+                style={{
+                  width: '100%', height: `${h * 100}%`, minHeight: 4,
+                  borderRadius: '5px 5px 2px 2px',
+                  background: d.ghost || d.value == null
+                    ? 'repeating-linear-gradient(135deg, var(--bg-raised) 0 5px, transparent 5px 10px)'
+                    : `linear-gradient(180deg, ${accent}, color-mix(in srgb, ${accent} 42%, transparent))`,
+                  border: d.ghost || d.value == null
+                    ? '1px dashed var(--line-strong)' : '0',
+                  transition: 'height .55s cubic-bezier(.22,.61,.36,1)',
+                }}
+              />
+            </>
+          );
+          const inner = (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+              {body}
+            </div>
+          );
+          return onPick && d.value != null ? (
+            <button
+              key={d.label}
+              onClick={() => onPick(d.label)}
+              title={d.note ?? `${d.label}: ${format(d.value ?? 0)}`}
+              style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', height: '100%' }}
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={d.label} title={d.note} style={{ height: '100%' }}>{inner}</div>
+          );
+        })}
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))`,
+          gap: 10, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line)',
+        }}
+      >
+        {data.map((d) => (
+          <span
+            key={`${gid}-${d.label}`}
+            style={{
+              fontSize: 10.5, textAlign: 'center', letterSpacing: '.04em',
+              color: d.ghost || d.value == null ? 'var(--ink-4)' : 'var(--ink-3)',
+              fontFamily: 'var(--mono)',
+            }}
+          >
+            {d.label}
+            {d.note && (
+              <em style={{ display: 'block', fontStyle: 'normal', fontSize: 9.5, color: 'var(--ink-4)' }}>
+                {d.note}
+              </em>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Una población repartida en estados excluyentes. La barra da la proporción
+ *  de un vistazo; las fichas de abajo dan el número, porque el ancho de un
+ *  tramo del 2% no se lee. */
+export function StateBar({
+  rows,
+  total,
+  onPick,
+}: {
+  rows: { key: string; label: string; value: number; color: string; hint?: string }[];
+  total: number;
+  onPick?: (key: string) => void;
+}) {
+  const sum = Math.max(1, total);
+  return (
+    <div>
+      <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', gap: 2, background: 'var(--bg-raised)' }}>
+        {rows.map((r) => (
+          <div
+            key={r.key}
+            title={`${r.label}: ${n(r.value)}`}
+            style={{ width: `${(r.value / sum) * 100}%`, background: r.color, minWidth: r.value ? 3 : 0 }}
+          />
+        ))}
+      </div>
+      <div
+        style={{
+          display: 'grid', gap: 8, marginTop: 14,
+          gridTemplateColumns: `repeat(auto-fit, minmax(128px, 1fr))`,
+        }}
+      >
+        {rows.map((r) => {
+          const inner = (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--ink-3)' }}>
+                <i style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                {r.label}
+              </span>
+              <b className="num" style={{ display: 'block', fontSize: 19, fontWeight: 680, marginTop: 5, letterSpacing: '-0.03em' }}>
+                {n(r.value)}
+              </b>
+              <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
+                {n1((r.value / sum) * 100)}%{r.hint ? ` · ${r.hint}` : ''}
+              </span>
+            </>
+          );
+          return onPick ? (
+            <button key={r.key} className="state-card" onClick={() => onPick(r.key)}>{inner}</button>
+          ) : (
+            <div key={r.key} className="state-card">{inner}</div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
