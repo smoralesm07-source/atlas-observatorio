@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ErrorBox, Loading } from '../components/primitives';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
@@ -38,6 +38,16 @@ type SearchRow = {
 };
 type SearchData = { error?: string; total: number; rows: SearchRow[] };
 
+type DetailEntity = {
+  fintech_id: string; atlas_entity_id: string | null; rut: string | null; brand: string | null; legal_name: string;
+  website: string | null; origin_country: string | null; presence_chile: string; entity_status: string;
+  identification_status: string; identification_basis: string; primary_vertical: string | null;
+  business_model: string | null; target_customer: string | null; revenue_model: string | null; psav_status: string;
+  confidence: number; region: string | null; commune: string | null; sii_main_activity: string | null;
+  sii_economic_sector: string | null; sii_sales_band: string | null; sii_sales_band_rank: number | null;
+  sii_workers: number | null; sii_activity_start_date: string | null; uaf_sector_canonical: string | null;
+  has_cmf_public: boolean; has_uaf_public: boolean; market_metric_count: number; first_seen_at: string; last_seen_at: string;
+};
 type RegulatoryRow = {
   regulator: string; registry: string; service: string; status: string; registration_no: string | null;
   effective_date: string | null; source_url: string | null; observed_at: string;
@@ -52,10 +62,7 @@ type EventRow = { event_id: number; event_type: string; event_date: string | nul
 type EvidenceSource = { source_code: string; catalog_label: string; authority_level: string; source_url: string | null; status: string; first_seen_at: string; last_seen_at: string };
 type DetailData = {
   error?: string;
-  entity: SearchRow & {
-    website: string | null; origin_country: string | null; presence_chile: string; entity_status: string;
-    identification_status: string; identification_basis: string; confidence: number;
-  };
+  entity: DetailEntity;
   activities: ActivityRow[];
   regulation: RegulatoryRow[];
   market_metrics: MetricRow[];
@@ -275,8 +282,8 @@ function DetailPanel({ data, loading, error, onRetry, onOpen }: { data: DetailDa
     <div className="fintech-detail-tags"><em>{e.business_model ?? 'Modelo por clasificar'}</em><em>{psavLabel(e.psav_status)}</em>{e.has_uaf_public && <em>UAF público</em>}{e.has_cmf_public && <em>CMF</em>}</div>
     <div className="fintech-detail-grid">
       <div><span>Actividad SII</span><b>{e.sii_main_activity ?? 'No observada'}</b></div>
-      <div><span>Ventas</span><b>{e.sales_band ? `Tramo ${e.sales_band}` : 'No observable'}</b></div>
-      <div><span>Trabajadores</span><b>{e.workers != null ? formatNumber(e.workers) : 'n/d'}</b></div>
+      <div><span>Ventas</span><b>{e.sii_sales_band ? `Tramo ${e.sii_sales_band}` : 'No observable'}</b></div>
+      <div><span>Trabajadores</span><b>{e.sii_workers != null ? formatNumber(e.sii_workers) : 'n/d'}</b></div>
       <div><span>Métricas mercado</span><b>{formatNumber(data.market_weight.metric_count)}</b></div>
     </div>
     <Block title="Huella regulatoria">{data.regulation.length ? data.regulation.map((r) => <div className="fintech-line" key={`${r.regulator}-${r.registry}-${r.service}`}><span>{r.regulator}</span><b>{r.status.replaceAll('_',' ')}</b><small>{r.service}</small></div>) : <p className="fintech-muted">Sin vínculo regulatorio estructurado todavía.</p>}</Block>
@@ -288,7 +295,7 @@ function DetailPanel({ data, loading, error, onRetry, onOpen }: { data: DetailDa
   </aside>;
 }
 
-function Block({ title, children }: { title: string; children: React.ReactNode }) { return <section className="fintech-detail-block"><h4>{title}</h4>{children}</section>; }
+function Block({ title, children }: { title: string; children: ReactNode }) { return <section className="fintech-detail-block"><h4>{title}</h4>{children}</section>; }
 
 function Select({ label, value, options, labels = {}, noEmpty = false, onChange }: { label: string; value: string; options: string[]; labels?: Record<string,string>; noEmpty?: boolean; onChange: (v: string) => void }) {
   return <label className="fintech-select"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}>{!noEmpty && <option value="">Todos</option>}{options.map((x) => <option key={x} value={x}>{labels[x] ?? x}</option>)}</select></label>;
