@@ -826,6 +826,7 @@ button.gap-row:focus-visible { outline: 2px solid var(--accent); outline-offset:
   padding: 12px 20px 13px;
   border-bottom: 1px solid var(--line-soft);
   background: var(--bg-panel-2);
+  flex-shrink: 0;
 }
 
 .drawer-find { position: relative; display: flex; }
@@ -1086,4 +1087,116 @@ button.gap-row:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .dossier-corte {
   font-size: 10px; font-family: var(--mono); color: var(--ink-4);
   margin-left: auto; white-space: nowrap;
+}
+
+/* ───────────────────────────────────────────── sector health boxes */
+.sector-health {
+  display: grid; gap: 16px; padding: 14px 18px 4px;
+}
+
+.health-intro {
+  margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.6;
+}
+
+.health-boxes {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.health-box {
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 16px; background: var(--bg-panel);
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.health-box-head {
+  display: flex; gap: 12px;
+}
+
+.health-icon {
+  font-size: 28px; line-height: 1; flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.health-box-title {
+  min-width: 0;
+}
+
+.health-box-title h4 {
+  margin: 0; font-size: 14px; font-weight: 660; letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.health-box-title p {
+  margin: 4px 0 0; font-size: 12px; color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.health-stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px; border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.health-stat-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--ink-3);
+}
+
+.health-stat-value {
+  font-size: 22px; font-weight: 660; letter-spacing: -0.03em;
+  color: var(--accent); line-height: 1;
+}
+
+.health-stat-hint {
+  font-size: 11px; color: var(--ink-4); margin-top: 2px;
+}
+
+.health-explore {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.health-explore-btn {
+  padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: 6px; background: transparent;
+  font-size: 12px; font-weight: 500;
+  color: var(--ink-2); cursor: pointer;
+  transition: all 0.2s;
+}
+
+.health-explore-btn:hover {
+  background: var(--bg-raised); border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.health-list {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 8px;
+}
+
+.health-list-head {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 12px; padding: 0 8px 6px;
+  font-size: 10.5px; font-weight: 650; text-transform: uppercase;
+  color: var(--ink-3); letter-spacing: 0.05em;
+}
+
+.health-list-item {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 12px; align-items: center;
+  padding: 8px; margin: 0; border: none;
+  border-radius: 4px; background: transparent;
+  font-size: 12px; color: var(--ink-2);
+  cursor: pointer; text-align: left;
+  transition: all 0.15s;
+}
+
+.health-list-item:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--ink);
+}
+
+.health-list-item .num {
+  font-size: 12px; color: var(--ink-3); font-weight: 600;
 }
