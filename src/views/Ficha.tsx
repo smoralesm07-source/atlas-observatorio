@@ -187,6 +187,7 @@ function Panorama({ data, onNavigate }: { data: EntityDetail; onNavigate: (h: st
                 <tr>
                   <th>Fecha</th><th>Regulador</th><th>Materia</th>
                   <th>Identidad</th><th className="right">Monto UF</th>
+                  <th>Documento</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,10 +204,16 @@ function Panorama({ data, onNavigate }: { data: EntityDetail; onNavigate: (h: st
                       ) : '—'}
                     </td>
                     <td className="right num">{s.amount_uf == null ? '—' : n1(s.amount_uf)}</td>
+                    <td><EnlaceResolucion sancion={s} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {data.sanctions.some((s) => s.document_quality === 'PARTIAL') && (
+              <p style={{ margin: 0, padding: '10px 14px 14px', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
+                {data.lifecycle_notes?.sanction_document_note}
+              </p>
+            )}
           </Panel>
         )}
       </div>
@@ -942,5 +949,33 @@ function PerfilTributario({ data }: { data: EntityDetail }) {
         </p>
       )}
     </Panel>
+  );
+}
+
+/* El enlace a la resolución evita que el analista tenga que buscarla a mano en
+   el sitio del regulador. Se rotula con el número de resolución cuando existe,
+   porque "Ver documento" repetido doce veces no distingue una fila de otra. */
+function EnlaceResolucion({
+  sancion: s,
+}: {
+  sancion: EntityDetail['sanctions'][number];
+}) {
+  if (!s.document_url) {
+    return <span style={{ color: 'var(--ink-4)', fontSize: 11.5 }}>sin documento</span>;
+  }
+  const parcial = s.document_quality === 'PARTIAL';
+  return (
+    <a
+      href={s.document_url}
+      target="_blank"
+      rel="noreferrer"
+      title={parcial
+        ? 'El documento puede cubrir más de un acto sancionatorio.'
+        : s.document_excerpt ?? 'Resolución publicada por el regulador'}
+      style={{ fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap' }}
+    >
+      {s.resolution_ref ? `N° ${s.resolution_ref}` : 'Resolución'}
+      {parcial && <span style={{ color: 'var(--ink-4)' }}> · parcial</span>} ↗
+    </a>
   );
 }

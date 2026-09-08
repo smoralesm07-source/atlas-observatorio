@@ -179,6 +179,13 @@ export interface EntityDetail {
     laft_direct: boolean | null;
     amount_uf: number | null;
     payload: Record<string, unknown>;
+    /** URL a la resolución tal como la publica el regulador. */
+    document_url: string | null;
+    /** VALID, PARTIAL, UNKNOWN u OFFICIAL_CGR_URL. Un documento PARTIAL puede
+     *  cubrir más de un acto sancionatorio. */
+    document_quality: string | null;
+    document_excerpt: string | null;
+    resolution_ref: string | null;
   }[];
   marks: {
     mark_id: string;
@@ -1023,4 +1030,5 @@ export interface LifecycleNotes {
   uaf_observed_at: string | null;
   res_coverage_note: string;
   sales_band_note: string;
+  sanction_document_note: string;
 }

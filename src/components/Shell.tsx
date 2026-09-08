@@ -33,7 +33,6 @@ export function Shell({
     localStorage.setItem('atlas-obs-theme', theme);
   }, [theme]);
 
-  // "/" focuses search from anywhere: entity lookup is the primary act here.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
@@ -107,7 +106,7 @@ export function Shell({
         </div>
       </header>
 
-      <main className="main">{children}</main>
+      <main className={`main view-${route.view}`}>{children}</main>
     </div>
   );
 }

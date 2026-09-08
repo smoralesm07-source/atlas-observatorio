@@ -38,8 +38,6 @@ export function parseHash(hash: string): Route {
     case 'sectores':
       return { view: 'sectores' };
     case 'gasto':
-      // #/gasto/comprador/<rut> y #/gasto/proveedor/<rut> abren la ficha del
-      // actor; el RUT es el identificador porque la fuente casi no trae nombre.
       if (seg[1] === 'comprador' && seg[2]) {
         return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'BUYER' };
       }

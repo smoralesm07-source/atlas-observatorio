@@ -229,11 +229,21 @@ as $$
     from public.obs_alert where scope_type = 'ENTITY' and scope_id = p_entity_id
     order by strength desc nulls last
   ),
+  -- La sancion sin su documento obliga al analista a buscarla a mano en el sitio
+  -- del regulador. La radiografia resuelve identidad y conserva la URL de la
+  -- resolucion: 984 de las 988 sanciones cruzan por event_id y todas traen
+  -- enlace. document_quality viaja con el enlace porque no todos apuntan al
+  -- acto exacto: PARTIAL puede ser un documento que cubre varios eventos.
   sanctions as (
-    select sanction_id, event_date, regulator, subject, identity_status,
-           laft_direct, amount_uf, payload
-    from public.aml_sanctions where entity_id = p_entity_id
-    order by event_date desc nulls last limit 40
+    select s.sanction_id, s.event_date, s.regulator, s.subject, s.identity_status,
+           s.laft_direct, s.amount_uf, s.payload,
+           r.document_url, r.document_quality, r.document_excerpt,
+           s.payload->'attributes'->>'resolution' as resolution_ref
+    from public.aml_sanctions s
+    left join public.aml_sanctions_radiography_runtime_snapshot_v0961 r
+      on r.event_id = s.sanction_id
+    where s.entity_id = p_entity_id
+    order by s.event_date desc nulls last limit 40
   ),
   marks as (
     select mark_id, mark_name, semantic_class, primary_dimension, score_group,
