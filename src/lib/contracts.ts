@@ -1032,3 +1032,126 @@ export interface LifecycleNotes {
   sales_band_note: string;
   sanction_document_note: string;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Resolución de sujeto · obs_subject_search
+
+   Una fila es un SUJETO, no una fila de fuente. Las menciones de prensa que
+   nombran a la razón social viajan como alias candidatos dentro de la misma
+   fila; las que no logran adherirse a ninguna vienen aparte, marcadas.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export interface PressAlias {
+  entity_id: string;
+  name: string;
+  source: string;
+}
+
+export type SpendRole = 'SUPPLIER' | 'BUYER' | string;
+
+export interface SubjectRow extends EntityRow {
+  /** Coincidencia declarada padrón por padrón. */
+  in_uaf: boolean;
+  in_sii: boolean;
+  in_osfl: boolean;
+  in_press: boolean;
+  osfl_registro19862: boolean;
+  osfl_type: string | null;
+  /** Compras públicas. Cruza por RUT: un proveedor fuera del universo
+   *  observado sigue siendo proveedor del Estado. */
+  spend_role: SpendRole | null;
+  spend_amount_12m: number | null;
+  spend_orders_12m: number | null;
+  /** Ejecución presupuestaria, auditoría CGR y lobby. Universo distinto al de
+   *  compras públicas: no se suman. */
+  budget_signal_count: number;
+  /** La entidad existe sólo en prensa y no tiene RUT en las fuentes oficiales
+   *  del corte. No es una identidad canónica. */
+  is_press_only: boolean;
+  press_alias_count: number;
+  press_aliases: PressAlias[];
+}
+
+/* ─────────────────────────────────────────────── línea de tiempo del dossier */
+
+export type TimelineKind =
+  | 'SANCION' | 'PRENSA' | 'PRESUPUESTO' | 'COMPRAS' | 'SII' | 'PADRON_UAF';
+
+/** DIA: la fuente publica la fecha exacta. SIN_FECHA: la fuente registra el
+ *  hecho pero no cuándo ocurrió, y la interfaz no debe inventarla. */
+export type DatePrecision = 'DIA' | 'ANIO' | 'SIN_FECHA';
+
+export interface TimelineRow {
+  kind: TimelineKind;
+  event_date: string | null;
+  date_precision: DatePrecision;
+  source_code: string | null;
+  source_label: string | null;
+  title: string;
+  summary: string | null;
+  amount_uf: number | null;
+  amount_clp: number | null;
+  document_url: string | null;
+  has_link: boolean;
+  identity_status: string | null;
+}
+
+export interface SpendActorBlock {
+  actor_role: SpendRole;
+  label: string | null;
+  amount_12m: number | null;
+  order_count_12m: number | null;
+  counterpart_count: number | null;
+  top_counterpart_share: number | null;
+  hhi: number | null;
+  concentration_percentile: number | null;
+  materiality_percentile: number | null;
+  growth_ratio: number | null;
+  active_months: number | null;
+  first_seen: string | null;
+  last_seen: string | null;
+  review_priority: number | null;
+}
+
+export interface BudgetSignalRow {
+  evidence_id: string;
+  source_code: string | null;
+  evidence_type: string | null;
+  signal_code: string | null;
+  severity: string | null;
+  priority_tier: string | null;
+  event_date: string | null;
+  amount_clp: number | null;
+  title: string | null;
+  summary: string | null;
+  source_url: string | null;
+  match_method: string | null;
+}
+
+export interface OsflRegistryBlock {
+  osfl_type: string | null;
+  activity_group: string | null;
+  main_activity: string | null;
+  current_status: string | null;
+  registro19862: boolean;
+  public_funds: boolean;
+  transfer_count: number | null;
+  transfer_amount_clp: number | null;
+  uaf_class: string | null;
+  uaf_label: string | null;
+  sales_band: string | null;
+  workers_numeric: number | null;
+}
+
+/** obs_entity_dossier = obs_entity_detail + los bloques que la ficha no leía. */
+export interface EntityDossier extends EntityDetail {
+  spend: SpendActorBlock | null;
+  budget: BudgetSignalRow[];
+  osfl_registry: OsflRegistryBlock | null;
+  timeline: TimelineRow[];
+  dossier_semantics: {
+    spend_note: string;
+    timeline_note: string;
+    press_note: string;
+  };
+}

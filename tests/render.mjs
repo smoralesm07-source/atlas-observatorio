@@ -102,7 +102,93 @@ const detail = {
   semantics: 'Ficha de observacion. Reune lo que las fuentes abiertas gobernadas registran sobre la entidad. No es un expediente ni una decision institucional.',
 };
 
+/* obs_subject_search devuelve SUJETOS: la fila trae la coincidencia padrón por
+   padrón y los alias con que la prensa nombra a la misma razón social. La
+   fixture se deriva del listado capturado para no duplicar el corte. */
+const subjects = F.search.map((r, i) => ({
+  ...r,
+  in_uaf: r.is_uaf_observed,
+  in_sii: r.sources.includes('RADAR_SII'),
+  in_osfl: r.sources.includes('RADAR_OSFL'),
+  in_press: r.sources.includes('RADAR_PRENSA'),
+  osfl_registro19862: false,
+  osfl_type: null,
+  // El primer sujeto es comprador público: sin una fila con compras, la tira
+  // de padrones nunca mostraría el caso "con registro" de esa fuente.
+  spend_role: i === 0 ? 'BUYER' : null,
+  spend_amount_12m: i === 0 ? 18130049673.48 : null,
+  spend_orders_12m: i === 0 ? 1283 : null,
+  budget_signal_count: i === 0 ? 2 : 0,
+  is_press_only: r.rut == null,
+  press_alias_count: i === 0 ? 2 : 0,
+  press_aliases: i === 0
+    ? [{ entity_id: 'entity:press:aa11', name: 'Bice', source: 'RADAR_PRENSA' },
+       { entity_id: 'entity:press:bb22', name: 'Banco Bice S.A', source: 'RADAR_PRENSA' }]
+    : [],
+}));
+
+/* obs_entity_dossier = obs_entity_detail más los bloques que la ficha no leía:
+   compras públicas, ejecución fiscal, registro OSFL y la línea de tiempo con
+   el documento oficial de cada hecho. */
+const dossier = {
+  ...detail,
+  spend: {
+    actor_role: 'BUYER', label: 'BANCO BICE', amount_12m: 18130049673.48,
+    order_count_12m: 1283, counterpart_count: 74, top_counterpart_share: 0.21,
+    hhi: 0.09, concentration_percentile: 41.2, materiality_percentile: 88.6,
+    growth_ratio: 1.07, active_months: 12,
+    first_seen: '2025-09-01', last_seen: '2026-08-28', review_priority: 51.4,
+  },
+  budget: [
+    { evidence_id: 'BUD-1', source_code: 'RADAR_CGR', evidence_type: 'AUDITORIA',
+      signal_code: 'REPARO', severity: 'MEDIA', priority_tier: 'B',
+      event_date: '2026-04-18', amount_clp: 412000000,
+      title: 'Informe de auditoría con observaciones',
+      summary: 'Contraloría formula observaciones sobre rendición de fondos.',
+      source_url: 'https://www.contraloria.cl/informes/2026-412', match_method: 'RUT' },
+  ],
+  osfl_registry: null,
+  timeline: [
+    { kind: 'SANCION', event_date: '2026-02-09', date_precision: 'DIA',
+      source_code: 'RADAR_SANCIONES', source_label: 'CMF',
+      title: 'Incumplimiento de deberes de información',
+      summary: 'La resolución CMF N°5624 individualiza a BANCO BICE.',
+      amount_uf: 165, amount_clp: null,
+      document_url: 'https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php?s567=5e69cbb724a4124c95',
+      has_link: true, identity_status: 'RESOLVED_SOURCE' },
+    { kind: 'PADRON_UAF', event_date: '2026-08-25', date_precision: 'DIA',
+      source_code: 'RADAR_UAF', source_label: 'Unidad de Análisis Financiero',
+      title: 'Observada en el padrón de sujetos obligados',
+      summary: 'Bancos · LEGAL_ENTITY', amount_uf: null, amount_clp: null,
+      document_url: null, has_link: false, identity_status: null },
+    { kind: 'COMPRAS', event_date: '2025-09-01', date_precision: 'DIA',
+      source_code: 'MERCADO_PUBLICO', source_label: 'Mercado Público · ChileCompra',
+      title: 'Comprador público',
+      summary: '1283 órdenes en 12 meses · 74 contrapartes',
+      amount_uf: null, amount_clp: 18130049673.48,
+      document_url: null, has_link: false, identity_status: null },
+    { kind: 'SII', event_date: '1979-03-16', date_precision: 'DIA',
+      source_code: 'RADAR_SII', source_label: 'Servicio de Impuestos Internos',
+      title: 'Inicio de actividades', summary: 'ACTIVIDADES BANCARIAS',
+      amount_uf: null, amount_clp: null, document_url: null, has_link: false,
+      identity_status: null },
+    // Un hecho que la fuente registra sin fecha: la interfaz no debe inventarla.
+    { kind: 'PRENSA', event_date: null, date_precision: 'SIN_FECHA',
+      source_code: 'RADAR_PRENSA', source_label: 'Prensa',
+      title: 'Mención en prensa', summary: null,
+      amount_uf: null, amount_clp: null, document_url: null, has_link: false,
+      identity_status: 'PRESS_ONLY' },
+  ],
+  dossier_semantics: {
+    spend_note: 'Compras públicas y ejecución presupuestaria son universos distintos y no se suman. La ventana de compras es de 12 meses al corte publicado.',
+    timeline_note: 'La línea de tiempo reúne lo que las fuentes registran. Una fila sin enlace es una fuente que no publica el documento, no una afirmación sin respaldo.',
+    press_note: 'Las coincidencias de prensa son contexto abierto: no acreditan identidad canónica ni participación.',
+  },
+};
+
 const RPC = {
+  obs_subject_search: subjects,
+  obs_entity_dossier: dossier,
   obs_pulse: F.pulse,
   obs_alert_feed: F.alerts,
   obs_search_entities: F.search,
@@ -154,7 +240,7 @@ await ctx.route('**/rest/v1/rpc/**', async (route) => {
   // Una consulta que el universo no conoce debe devolver vacío, para que la
   // cascada hacia fuentes externas se dispare de verdad.
   let payload = RPC[fn];
-  if (fn === 'obs_search_entities') {
+  if (fn === 'obs_search_entities' || fn === 'obs_subject_search') {
     let body = {};
     try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* sin cuerpo */ }
     const q = String(body.p_q || '').toLowerCase();
@@ -370,28 +456,49 @@ const checks = [
     'no existe ROS por sujeto', 'no prueba incumplimiento',
     'Entorno territorial donde operan', 'Muy alto']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
-  // El listado ya no dice sólo quién es la entidad: dice desde cuándo existe,
-  // a qué se dedica y de qué tamaño es.
-  ['entidades', '#/entidades', ['Entidades', 'Banco Bice', 'Sujeto obligado', '97.080.000-K',
-     'Identidad sin resolver', 'sin RUT',
-     'desde 1979', 'Actividades Bancarias', 'Grande', 'Más de 1.000.000 UF', '1.793 trab.']],
+  // El resultado es un SUJETO: declara la coincidencia padrón por padrón, agrupa
+  // las variantes con que la prensa lo nombra y separa lo que no pudo resolver.
+  ['entidades', '#/entidades', ['Entidades', 'Banco Bice', '97.080.000-K',
+     // Padrón por padrón, con la ausencia dicha en palabras.
+     'Padrón UAF', 'Actividad SII', 'Registro OSFL', 'Proveedor del Estado',
+     'sin registro', 'Comprador público', 'Presupuesto y CGR',
+     // Caracterización tributaria en la propia fila.
+     'desde 1979', 'Actividades Bancarias', 'Grande', 'Más de 1.000.000 UF',
+     '1.793 trabajadores',
+     // Los alias de prensa viajan dentro del sujeto, declarados como tales.
+     'También aparece en prensa como', 'Banco Bice S.A',
+     // Y lo que no se adhirió a ninguna razón social se dice, en vez de
+     // rotularse con un estado interno del pipeline.
+     'Sólo en prensa', 'Sin RUT en fuentes oficiales del corte',
+     'de prensa sin razón social']],
   // La ficha enmarca los hechos dentro del ciclo de vida, y declara que el
   // padrón UAF no publica fecha de inscripción en vez de inventar un hito.
-  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice', 'Prioridad analítica',
-    'Línea de tiempo',
-    // La sanción entra a la línea de tiempo con su materia, su regulador y su
-    // monto, no como el rótulo genérico del productor. El "165 UF" sólo lo
-    // imprime la línea de tiempo: la tabla de abajo usa un decimal.
-    'Incumplimiento de deberes de información', '165 UF',
-    'Constitución de la sociedad', 'Inicio de actividades',
-    'Registro de Empresas y Sociedades', 'Servicio de Impuestos Internos',
-    'Perfil tributario', 'Actividades Bancarias', 'Más de 1.000.000 UF', '1.793',
-    'no publica fecha de inscripción',
-    'Documento', 'N° 5624', 'N° 4082', 'parcial',
-    // El estado de identidad de la radiografía llega en inglés desde el
-    // productor; la ficha lo dice en español y sin sonar a certeza.
-    'RUT, criterio conservador',
-    'puede cubrir más de un acto sancionatorio']],
+  // La ficha abre en el dossier: qué es esta entidad, qué la caracteriza
+  // tributariamente, qué le pasó y por qué la estamos mirando.
+  ['ficha', '#/entidad/ENT-RUT-97080000-K', ['Banco Bice',
+    // Cinco preguntas, cinco respuestas, con la ausencia dicha en palabras.
+    'Sujeto obligado', 'Inscrita en el padrón', 'Sanciones', 'Prensa',
+    'Proveedor del Estado', 'Sin fines de lucro', 'Sin registro',
+    'nunca que no se haya mirado',
+    // La línea de tiempo, con el documento oficial en la fila que lo tiene y
+    // el "sin documento" declarado en la que no.
+    'Línea de tiempo', 'Incumplimiento de deberes de información', '165 UF',
+    'Ver resolución', 'sin documento', 'sin fecha',
+    'Observada en el padrón de sujetos obligados',
+    'Comprador público', 'Inicio de actividades',
+    // El perfil tributario completo: desde cuándo existe, a qué se dedica,
+    // dónde tributa, de qué tamaño es y con cuánta gente.
+    'Perfil tributario', 'Giro vigente', 'Actividades Bancarias',
+    'Más de 1.000.000 UF', '1.793', 'Actividades económicas declaradas',
+    'Tramo de ventas', 'Trabajadores', 'Sector económico', 'Subsector',
+    'Domicilios registrados', 'Las Condes',
+    // Un cero numérico se leería como bajo riesgo: la ausencia de cálculo no
+    // es un cero, y la ficha lo dice con todas sus letras.
+    'Por qué aparece', 'Prioridad no calculada en este corte',
+    'No es probabilidad de LA/FT',
+    // Los dos universos, separados y nunca sumados.
+    'Compras públicas', 'Ejecución fiscal, auditoría y lobby',
+    'Informe de auditoría con observaciones', 'no se suman']],
   // Fuentes: una al dia, una de alcance parcial que dice por que su cobertura
   // es baja, una en silencio y una bajo demanda.
   ['fuentes', '#/fuentes', ['Fuentes', 'Radar SII', 'En silencio',
@@ -439,8 +546,9 @@ for (const [name, hash, expect] of checks) {
 
 // Ficha tabs must switch without a reload.
 await page.goto(`${BASE}/#/entidad/ENT-RUT-97080000-K`, { waitUntil: 'networkidle' });
-for (const tab of ['Fuentes', 'Señales y hallazgos', 'Marcas', 'Economía y padrón',
-                   'Screening internacional', 'Identidad digital']) {
+for (const tab of ['Panorama', 'Fuentes', 'Señales y hallazgos', 'Marcas',
+                   'Economía y padrón', 'Screening internacional',
+                   'Identidad digital', 'Dossier']) {
   await page.getByRole('button', { name: tab, exact: true }).click();
   await page.waitForTimeout(220);
   await shot(page, `${OUT}/ficha-${tab.split(' ')[0].toLowerCase()}.png`);

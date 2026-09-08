@@ -15,11 +15,17 @@ lee los mismos datos gobernados a través de contratos propios.
 - Una lectura de **gasto público y compras**: patrones de concentración,
   trayectoria, precios y convergencia sobre la relación comprador–proveedor en
   ChileCompra, junto a —y nunca sumada con— la ejecución presupuestaria.
-- Un **buscador de entidades en cascada**: busca en el universo observado y, si
-  ahí no hay nada, sigue solo hacia sanciones internacionales, debarment y bases
-  offshore. La identidad digital se resuelve bajo demanda.
-- Una **ficha de observación** que distingue tres estados por fuente: con
-  registro, sin registro y no consultada.
+- Un **buscador de sujetos en cascada**: cada resultado es una entidad del mundo
+  real, no una fila por fuente. Agrupa como alias candidatos las variantes con
+  que la prensa nombra a la misma razón social y declara, padrón por padrón,
+  dónde figura: UAF, SII, registro OSFL, sanciones, prensa, compras públicas y
+  ejecución fiscal. Si el universo observado no tiene nada, sigue solo hacia
+  sanciones internacionales, debarment y bases offshore. La identidad digital se
+  resuelve bajo demanda.
+- Un **dossier de entidad**: qué es —en cinco padrones—, qué la caracteriza
+  tributariamente, qué le pasó en una línea de tiempo con el documento oficial
+  de cada hecho, y por qué el Observatorio la muestra. Distingue tres estados
+  por fuente: con registro, sin registro y no consultada.
 
 ## Qué no es
 
@@ -46,19 +52,28 @@ Reglas que sostienen el diseño:
    `obs_source_status`, `obs_territory_map`, `obs_territory_detail`,
    `obs_sector_overview`, `obs_sector_detail`, `obs_spend_overview`,
    `obs_spend_finding_feed`, `obs_spend_actor_detail`, `obs_uaf_pulse`,
-   `obs_uaf_cohort` y `obs_uaf_subject_dossier`.
-3. **Las capas no se mezclan.** Universo observado, listas internacionales e
+   `obs_uaf_cohort`, `obs_uaf_subject_dossier`, `obs_subject_search`,
+   `obs_entity_timeline` y `obs_entity_dossier`.
+3. **Agrupar no es resolver identidad.** `obs_subject_search` adhiere una
+   mención de prensa a una razón social cuando todos sus términos distintivos
+   están en ella e incluye la palabra con que la razón social empieza — así
+   "Grupo Sartor" se agrupa bajo la administradora, y "Codelco" no se agrupa
+   bajo un sindicato de trabajadores de Codelco. El resultado es un alias
+   **candidato**: viaja siempre visible junto al sujeto, no se persiste, no crea
+   identidad canónica y no altera la prioridad analítica de nadie. Lo que no se
+   adhiere a ninguna razón social se muestra aparte y se dice por qué.
+4. **Las capas no se mezclan.** Universo observado, listas internacionales e
    identidad digital tienen autoridad distinta y se presentan por separado. Lo
    externo es siempre candidato: no se persiste, no crea identidad canónica y no
    modifica la prioridad analítica de ninguna entidad.
-4. **La autorización no se degrada.** La identidad la acredita Microsoft Entra,
+5. **La autorización no se degrada.** La identidad la acredita Microsoft Entra,
    igual que ATLAS. Todos los contratos son `SECURITY INVOKER` y las tablas
    `obs_*` tienen RLS contra la misma lista `aml_allowed_users`. Un usuario
    autenticado fuera de la lista lee cero filas y ve una pantalla que se lo dice;
    `anon` no tiene privilegio de ejecución sobre ningún contrato.
-5. **La ausencia de una fuente es ausencia, nunca un cero.** Una fuente no
+6. **La ausencia de una fuente es ausencia, nunca un cero.** Una fuente no
    consultada jamás se presenta como una fuente que no encontró nada.
-6. **Universos distintos permanecen explícitos.** Ejecución presupuestaria no es
+7. **Universos distintos permanecen explícitos.** Ejecución presupuestaria no es
    compra pública; padrón UAF no es universo económico. La pantalla de gasto
    público los separa en dos bloques y nunca los agrega en una sola cifra.
 

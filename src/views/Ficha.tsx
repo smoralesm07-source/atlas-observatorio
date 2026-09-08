@@ -1,7 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
-import type { CoverageRow, EntityDetail } from '../lib/contracts';
+import type { CoverageRow, EntityDetail, EntityDossier } from '../lib/contracts';
+import {
+  ComprasYPresupuesto, LineaDeTiempo, PerfilTributario, PorQueAparece,
+  pressToTimeline, QueEsEstaEntidad,
+} from '../components/Dossier';
+import { pressForEntity, type PressForSubject } from '../lib/press';
 import { AlertCard } from '../components/AlertCard';
 import { Meter } from '../components/charts';
 import { WatchlistResults } from '../components/Watchlists';
@@ -15,9 +20,12 @@ import {
   rutFormat, sourceClassLabel, sourceClassVar, titleCase,
 } from '../lib/format';
 
-type Tab = 'panorama' | 'fuentes' | 'senales' | 'marcas' | 'economia' | 'screening' | 'digital';
+type Tab =
+  | 'dossier' | 'panorama' | 'fuentes' | 'senales' | 'marcas' | 'economia'
+  | 'screening' | 'digital';
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'dossier', label: 'Dossier' },
   { id: 'panorama', label: 'Panorama' },
   { id: 'fuentes', label: 'Fuentes' },
   { id: 'senales', label: 'Señales y hallazgos' },
@@ -34,10 +42,27 @@ export function Ficha({
   entityId: string;
   onNavigate: (hash: string) => void;
 }) {
-  const [tab, setTab] = useState<Tab>('panorama');
-  const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_detail', {
+  const [tab, setTab] = useState<Tab>('dossier');
+  const { data, error, loading, reload } = useRpc<EntityDossier | null>('obs_entity_dossier', {
     p_entity_id: entityId,
   });
+
+  // La evidencia periodística —titular, medio, fecha y URL— vive en el puente
+  // de Radar Prensa y no en el corte materializado, así que se consulta aparte
+  // y se funde en la línea de tiempo. Se busca por la razón social y por cada
+  // alias que la base ya agrupó.
+  const [press, setPress] = useState<PressForSubject | null>(null);
+  const name = data?.entity.name ?? null;
+  const rut = data?.entity.rut ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    setPress(null);
+    if (!name) return () => { cancelled = true; };
+    void pressForEntity(name, [], rut)
+      .then((result) => { if (!cancelled) setPress(result); })
+      .catch(() => { if (!cancelled) setPress(null); });
+    return () => { cancelled = true; };
+  }, [name, rut]);
 
   if (loading) return <Loading label="Reuniendo lo que las fuentes registran…" />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
@@ -103,7 +128,9 @@ export function Ficha({
 
         <div className="ficha-scores">
           <ScoreTile
-            value={e.ipa3_score == null ? '—' : n1(e.ipa3_score)}
+            value={
+              e.ipa3_score == null || Number(e.ipa3_score) === 0 ? '—' : n1(e.ipa3_score)
+            }
             label="Prioridad analítica"
             hint={bandLabel(e.ipa3_band)}
           />
@@ -125,6 +152,7 @@ export function Ficha({
         ))}
       </div>
 
+      {tab === 'dossier' && <DossierTab data={data} press={press} />}
       {tab === 'panorama' && <Panorama data={data} onNavigate={onNavigate} />}
       {tab === 'fuentes' && <Fuentes present={present} absent={absent} pending={pending} />}
       {tab === 'senales' && <SenalesTab data={data} onNavigate={onNavigate} />}
@@ -168,7 +196,7 @@ function Panorama({ data, onNavigate }: { data: EntityDetail; onNavigate: (h: st
   return (
     <div className="grid grid-main">
       <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
-        <LineaDeTiempo data={data} />
+        <HitosYEventos data={data} />
 
         {data.alerts.length > 0 && (
           <Panel title="Señales sobre esta entidad" pad={false}>
@@ -758,7 +786,7 @@ type FilaTiempo = {
   monto?: number | null;
 };
 
-function LineaDeTiempo({ data }: { data: EntityDetail }) {
+function HitosYEventos({ data }: { data: EntityDetail }) {
   const filas: FilaTiempo[] = [];
 
   for (const m of data.lifecycle ?? []) {
@@ -858,100 +886,6 @@ function LineaDeTiempo({ data }: { data: EntityDetail }) {
    operando. El corte tributario alcanza a 45.433 de las 50.516 entidades: para
    el resto se dice que la fuente no la cubre, nunca que la entidad no opera. */
 
-function PerfilTributario({ data }: { data: EntityDetail }) {
-  const t = data.tax;
-  const r = data.res;
-
-  if (!t && !r) {
-    return (
-      <Panel title="Perfil tributario">
-        <Empty
-          title="Sin perfil tributario en el corte"
-          hint="El Servicio de Impuestos Internos no publica un perfil para esta entidad. La ausencia es de la fuente, no una afirmación sobre su actividad."
-        />
-      </Panel>
-    );
-  }
-
-  const terminada = Boolean(t?.termination_date);
-
-  return (
-    <Panel
-      title="Perfil tributario"
-      meta={t?.commercial_year ? `año comercial ${t.commercial_year}` : undefined}
-    >
-      {t && (
-        <>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            {t.size_label && <Badge tone="neutral">{t.size_label}</Badge>}
-            {terminada
-              ? <Badge tone="critical" dot>Con término de giro</Badge>
-              : t.current_status && <Badge tone="present">Activa ante el SII</Badge>}
-          </div>
-
-          <dl className="kv">
-            <dt>Inicio de actividades</dt>
-            <dd>{t.activity_start_date ? fecha(t.activity_start_date) : '—'}</dd>
-            {terminada && (
-              <>
-                <dt>Término de giro</dt>
-                <dd style={{ color: 'var(--sig-critical)' }}>{fecha(t.termination_date)}</dd>
-              </>
-            )}
-            <dt>Actividad principal</dt>
-            <dd>{t.main_activity ? titleCase(t.main_activity) : '—'}</dd>
-            {t.economic_sector && (
-              <>
-                <dt>Rubro económico</dt>
-                <dd>{titleCase(t.economic_sector)}</dd>
-              </>
-            )}
-            <dt>Región</dt>
-            <dd>{t.region ? titleCase(t.region) : '—'}{t.commune ? ` · ${titleCase(t.commune)}` : ''}</dd>
-            <dt>Ventas anuales</dt>
-            <dd>{t.sales_band_uf ?? '—'}</dd>
-            <dt>Trabajadores</dt>
-            <dd className="num">{t.workers_numeric == null ? '—' : n(t.workers_numeric)}</dd>
-            {t.society_type && (
-              <>
-                <dt>Tipo de sociedad</dt>
-                <dd>{titleCase(t.society_type)}</dd>
-              </>
-            )}
-          </dl>
-        </>
-      )}
-
-      {r?.constitution_date && (
-        <dl className="kv" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-soft)' }}>
-          <dt>Constitución</dt>
-          <dd>{fecha(r.constitution_date)}</dd>
-          {r.capital != null && (
-            <>
-              <dt>Capital declarado</dt>
-              <dd className="num">${n(r.capital)}</dd>
-            </>
-          )}
-          {r.relationship_count != null && r.relationship_count > 0 && (
-            <>
-              <dt>Vínculos societarios</dt>
-              <dd className="num">{n(r.relationship_count)}</dd>
-            </>
-          )}
-        </dl>
-      )}
-
-      {/* El tramo más bajo del SII significa "sin información", no ventas cero.
-          Sin esta nota, una entidad sin datos parecería una entidad sin ventas. */}
-      {t?.sales_band_rank === 1 && (
-        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-          {data.lifecycle_notes?.sales_band_note}
-        </p>
-      )}
-    </Panel>
-  );
-}
-
 /* El enlace a la resolución evita que el analista tenga que buscarla a mano en
    el sitio del regulador. Se rotula con el número de resolución cuando existe,
    porque "Ver documento" repetido doce veces no distingue una fila de otra. */
@@ -977,5 +911,55 @@ function EnlaceResolucion({
       {s.resolution_ref ? `N° ${s.resolution_ref}` : 'Resolución'}
       {parcial && <span style={{ color: 'var(--ink-4)' }}> · parcial</span>} ↗
     </a>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════ dossier
+
+   La primera pantalla de la ficha responde, en este orden: qué es esta
+   entidad, qué la caracteriza tributariamente, qué le pasó y por qué la
+   estamos mirando. Cada hecho de la línea de tiempo lleva su enlace a la
+   fuente cuando la fuente lo publica. */
+
+function DossierTab({
+  data,
+  press,
+}: {
+  data: EntityDossier;
+  press: PressForSubject | null;
+}) {
+  // La serie de la base trae los hechos gobernados; el puente de prensa trae
+  // las notas con su URL. Se funden en una sola línea ordenada por fecha, sin
+  // duplicar las menciones que la base ya registra sin enlace.
+  const rows = useMemo(() => {
+    const fromPress = pressToTimeline(press);
+    const governed = (data.timeline ?? []).filter(
+      (r) => !(r.kind === 'PRENSA' && fromPress.length > 0),
+    );
+    return [...governed, ...fromPress].sort((a, b) => {
+      if (!a.event_date && !b.event_date) return 0;
+      if (!a.event_date) return 1;
+      if (!b.event_date) return -1;
+      return b.event_date.localeCompare(a.event_date);
+    });
+  }, [data.timeline, press]);
+
+  return (
+    <div className="dossier">
+      <QueEsEstaEntidad data={data} press={press} />
+
+      <div className="dossier-split">
+        <Panel title="Línea de tiempo" meta="todo lo que las fuentes registran, en orden">
+          <LineaDeTiempo rows={rows} note={data.dossier_semantics?.timeline_note} />
+        </Panel>
+
+        <div className="dossier-aside">
+          <PorQueAparece data={data} press={press} />
+          <PerfilTributario data={data} />
+        </div>
+      </div>
+
+      <ComprasYPresupuesto data={data} />
+    </div>
   );
 }

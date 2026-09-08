@@ -344,3 +344,150 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
   );
   return [fallback, ...indexed].slice(0, maxResults);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Adhesión de menciones de prensa a un sujeto
+
+   La misma regla que aplica obs_press_attaches en la base, reimplementada aquí
+   porque la evidencia periodística —titular, medio, fecha y URL— vive en el
+   puente y no en el corte materializado. Las dos implementaciones tienen que
+   coincidir: si la base agrupó "Grupo Sartor" bajo una razón social, la ficha
+   de esa razón social debe mostrar sus notas.
+
+   Una coincidencia sigue siendo un CANDIDATO. No acredita identidad canónica
+   ni participación: sólo dice que la prensa usó ese nombre.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const NAME_STOPWORDS = new Set([
+  'sociedad', 'sociedades', 'limitada', 'ltda', 'spa', 'eirl', 'anonima',
+  'compania', 'cia', 'grupo', 'group', 'caso', 'casos', 'para', 'este', 'esta',
+  'esto', 'estos', 'estas', 'como', 'sobre', 'entre', 'desde', 'hasta', 'contra',
+  'segun', 'tras', 'ante', 'bajo', 'cabe', 'sino', 'pero', 'porque', 'cuando',
+  'donde', 'quien', 'cual', 'cuales', 'otro', 'otra', 'otros', 'otras',
+]);
+
+/** Términos distintivos de un nombre. Descarta formas jurídicas, conectores y
+ *  términos de menos de cuatro letras, que producen colisiones absurdas. */
+export function nameTokens(value: string): string[] {
+  const seen = new Set<string>();
+  normalizePressText(value)
+    .split(' ')
+    .forEach((t) => {
+      if (t.length >= 4 && !NAME_STOPWORDS.has(t)) seen.add(t);
+    });
+  return [...seen];
+}
+
+/** La palabra con la que empieza la razón social: su marca, antes del giro. */
+export function nameHead(value: string): string {
+  const parts = normalizePressText(value).split(' ').filter(Boolean);
+  return parts.find((t) => t.length >= 4) ?? parts[0] ?? '';
+}
+
+/** Una mención se adhiere cuando NOMBRA a la razón social, no cuando aparece
+ *  dentro del nombre de un tercero que la menciona: sin exigir la palabra
+ *  cabecera, "Codelco" se pegaría a "Sindicato de Trabajadores de Codelco". */
+export function pressAttaches(pressName: string, canonicalName: string): boolean {
+  const press = nameTokens(pressName);
+  if (press.length === 0) return false;
+  const canonical = nameTokens(canonicalName);
+  if (canonical.length === 0) return false;
+  if (canonical.length > press.length + 4) return false;
+  const canonicalSet = new Set(canonical);
+  if (!press.every((t) => canonicalSet.has(t))) return false;
+  return press.includes(nameHead(canonicalName));
+}
+
+export interface PressForSubject {
+  matches: PressMatch[];
+  /** Notas distintas: dos menciones de la misma nota no son dos notas. */
+  articleCount: number;
+  roles: string[];
+  articles: PressArticleMatch[];
+}
+
+const GENERIC_ROLE = 'mencionada en la publicación';
+
+/** Roles que califican la aparición. "Mencionada en la publicación" no dice
+ *  nada que el conteo de notas no diga ya, así que no se muestra. */
+function meaningfulRoles(matches: PressMatch[]): string[] {
+  const seen = new Set<string>();
+  matches.forEach((m) => {
+    (m.roles ?? []).forEach((r) => {
+      const role = String(r ?? '').trim();
+      if (!role || role === GENERIC_ROLE) return;
+      // Los roles compuestos que el reconocedor emite ("objeto de «sanciona a»
+      // por…") son demasiado largos para una fila de resultados.
+      if (role.length > 26) return;
+      seen.add(role);
+    });
+  });
+  return [...seen];
+}
+
+function collect(matches: PressMatch[]): PressForSubject {
+  const articles = new Map<string, PressArticleMatch>();
+  matches.forEach((m) => m.articles.forEach((a) => articles.set(a.id, a)));
+  const list = [...articles.values()].sort((a, b) =>
+    String(b.date ?? '').localeCompare(String(a.date ?? '')));
+  return {
+    matches,
+    articleCount: list.length,
+    roles: meaningfulRoles(matches),
+    articles: list,
+  };
+}
+
+/** Reparte las coincidencias de prensa entre los sujetos de la página. Lo que
+ *  no se adhiere a ninguno se devuelve aparte: perderlo sería peor que
+ *  mostrarlo suelto. */
+export function groupPressBySubject(
+  matches: PressMatch[],
+  subjects: { entity_id: string; name: string; rut: string | null }[],
+): { bySubject: Map<string, PressForSubject>; loose: PressMatch[] } {
+  const buckets = new Map<string, PressMatch[]>();
+  const attached = new Set<string>();
+
+  matches.forEach((match) => {
+    const matchRuts = new Set(match.ruts.map((r) => r.toUpperCase().replace(/[^0-9K]/g, '')));
+    subjects.forEach((subject) => {
+      const rut = String(subject.rut ?? '').toUpperCase().replace(/[^0-9K]/g, '');
+      const byRut = rut !== '' && matchRuts.has(rut);
+      const byName = pressAttaches(match.name, subject.name)
+        || match.aliases.some((alias) => pressAttaches(alias, subject.name));
+      if (!byRut && !byName) return;
+      const bucket = buckets.get(subject.entity_id) ?? [];
+      bucket.push(match);
+      buckets.set(subject.entity_id, bucket);
+      attached.add(match.press_entity_id);
+    });
+  });
+
+  const bySubject = new Map<string, PressForSubject>();
+  buckets.forEach((value, key) => bySubject.set(key, collect(value)));
+  return {
+    bySubject,
+    loose: matches.filter((m) => !attached.has(m.press_entity_id)),
+  };
+}
+
+/** Evidencia periodística de un sujeto ya conocido, para la ficha. Se consulta
+ *  por la razón social y por cada alias que la base ya agrupó. */
+export async function pressForEntity(
+  name: string,
+  aliases: string[] = [],
+  rut: string | null = null,
+): Promise<PressForSubject> {
+  // La razón social completa rara vez coincide con el nombre corto que usa la
+  // prensa, así que también se consulta por su palabra cabecera: "sartor"
+  // encuentra "Grupo Sartor", "Sartor AGF" y "Sartor Group"; el filtro de
+  // adhesión posterior descarta lo que sólo comparte esa palabra.
+  const head = nameHead(name);
+  const queries = [name, ...aliases, ...(head && head.length >= 4 ? [head] : [])];
+  const seen = new Map<string, PressMatch>();
+  const results = await Promise.all(queries.map((q) => searchPress(q, 30).catch(() => [])));
+  const subject = [{ entity_id: 'self', name, rut }];
+  results.flat().forEach((m) => seen.set(m.press_entity_id, m));
+  const grouped = groupPressBySubject([...seen.values()], subject);
+  return grouped.bySubject.get('self') ?? { matches: [], articleCount: 0, roles: [], articles: [] };
+}

@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
-import type { EntityRow } from '../lib/contracts';
+import type { SubjectRow } from '../lib/contracts';
 import {
   looksLikePersonName, screenWatchlists, type WatchlistResult,
 } from '../lib/connectors';
 import { Badge, Empty, ErrorBox, Loading, Semantics } from '../components/primitives';
-import { EntityRowItem } from '../components/EntityRowItem';
+import { SubjectRowItem } from '../components/SubjectRowItem';
 import { WatchlistResults } from '../components/Watchlists';
 import { IdentidadDigital } from '../components/IdentidadDigital';
 import { PressMatches } from '../components/PressMatches';
-import { normalizePressText, searchPress, type PressMatch } from '../lib/press';
+import { groupPressBySubject, searchPress, type PressForSubject, type PressMatch } from '../lib/press';
 import { n, shortSource, titleCase } from '../lib/format';
 
 const PAGE = 25;
@@ -39,22 +39,7 @@ interface PressState {
   error?: string;
 }
 
-function compactRut(value: string | null | undefined): string {
-  return String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
-}
-
-function pressAlreadyRepresented(match: PressMatch, rows: EntityRow[]): boolean {
-  const names = new Set([
-    normalizePressText(match.name),
-    ...match.aliases.map(normalizePressText),
-  ].filter(Boolean));
-  const ruts = new Set(match.ruts.map(compactRut).filter(Boolean));
-  return rows.some((row) => {
-    const rut = compactRut(row.rut);
-    if (rut && ruts.has(rut)) return true;
-    return names.has(normalizePressText(row.name));
-  });
-}
+const EMPTY_PRESS: PressState = { status: 'idle', matches: [] };
 
 export function Entidades({
   initialQuery,
@@ -70,6 +55,7 @@ export function Entidades({
   const [source, setSource] = useState<string | null>(null);
   const [onlyUaf, setOnlyUaf] = useState(false);
   const [onlySanctioned, setOnlySanctioned] = useState(false);
+  const [onlySupplier, setOnlySupplier] = useState(false);
   const [multiSource, setMultiSource] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -77,12 +63,15 @@ export function Entidades({
   const [watch, setWatch] = useState<LayerState>({ status: 'idle' });
   const [digitalQuery, setDigitalQuery] = useState<string | null>(null);
   const [digitalDone, setDigitalDone] = useState(false);
-  const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
+  const [press, setPress] = useState<PressState>(EMPTY_PRESS);
 
   const debounced = useDebounced(q, 240);
   const trimmed = debounced.trim();
 
-  useEffect(() => setPage(0), [debounced, region, source, onlyUaf, onlySanctioned, multiSource]);
+  useEffect(
+    () => setPage(0),
+    [debounced, region, source, onlyUaf, onlySanctioned, onlySupplier, multiSource],
+  );
 
   // Cada consulta nueva reinicia las capas externas: un resultado de OFAC de la
   // búsqueda anterior junto a un nombre distinto sería una atribución falsa.
@@ -93,24 +82,22 @@ export function Entidades({
     setLayer('universo');
   }, [trimmed]);
 
-  // Radar Prensa participa en la búsqueda principal. El bridge conserva las
-  // entidades detectadas por el Monitor incluso cuando todavía no tienen RUT o
-  // no han sido conciliadas con una identidad canónica de Atlas.
+  // Radar Prensa aporta la evidencia periodística —titular, medio, fecha y URL—
+  // que el corte materializado no guarda. Se consulta en paralelo y se reparte
+  // entre los sujetos que la base ya agrupó.
   useEffect(() => {
     let cancelled = false;
     if (trimmed.length < 3) {
-      setPress({ status: 'idle', matches: [] });
+      setPress(EMPTY_PRESS);
       return () => { cancelled = true; };
     }
     setPress((current) => ({ status: 'loading', matches: current.matches }));
-    void searchPress(trimmed, 12)
+    void searchPress(trimmed, 40)
       .then((matches) => {
         if (!cancelled) setPress({ status: 'done', matches });
       })
       .catch((e) => {
-        if (!cancelled) {
-          setPress({ status: 'error', matches: [], error: (e as Error).message });
-        }
+        if (!cancelled) setPress({ status: 'error', matches: [], error: (e as Error).message });
       });
     return () => { cancelled = true; };
   }, [trimmed]);
@@ -134,25 +121,30 @@ export function Entidades({
       p_only_uaf: onlyUaf,
       p_only_sanctioned: onlySanctioned,
       p_min_sources: multiSource ? 3 : null,
+      p_only_supplier: onlySupplier,
     }),
-    [trimmed, page, region, source, onlyUaf, onlySanctioned, multiSource],
+    [trimmed, page, region, source, onlyUaf, onlySanctioned, multiSource, onlySupplier],
   );
 
-  const { data, error, loading, reload } = useRpc<EntityRow[]>('obs_search_entities', args);
+  const { data, error, loading, reload } = useRpc<SubjectRow[]>('obs_subject_search', args);
   const total = data?.[0]?.total_count ?? 0;
   const pages = Math.ceil(total / PAGE);
-  const hasFilters = !!(region || source || onlyUaf || onlySanctioned || multiSource);
+  const hasFilters = !!(region || source || onlyUaf || onlySanctioned || multiSource || onlySupplier);
   const isPerson = looksLikePersonName(trimmed);
 
-  // Una coincidencia PRESS_ONLY se suma al resultado sólo si no está ya
-  // representada por una entidad canónica en la página actual. La evidencia de
-  // prensa, en cambio, siempre se muestra para que el analista pueda abrirla.
-  const standalonePressCount = useMemo(() => {
-    if (!data || press.status !== 'done') return 0;
-    return press.matches.filter((match) => !pressAlreadyRepresented(match, data)).length;
-  }, [data, press]);
-  const visibleTotal = total + standalonePressCount;
-  const pressHits = press.matches.length;
+  const subjects = useMemo(() => data ?? [], [data]);
+  const resolved = useMemo(() => subjects.filter((s) => !s.is_press_only), [subjects]);
+  const pressOnly = useMemo(() => subjects.filter((s) => s.is_press_only), [subjects]);
+
+  // La evidencia de prensa se adhiere al sujeto con la misma regla que aplicó
+  // la base. Lo que no se adhiere a nadie se muestra suelto: perderlo sería
+  // peor que mostrarlo sin identidad.
+  const pressBySubject = useMemo(() => {
+    if (press.status !== 'done') {
+      return { bySubject: new Map<string, PressForSubject>(), loose: [] as PressMatch[] };
+    }
+    return groupPressBySubject(press.matches, subjects);
+  }, [press, subjects]);
 
   const runWatchlists = useCallback(
     async (auto: boolean) => {
@@ -170,6 +162,7 @@ export function Entidades({
 
   // La cascada sale a listas internacionales sólo cuando tanto el universo
   // materializado como Radar Prensa terminaron sin coincidencias.
+  const pressHits = press.matches.length;
   useEffect(() => {
     if (loading || error || !trimmed || trimmed.length < 3) return;
     if (press.status === 'idle' || press.status === 'loading') return;
@@ -183,14 +176,17 @@ export function Entidades({
     ? Object.values(watch.result.sources).reduce((acc, s) => acc + (s.records?.length ?? 0), 0)
     : 0;
 
+  const busy = loading || press.status === 'loading';
+
   return (
     <div className="fade-in">
       <header className="view-head">
         <h1 className="view-title">Entidades</h1>
         <p className="view-lede">
-          Escribe un nombre o un RUT. El Observatorio cruza el universo gobernado con
-          Radar Prensa y muestra la evidencia periodística coincidente. Si ambas capas
-          quedan sin resultados, continúa hacia las listas internacionales.
+          Escribe un nombre o un RUT. Cada resultado es un sujeto, no una fila por fuente:
+          el Observatorio agrupa las variantes con que la prensa lo nombra y declara, padrón
+          por padrón, dónde figura — UAF, SII, registro OSFL, sanciones, prensa y compras
+          públicas.
         </p>
       </header>
 
@@ -225,8 +221,8 @@ export function Entidades({
             active={layer === 'universo'}
             onClick={() => setLayer('universo')}
             label="Universo observado"
-            badge={loading || press.status === 'loading' ? '…' : n(visibleTotal)}
-            tone={visibleTotal > 0 ? 'present' : 'absent'}
+            badge={busy ? '…' : n(total)}
+            tone={total > 0 ? 'present' : 'absent'}
           />
           <LayerTab
             active={layer === 'internacional'}
@@ -274,6 +270,9 @@ export function Entidades({
             <button className="chip" data-on={onlySanctioned} onClick={() => setOnlySanctioned((v) => !v)}>
               Con sanción
             </button>
+            <button className="chip" data-on={onlySupplier} onClick={() => setOnlySupplier((v) => !v)}>
+              Proveedor del Estado
+            </button>
             <button className="chip" data-on={multiSource} onClick={() => setMultiSource((v) => !v)}>
               3+ fuentes
             </button>
@@ -291,8 +290,8 @@ export function Entidades({
             </select>
             {hasFilters && (
               <button className="chip" onClick={() => {
-                setRegion(null); setSource(null);
-                setOnlyUaf(false); setOnlySanctioned(false); setMultiSource(false);
+                setRegion(null); setSource(null); setOnlyUaf(false);
+                setOnlySanctioned(false); setMultiSource(false); setOnlySupplier(false);
               }}>
                 Limpiar filtros ✕
               </button>
@@ -300,10 +299,10 @@ export function Entidades({
           </div>
 
           <div className="section-title" style={{ marginTop: 20 }}>
-            {loading || press.status === 'loading'
+            {busy
               ? 'Buscando…'
-              : `${n(visibleTotal)} ${visibleTotal === 1 ? 'entidad' : 'entidades'}`}
-            {trimmed && !loading && <span className="hint">para “{trimmed}”</span>}
+              : `${n(total)} ${total === 1 ? 'sujeto' : 'sujetos'}`}
+            {trimmed && !busy && <span className="hint">para “{trimmed}”</span>}
             {!trimmed && !hasFilters && !loading && (
               <span className="hint">universo completo · empieza a escribir para acotar</span>
             )}
@@ -313,38 +312,88 @@ export function Entidades({
           {loading && !data && <Loading label="Consultando el índice de entidades…" />}
           {press.status === 'error' && trimmed.length >= 3 && (
             <div className="note" style={{ marginBottom: 12 }}>
-              Radar Prensa no pudo incorporarse a esta búsqueda: {press.error}
+              Radar Prensa no pudo incorporarse a esta búsqueda: {press.error}. Los padrones
+              se muestran igual; lo que falta es la evidencia periodística.
             </div>
           )}
 
           {!error && data && (
             <>
-              {total === 0 && pressHits === 0 && press.status === 'done' ? (
+              {total === 0 ? (
                 <Empty
-                  title="Ninguna entidad del universo observado coincide"
+                  title={
+                    trimmed
+                      ? `El universo observado no registra “${trimmed}”`
+                      : 'Ninguna entidad coincide con estos filtros'
+                  }
                   hint={
                     trimmed
-                      ? 'Ni las fuentes materializadas ni Radar Prensa reportan esta consulta en el corte vigente. El Observatorio continúa hacia las listas internacionales.'
+                      ? 'Ni los padrones materializados ni Radar Prensa lo reportan en el corte vigente. Que una entidad no esté en el corte no significa que no exista: significa que ninguna de las fuentes gobernadas la publica. El Observatorio continúa hacia las listas internacionales.'
                       : 'Ajusta los filtros para ampliar la búsqueda.'
                   }
                 />
-              ) : total > 0 ? (
-                <div className="panel" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity .18s' }}>
-                  <div className="rows">
-                    {data.map((e) => (
-                      <EntityRowItem
-                        key={e.entity_id}
-                        entity={e}
-                        onOpen={() => onNavigate(hrefFor({ view: 'ficha', entityId: e.entity_id }))}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : press.status === 'loading' ? (
-                <Loading label="Consultando entidades detectadas por Radar Prensa…" />
-              ) : null}
+              ) : (
+                <>
+                  {resolved.length > 0 && (
+                    <div className="panel" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity .18s' }}>
+                      <div className="rows">
+                        {resolved.map((s) => {
+                          const p = pressBySubject.bySubject.get(s.entity_id);
+                          return (
+                            <SubjectRowItem
+                              key={s.entity_id}
+                              subject={s}
+                              pressNotes={p?.articleCount ?? 0}
+                              pressRoles={p?.roles ?? []}
+                              onOpen={() => onNavigate(hrefFor({ view: 'ficha', entityId: s.entity_id }))}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-              <PressMatches matches={press.matches} loading={press.status === 'loading' && press.matches.length > 0} />
+                  {/* Lo que no se pudo resolver se declara, en vez de mezclarse
+                      con las razones sociales como si tuviera la misma
+                      autoridad. */}
+                  {pressOnly.length > 0 && (
+                    <div className="press-only-block">
+                      <div className="press-only-head">
+                        <span>
+                          {n(pressOnly.length)}{' '}
+                          {pressOnly.length === 1 ? 'mención de prensa sin razón social' : 'menciones de prensa sin razón social'}
+                        </span>
+                        <span className="press-only-hint">
+                          Aparecen en prensa y no tienen RUT en las fuentes oficiales del corte.
+                          No se agruparon bajo ninguna sociedad porque su nombre no la identifica.
+                        </span>
+                      </div>
+                      <div className="rows">
+                        {pressOnly.map((s) => {
+                          const p = pressBySubject.bySubject.get(s.entity_id);
+                          return (
+                            <SubjectRowItem
+                              key={s.entity_id}
+                              subject={s}
+                              pressNotes={p?.articleCount ?? 0}
+                              pressRoles={p?.roles ?? []}
+                              onOpen={() => onNavigate(hrefFor({ view: 'ficha', entityId: s.entity_id }))}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Coincidencias periodísticas que ningún sujeto de esta página
+                  reclama. Se muestran con su evidencia para que el analista
+                  pueda abrirlas. */}
+              <PressMatches
+                matches={pressBySubject.loose}
+                loading={press.status === 'loading' && press.matches.length > 0}
+              />
 
               {pages > 1 && (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 22, alignItems: 'center' }}>
@@ -364,11 +413,12 @@ export function Entidades({
 
           <div style={{ marginTop: 24 }}>
             <Semantics>
-              <strong>Qué son los puntos de fuente.</strong> Cada cuadro encendido junto a una
-              entidad es una fuente gobernada que tiene registro suyo. Un cuadro apagado
-              significa que esa fuente no la reporta — no que la haya descartado. Una entidad
-              marcada como <em>identidad sin resolver</em> puede provenir exclusivamente de
-              prensa y no debe tratarse como una identidad canónica hasta su conciliación.
+              <strong>Cómo leer un resultado.</strong> Cada fila declara, fuente por fuente,
+              si el sujeto tiene registro o no lo tiene. Las seis fuentes de la tira son de
+              consulta programada: “sin registro” significa que se consultó y no reporta,
+              nunca que no se haya mirado. Las variantes de prensa agrupadas bajo una razón
+              social son <em>candidatas</em>: dicen que la prensa usó ese nombre, no que la
+              identidad esté acreditada ni que la entidad haya participado en los hechos.
             </Semantics>
           </div>
         </>

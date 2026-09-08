@@ -1,0 +1,464 @@
+/* ATLAS Observatorio · sujeto resuelto y dossier de entidad
+   Dos superficies nuevas: la fila de resultado, que ahora describe un sujeto
+   completo, y la ficha, que cuenta qué le pasó. Ambas heredan los tokens del
+   sistema: aquí no se define ni un color propio. */
+
+/* ══════════════════════════════════════════════ fila de sujeto en el listado */
+
+.row-subject {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 262px);
+  gap: 20px;
+  width: 100%;
+  padding: 15px 16px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background .15s var(--ease);
+}
+.row-subject:last-child { border-bottom: 0; }
+.row-subject:hover { background: var(--bg-panel-2); }
+.row-subject:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.subject-main { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.subject-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -.012em;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.subject-meta,
+.subject-tax {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+.subject-tax { color: var(--ink-4); }
+.subject-meta .rut {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.subject-activity {
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Los alias de prensa son candidatos declarados. Se ven distintos de una razón
+   social justamente para que nadie los confunda con una identidad acreditada. */
+.subject-aliases,
+.subject-roles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+.subject-aliases-label,
+.subject-roles-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-right: 2px;
+}
+.alias-chip {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--unknown) 12%, transparent);
+  color: var(--unknown);
+  border: 1px dashed color-mix(in srgb, var(--unknown) 40%, transparent);
+  white-space: nowrap;
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alias-chip-more { border-style: solid; opacity: .75; }
+
+.subject-role {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--sig-high) 13%, transparent);
+  color: var(--sig-high);
+  white-space: nowrap;
+}
+.subject-press-count { color: var(--sig-high); font-weight: 600; }
+
+/* Padrón por padrón. La columna encendida dice qué encontró la fuente; la
+   apagada dice que se consultó y no hay registro. */
+.subject-padrones {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  align-content: start;
+  align-self: start;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.padron {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 8px;
+  background: var(--bg-panel-2);
+  font-size: 11px;
+  line-height: 1.4;
+}
+/* La etiqueta cede antes que el valor: recortar "Proveedor del Estado" es
+   preferible a recortar "Comprador público", que es el dato. */
+.padron-label {
+  color: var(--ink-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.padron-value {
+  color: var(--ink-4);
+  text-align: right;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 0 0 auto;
+  max-width: 62%;
+}
+.padron[data-on='true'] { background: var(--bg-raised); }
+.padron[data-on='true'] .padron-label { color: var(--ink-3); }
+.padron[data-on='true'] .padron-value { color: var(--ink-2); font-weight: 600; }
+.padron[data-on='true'][data-tone='present'] .padron-value { color: var(--present); }
+.padron[data-on='true'][data-tone='critical'] .padron-value { color: var(--sig-critical); }
+.padron[data-on='true'][data-tone='warn'] .padron-value { color: var(--sig-high); }
+
+/* Una mención sin razón social no compite visualmente con un sujeto resuelto. */
+.row-subject-press {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 11px 16px;
+}
+.subject-chevron { color: var(--ink-4); font-size: 15px; }
+
+.press-only-block {
+  margin-top: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-panel);
+}
+.press-only-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-panel-2);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.press-only-hint {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--ink-4);
+  line-height: 1.5;
+  max-width: 84ch;
+}
+
+@media (max-width: 900px) {
+  .row-subject { grid-template-columns: minmax(0, 1fr); }
+  .subject-padrones { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ══════════════════════════════════════════════════════════════════ dossier */
+
+.dossier { display: flex; flex-direction: column; gap: 22px; }
+
+.dossier-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.dossier-aside { display: flex; flex-direction: column; gap: 18px; }
+@media (max-width: 1080px) {
+  .dossier-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Qué es esta entidad ─────────────────────────────────────────────────── */
+
+.estado-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: 10px;
+}
+.estado-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.estado-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.estado-value {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -.012em;
+  color: var(--ink-3);
+  line-height: 1.25;
+}
+.estado-hint { font-size: 11px; color: var(--ink-4); line-height: 1.4; }
+.estado-card[data-tone='present'] { border-color: color-mix(in srgb, var(--present) 34%, var(--line)); }
+.estado-card[data-tone='present'] .estado-value { color: var(--present); }
+.estado-card[data-tone='critical'] { border-color: color-mix(in srgb, var(--sig-critical) 38%, var(--line)); }
+.estado-card[data-tone='critical'] .estado-value { color: var(--sig-critical); }
+.estado-card[data-tone='warn'] { border-color: color-mix(in srgb, var(--sig-high) 36%, var(--line)); }
+.estado-card[data-tone='warn'] .estado-value { color: var(--sig-high); }
+
+.estado-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-4);
+  max-width: 92ch;
+}
+
+/* ── Perfil tributario ───────────────────────────────────────────────────── */
+
+.tax-head { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 13px; }
+
+.tax-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.tax-row {
+  background: var(--bg-panel);
+  padding: 8px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tax-row dt {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.tax-row dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tax-activities { margin-top: 15px; }
+.tax-activities-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 8px;
+}
+.tax-activities-head .num { color: var(--ink-2); font-size: 11px; letter-spacing: 0; }
+.tax-activity-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+.tax-activity-tag {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+.tax-activity-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.tax-activity-list li {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  line-height: 1.35;
+}
+.tax-empty { margin: 8px 0 0; font-size: 11.5px; color: var(--ink-4); line-height: 1.5; }
+
+/* ── Línea de tiempo ─────────────────────────────────────────────────────── */
+
+.dtl-meta {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dossier-timeline { list-style: none; margin: 0; padding: 0; }
+
+.dtl-item {
+  display: grid;
+  grid-template-columns: 88px 14px minmax(0, 1fr) auto;
+  gap: 0 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line-soft);
+  align-items: start;
+}
+.dtl-item:first-child { border-top: 0; }
+
+.dtl-date {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--ink-3);
+  padding-top: 3px;
+  white-space: nowrap;
+}
+.dtl-undated { color: var(--ink-4); font-style: italic; }
+
+/* El riel codifica la familia del hecho por color, pero el rótulo siempre
+   viaja como texto: el color nunca es la única codificación. */
+.dtl-rail {
+  width: 3px;
+  border-radius: 2px;
+  align-self: stretch;
+  margin-top: 4px;
+  background: var(--sig-none);
+}
+.dtl-rail[data-tone='critical'] { background: var(--sig-critical); }
+.dtl-rail[data-tone='warn'] { background: var(--sig-high); }
+.dtl-rail[data-tone='watch'] { background: var(--sig-watch); }
+.dtl-rail[data-tone='present'] { background: var(--present); }
+.dtl-rail[data-tone='neutral'] { background: var(--line-strong); }
+
+.dtl-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dtl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dtl-source { font-size: 11px; color: var(--ink-3); }
+.dtl-amount {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.dtl-title { font-size: 13px; font-weight: 550; color: var(--ink); line-height: 1.4; }
+.dtl-summary { font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+
+.dtl-link { padding-top: 2px; white-space: nowrap; font-size: 11.5px; }
+.dtl-link a { color: var(--accent); text-decoration: none; }
+.dtl-link a:hover { text-decoration: underline; }
+.dtl-nolink { color: var(--ink-4); font-style: italic; }
+
+@media (max-width: 720px) {
+  .dtl-item { grid-template-columns: 74px 14px minmax(0, 1fr); }
+  .dtl-link { grid-column: 3; }
+}
+
+/* ── Por qué aparece ─────────────────────────────────────────────────────── */
+
+.porque-score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 13px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.porque-value {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: var(--ink-4);
+  flex-shrink: 0;
+}
+.porque-value[data-scored='true'] { color: var(--ink); }
+.porque-label { font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+
+.porque-list { margin: 0; padding-left: 17px; }
+.porque-list li {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  margin-bottom: 4px;
+}
+.porque-list li::marker { color: var(--accent); }
+
+/* ── Compras y presupuesto ───────────────────────────────────────────────── */
+
+.budget-list { list-style: none; margin: 0; padding: 0; }
+.budget-list li {
+  padding: 10px 0;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.budget-list li:first-child { border-top: 0; }
+.budget-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.budget-link { font-size: 11.5px; color: var(--accent); text-decoration: none; }
+.budget-link:hover { text-decoration: underline; }
+
+.panel-meta-line { font-size: 11px; color: var(--ink-3); }

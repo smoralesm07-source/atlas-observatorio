@@ -102,7 +102,7 @@ export const findingLabel = (t: string) =>
 /** Priority bands arrive as shadow-model codes; SIN_MARCA_SHADOW is not a band
  *  the analyst should have to decode. */
 const BAND_LABEL: Record<string, string> = {
-  SIN_MARCA_SHADOW: 'Sin marca activa',
+  SIN_MARCA_SHADOW: 'Prioridad no calculada en este corte',
   MUY_ALTA: 'Muy alta',
   ALTA: 'Alta',
   MEDIA: 'Media',
@@ -184,3 +184,17 @@ const IDENTITY_LABEL: Record<string, string> = {
 };
 export const identityLabel = (s: string | null | undefined) =>
   !s ? '—' : IDENTITY_LABEL[s.toUpperCase()] ?? titleCase(s.replace(/_/g, ' '));
+
+
+/* El estado del contribuyente llega como código del productor. "Active As
+   Published" no es español, y "publicado" importa: el corte describe lo que el
+   SII publicó, no lo que la entidad hace hoy. */
+const TAX_STATUS_LABEL: Record<string, string> = {
+  ACTIVE_AS_PUBLISHED: 'Activa según el corte publicado',
+  ACTIVE: 'Activa',
+  TERMINATED: 'Con término de giro',
+  INACTIVE: 'Sin actividad en el corte',
+  UNKNOWN: 'No informado',
+};
+export const taxStatusLabel = (s: string | null | undefined) =>
+  !s ? '—' : TAX_STATUS_LABEL[s.toUpperCase()] ?? titleCase(s.replace(/_/g, ' '));

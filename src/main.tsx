@@ -4,6 +4,7 @@ import App from './App';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
+import './styles/dossier.css';
 import './styles/ui-fixes.css';
 
 const root = document.getElementById('root');
