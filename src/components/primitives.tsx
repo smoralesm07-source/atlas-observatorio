@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { priorityTone, statusLabel, type Tone } from '../lib/format';
-import { UafSectorWatch } from './UafSectorWatch';
 
 export function Badge({
   tone = 'neutral',
@@ -49,10 +48,6 @@ export function Panel({
   actions?: ReactNode;
   pad?: boolean;
 }) {
-  const sectorWatch =
-    typeof title === 'string'
-    && (title === 'Estado registral ante el SII' || title.toLocaleLowerCase('es').includes('conciliación uaf'));
-
   return (
     <section className="panel">
       {(title || actions) && (
@@ -62,7 +57,6 @@ export function Panel({
         </header>
       )}
       <div className={pad ? 'panel-pad' : undefined}>{children}</div>
-      {sectorWatch && <UafSectorWatch />}
     </section>
   );
 }
