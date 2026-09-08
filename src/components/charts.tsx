@@ -593,3 +593,91 @@ export function StateBar({
     </div>
   );
 }
+
+/* ───────────────────────────────────────────── padrón contra universo SII
+
+   La brecha de screening compara dos poblaciones de órdenes distintos: un
+   sector puede tener 31 inscritos y 11.064 RUT del SII declarando su giro
+   característico. En escala lineal el padrón desaparece y sólo se ve la barra
+   larga, que es justamente la lectura equivocada: el punto no es que el
+   universo sea grande, es cuánto excede al padrón.
+
+   Por eso las dos barras comparten una escala logarítmica común —así ambas
+   siguen siendo visibles— y la razón se imprime como número, que es la única
+   forma honesta de leer una diferencia comprimida. */
+
+export function GapBars({
+  rows,
+  onPick,
+}: {
+  rows: {
+    key: string;
+    label: string;
+    inscritos: number | null;
+    universo: number | null;
+    riesgo?: string | null;
+    meta?: string;
+  }[];
+  onPick?: (key: string) => void;
+}) {
+  const peak = Math.max(1, ...rows.map((r) => Math.max(r.inscritos ?? 0, r.universo ?? 0)));
+  const scale = (v: number) => (Math.log10(1 + Math.max(0, v)) / Math.log10(1 + peak)) * 100;
+  const tone = (r?: string | null) =>
+    r === 'ALTO' ? 'var(--sig-high)' : r === 'MEDIO' ? 'var(--sig-medium)' : 'var(--present)';
+
+  return (
+    <div className="gap-chart">
+      {rows.map((r) => {
+        const ins = r.inscritos ?? 0;
+        const uni = r.universo ?? 0;
+        /* Sin inscritos la razón no existe: dividir por cero produciría un
+           infinito que se leería como brecha máxima, cuando en realidad es un
+           sector sin padrón con el cual comparar. */
+        const razon = ins > 0 && uni > 0 ? uni / ins : null;
+        const inner = (
+          <>
+            <span className="gap-label" title={r.label}>
+              {r.label}
+              {r.meta && <em>{r.meta}</em>}
+            </span>
+            <span className="gap-track">
+              <i
+                className="gap-bar gap-bar-in"
+                style={{ width: `${Math.max(ins > 0 ? 1.5 : 0, scale(ins))}%` }}
+                title={`${n(ins)} inscritos en el padrón`}
+              />
+              <i
+                className="gap-bar gap-bar-un"
+                style={{
+                  width: `${Math.max(uni > 0 ? 1.5 : 0, scale(uni))}%`,
+                  background: tone(r.riesgo),
+                }}
+                title={`${n(uni)} RUT del SII con giro alcanzado, fuera del padrón`}
+              />
+            </span>
+            <span className="gap-nums">
+              <b className="num">{n(ins)}</b>
+              <span aria-hidden>→</span>
+              <b className="num">{n(uni)}</b>
+            </span>
+            <span className="gap-ratio" data-risk={r.riesgo ?? 'BAJO'}>
+              {razon == null ? '—' : `×${razon >= 100 ? n(Math.round(razon)) : n1(razon)}`}
+            </span>
+          </>
+        );
+        return onPick ? (
+          <button key={r.key} className="gap-row" onClick={() => onPick(r.key)}>{inner}</button>
+        ) : (
+          <div key={r.key} className="gap-row">{inner}</div>
+        );
+      })}
+      <div className="gap-legend">
+        <span><i className="gap-key gap-bar-in" /> inscritos en el padrón UAF</span>
+        <span><i className="gap-key" style={{ background: 'var(--present)' }} /> universo SII fuera del padrón · riesgo de falso positivo bajo</span>
+        <span><i className="gap-key" style={{ background: 'var(--sig-medium)' }} /> medio</span>
+        <span><i className="gap-key" style={{ background: 'var(--sig-high)' }} /> alto</span>
+        <span className="gap-legend-note">escala logarítmica · la razón se imprime porque la barra la comprime</span>
+      </div>
+    </div>
+  );
+}

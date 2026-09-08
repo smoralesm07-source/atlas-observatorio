@@ -1491,7 +1491,7 @@
   ]
  },
  "uafPulse": {
-  "contract": "ATLAS_OBS_UAF_PULSE_V2",
+  "contract": "ATLAS_OBS_UAF_PULSE_V3",
   "snapshot": {
    "status": "READY",
    "snapshot_id": "OBS-2026-09-08T0625Z",
@@ -2515,7 +2515,303 @@
    "uaf_registration_date": false,
    "uaf_registration_note": "El registro UAF no publica fecha de inscripción ni estado de vigencia, de modo que el eje temporal es el ciclo de vida ante el SII."
   },
-  "semantics": "Caracterización descriptiva del padrón de sujetos obligados y de su reportabilidad sectorial publicada. El estado ante el SII describe el ciclo de vida tributario, no el cumplimiento de la obligación de reportar. El IGR describe la comuna donde opera el sujeto, nunca al sujeto. El motivo de atención ordena revisión y no imputa incumplimiento."
+  "semantics": "Caracterización descriptiva del padrón de sujetos obligados y de su reportabilidad sectorial publicada. El estado ante el SII describe el ciclo de vida tributario, no el cumplimiento de la obligación de reportar. El IGR describe la comuna donde opera el sujeto, nunca al sujeto. El motivo de atención ordena revisión y no imputa incumplimiento.",
+  "screening": {
+   "disponible": true,
+   "corte": {
+    "sii_periodo": "2026-05",
+    "sii_dataset": "PUB_NOM_ACTECOS · nómina de actividades económicas vigentes de personas jurídicas",
+    "uaf_corte": "2026-06-30",
+    "universo_declarado": 79449,
+    "universo_estado": "BASELINE_DECLARED",
+    "universo_nota": "RUT distintos del screening consolidado de Radar_SII al corte SII 2026-05. Línea base declarada: no está materializada RUT a RUT en este proyecto, de modo que aquí no se navega ni se filtra.",
+    "fuente": "Radar_SII · homologación empírica UAF–SII (uaf_sii_screening_policy.csv)",
+    "fuente_url": "https://www.sii.cl/sobre_el_sii/nominapersonasjuridicas.html"
+   },
+   "totales": {
+    "sectores": 22,
+    "gatillantes": 23,
+    "padron_total": 10294,
+    "gatillantes_b": 11,
+    "universo_top4": 72085,
+    "universo_bruto": 78365,
+    "sujetos_otro_modo": 3699,
+    "sectores_otro_modo": 6,
+    "inscritos_cubiertos": 2927,
+    "universo_riesgo_alto": 36379
+   },
+   "actecos": [
+    {
+     "acteco": "682000",
+     "glosa": "ACTIVIDADES INMOBILIARIAS REALIZADAS A CAMBIO DE UNA RETRIBUCION O POR CONTRATA",
+     "universo": 25062,
+     "sii_total": 25909,
+     "inscritos_con_codigo": 847,
+     "cobertura_max": 0.857902,
+     "pureza_max": 0.762692,
+     "lift_max": 7.316,
+     "riesgo": "MEDIO",
+     "sectores": [
+      "Corredores de Propiedades"
+     ]
+    },
+    {
+     "acteco": "771000",
+     "glosa": "ALQUILER DE VEHICULOS AUTOMOTORES SIN CHOFER",
+     "universo": 24592,
+     "sii_total": 24863,
+     "inscritos_con_codigo": 271,
+     "cobertura_max": 0.895833,
+     "pureza_max": 0.158672,
+     "lift_max": 23.8768,
+     "riesgo": "ALTO",
+     "sectores": [
+      "Vehículos: Empresas de Arriendo de Vehículos"
+     ]
+    },
+    {
+     "acteco": "451002",
+     "glosa": "VENTA AL POR MENOR DE VEHICULOS AUTOMOTORES NUEVOS O USADOS (INCLUYE COMPRAVENTA)",
+     "universo": 11367,
+     "sii_total": 12130,
+     "inscritos_con_codigo": 763,
+     "cobertura_max": 0.902857,
+     "pureza_max": 0.621232,
+     "lift_max": 8.547,
+     "riesgo": "MEDIO",
+     "sectores": [
+      "Vehículos: Automotoras",
+      "Vehículos: Comercializadoras de Vehículos Nuevos o Usados"
+     ]
+    },
+    {
+     "acteco": "477394",
+     "glosa": "VENTA AL POR MENOR DE ARTICULOS DE JOYERIA, BISUTERIA Y RELOJERIA EN COMERCIOS ESPECIALIZADOS",
+     "universo": 11064,
+     "sii_total": 11133,
+     "inscritos_con_codigo": 69,
+     "cobertura_max": 0.870968,
+     "pureza_max": 0.391304,
+     "lift_max": 91.1739,
+     "riesgo": "ALTO",
+     "sectores": [
+      "Comerciantes de Joyas y Piedras Preciosas"
+     ]
+    },
+    {
+     "acteco": "663091",
+     "glosa": "ADMINISTRADORAS DE FONDOS DE INVERSION",
+     "universo": 1819,
+     "sii_total": 2028,
+     "inscritos_con_codigo": 209,
+     "cobertura_max": 0.91411,
+     "pureza_max": 0.712919,
+     "lift_max": 31.5915,
+     "riesgo": "MEDIO",
+     "sectores": [
+      "Administradoras de Fondos de Inversión"
+     ]
+    },
+    {
+     "acteco": "451001",
+     "glosa": "VENTA AL POR MAYOR DE VEHICULOS AUTOMOTORES",
+     "universo": 1714,
+     "sii_total": 2144,
+     "inscritos_con_codigo": 430,
+     "cobertura_max": 0.85,
+     "pureza_max": 0.186047,
+     "lift_max": 14.278,
+     "riesgo": "BAJO",
+     "sectores": [
+      "Vehículos: Automotoras",
+      "Vehículos: Comercializadoras de Vehículos Nuevos o Usados"
+     ]
+    },
+    {
+     "acteco": "641910",
+     "glosa": "ACTIVIDADES BANCARIAS",
+     "universo": 38,
+     "sii_total": 59,
+     "inscritos_con_codigo": 21,
+     "cobertura_max": 1.0,
+     "pureza_max": 0.857143,
+     "lift_max": 343.9524,
+     "riesgo": "BAJO",
+     "sectores": [
+      "Bancos"
+     ]
+    }
+   ],
+   "sectores": [
+    {
+     "etiqueta": "Corredores de Propiedades",
+     "uaf_sector": "Corredores de Propiedades",
+     "inscritos": 1459,
+     "universo_bruto": 25062,
+     "gatillantes": 1,
+     "cobertura_max": 0.857902,
+     "riesgo": "MEDIO",
+     "actecos": [
+      "682000"
+     ]
+    },
+    {
+     "etiqueta": "Vehículos: Empresas de Arriendo de Vehículos",
+     "uaf_sector": "Vehículos: Empresas de Arriendo de Vehículos",
+     "inscritos": 48,
+     "universo_bruto": 24592,
+     "gatillantes": 1,
+     "cobertura_max": 0.895833,
+     "riesgo": "ALTO",
+     "actecos": [
+      "771000"
+     ]
+    },
+    {
+     "etiqueta": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+     "uaf_sector": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+     "inscritos": 538,
+     "universo_bruto": 13081,
+     "gatillantes": 2,
+     "cobertura_max": 0.902857,
+     "riesgo": "MEDIO",
+     "actecos": [
+      "451002",
+      "451001"
+     ]
+    },
+    {
+     "etiqueta": "Vehículos: Automotoras",
+     "uaf_sector": "Vehículos: Automotoras",
+     "inscritos": 20,
+     "universo_bruto": 13081,
+     "gatillantes": 2,
+     "cobertura_max": 0.85,
+     "riesgo": "MEDIO",
+     "actecos": [
+      "451002",
+      "451001"
+     ]
+    },
+    {
+     "etiqueta": "Comerciantes de Joyas y Piedras Preciosas",
+     "uaf_sector": "Comerciantes de Joyas y Piedras Preciosas",
+     "inscritos": 31,
+     "universo_bruto": 11064,
+     "gatillantes": 1,
+     "cobertura_max": 0.870968,
+     "riesgo": "ALTO",
+     "actecos": [
+      "477394"
+     ]
+    },
+    {
+     "etiqueta": "Administradoras de Fondos de Inversión",
+     "uaf_sector": "Administradoras de Fondos de Inversión",
+     "inscritos": 168,
+     "universo_bruto": 1819,
+     "gatillantes": 1,
+     "cobertura_max": 0.91411,
+     "riesgo": "MEDIO",
+     "actecos": [
+      "663091"
+     ]
+    },
+    {
+     "etiqueta": "Organizaciones Deportivas Profesionales regidas por la Ley N° 20.019",
+     "uaf_sector": "Organizaciones Deportivas Profesionales regidas por la Ley N° 20.019",
+     "inscritos": 30,
+     "universo_bruto": 723,
+     "gatillantes": 1,
+     "cobertura_max": 0.666667,
+     "riesgo": "ALTO",
+     "actecos": [
+      "931201"
+     ]
+    },
+    {
+     "etiqueta": "Casas de Cambio",
+     "uaf_sector": "Casas de Cambio",
+     "inscritos": 346,
+     "universo_bruto": 528,
+     "gatillantes": 1,
+     "cobertura_max": 0.855967,
+     "riesgo": "BAJO",
+     "actecos": [
+      "661204"
+     ]
+    },
+    {
+     "etiqueta": "Bancos",
+     "uaf_sector": "Bancos",
+     "inscritos": 18,
+     "universo_bruto": 38,
+     "gatillantes": 1,
+     "cobertura_max": 1.0,
+     "riesgo": "BAJO",
+     "actecos": [
+      "641910"
+     ]
+    },
+    {
+     "etiqueta": "Administradoras de Fondos de Pensiones",
+     "uaf_sector": "Administradoras de Fondos de Pensiones",
+     "inscritos": 7,
+     "universo_bruto": 2,
+     "gatillantes": 1,
+     "cobertura_max": 1.0,
+     "riesgo": "BAJO",
+     "actecos": [
+      "663010"
+     ]
+    }
+   ],
+   "modos": [
+    {
+     "uaf_sector": "Usuarios de Zonas Francas",
+     "mode": "REGISTRO_EXTERNO",
+     "external_source": "Aduanas / administración de Zona Franca",
+     "note": "Ser usuario de zona franca es una condición territorial y operativa, no una actividad económica: 2.840 inscritos declaran 197 giros distintos y el dominante cubre 26 %. Ningún ACTECO lo caracteriza.",
+     "inscritos": 2840
+    },
+    {
+     "uaf_sector": "Notarios",
+     "mode": "NO_EVALUABLE_SII_PJ",
+     "external_source": "Poder Judicial",
+     "note": "Calidad ministerial de persona natural: la nómina SII de personas jurídicas no la observa.",
+     "inscritos": 483
+    },
+    {
+     "uaf_sector": "Agentes de Aduana",
+     "mode": "NO_EVALUABLE_SII_PJ",
+     "external_source": "Servicio Nacional de Aduanas",
+     "note": "La licencia de agente de aduana es personal y se otorga por Aduanas; el giro declarado no la identifica.",
+     "inscritos": 277
+    },
+    {
+     "uaf_sector": "Conservadores",
+     "mode": "NO_EVALUABLE_SII_PJ",
+     "external_source": "Poder Judicial",
+     "note": "Calidad ministerial de persona natural: la nómina SII de personas jurídicas no la observa.",
+     "inscritos": 92
+    },
+    {
+     "uaf_sector": "Fintec: Otros Fiscalizados por la CMF",
+     "mode": "REGISTRO_EXTERNO",
+     "external_source": "Comisión para el Mercado Financiero",
+     "note": "La obligación depende de la inscripción en el registro de la CMF, que no se deduce del ACTECO.",
+     "inscritos": 5
+    },
+    {
+     "uaf_sector": "Sociedades Administradoras de Zonas Francas",
+     "mode": "REGISTRO_EXTERNO",
+     "external_source": "Administración de Zona Franca",
+     "note": "La calidad proviene de la concesión, no del giro declarado.",
+     "inscritos": 2
+    }
+   ],
+   "semantics": "Observación de screening OSINT. Un ACTECO alcanzado por la Ley 19.913 no prueba la calidad jurídica de sujeto obligado, no imputa incumplimiento y no equivale a una omisión de inscripción. Toda suma entre códigos es bruta y puede contar dos veces al RUT con más de un giro alcanzado; dos sectores que comparten un gatillante repiten el mismo universo y no deben sumarse entre sí."
+  }
  },
  "uafCohort": [
   {
