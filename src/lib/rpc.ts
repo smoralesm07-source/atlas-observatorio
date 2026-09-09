@@ -70,39 +70,37 @@ export function useRpc<T>(
     setError(null);
     setLoading(true);
 
-    const run = (attempt: number) => {
-      supabase
-        .rpc(fn, parsedArgs)
-        .then(({ data: d, error: e }) => {
-          if (my !== seq.current) return;
+    const run = async (attempt: number): Promise<void> => {
+      try {
+        const { data: d, error: e } = await supabase.rpc(fn, parsedArgs);
+        if (my !== seq.current) return;
 
-          if (e && mayRetryTimeout && isStatementTimeout(e) && attempt === 0) {
-            // Breve backoff para dejar salir la consulta cancelada y reintentar
-            // el expediente exacto sin mostrar un falso fallo permanente.
-            retryTimer = setTimeout(() => {
-              if (my === seq.current) run(1);
-            }, 450);
-            return;
-          }
+        if (e && mayRetryTimeout && isStatementTimeout(e) && attempt === 0) {
+          // Breve backoff para dejar salir la consulta cancelada y reintentar
+          // el expediente exacto sin mostrar un falso fallo permanente.
+          retryTimer = setTimeout(() => {
+            if (my === seq.current) void run(1);
+          }, 450);
+          return;
+        }
 
-          if (e) {
-            setError(message(e, fn));
-            setData(null);
-          } else {
-            setError(null);
-            setData(d as T);
-          }
-          setLoading(false);
-        })
-        .catch((e: unknown) => {
-          if (my !== seq.current) return;
+        if (e) {
           setError(message(e, fn));
           setData(null);
-          setLoading(false);
-        });
+        } else {
+          setError(null);
+          setData(d as T);
+        }
+        setLoading(false);
+      } catch (e) {
+        if (my !== seq.current) return;
+        setError(message(e, fn));
+        setData(null);
+        setLoading(false);
+      }
     };
 
-    run(0);
+    void run(0);
 
     return () => {
       if (retryTimer) clearTimeout(retryTimer);
