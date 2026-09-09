@@ -105,6 +105,22 @@ const GENERIC_ENTITY_TOKENS = new Set([
   'organizacion', 'instituto',
 ]);
 
+const GROUP_DESCRIPTOR_TOKENS = new Set([
+  ...GENERIC_ENTITY_TOKENS,
+  'administrador', 'administradores', 'general',
+  'fondo', 'fondos', 'privado', 'privada', 'privados', 'privadas',
+  'liquidacion', 'liquidada', 'liquidado',
+  'agf', 'afip', 'corredora', 'corredoras', 'corredor', 'corredores', 'bolsa',
+  'banco', 'bancaria', 'bancario', 'credito', 'creditos',
+  'seguro', 'seguros', 'asset', 'management', 'wealth', 'capital',
+]);
+
+const UNSAFE_GROUP_KEYS = new Set([
+  'chile', 'chilena', 'chileno', 'nacional', 'internacional',
+  'santiago', 'andes', 'pacifico', 'central', 'regional', 'metropolitana',
+  'norte', 'sur',
+]);
+
 export function normalizePressText(value: unknown): string {
   return String(value ?? '')
     .normalize('NFKD')
@@ -134,6 +150,22 @@ function containsAllTokens(candidate: string, required: string[]): boolean {
   if (!required.length) return false;
   const candidateTokens = new Set(nameTokens(candidate));
   return required.every((token) => candidateTokens.has(token));
+}
+
+function groupBrandKey(queryText: string): string | null {
+  const tokens = nameTokens(queryText);
+  if (tokens.length < 4) return null;
+
+  const descriptorHits = tokens.filter((token) => GROUP_DESCRIPTOR_TOKENS.has(token)).length;
+  if (descriptorHits < 2) return null;
+
+  const candidates = Array.from(new Set(tokens.filter((token) => (
+    token.length >= 5
+    && !GROUP_DESCRIPTOR_TOKENS.has(token)
+    && !UNSAFE_GROUP_KEYS.has(token)
+  ))));
+
+  return candidates.length === 1 ? candidates[0] : null;
 }
 
 function bigrams(value: string): Set<string> {
@@ -217,6 +249,13 @@ function articleSupportsIdentity(queryText: string, article: PressArticle): bool
   if (!required.length) return false;
   const articleTokens = new Set(fields.flatMap((field) => nameTokens(field)));
   return required.every((token) => articleTokens.has(token));
+}
+
+function articleHasExactToken(token: string, article: PressArticle): boolean {
+  const fields = [article.title, article.summary, ...(article.search_terms ?? [])]
+    .map(normalizePressText)
+    .filter(Boolean);
+  return fields.some((field) => nameTokens(field).includes(token));
 }
 
 async function loadBridge(): Promise<PreparedBridge> {
@@ -372,6 +411,60 @@ function articleFallbackMatch(
   };
 }
 
+function groupContextMatch(
+  queryText: string,
+  sourceArticles: PressArticle[],
+  excludedArticleIds: Set<string>,
+  generatedAt: string | null,
+): PressMatch | null {
+  const brand = groupBrandKey(queryText);
+  if (!brand) return null;
+
+  const allHits = sourceArticles
+    .filter((article) => !excludedArticleIds.has(article.id) && articleHasExactToken(brand, article))
+    .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
+
+  if (!allHits.length) return null;
+
+  const articles = allHits.slice(0, 6).map<PressArticleMatch>((article) => {
+    const contextNote = `Contexto de grupo/marca vinculado por la mención «${brand}». No implica que el hecho corresponda a esta razón social.`;
+    return {
+      ...article,
+      title: `Contexto de grupo · ${article.title}`,
+      summary: article.summary ? `${contextNote} ${article.summary}` : contextNote,
+      role: 'Contexto de grupo/marca',
+      mention_confidence: null,
+      mention_requires_validation: true,
+    };
+  });
+
+  const dates = allHits.map((article) => String(article.date ?? '').slice(0, 10)).filter(Boolean);
+  const media = Array.from(new Set(allHits.map((article) => article.media).filter((value): value is string => Boolean(value))));
+
+  return {
+    press_entity_id: `PRESS-GROUP-${brand}`,
+    name: `Contexto de grupo · ${brand}`,
+    entity_type: 'Contexto de grupo',
+    nature: 'GROUP_CONTEXT',
+    ruts: [],
+    aliases: [brand],
+    first_seen: dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null,
+    last_seen: dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null,
+    article_count: allHits.length,
+    mention_count: allHits.length,
+    media,
+    roles: ['Contexto de grupo/marca'],
+    confidence: 0.94,
+    requires_validation: true,
+    resolution_status: 'GROUP_CONTEXT',
+    match_kind: 'CONTENIDA',
+    match_score: 0.94,
+    match_source: 'ARTICLE_TEXT',
+    articles,
+    bridge_generated_at: generatedAt,
+  };
+}
+
 export async function searchPress(query: string, limit = 12): Promise<PressMatch[]> {
   const queryText = normalizePressText(query);
   const queryRut = normalizeRut(query);
@@ -402,20 +495,26 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
 
   if (queryRut.length >= 4) return indexed;
 
-  const coveredArticleIds = new Set(indexed.flatMap((match) => match.articles.map((article) => article.id)));
+  const indexedArticleIds = new Set(indexed.flatMap((match) => match.articles.map((article) => article.id)));
   const directArticleHits = (bridge.articles ?? [])
     .map((article) => ({ article, score: scoreArticle(queryText, article) }))
-    .filter((row) => row.score >= 0.90 && !coveredArticleIds.has(row.article.id));
+    .filter((row) => row.score >= 0.90 && !indexedArticleIds.has(row.article.id));
 
-  if (!directArticleHits.length) return indexed;
+  const baseMatches = directArticleHits.length
+    ? [articleFallbackMatch(query, queryText, directArticleHits, bridge.generated_at ?? null), ...indexed]
+    : [...indexed];
 
-  const fallback = articleFallbackMatch(
-    query,
+  const coveredArticleIds = new Set(baseMatches.flatMap((match) => match.articles.map((article) => article.id)));
+  const groupContext = groupContextMatch(
     queryText,
-    directArticleHits,
+    bridge.articles ?? [],
+    coveredArticleIds,
     bridge.generated_at ?? null,
   );
-  return [fallback, ...indexed].slice(0, maxResults);
+
+  return groupContext
+    ? [...baseMatches, groupContext].slice(0, maxResults)
+    : baseMatches.slice(0, maxResults);
 }
 
 
