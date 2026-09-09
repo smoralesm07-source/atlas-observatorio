@@ -81,7 +81,8 @@ type FunctionalDetail = {
 type SearchRow = {
   fintech_id: string; atlas_entity_id: string | null; rut: string | null; brand: string | null; legal_name: string;
   vertical: string | null; business_model: string | null; target_customer: string | null; revenue_model: string | null;
-  psav_status: string; region: string | null; commune: string | null; sii_main_activity: string | null;
+  psav_status: string; operating_status: string; operating_status_as_of: string | null; actor_kind: string | null;
+  region: string | null; commune: string | null; sii_main_activity: string | null;
   sales_band: string | null; sales_band_rank: number | null; workers: number | null;
   has_cmf_public: boolean; has_uaf_public: boolean; market_metric_count: number; last_seen_at: string; confidence: number;
 };
@@ -92,6 +93,9 @@ type DetailEntity = {
   website: string | null; origin_country: string | null; presence_chile: string; entity_status: string;
   identification_status: string; identification_basis: string; primary_vertical: string | null;
   business_model: string | null; target_customer: string | null; revenue_model: string | null; psav_status: string;
+  operating_status: string; operating_status_basis: string | null; operating_status_source_code: string | null;
+  operating_status_source_url: string | null; operating_status_as_of: string | null; actor_kind: string | null;
+  lifecycle_basis: string | null; lifecycle_validated_at: string | null;
   confidence: number; region: string | null; commune: string | null; sii_main_activity: string | null;
   sii_economic_sector: string | null; sii_sales_band: string | null; sii_sales_band_rank: number | null;
   sii_workers: number | null; sii_activity_start_date: string | null; uaf_sector_canonical: string | null;
@@ -109,6 +113,12 @@ type MetricRow = {
 type ActivityRow = { activity_code: string; activity_label: string; activity_group: string | null; is_primary: boolean; confidence: number };
 type EventRow = { event_id: number; event_type: string; event_date: string | null; title: string; summary: string | null; source_url: string | null };
 type EvidenceSource = { source_code: string; catalog_label: string; authority_level: string; source_url: string | null; status: string; first_seen_at: string; last_seen_at: string };
+type RelationshipRow = {
+  relationship_id: number; subject_type: string; subject_key: string; relation_type: string;
+  target_fintech_id: string | null; target_rut: string | null; target_atlas_entity_id: string | null; target_label: string;
+  valid_from: string | null; valid_to: string | null; source_code: string | null; source_url: string | null;
+  evidence_basis: string; confidence: number; active: boolean; metadata: Record<string, unknown>;
+};
 type DetailData = {
   error?: string;
   entity: DetailEntity;
@@ -116,6 +126,7 @@ type DetailData = {
   regulation: RegulatoryRow[];
   market_metrics: MetricRow[];
   events: EventRow[];
+  relationships: RelationshipRow[];
   sources: EvidenceSource[];
   market_weight: { sales_band: string | null; sales_band_rank: number | null; workers: number | null; metric_count: number; note: string };
   boundary_note: string;
@@ -339,10 +350,10 @@ function EntityTable({ rows, selected, onSelect }: { rows: SearchRow[]; selected
   if (!rows.length) return <div className="fintech-empty">No hay entidades para los filtros actuales.</div>;
   return <div className="fintech-table"><div className="fintech-tr fintech-th"><span>Entidad</span><span>Vertical</span><span>Escala abierta</span><span>Huella</span></div>
     {rows.map((r) => <button key={r.fintech_id} className="fintech-tr" data-active={selected === r.fintech_id} onClick={() => onSelect(r.fintech_id)}>
-      <span><b>{r.brand || r.legal_name}</b><small>{r.rut ?? 'RUT no resuelto'}</small></span>
-      <span><b>{r.vertical ?? 'Por clasificar'}</b><small>{r.business_model ?? 'Modelo por clasificar'}</small></span>
+      <span><b>{r.brand || r.legal_name}</b><small>{r.rut ?? 'RUT no resuelto'} · {operatingLabel(r.operating_status)}</small></span>
+      <span><b>{r.vertical ?? 'Por clasificar'}</b><small>{r.business_model ?? 'Modelo por clasificar'}{r.actor_kind ? ` · ${actorKindLabel(r.actor_kind)}` : ''}</small></span>
       <span><b>{r.sales_band ? `Tramo SII ${r.sales_band}` : 'No observable'}</b><small>{r.workers != null ? `${formatNumber(r.workers)} trabajadores` : 'Trabajadores n/d'}</small></span>
-      <span className="fintech-badges">{r.has_cmf_public && <em>CMF</em>}{r.has_uaf_public && <em>UAF</em>}{r.psav_status !== 'NO_EVIDENCE' && <em>AV</em>}</span>
+      <span className="fintech-badges">{r.operating_status !== 'UNKNOWN' && <em>{operatingShort(r.operating_status)}</em>}{r.has_cmf_public && <em>CMF</em>}{r.has_uaf_public && <em>UAF</em>}{r.psav_status !== 'NO_EVIDENCE' && <em>AV</em>}</span>
     </button>)}
   </div>;
 }
@@ -355,13 +366,23 @@ function DetailPanel({ data, functional, loading, error, onRetry, onOpen }: { da
   const fd = functional && !functional.error ? functional : null;
   return <aside className="fintech-detail">
     <div className="fintech-detail-head"><div><span>{e.primary_vertical ?? 'Vertical por clasificar'}</span><h3>{e.brand || e.legal_name}</h3><p>{e.rut ?? 'RUT no resuelto'} · {[e.commune,e.region].filter(Boolean).join(', ') || 'Ubicación n/d'}</p></div><span className="fintech-confidence">{Math.round((e.confidence ?? 0) * 100)}%<small>identidad</small></span></div>
-    <div className="fintech-detail-tags"><em>{e.business_model ?? 'Modelo por clasificar'}</em><em>{psavLabel(fd?.psav_status ?? e.psav_status)}</em>{e.has_uaf_public && <em>UAF público</em>}{e.has_cmf_public && <em>CMF</em>}</div>
+    <div className="fintech-detail-tags"><em>{operatingLabel(e.operating_status)}</em>{e.actor_kind && <em>{actorKindLabel(e.actor_kind)}</em>}<em>{e.business_model ?? 'Modelo por clasificar'}</em><em>{psavLabel(fd?.psav_status ?? e.psav_status)}</em>{e.has_uaf_public && <em>UAF público</em>}{e.has_cmf_public && <em>CMF</em>}</div>
     <div className="fintech-detail-grid">
       <div><span>Actividad SII</span><b>{e.sii_main_activity ?? 'No observada'}</b></div>
       <div><span>Ventas</span><b>{e.sii_sales_band ? `Tramo ${e.sii_sales_band}` : 'No observable'}</b></div>
       <div><span>Trabajadores</span><b>{e.sii_workers != null ? formatNumber(e.sii_workers) : 'n/d'}</b></div>
-      <div><span>Confianza PSAV</span><b>{fd?.psav_confidence != null ? `${Math.round(fd.psav_confidence * 100)}%` : 'n/d'}</b></div>
+      <div><span>Estado operativo</span><b>{operatingLabel(e.operating_status)}</b></div>
     </div>
+
+    <Block title="Estado y vigencia">
+      <div className="fintech-line"><span>{e.operating_status_as_of ? `Corte ${formatDate(e.operating_status_as_of)}` : 'Corte no informado'}</span><b>{operatingLabel(e.operating_status)}</b><small>{e.operating_status_basis ?? e.lifecycle_basis ?? 'Sin fundamento de vigencia estructurado todavía.'}</small></div>
+    </Block>
+
+    {data.relationships?.length > 0 && <Block title="Relaciones corporativas">
+      {data.relationships.map((r) => <div className="fintech-line" key={r.relationship_id}>
+        <span>{relationshipLabel(r.relation_type)}</span><b>{r.target_label}{r.target_rut ? ` · ${r.target_rut}` : ''}</b><small>{Math.round(r.confidence * 100)}% · {r.source_code ?? 'fuente abierta'}{r.evidence_basis ? ` · ${r.evidence_basis}` : ''}</small>
+      </div>)}
+    </Block>}
 
     <Block title="Vector funcional">
       {fd?.functions.length ? fd.functions.map((f) => <div className="fintech-line" key={`${f.function_code}-${f.source_url ?? ''}-${f.evidence_status}`}>
@@ -380,6 +401,7 @@ function DetailPanel({ data, functional, loading, error, onRetry, onOpen }: { da
 
     <Block title="Huella regulatoria">{data.regulation.length ? data.regulation.map((r) => <div className="fintech-line" key={`${r.regulator}-${r.registry}-${r.service}`}><span>{r.regulator}</span><b>{r.status.replaceAll('_',' ')}</b><small>{r.service}</small></div>) : <p className="fintech-muted">Sin vínculo regulatorio estructurado todavía.</p>}</Block>
     <Block title="Actividad / productos">{data.activities.length ? data.activities.map((a) => <div className="fintech-line" key={a.activity_code}><span>{a.activity_group ?? 'Actividad'}</span><b>{a.activity_label}</b></div>) : <p className="fintech-muted">Pendiente de clasificación adicional desde fuentes corporativas y regulatorias abiertas.</p>}</Block>
+    {data.events?.length > 0 && <Block title="Línea de tiempo">{data.events.slice(0, 6).map((ev) => <div className="fintech-line" key={ev.event_id}><span>{formatDate(ev.event_date)}</span><b>{ev.title}</b><small>{ev.event_type.replaceAll('_',' ')}{ev.summary ? ` · ${ev.summary}` : ''}</small></div>)}</Block>}
     <Block title="Evidencia de mercado">{data.market_metrics.length ? data.market_metrics.slice(0, 5).map((m) => <div className="fintech-line" key={m.metric_id}><span>{m.metric_code}</span><b>{metricValue(m)}</b><small>{m.evidence_type.replaceAll('_',' ')}</small></div>) : <p className="fintech-muted">Aún sin métricas transaccionales estructuradas. El tramo de ventas y trabajadores funciona sólo como proxy inicial.</p>}</Block>
     <Block title="Fuentes enlazadas">{data.sources.map((s) => <div className="fintech-line" key={s.source_code}><span>{s.source_code}</span><b>{s.catalog_label}</b><small>{formatDate(s.last_seen_at)}</small></div>)}</Block>
     <div className="fintech-detail-note">{fd?.method_note ?? data.boundary_note}</div>
@@ -397,6 +419,10 @@ function metricValue(m: MetricRow) { if (m.value_numeric != null) return `${m.cu
 function psavLabel(v: string) { return ({ CONFIRMED:'PSAV funcional confirmado', PROBABLE:'PSAV funcional probable', EXPOSURE:'Exposición a AV', NO_EVIDENCE:'Sin evidencia funcional PSAV' } as Record<string,string>)[v] ?? v; }
 function evidenceLabel(v: string) { return ({ OBSERVED:'Observado', PROBABLE:'Probable', SIGNAL:'Señal' } as Record<string,string>)[v] ?? v; }
 function footprintLabel(v: string) { return ({ DIRECT_EQUIVALENT_OBSERVED:'Equivalente directo observado', RELATED_PUBLIC_FOOTPRINT:'Huella pública relacionada', NO_PUBLIC_EQUIVALENT_OBSERVED:'Sin equivalente público observado', NOT_ASSESSED:'No evaluado' } as Record<string,string>)[v] ?? v; }
+function relationshipLabel(v: string) { return ({ PRODUCT_OF:'Producto de', BRAND_OF:'Marca de', LEGAL_VEHICLE_OF:'Vehículo legal de', ACQUIRED_BY:'Adquirido por', SUCCESSOR_OF:'Sucesor de', PREDECESSOR_OF:'Predecesor de', OPERATED_BY:'Operado por', CONTROLLED_BY:'Controlado por' } as Record<string,string>)[v] ?? v.replaceAll('_',' '); }
+function operatingLabel(v: string) { return ({ ACTIVE:'Activo observado', LIMITED:'Operación limitada', NO_NEW_BUSINESS:'Sin nuevos negocios', CEASED:'Operación cesada', UNKNOWN:'Vigencia por validar' } as Record<string,string>)[v] ?? v; }
+function operatingShort(v: string) { return ({ ACTIVE:'ACTIVO', LIMITED:'LIMITADO', NO_NEW_BUSINESS:'SIN ALTAS', CEASED:'CESADO', UNKNOWN:'POR VALIDAR' } as Record<string,string>)[v] ?? v; }
+function actorKindLabel(v: string) { return ({ LEGAL_ENTITY:'Entidad jurídica', FOREIGN_ACTOR:'Actor extranjero', PRODUCT:'Producto', BRAND:'Marca', MULTI_LEGAL_BRAND:'Marca multivehículo', ACTOR:'Actor' } as Record<string,string>)[v] ?? v.replaceAll('_',' '); }
 function pct(a: number, b: number) { return b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0; }
 function formatPct(a: number, b: number) { return `${pct(a,b)}%`; }
 function formatNumber(v: number | null | undefined) { return v == null ? 'n/d' : new Intl.NumberFormat('es-CL').format(v); }
