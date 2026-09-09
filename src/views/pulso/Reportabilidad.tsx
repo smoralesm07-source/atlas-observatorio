@@ -8,11 +8,9 @@ import type { CohortRequest } from '../../components/CohortDrawer';
 /* LENTE · REPORTABILIDAD
    ──────────────────────
    Cuánto reporta el universo obligado y quién sostiene ese volumen. La serie
-   nacional viene del Informe Estadístico UAF y describe al país, nunca a una
-   entidad: la reportabilidad es sectorial y jamás se atribuye a un inscrito. */
+   nacional viene de publicaciones UAF y describe al país, nunca a una entidad:
+   la reportabilidad es sectorial y jamás se atribuye a un inscrito. */
 
-/* Series nacionales que el Informe Estadístico publica con historia completa.
-   Las de un solo punto no entran al gráfico: una columna sola no es una serie. */
 const SERIES: { key: string; label: string; unit: string; lede: string; accent: string }[] = [
   { key: 'ros_recibidos', label: 'ROS', unit: 'reportes de operación sospechosa',
     lede: 'Reportes de operación sospechosa recibidos por la UAF. Se emiten ante una operación sospechosa, no con periodicidad fija.',
@@ -24,9 +22,11 @@ const SERIES: { key: string; label: string; unit: string; lede: string; accent: 
     lede: 'Acciones de supervisión ejecutadas por la UAF en el año. Es capacidad desplegada, no cobertura del padrón.',
     accent: 'var(--sig-medium)' },
   { key: 'entidades_reportantes_total', label: 'Padrón', unit: 'personas y entidades inscritas',
-    lede: 'Entidades reportantes inscritas al cierre de cada año, según el propio informe. No es el padrón operativo del Observatorio.',
+    lede: 'Stock de sujetos obligados inscritos publicado por la UAF: cierres anuales 2020–2025 y corte semestral al 30-06-2026. El último punto, 10.294, es el padrón vigente publicado y no una proyección.',
     accent: 'var(--unknown)' },
 ];
+
+const UAF_REGISTRY_2026 = 'https://www.uaf.cl/es-cl/sujetos-obligados/sector-privado/inscritos-en-la-uaf';
 
 export function LenteReportabilidad({
   data,
@@ -52,6 +52,15 @@ export function LenteReportabilidad({
   const t = rep?.totales;
   const serieActiva = SERIES.find((s) => s.key === serie) ?? SERIES[0];
   const serieDatos = rep?.nacional?.[serie];
+  const puntosPublicados = (serieDatos?.puntos ?? [])
+    .filter((p) => /^\d{4}$/.test(p.periodo))
+    .map((p) => ({ label: p.periodo, value: p.valor }));
+  const tiene2026 = puntosPublicados.some((p) => p.label === '2026');
+  const chartData = tiene2026
+    ? puntosPublicados
+    : [...puntosPublicados, { label: '2026', value: null, ghost: true, note: 'sin publicar' }];
+  const sourceHref = serie === 'entidades_reportantes_total' ? UAF_REGISTRY_2026 : serieDatos?.fuente;
+  const sourceLabel = serie === 'entidades_reportantes_total' ? 'Padrón UAF 30-06-2026' : 'Informe Estadístico UAF';
 
   /* Concentración: la cifra que cambia la lectura de todo el tablero. Tres
      sectores de cincuenta explican la mayor parte del volumen reportado, y el
@@ -83,27 +92,17 @@ export function LenteReportabilidad({
           <p style={{ margin: '0 0 4px', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: '72ch' }}>
             {serieActiva.lede}
           </p>
-          {serieDatos?.puntos?.length ? (
+          {chartData.length ? (
             <>
-              <Columns
-                accent={serieActiva.accent}
-                data={[
-                  ...serieDatos.puntos
-                    .filter((p) => /^\d{4}$/.test(p.periodo))
-                    .map((p) => ({ label: p.periodo, value: p.valor })),
-                  /* 2026 todavía no tiene informe publicado. Se dibuja el hueco
-                     y se rotula: omitirlo sugeriría que la serie terminó. */
-                  { label: '2026', value: null, ghost: true, note: 'sin publicar' },
-                ]}
-              />
+              <Columns accent={serieActiva.accent} data={chartData} />
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
                 <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
-                  {serieActiva.unit} · corte {serieDatos.corte ?? '—'}
+                  {serieActiva.unit} · corte {serieDatos?.corte ?? '—'}
                 </span>
-                {serieDatos.fuente && (
+                {sourceHref && (
                   <a className="ev-link" style={{ marginTop: 0, fontSize: 11.5 }}
-                    href={serieDatos.fuente} target="_blank" rel="noreferrer">
-                    Informe Estadístico UAF →
+                    href={sourceHref} target="_blank" rel="noreferrer">
+                    {sourceLabel} →
                   </a>
                 )}
               </div>
@@ -234,8 +233,6 @@ function SectorReportRow({
         {sinInscritos && <span className="badge badge-absent">sin inscritos</span>}
       </span>
       <span className="rep-hide num" style={{ textAlign: 'right', fontSize: 12, color: s.padron_sujetos == null ? 'var(--ink-4)' : 'var(--ink-2)' }}>
-        {/* Un sector canónico sin inscritos no tiene cero inscritos: no tiene
-            padrón que contar, y un cero lo diría al revés. */}
         {s.padron_sujetos == null ? '—' : n(s.padron_sujetos)}
       </span>
       <span className="num" style={{ textAlign: 'right', fontSize: 12, fontWeight: 620 }}>
@@ -244,9 +241,6 @@ function SectorReportRow({
           {intensidad == null ? 'sin corte' : `${n1(intensidad)} / 100 SO`}
         </em>
       </span>
-      {/* La variación sin base engaña: un sector que pasa de 2 a 11 ROS marca
-          +450%. Por eso el porcentaje va junto al volumen del año y en tono
-          neutro cuando la base es mínima. */}
       <span
         className="rep-hide num"
         style={{
