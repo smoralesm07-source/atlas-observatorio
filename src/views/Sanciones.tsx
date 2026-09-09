@@ -26,13 +26,18 @@ type SanctionEvent = {
   event_kind: string | null;
   sanction_record: boolean | null;
   entity_id: string | null;
+  entity_key?: string | null;
   rut: string | null;
   canonical_name: string | null;
   source_entity_name: string | null;
   identity_status: string | null;
+  identity_method?: string | null;
+  identity_confidence?: number | string | null;
   region: string | null;
   commune: string | null;
+  territory_basis?: string | null;
   current_condition: string | null;
+  condition_basis?: string | null;
   is_uaf_registered: boolean | null;
   is_potential_screening: boolean | null;
   uaf_sector: string | null;
@@ -40,14 +45,58 @@ type SanctionEvent = {
   amount_clp: number | string | null;
   reason: string | null;
   resolution_ref: string | null;
+  evidence_id?: string | null;
   document_url: string | null;
   document_quality: string | null;
+  document_excerpt?: string | null;
+  cgr_stage?: string | null;
+  cgr_risk_family?: string | null;
+  cgr_severity?: string | null;
+  in_sii_registry?: boolean | null;
+  in_uaf_registry?: boolean | null;
+  in_osfl_registry?: boolean | null;
   in_unified_universe: boolean | null;
 };
 
-type Filters = { year: string; regulator: string; sector: string; region: string };
-const EMPTY_FILTERS: Filters = { year: '', regulator: '', sector: '', region: '' };
+type Filters = { year: string; regulator: string; sector: string };
+type ActorSummary = {
+  key: string;
+  name: string;
+  rut: string;
+  events: number;
+  amountUf: number;
+  lastDate: string | null;
+  regulator: string;
+  sector: string;
+  region: string;
+  entityId: string | null;
+  rows: SanctionEvent[];
+};
+
+type RegulatorSummary = {
+  regulator: string;
+  events: number;
+  entities: number;
+  years: number;
+  amountUf: number;
+  lastDate: string | null;
+};
+
+type RegionSummary = {
+  region: string;
+  events: number;
+  entities: number;
+  amountUf: number;
+};
+
+const EMPTY_FILTERS: Filters = { year: '', regulator: '', sector: '' };
 const PAGE = 1000;
+const SOURCE_NAMES: Record<string, string> = {
+  CMF: 'Comisión para el Mercado Financiero',
+  UAF: 'Unidad de Análisis Financiero',
+  SCJ: 'Superintendencia de Casinos de Juego',
+  CGR: 'Contraloría General de la República',
+};
 
 export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -56,13 +105,20 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [query, setQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [selectedActor, setSelectedActor] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchPaged<T>(table: string, columns: string): Promise<T[]> {
+    async function fetchPaged<T>(table: string): Promise<T[]> {
       const all: T[] = [];
       for (let start = 0; ; start += PAGE) {
-        const { data, error: pageError } = await supabase.from(table).select(columns).range(start, start + PAGE - 1);
+        const { data, error: pageError } = await supabase
+          .from(table)
+          .select('*')
+          .order('event_date', { ascending: false, nullsFirst: false })
+          .range(start, start + PAGE - 1);
         if (pageError) throw pageError;
         const rows = (data ?? []) as T[];
         all.push(...rows);
@@ -70,16 +126,14 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
       }
       return all;
     }
+
     async function load() {
       setLoading(true);
       setError(null);
       try {
         const [overviewResult, eventRows] = await Promise.all([
           supabase.from('aml_v_sanctions_overview_current_v0960').select('*').limit(1).maybeSingle(),
-          fetchPaged<SanctionEvent>(
-            'aml_v_sanctions_radiography_current_v0960',
-            'event_id,event_date,event_year,regulator,event_class,event_kind,sanction_record,entity_id,rut,canonical_name,source_entity_name,identity_status,region,commune,current_condition,is_uaf_registered,is_potential_screening,uaf_sector,amount_uf,amount_clp,reason,resolution_ref,document_url,document_quality,in_unified_universe',
-          ),
+          fetchPaged<SanctionEvent>('aml_v_sanctions_radiography_current_v0960'),
         ]);
         if (overviewResult.error) throw overviewResult.error;
         if (!cancelled) {
@@ -92,6 +146,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
     return () => { cancelled = true; };
   }, [reloadKey]);
@@ -100,232 +155,566 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
     years: unique(events.map((e) => e.event_year).filter((v): v is number => v != null)).sort((a, b) => b - a),
     regulators: unique(events.map((e) => clean(e.regulator)).filter(Boolean)).sort(),
     sectors: unique(events.map((e) => sectorOf(e)).filter(Boolean)).sort(),
-    regions: unique(events.map((e) => regionOf(e)).filter(Boolean)).sort(),
   }), [events]);
 
-  const filtered = useMemo(() => events.filter((e) => {
+  const globalRows = useMemo(() => events.filter((e) => {
     if (filters.year && String(e.event_year ?? '') !== filters.year) return false;
     if (filters.regulator && clean(e.regulator) !== filters.regulator) return false;
     if (filters.sector && sectorOf(e) !== filters.sector) return false;
-    if (filters.region && regionOf(e) !== filters.region) return false;
     return true;
   }), [events, filters]);
 
-  const stats = useMemo(() => deriveStats(filtered), [filtered]);
-  const regulatorRows = useMemo(() => deriveRegulators(filtered), [filtered]);
-  const regionRows = useMemo(() => deriveRegions(filtered), [filtered]);
-  const sectorRows = useMemo(() => deriveSectors(filtered), [filtered]);
-  const yearRows = useMemo(() => deriveYears(filtered), [filtered]);
-  const costly = useMemo(() => [...filtered].filter((e) => num(e.amount_uf) > 0).sort((a, b) => num(b.amount_uf) - num(a.amount_uf)).slice(0, 5), [filtered]);
-  const recent = useMemo(() => [...filtered].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date)).slice(0, 5), [filtered]);
-  const recent50 = useMemo(() => [...filtered].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date)).slice(0, 50), [filtered]);
+  useEffect(() => {
+    if (selectedRegion && !globalRows.some((e) => regionOf(e) === selectedRegion)) {
+      setSelectedRegion(null);
+      setSelectedActor(null);
+    }
+  }, [globalRows, selectedRegion]);
+
+  const regionScopedRows = useMemo(
+    () => selectedRegion ? globalRows.filter((e) => regionOf(e) === selectedRegion) : globalRows,
+    [globalRows, selectedRegion],
+  );
+
+  useEffect(() => {
+    if (selectedActor && !regionScopedRows.some((e) => actorKey(e) === selectedActor)) setSelectedActor(null);
+  }, [regionScopedRows, selectedActor]);
+
+  const visibleRows = useMemo(
+    () => selectedActor ? regionScopedRows.filter((e) => actorKey(e) === selectedActor) : regionScopedRows,
+    [regionScopedRows, selectedActor],
+  );
+
+  const stats = useMemo(() => deriveStats(visibleRows), [visibleRows]);
+  const regulatorRows = useMemo(() => deriveRegulators(globalRows), [globalRows]);
+  const regionRows = useMemo(() => deriveRegions(globalRows), [globalRows]);
+  const regionalActors = useMemo(() => deriveActors(regionScopedRows).slice(0, 2), [regionScopedRows]);
+  const selectedActorSummary = useMemo(
+    () => selectedActor ? deriveActors(regionScopedRows).find((a) => a.key === selectedActor) ?? null : null,
+    [regionScopedRows, selectedActor],
+  );
+  const searchResults = useMemo(() => {
+    const q = normalize(query);
+    if (q.length < 2) return [] as ActorSummary[];
+    return deriveActors(globalRows.filter((e) => normalize([
+      actorName(e), e.rut, e.reason, e.resolution_ref, e.regulator, e.uaf_sector, e.region,
+    ].filter(Boolean).join(' ')).includes(q))).slice(0, 6);
+  }, [globalRows, query]);
+
+  const costly = useMemo(
+    () => [...visibleRows].filter((e) => num(e.amount_uf) > 0).sort((a, b) => num(b.amount_uf) - num(a.amount_uf)).slice(0, 5),
+    [visibleRows],
+  );
+  const recent = useMemo(
+    () => [...visibleRows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date)).slice(0, 5),
+    [visibleRows],
+  );
+  const recent50 = useMemo(
+    () => [...visibleRows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date)).slice(0, 50),
+    [visibleRows],
+  );
+  const quality = useMemo(() => deriveQuality(visibleRows), [visibleRows]);
+  const years = useMemo(() => deriveYears(visibleRows), [visibleRows]);
 
   function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((current) => ({ ...current, [key]: value }));
+    setSelectedRegion(null);
+    setSelectedActor(null);
   }
-  function toggleFilter(key: 'regulator' | 'sector' | 'region', value: string) {
-    setFilters((current) => ({ ...current, [key]: current[key] === value ? '' : value }));
+
+  function toggleRegulator(value: string) {
+    setFilter('regulator', filters.regulator === value ? '' : value);
+  }
+
+  function chooseRegion(region: string) {
+    const next = selectedRegion === region ? null : region;
+    setSelectedRegion(next);
+    setSelectedActor(null);
+  }
+
+  function chooseActor(actor: ActorSummary) {
+    if (actor.region && actor.region !== 's/i') setSelectedRegion(actor.region);
+    setSelectedActor(actor.key);
+  }
+
+  function clearAll() {
+    setFilters(EMPTY_FILTERS);
+    setSelectedRegion(null);
+    setSelectedActor(null);
+    setQuery('');
   }
 
   if (loading) return <div className="sanctions-state"><span className="sanctions-spinner" />Construyendo inteligencia sancionatoria…</div>;
   if (error) return <div className="sanctions-state sanctions-error"><b>No fue posible abrir Sanciones</b><span>{error}</span><button onClick={() => setReloadKey((x) => x + 1)}>Reintentar</button></div>;
 
-  const refreshed = overview?.refreshed_at;
-  const anyFilter = Object.values(filters).some(Boolean);
+  const anyContext = Boolean(filters.year || filters.regulator || filters.sector || selectedRegion || selectedActor || query);
+  const maxRegion = Math.max(...regionRows.map((r) => r.events), 1);
+  const maxYear = Math.max(...years.map((r) => r.events), 1);
 
-  return <div className="sanctions-page fade-in">
-    <header className="sanctions-head">
-      <div>
-        <div className="sanctions-kicker">INTELIGENCIA ADMINISTRATIVA · FUENTES ABIERTAS</div>
-        <h1>Sanciones <span>|</span> Administrative Sanctions Intelligence</h1>
-        <p>Lectura transversal de eventos sancionatorios y de enforcement. Supervisores, entidades, territorio, sectores, montos y recurrencia en una sola vista.</p>
+  return <div className="sanctions-v12 fade-in" data-sanctions-v12-root="true">
+    <header className="san12-head">
+      <div className="san12-title">
+        <span className="san12-kicker">RADAR SANCIONATORIO · FUENTES ABIERTAS</span>
+        <h1>Sanciones</h1>
+        <p>Lectura integrada de sanciones administrativas y acciones de enforcement, con filtros globales y profundización progresiva por territorio y actor.</p>
       </div>
-      <div className="sanctions-cut"><b>Corte ATLAS</b><span>{formatDateTime(refreshed)}</span><small>{fmt(overview?.event_count)} eventos en el read model</small></div>
+      <div className="san12-cut">
+        <span>Corte ATLAS</span>
+        <b>{formatDateTime(overview?.refreshed_at)}</b>
+        <small>{fmt(overview?.event_count ?? events.length)} eventos en el read model</small>
+      </div>
     </header>
 
-    <section className="sanctions-filterbar" aria-label="Filtros globales de sanciones">
+    <section className="san12-command" aria-label="Filtros globales">
       <Filter label="Año" value={filters.year} onChange={(v) => setFilter('year', v)} options={options.years.map(String)} />
       <Filter label="Institución" value={filters.regulator} onChange={(v) => setFilter('regulator', v)} options={options.regulators} />
-      <Filter label="Industria / sector UAF" value={filters.sector} onChange={(v) => setFilter('sector', v)} options={options.sectors} />
-      <Filter label="Región" value={filters.region} onChange={(v) => setFilter('region', v)} options={options.regions} />
-      <button className="sanctions-clear" disabled={!anyFilter} onClick={() => setFilters(EMPTY_FILTERS)}>Limpiar filtros</button>
+      <Filter label="Industria" value={filters.sector} onChange={(v) => setFilter('sector', v)} options={options.sectors} />
+      <button className="san12-clear" disabled={!anyContext} onClick={clearAll}>Limpiar filtros</button>
     </section>
 
-    <section className="sanctions-kpis">
-      <Kpi label="Eventos visibles" value={fmt(stats.events)} hint={anyFilter ? `de ${fmt(events.length)} en el universo` : `${fmt(overview?.regulatory_sanction_event_count)} sanciones regulatorias`} />
-      <Kpi label="Entidades afectadas" value={fmt(stats.entities)} hint={`${fmt(stats.resolvedEntities)} vinculadas al universo ATLAS`} />
-      <Kpi label="Instituciones" value={fmt(stats.regulators)} hint={stats.topRegulator ? `mayor volumen: ${stats.topRegulator}` : 'sin eventos'} />
+    <section className="san12-kpis">
+      <Kpi label="Eventos" value={fmt(stats.events)} hint={selectedRegion ? `corte: ${selectedRegion}` : `${fmt(globalRows.length)} bajo filtros globales`} />
+      <Kpi label="Entidades" value={fmt(stats.entities)} hint={`${fmt(stats.resolvedEntities)} con identidad enlazable`} />
+      <Kpi label="Instituciones" value={fmt(stats.regulators)} hint={stats.topRegulator ? `mayor volumen: ${stats.topRegulator}` : 's/i'} />
       <Kpi label="Monto observable" value={`${fmtUf(stats.amountUf)} UF`} hint={`${fmt(stats.withAmount)} eventos con monto UF`} emphasis />
-      <Kpi label="Documentación" value={pct(stats.withDocument, stats.events)} hint="casos con documento enlazado" />
     </section>
 
-    <section className="sanctions-block">
-      <SectionHead index="A" title="Actores clave" subtitle="Qué instituciones concentran actividad, cuántas entidades alcanzan y cómo evoluciona su presencia." />
-      <div className="sanctions-split wide-left">
-        <article className="sanctions-panel">
-          <PanelHead title="Instituciones supervisoras" meta={`${fmt(regulatorRows.length)} instituciones en el corte`} />
-          <div className="sanctions-table-wrap">
-            <table className="sanctions-table">
-              <thead><tr><th>Institución</th><th>Eventos</th><th>Entidades</th><th>Años activos</th><th>Último caso</th><th>UF observadas</th></tr></thead>
-              <tbody>{regulatorRows.map((r) => <tr key={r.regulator} data-active={filters.regulator === r.regulator} onClick={() => toggleFilter('regulator', r.regulator)}>
-                <td><b>{r.regulator}</b></td><td>{fmt(r.events)}</td><td>{fmt(r.entities)}</td><td>{fmt(r.years)}</td><td>{formatDate(r.lastDate)}</td><td>{fmtUf(r.amountUf)}</td>
-              </tr>)}</tbody>
-            </table>
+    <section className="san12-searchbox">
+      <div>
+        <span>BÚSQUEDA DIRECTA</span>
+        <b>Entidad, RUT, motivo o resolución</b>
+      </div>
+      <label>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} type="search" autoComplete="off" placeholder="Buscar en el corte actual…" />
+        <span aria-hidden="true">⌕</span>
+      </label>
+      {query.trim().length >= 2 && <div className="san12-search-results">
+        {searchResults.length ? searchResults.map((actor) => <button key={actor.key} onClick={() => chooseActor(actor)}>
+          <span><b>{actor.name}</b><small>{actor.rut !== 's/i' ? actor.rut : actor.sector}</small></span>
+          <em>{fmt(actor.events)} eventos</em>
+        </button>) : <div className="san12-empty-inline">Sin coincidencias en los filtros actuales.</div>}
+      </div>}
+    </section>
+
+    {(selectedRegion || selectedActor) && <div className="san12-contextbar">
+      <span>Profundización activa</span>
+      {selectedRegion && <button onClick={() => { setSelectedRegion(null); setSelectedActor(null); }}>Región · {selectedRegion} ×</button>}
+      {selectedActorSummary && <button onClick={() => setSelectedActor(null)}>Actor · {selectedActorSummary.name} ×</button>}
+      <button className="san12-back" onClick={() => selectedActor ? setSelectedActor(null) : chooseRegion(selectedRegion ?? '')}>← Volver</button>
+    </div>}
+
+    <section className="san12-section">
+      <SectionHead index="A" title="Actores clave" subtitle="Instituciones con mayor presencia en el universo sancionatorio visible. Selecciona una para cruzar el tablero." />
+      <div className="san12-actor-grid">
+        {regulatorRows.map((r) => <button key={r.regulator} className="san12-actor-card" data-active={filters.regulator === r.regulator} onClick={() => toggleRegulator(r.regulator)}>
+          <span>{r.regulator}</span>
+          <small>{SOURCE_NAMES[r.regulator] ?? 'Institución supervisora'}</small>
+          <div><b>{fmt(r.events)}</b><em>eventos</em></div>
+          <footer><span>{fmt(r.entities)} entidades</span><span>{fmt(r.years)} años</span><span>{fmtUf(r.amountUf)} UF</span></footer>
+        </button>)}
+        {!regulatorRows.length && <Empty text="No hay instituciones para el corte actual." />}
+      </div>
+    </section>
+
+    <section className="san12-section">
+      <SectionHead index="B" title="Matriz regional" subtitle="Selecciona una región para abrir sus actores principales. La profundización se aplica al resto del módulo." />
+      <div className="san12-region-layout">
+        <article className="san12-panel san12-region-panel">
+          <PanelHead title="Distribución territorial" meta={`${fmt(regionRows.length)} regiones observables`} />
+          <div className="san12-region-list">
+            {regionRows.map((r) => <div key={r.region} className="san12-region-item" data-active={selectedRegion === r.region}>
+              <button className="san12-region-main" onClick={() => chooseRegion(r.region)}>
+                <span className="san12-region-name">{r.region}</span>
+                <span className="san12-track"><i style={{ width: `${Math.max(3, (r.events / maxRegion) * 100)}%` }} /></span>
+                <b>{fmt(r.events)}</b>
+                <small>{fmt(r.entities)} ent.</small>
+                <em>{fmtUf(r.amountUf)} UF</em>
+              </button>
+              {selectedRegion === r.region && <div className="san12-region-actors">
+                <span>Actores principales · máximo 2</span>
+                {regionalActors.length ? regionalActors.map((actor) => <button key={actor.key} data-active={selectedActor === actor.key} onClick={() => setSelectedActor(selectedActor === actor.key ? null : actor.key)}>
+                  <div><b>{actor.name}</b><small>{actor.rut !== 's/i' ? actor.rut : actor.sector}</small></div>
+                  <span>{fmt(actor.events)} eventos</span>
+                  <em>{fmtUf(actor.amountUf)} UF</em>
+                </button>) : <Empty text="No hay actores identificables en esta región." compact />}
+              </div>}
+            </div>)}
           </div>
         </article>
-        <article className="sanctions-panel sanctions-focus">
-          <PanelHead title="Lectura rápida" meta="sobre el filtro actual" />
-          <Focus label="Institución dominante" value={stats.topRegulator || '—'} sub={stats.topRegulator ? `${fmt(stats.topRegulatorCount)} eventos` : 'Sin datos'} />
-          <Focus label="Industria más observada" value={stats.topSector || 'Sin sector UAF'} sub={stats.topSector ? `${fmt(stats.topSectorCount)} eventos` : 'Cobertura sectorial incompleta'} />
-          <Focus label="Región más observada" value={stats.topRegion || 'Sin región'} sub={stats.topRegion ? `${fmt(stats.topRegionCount)} eventos` : 'Territorio no resuelto'} />
-          <Focus label="Último evento" value={formatDate(stats.lastDate)} sub={stats.lastEntity || 'Sin entidad identificada'} />
+
+        <article className="san12-panel san12-inspector" data-open={Boolean(selectedActorSummary)}>
+          {selectedActorSummary ? <ActorInspector actor={selectedActorSummary} onBack={() => setSelectedActor(null)} onNavigate={onNavigate} /> : <>
+            <PanelHead title="Inspector de actor" meta="profundización contextual" />
+            <div className="san12-inspector-placeholder">
+              <span>◎</span>
+              <b>Selecciona un actor regional</b>
+              <p>La ficha concentra identidad, territorio, sector, recurrencia, monto y trazabilidad documental sin abandonar el radar.</p>
+            </div>
+          </>}
         </article>
       </div>
     </section>
 
-    <section className="sanctions-block">
-      <SectionHead index="B" title="Matriz territorial" subtitle="Distribución regional de eventos, entidades y montos. Selecciona una región para cruzar toda la vista." />
-      <article className="sanctions-panel">
-        <div className="sanctions-region-grid">
-          {regionRows.map((r) => {
-            const max = Math.max(...regionRows.map((x) => x.events), 1);
-            return <button key={r.region} className="sanctions-region-row" data-active={filters.region === r.region} onClick={() => toggleFilter('region', r.region)}>
-              <span className="region-name">{r.region}</span>
-              <span className="region-bar"><i style={{ width: `${Math.max(4, (r.events / max) * 100)}%` }} /></span>
-              <b>{fmt(r.events)}</b><small>{fmt(r.entities)} entidades</small><em>{fmtUf(r.amountUf)} UF</em>
-            </button>;
-          })}
-        </div>
-      </article>
+    <section className="san12-section">
+      <SectionHead index="C" title="Rigor e intensidad regulatoria" subtitle="Se preserva el bloque IER de la referencia aprobada. El read model de Atlas no contiene el IER original, por lo que se marca s/i y se muestran métricas observables sin sustituirlo por un índice inventado." />
+      <div className="san12-rigor-grid">
+        {deriveRegulators(visibleRows).map((r) => <article key={r.regulator} className="san12-panel san12-rigor-card">
+          <header><span>{r.regulator}</span><small>{SOURCE_NAMES[r.regulator] ?? 'Institución'}</small></header>
+          <div className="san12-ier"><span>IER 0–100</span><b>s/i</b><small>No disponible en contrato actual</small></div>
+          <div className="san12-rigor-metrics">
+            <Metric label="Eventos" value={fmt(r.events)} />
+            <Metric label="Entidades" value={fmt(r.entities)} />
+            <Metric label="UF observadas" value={fmtUf(r.amountUf)} />
+            <Metric label="Último caso" value={formatDate(r.lastDate)} />
+          </div>
+        </article>)}
+        {!deriveRegulators(visibleRows).length && <Empty text="Sin actividad institucional para este corte." />}
+      </div>
     </section>
 
-    <section className="sanctions-block">
-      <SectionHead index="C" title="Rigor e intensidad regulatoria" subtitle="El IER del Workbench no forma parte del read model actual de Atlas. Se muestra intensidad monetaria observable (UF) y tendencia, sin tratarlas como equivalentes." />
-      <div className="sanctions-split">
-        <article className="sanctions-panel">
-          <PanelHead title="Intensidad por institución" meta="sólo eventos con monto UF" />
-          <div className="sanctions-rigor-list">{regulatorRows.map((r) => {
-            const maxAvg = Math.max(...regulatorRows.map((x) => x.avgUf), 1);
-            return <button key={r.regulator} data-active={filters.regulator === r.regulator} onClick={() => toggleFilter('regulator', r.regulator)}>
-              <span><b>{r.regulator}</b><small>{fmtUf(r.avgUf)} UF promedio</small></span>
-              <span className="rigor-track"><i style={{ width: `${Math.max(r.avgUf ? 5 : 0, (r.avgUf / maxAvg) * 100)}%` }} /></span>
-              <em>{trendLabel(r.trend)}</em>
-            </button>;
-          })}</div>
+    <section className="san12-section">
+      <SectionHead index="D" title="Calidad del enforcement" subtitle="Cobertura documental y de identificación del corte visible. Los faltantes se reportan como no observables, nunca como ausencia de riesgo o incumplimiento." />
+      <div className="san12-quality-layout">
+        <article className="san12-panel">
+          <PanelHead title="Cobertura de evidencia" meta={`${fmt(visibleRows.length)} eventos evaluados`} />
+          <div className="san12-quality-list">
+            <Quality label="Documento enlazado" value={quality.documentPct} count={quality.withDocument} total={visibleRows.length} />
+            <Quality label="Referencia / resolución" value={quality.resolutionPct} count={quality.withResolution} total={visibleRows.length} />
+            <Quality label="Identidad resuelta" value={quality.identityPct} count={quality.withIdentity} total={visibleRows.length} />
+            <Quality label="Monto observable" value={quality.amountPct} count={quality.withAmount} total={visibleRows.length} />
+          </div>
+          {quality.qualityClasses <= 1 && <div className="san12-warning"><b>Lectura incompleta</b><span>La clasificación de calidad documental tiene cobertura o diversidad insuficiente para interpretar diferencias de calidad entre casos.</span></div>}
         </article>
-        <article className="sanctions-panel">
-          <PanelHead title="Comparador de intensidad" meta={`media general ${fmtUf(stats.avgUf)} UF`} />
-          <table className="sanctions-table compact"><thead><tr><th>Institución</th><th>UF media</th><th>% casos &gt; media</th><th>Tendencia</th><th>Más reciente</th></tr></thead>
-            <tbody>{regulatorRows.map((r) => <tr key={r.regulator} onClick={() => toggleFilter('regulator', r.regulator)}><td><b>{r.regulator}</b></td><td>{fmtUf(r.avgUf)}</td><td>{pct(r.aboveAverage, r.withAmount)}</td><td>{trendLabel(r.trend)}</td><td>{formatDate(r.lastDate)}</td></tr>)}</tbody>
-          </table>
+
+        <article className="san12-panel">
+          <PanelHead title="Evolución del corte" meta="eventos por año" />
+          <div className="san12-year-bars">
+            {years.map((r) => <button key={r.year} data-active={filters.year === String(r.year)} onClick={() => setFilter('year', filters.year === String(r.year) ? '' : String(r.year))}>
+              <b>{r.events}</b><i style={{ height: `${Math.max(5, (r.events / maxYear) * 100)}%` }} /><span>{r.year}</span>
+            </button>)}
+          </div>
         </article>
       </div>
     </section>
 
-    <section className="sanctions-block">
-      <SectionHead index="D" title="Cobertura de enforcement" subtitle="Cruce entre industria y evolución temporal para distinguir concentración estructural de episodios puntuales." />
-      <div className="sanctions-split">
-        <article className="sanctions-panel">
-          <PanelHead title="Industrias / sectores" meta="clic para filtrar" />
-          <RankBars rows={sectorRows.slice(0, 12).map((r) => ({ label: r.sector, value: r.events, sub: `${fmt(r.entities)} entidades` }))} active={filters.sector} onPick={(v) => toggleFilter('sector', v)} />
-        </article>
-        <article className="sanctions-panel">
-          <PanelHead title="Evolución anual" meta={`${yearRows.length ? yearRows[yearRows.length - 1].year : '—'} último año con casos`} />
-          <div className="sanctions-years">{yearRows.map((r) => {
-            const max = Math.max(...yearRows.map((x) => x.events), 1);
-            return <button key={r.year} data-active={filters.year === String(r.year)} onClick={() => setFilter('year', filters.year === String(r.year) ? '' : String(r.year))} title={`${r.year}: ${r.events} eventos`}>
-              <span><i style={{ height: `${Math.max(5, (r.events / max) * 100)}%` }} /></span><b>{r.events}</b><small>{String(r.year).slice(-2)}</small>
-            </button>;
-          })}</div>
-          <div className="sanctions-legend">{regulatorRows.map((r) => <button key={r.regulator} data-active={filters.regulator === r.regulator} onClick={() => toggleFilter('regulator', r.regulator)}>{r.regulator} · {fmt(r.events)}</button>)}</div>
-        </article>
+    <section className="san12-section">
+      <SectionHead index="E" title="Casos prioritarios" subtitle="Dos lecturas complementarias: mayor monto UF observado y mayor recencia. El ranking monetario se ordena numéricamente antes de formatear y no usa un corte temporal arbitrario." />
+      <div className="san12-top-grid">
+        <TopList title="Sanciones más costosas" eyebrow="TOP 5 · MONTO UF" rows={costly} mode="cost" onActor={(row) => chooseActor(actorFromRow(row))} />
+        <TopList title="Sanciones más recientes" eyebrow="TOP 5 · FECHA" rows={recent} mode="recent" onActor={(row) => chooseActor(actorFromRow(row))} />
       </div>
     </section>
 
-    <section className="sanctions-block">
-      <SectionHead index="E" title="Casos prioritarios" subtitle="Rankings calculados sobre valores numéricos antes de formatear. Los filtros globales también aplican aquí." />
-      <div className="sanctions-split">
-        <TopCases title="Top 5 · mayor monto UF" rows={costly} metric={(e) => `${fmtUf(num(e.amount_uf))} UF`} onNavigate={onNavigate} />
-        <TopCases title="Top 5 · más recientes" rows={recent} metric={(e) => formatDate(e.event_date)} onNavigate={onNavigate} />
-      </div>
-    </section>
-
-    <section className="sanctions-block">
-      <SectionHead index="F" title="Casos recientes" subtitle="Hasta 50 eventos ordenados cronológicamente. Los documentos oficiales se abren en una pestaña separada." />
-      <article className="sanctions-panel">
-        <div className="sanctions-table-wrap recent">
-          <table className="sanctions-table"><thead><tr><th>Fecha</th><th>Entidad</th><th>Institución</th><th>Sector</th><th>Región</th><th>Monto UF</th><th>Hecho</th><th>Documento</th></tr></thead>
-            <tbody>{recent50.map((e) => <tr key={e.event_id}>
-              <td>{formatDate(e.event_date)}</td>
-              <td>{e.entity_id ? <button className="sanctions-entity-link" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(e.entity_id!)}`)}>{entityName(e)}</button> : <b>{entityName(e)}</b>}<small className="cell-sub">{e.rut || e.identity_status || ''}</small></td>
-              <td><button className="sanctions-chip" onClick={() => toggleFilter('regulator', clean(e.regulator))}>{clean(e.regulator) || '—'}</button></td>
-              <td><button className="sanctions-chip" onClick={() => toggleFilter('sector', sectorOf(e))}>{sectorOf(e)}</button></td>
-              <td>{regionOf(e)}</td><td>{num(e.amount_uf) > 0 ? fmtUf(num(e.amount_uf)) : '—'}</td>
-              <td className="reason-cell" title={e.reason || e.event_kind || ''}>{e.reason || e.event_kind || e.event_class || '—'}</td>
-              <td>{e.document_url ? <a className="sanctions-doc" href={e.document_url} target="_blank" rel="noreferrer">Abrir ↗</a> : <span className="muted">No disponible</span>}</td>
+    <section className="san12-section san12-final-section">
+      <SectionHead index="F" title="Detalle de sanciones recientes" subtitle="Expedientes visibles bajo el contexto activo. La tabla conserva trazabilidad hacia documento oficial y Entidad 360 cuando existe identidad enlazada." />
+      <article className="san12-panel san12-table-panel">
+        <div className="san12-table-head"><span>{fmt(recent50.length)} de {fmt(visibleRows.length)} eventos visibles</span><small>Orden: fecha descendente</small></div>
+        <div className="san12-table-wrap">
+          <table className="san12-table">
+            <thead><tr><th>Fecha</th><th>Entidad</th><th>Institución</th><th>Industria</th><th>Región</th><th>UF</th><th>Motivo / referencia</th><th>Documento</th></tr></thead>
+            <tbody>{recent50.map((row) => <tr key={row.event_id}>
+              <td>{formatDate(row.event_date)}</td>
+              <td><button className="san12-entity-link" onClick={() => chooseActor(actorFromRow(row))}>{actorName(row)}</button><small>{safe(row.rut)}</small></td>
+              <td><span className="san12-reg-badge">{safe(row.regulator)}</span></td>
+              <td>{sectorOf(row)}</td>
+              <td>{regionOf(row)}</td>
+              <td className="num">{num(row.amount_uf) > 0 ? fmtUf(num(row.amount_uf)) : 's/i'}</td>
+              <td><span className="san12-reason">{short(row.reason || row.resolution_ref, 110)}</span></td>
+              <td>{safeUrl(row.document_url) ? <a href={safeUrl(row.document_url)} target="_blank" rel="noreferrer">Abrir ↗</a> : <span className="san12-muted">s/i</span>}</td>
             </tr>)}</tbody>
           </table>
+          {!recent50.length && <Empty text="No hay expedientes para el contexto activo." />}
         </div>
       </article>
     </section>
-
-    <footer className="sanctions-foot">
-      <b>Regla de lectura</b><span>Ausencia de monto, RUT, sector, territorio o documento no se transforma en cero ni en señal adversa. La vista conserva los faltantes como “no observable”.</span>
-    </footer>
   </div>;
 }
 
 function Filter({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <label className="sanctions-filter"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}><option value="">Todos</option>{options.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>;
+  return <label className="san12-filter"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}><option value="">Todos</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
 }
+
 function Kpi({ label, value, hint, emphasis = false }: { label: string; value: string; hint: string; emphasis?: boolean }) {
-  return <article className="sanctions-kpi" data-emphasis={emphasis}><span>{label}</span><strong>{value}</strong><small>{hint}</small></article>;
+  return <article className="san12-kpi" data-emphasis={emphasis}><span>{label}</span><b>{value}</b><small>{hint}</small></article>;
 }
+
 function SectionHead({ index, title, subtitle }: { index: string; title: string; subtitle: string }) {
-  return <div className="sanctions-section-head"><span>{index}</span><div><h2>{title}</h2><p>{subtitle}</p></div></div>;
+  return <header className="san12-section-head"><span>{index}</span><div><h2>{title}</h2><p>{subtitle}</p></div></header>;
 }
-function PanelHead({ title, meta }: { title: string; meta: string }) { return <div className="sanctions-panel-head"><b>{title}</b><span>{meta}</span></div>; }
-function Focus({ label, value, sub }: { label: string; value: string; sub: string }) { return <div className="sanctions-focus-row"><span>{label}</span><b>{value}</b><small>{sub}</small></div>; }
-function RankBars({ rows, active, onPick }: { rows: { label: string; value: number; sub: string }[]; active: string; onPick: (value: string) => void }) {
-  const max = Math.max(...rows.map((r) => r.value), 1);
-  return <div className="sanctions-rank-bars">{rows.map((r) => <button key={r.label} data-active={active === r.label} onClick={() => onPick(r.label)}><span><b>{r.label}</b><small>{r.sub}</small></span><span className="rank-track"><i style={{ width: `${Math.max(5, (r.value / max) * 100)}%` }} /></span><em>{fmt(r.value)}</em></button>)}</div>;
+
+function PanelHead({ title, meta }: { title: string; meta: string }) {
+  return <header className="san12-panel-head"><b>{title}</b><span>{meta}</span></header>;
 }
-function TopCases({ title, rows, metric, onNavigate }: { title: string; rows: SanctionEvent[]; metric: (e: SanctionEvent) => string; onNavigate: (hash: string) => void }) {
-  return <article className="sanctions-panel"><PanelHead title={title} meta={`${rows.length} casos`} /><ol className="sanctions-top-list">{rows.map((e) => <li key={e.event_id}><span>{e.regulator || '—'}</span><div>{e.entity_id ? <button onClick={() => onNavigate(`#/entidad/${encodeURIComponent(e.entity_id!)}`)}>{entityName(e)}</button> : <b>{entityName(e)}</b>}<small>{sectorOf(e)} · {formatDate(e.event_date)}</small></div><strong>{metric(e)}</strong></li>)}</ol></article>;
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="san12-metric"><span>{label}</span><b>{value}</b></div>;
+}
+
+function Quality({ label, value, count, total }: { label: string; value: number; count: number; total: number }) {
+  return <div className="san12-quality-row">
+    <div><b>{label}</b><span>{fmt(count)} de {fmt(total)}</span></div>
+    <span className="san12-quality-track"><i style={{ width: `${Math.max(value ? 2 : 0, value)}%` }} /></span>
+    <em>{value.toLocaleString('es-CL', { maximumFractionDigits: 1 })}%</em>
+  </div>;
+}
+
+function ActorInspector({ actor, onBack, onNavigate }: { actor: ActorSummary; onBack: () => void; onNavigate: (hash: string) => void }) {
+  const latest = [...actor.rows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date))[0];
+  return <div className="san12-inspector-content">
+    <header><button onClick={onBack}>← Volver</button><span>FICHA DE ACTOR</span></header>
+    <h3>{actor.name}</h3>
+    <p>{actor.rut !== 's/i' ? actor.rut : 'RUT s/i'} · {actor.region}</p>
+    <div className="san12-inspector-kpis">
+      <Metric label="Eventos" value={fmt(actor.events)} />
+      <Metric label="Monto UF" value={fmtUf(actor.amountUf)} />
+      <Metric label="Último evento" value={formatDate(actor.lastDate)} />
+      <Metric label="Institución" value={actor.regulator} />
+    </div>
+    <div className="san12-inspector-detail">
+      <span>Industria / sector</span><b>{actor.sector}</b>
+      <span>Último motivo observable</span><p>{short(latest?.reason, 260)}</p>
+      <span>Referencia</span><b>{safe(latest?.resolution_ref)}</b>
+    </div>
+    <div className="san12-inspector-actions">
+      {actor.entityId && <button onClick={() => onNavigate(`#/entidad/${encodeURIComponent(actor.entityId ?? '')}`)}>Abrir Entidad 360</button>}
+      {safeUrl(latest?.document_url) && <a href={safeUrl(latest?.document_url)} target="_blank" rel="noreferrer">Documento oficial ↗</a>}
+    </div>
+  </div>;
+}
+
+function TopList({ title, eyebrow, rows, mode, onActor }: { title: string; eyebrow: string; rows: SanctionEvent[]; mode: 'cost' | 'recent'; onActor: (row: SanctionEvent) => void }) {
+  return <article className="san12-panel san12-top-list">
+    <header><span>{eyebrow}</span><h3>{title}</h3></header>
+    <div>{rows.map((row, index) => <button key={row.event_id} onClick={() => onActor(row)}>
+      <strong>{index + 1}</strong>
+      <span><b>{actorName(row)}</b><small>{safe(row.regulator)} · {sectorOf(row)}</small></span>
+      <em>{mode === 'cost' ? `${fmtUf(num(row.amount_uf))} UF` : formatDate(row.event_date)}</em>
+    </button>)}</div>
+    {!rows.length && <Empty text="Sin casos para este ranking." compact />}
+  </article>;
+}
+
+function Empty({ text, compact = false }: { text: string; compact?: boolean }) {
+  return <div className="san12-empty" data-compact={compact}>{text}</div>;
 }
 
 function deriveStats(rows: SanctionEvent[]) {
-  const entityKeys = new Set(rows.map((e) => e.entity_id || e.rut || clean(e.canonical_name) || clean(e.source_entity_name)).filter(Boolean));
-  const resolved = new Set(rows.filter((e) => e.in_unified_universe).map((e) => e.entity_id || e.rut).filter(Boolean));
-  const regulators = new Map<string, number>(); const sectors = new Map<string, number>(); const regions = new Map<string, number>();
-  let amountUf = 0; let withAmount = 0; let withDocument = 0;
-  rows.forEach((e) => { countMap(regulators, clean(e.regulator) || 'Sin institución'); countMap(sectors, sectorOf(e)); countMap(regions, regionOf(e)); const v = num(e.amount_uf); if (v > 0) { amountUf += v; withAmount += 1; } if (e.document_url) withDocument += 1; });
-  const topReg = topMap(regulators), topSector = topMap(sectors), topRegion = topMap(regions);
-  const newest = [...rows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date))[0];
-  return { events: rows.length, entities: entityKeys.size, resolvedEntities: resolved.size, regulators: regulators.size, amountUf, withAmount, withDocument, avgUf: withAmount ? amountUf / withAmount : 0, topRegulator: topReg[0], topRegulatorCount: topReg[1], topSector: topSector[0], topSectorCount: topSector[1], topRegion: topRegion[0], topRegionCount: topRegion[1], lastDate: newest?.event_date ?? null, lastEntity: newest ? entityName(newest) : null };
+  const actorKeys = rows.map(actorKey).filter(Boolean);
+  const regulators = unique(rows.map((e) => clean(e.regulator)).filter(Boolean));
+  const withAmount = rows.filter((e) => num(e.amount_uf) > 0).length;
+  const amountUf = rows.reduce((sum, e) => sum + num(e.amount_uf), 0);
+  const top = countBy(rows.map((e) => clean(e.regulator)).filter(Boolean))[0];
+  return {
+    events: rows.length,
+    entities: unique(actorKeys).length,
+    resolvedEntities: unique(rows.filter((e) => e.entity_id).map(actorKey)).length,
+    regulators: regulators.length,
+    amountUf,
+    withAmount,
+    topRegulator: top?.key ?? '',
+  };
 }
-function deriveRegulators(rows: SanctionEvent[]) {
-  const overallPositive = rows.map((e) => num(e.amount_uf)).filter((v) => v > 0); const overallAvg = overallPositive.length ? overallPositive.reduce((a, b) => a + b, 0) / overallPositive.length : 0;
-  const groups = new Map<string, SanctionEvent[]>(); rows.forEach((e) => { const key = clean(e.regulator) || 'Sin institución'; groups.set(key, [...(groups.get(key) ?? []), e]); });
-  return [...groups.entries()].map(([regulator, ev]) => { const positives = ev.map((e) => num(e.amount_uf)).filter((v) => v > 0); const byYear = new Map<number, number[]>(); ev.forEach((e) => { if (e.event_year && num(e.amount_uf) > 0) byYear.set(e.event_year, [...(byYear.get(e.event_year) ?? []), num(e.amount_uf)]); }); const points = [...byYear.entries()].sort((a, b) => a[0] - b[0]).map(([year, vals]) => [year, vals.reduce((a, b) => a + b, 0) / vals.length] as [number, number]); return { regulator, events: ev.length, entities: new Set(ev.map((e) => e.entity_id || e.rut || entityName(e))).size, years: new Set(ev.map((e) => e.event_year).filter(Boolean)).size, lastDate: [...ev].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date))[0]?.event_date ?? null, amountUf: positives.reduce((a, b) => a + b, 0), avgUf: positives.length ? positives.reduce((a, b) => a + b, 0) / positives.length : 0, withAmount: positives.length, aboveAverage: positives.filter((v) => overallAvg > 0 && v > overallAvg).length, trend: slope(points) }; }).sort((a, b) => b.events - a.events || dateValue(b.lastDate) - dateValue(a.lastDate));
-}
-function deriveRegions(rows: SanctionEvent[]) { const groups = new Map<string, SanctionEvent[]>(); rows.forEach((e) => { const k = regionOf(e); groups.set(k, [...(groups.get(k) ?? []), e]); }); return [...groups.entries()].map(([region, ev]) => ({ region, events: ev.length, entities: new Set(ev.map((e) => e.entity_id || e.rut || entityName(e))).size, amountUf: ev.reduce((s, e) => s + Math.max(0, num(e.amount_uf)), 0) })).sort((a, b) => b.events - a.events); }
-function deriveSectors(rows: SanctionEvent[]) { const groups = new Map<string, SanctionEvent[]>(); rows.forEach((e) => { const k = sectorOf(e); groups.set(k, [...(groups.get(k) ?? []), e]); }); return [...groups.entries()].map(([sector, ev]) => ({ sector, events: ev.length, entities: new Set(ev.map((e) => e.entity_id || e.rut || entityName(e))).size })).sort((a, b) => b.events - a.events); }
-function deriveYears(rows: SanctionEvent[]) { const m = new Map<number, number>(); rows.forEach((e) => { if (e.event_year) m.set(e.event_year, (m.get(e.event_year) ?? 0) + 1); }); return [...m.entries()].map(([year, events]) => ({ year, events })).sort((a, b) => a.year - b.year); }
 
-function sectorOf(e: SanctionEvent) { return clean(e.uaf_sector) || clean(e.current_condition) || 'Sin sector UAF'; }
-function regionOf(e: SanctionEvent) { return clean(e.region) || 'Sin región resuelta'; }
-function entityName(e: SanctionEvent) { return clean(e.canonical_name) || clean(e.source_entity_name) || 'Entidad no resuelta'; }
-function clean(v: string | null | undefined) { return (v ?? '').trim(); }
-function num(v: number | string | null | undefined) { const n = typeof v === 'number' ? v : Number(v ?? 0); return Number.isFinite(n) ? n : 0; }
-function unique<T>(values: T[]) { return [...new Set(values)]; }
-function countMap(map: Map<string, number>, key: string) { map.set(key, (map.get(key) ?? 0) + 1); }
-function topMap(map: Map<string, number>): [string, number] { return [...map.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['', 0]; }
-function dateValue(v: string | null | undefined) { const n = v ? new Date(`${v}T00:00:00`).getTime() : 0; return Number.isFinite(n) ? n : 0; }
-function formatDate(v: string | null | undefined) { if (!v) return '—'; const d = new Date(`${v.slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(d); }
-function formatDateTime(v: string | null | undefined) { if (!v) return 'Sin fecha'; const d = new Date(v); return Number.isNaN(d.getTime()) ? 'Sin fecha' : new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d); }
-function fmt(v: number | string | null | undefined) { return new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(num(v)); }
-function fmtUf(v: number | string | null | undefined) { const n = num(v); return new Intl.NumberFormat('es-CL', { maximumFractionDigits: n >= 1000 ? 0 : 1 }).format(n); }
-function pct(part: number, total: number) { if (!total) return '0%'; return `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format((part / total) * 100)}%`; }
-function slope(points: [number, number][]) { if (points.length < 2) return 0; const xm = points.reduce((s, p) => s + p[0], 0) / points.length; const ym = points.reduce((s, p) => s + p[1], 0) / points.length; const den = points.reduce((s, p) => s + (p[0] - xm) ** 2, 0); if (!den) return 0; return points.reduce((s, p) => s + (p[0] - xm) * (p[1] - ym), 0) / den; }
-function trendLabel(v: number) { if (v > 0.05) return 'aumentó'; if (v < -0.05) return 'disminuyó'; return 'neutral'; }
+function deriveRegulators(rows: SanctionEvent[]): RegulatorSummary[] {
+  const map = new Map<string, SanctionEvent[]>();
+  rows.forEach((e) => {
+    const key = clean(e.regulator) || 's/i';
+    map.set(key, [...(map.get(key) ?? []), e]);
+  });
+  return [...map.entries()].map(([regulator, list]) => ({
+    regulator,
+    events: list.length,
+    entities: unique(list.map(actorKey).filter(Boolean)).length,
+    years: unique(list.map((e) => e.event_year).filter((v): v is number => v != null)).length,
+    amountUf: list.reduce((sum, e) => sum + num(e.amount_uf), 0),
+    lastDate: latestDate(list),
+  })).sort((a, b) => b.events - a.events || b.amountUf - a.amountUf);
+}
+
+function deriveRegions(rows: SanctionEvent[]): RegionSummary[] {
+  const map = new Map<string, SanctionEvent[]>();
+  rows.forEach((e) => {
+    const region = regionOf(e);
+    if (region === 's/i') return;
+    map.set(region, [...(map.get(region) ?? []), e]);
+  });
+  return [...map.entries()].map(([region, list]) => ({
+    region,
+    events: list.length,
+    entities: unique(list.map(actorKey).filter(Boolean)).length,
+    amountUf: list.reduce((sum, e) => sum + num(e.amount_uf), 0),
+  })).sort((a, b) => b.events - a.events || b.amountUf - a.amountUf);
+}
+
+function deriveActors(rows: SanctionEvent[]): ActorSummary[] {
+  const map = new Map<string, SanctionEvent[]>();
+  rows.forEach((e) => {
+    const key = actorKey(e);
+    if (!key) return;
+    map.set(key, [...(map.get(key) ?? []), e]);
+  });
+  return [...map.entries()].map(([key, list]) => {
+    const latest = [...list].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date))[0];
+    return {
+      key,
+      name: actorName(latest),
+      rut: safe(latest?.rut),
+      events: list.length,
+      amountUf: list.reduce((sum, e) => sum + num(e.amount_uf), 0),
+      lastDate: latestDate(list),
+      regulator: safe(latest?.regulator),
+      sector: sectorOf(latest),
+      region: regionOf(latest),
+      entityId: latest?.entity_id ?? list.find((e) => e.entity_id)?.entity_id ?? null,
+      rows: list,
+    };
+  }).sort((a, b) => b.events - a.events || b.amountUf - a.amountUf || dateValue(b.lastDate) - dateValue(a.lastDate));
+}
+
+function deriveYears(rows: SanctionEvent[]) {
+  const counts = new Map<number, number>();
+  rows.forEach((e) => { if (e.event_year != null) counts.set(e.event_year, (counts.get(e.event_year) ?? 0) + 1); });
+  return [...counts.entries()].map(([year, events]) => ({ year, events })).sort((a, b) => a.year - b.year);
+}
+
+function deriveQuality(rows: SanctionEvent[]) {
+  const withDocument = rows.filter((e) => Boolean(safeUrl(e.document_url))).length;
+  const withResolution = rows.filter((e) => Boolean(clean(e.resolution_ref))).length;
+  const withIdentity = rows.filter((e) => Boolean(e.entity_id || clean(e.rut) || clean(e.canonical_name))).length;
+  const withAmount = rows.filter((e) => num(e.amount_uf) > 0 || num(e.amount_clp) > 0).length;
+  const qualityClasses = unique(rows.map((e) => clean(e.document_quality)).filter(Boolean)).length;
+  return {
+    withDocument,
+    withResolution,
+    withIdentity,
+    withAmount,
+    qualityClasses,
+    documentPct: percentage(withDocument, rows.length),
+    resolutionPct: percentage(withResolution, rows.length),
+    identityPct: percentage(withIdentity, rows.length),
+    amountPct: percentage(withAmount, rows.length),
+  };
+}
+
+function actorFromRow(row: SanctionEvent): ActorSummary {
+  return {
+    key: actorKey(row),
+    name: actorName(row),
+    rut: safe(row.rut),
+    events: 1,
+    amountUf: num(row.amount_uf),
+    lastDate: row.event_date,
+    regulator: safe(row.regulator),
+    sector: sectorOf(row),
+    region: regionOf(row),
+    entityId: row.entity_id,
+    rows: [row],
+  };
+}
+
+function actorKey(e?: SanctionEvent | null) {
+  if (!e) return '';
+  return clean(e.entity_key) || clean(e.entity_id) || clean(e.rut) || normalize(actorName(e)) || clean(e.event_id);
+}
+
+function actorName(e?: SanctionEvent | null) {
+  return clean(e?.canonical_name) || clean(e?.source_entity_name) || clean(e?.rut) || 'Entidad s/i';
+}
+
+function sectorOf(e?: SanctionEvent | null) {
+  return clean(e?.uaf_sector) || 'Sin sector UAF';
+}
+
+function regionOf(e?: SanctionEvent | null) {
+  const raw = clean(e?.region);
+  if (!raw) return 's/i';
+  const n = normalize(raw);
+  if (n.includes('METROPOLITANA')) return 'Metropolitana de Santiago';
+  if (n.includes('OHIGGINS') || n.includes('O HIGGINS') || n.includes('LIBERTADOR GENERAL BERNARDO')) return "Libertador Gral. Bernardo O'Higgins";
+  if (n.includes('AYSEN')) return 'Aysén';
+  if (n.includes('ARICA') && n.includes('PARINACOTA')) return 'Arica y Parinacota';
+  if (n.includes('ARAUCANIA')) return 'La Araucanía';
+  if (n.includes('BIOBIO')) return 'Biobío';
+  if (n.includes('MAGALLANES')) return 'Magallanes y de la Antártica Chilena';
+  return raw;
+}
+
+function countBy(values: string[]) {
+  const map = new Map<string, number>();
+  values.forEach((value) => map.set(value, (map.get(value) ?? 0) + 1));
+  return [...map.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
+}
+
+function latestDate(rows: SanctionEvent[]) {
+  return rows.reduce<string | null>((latest, e) => dateValue(e.event_date) > dateValue(latest) ? e.event_date : latest, null);
+}
+
+function safe(value: unknown) {
+  const text = value == null ? '' : String(value).trim();
+  return text || 's/i';
+}
+
+function clean(value: unknown) {
+  return value == null ? '' : String(value).trim();
+}
+
+function normalize(value: unknown) {
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9K]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function safeUrl(value: unknown) {
+  try {
+    const url = new URL(String(value ?? ''));
+    return /^https?:$/.test(url.protocol) ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function num(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function unique<T>(values: T[]) {
+  return [...new Set(values)];
+}
+
+function percentage(part: number, total: number) {
+  return total ? (part / total) * 100 : 0;
+}
+
+function dateValue(value: unknown) {
+  if (!value) return 0;
+  const n = new Date(String(value)).getTime();
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatDate(value: unknown) {
+  if (!value) return 's/i';
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? safe(value) : d.toLocaleDateString('es-CL');
+}
+
+function formatDateTime(value: unknown) {
+  if (!value) return 's/i';
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? safe(value) : d.toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function fmt(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(n) : 's/i';
+}
+
+function fmtUf(value: unknown) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 's/i';
+  return new Intl.NumberFormat('es-CL', { maximumFractionDigits: n >= 100 ? 0 : 1 }).format(n);
+}
+
+function short(value: unknown, max = 100) {
+  const text = clean(value);
+  if (!text) return 's/i';
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
