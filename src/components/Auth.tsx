@@ -7,7 +7,17 @@ type Access =
   | { state: 'checking' }
   | { state: 'granted'; role: string }
   | { state: 'pending' }
-  | { state: 'error'; message: string };
+  | { state: 'error'; message: string; transport: boolean };
+
+const RETRY_DELAYS_MS = [0, 450, 1200] as const;
+
+function isTransportError(message: string) {
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(message);
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+}
 
 /** The Observatorio reuses the ATLAS identity model exactly: Microsoft Entra
  *  proves who you are, and the aml_allowed_users allowlist decides whether you
@@ -17,6 +27,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [access, setAccess] = useState<Access>({ state: 'checking' });
+  const [validationKey, setValidationKey] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -27,26 +38,76 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // A temporary loss of connectivity must not strand an already authenticated
+  // analyst on the error screen. When the browser reports that connectivity is
+  // back, validate authorization again. RLS is still the authority: there is no
+  // client-side bypass or cached grant.
+  useEffect(() => {
+    const retryWhenOnline = () => setValidationKey((value) => value + 1);
+    window.addEventListener('online', retryWhenOnline);
+    return () => window.removeEventListener('online', retryWhenOnline);
+  }, []);
+
   useEffect(() => {
     if (!session) {
       setAccess({ state: 'checking' });
       return;
     }
+
     let live = true;
-    supabase
-      .from('aml_allowed_users')
-      .select('role, enabled')
-      .maybeSingle()
-      .then(({ data, error }) => {
+
+    async function validateAccess() {
+      setAccess({ state: 'checking' });
+      let lastMessage = 'No fue posible consultar la lista de habilitación.';
+      let transport = false;
+
+      for (const waitMs of RETRY_DELAYS_MS) {
+        if (waitMs) await delay(waitMs);
         if (!live) return;
-        if (error) setAccess({ state: 'error', message: error.message });
-        else if (data?.enabled) setAccess({ state: 'granted', role: data.role ?? 'viewer' });
-        else setAccess({ state: 'pending' });
-      });
+
+        try {
+          const { data, error } = await supabase
+            .from('aml_allowed_users')
+            .select('role, enabled')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (!live) return;
+
+          if (!error) {
+            if (data?.enabled) {
+              setAccess({ state: 'granted', role: data.role ?? 'viewer' });
+            } else {
+              setAccess({ state: 'pending' });
+            }
+            return;
+          }
+
+          lastMessage = error.message;
+          transport = isTransportError(lastMessage);
+          if (!transport) {
+            setAccess({ state: 'error', message: lastMessage, transport: false });
+            return;
+          }
+        } catch (error) {
+          lastMessage = error instanceof Error ? error.message : String(error);
+          transport = isTransportError(lastMessage);
+          if (!transport) {
+            setAccess({ state: 'error', message: lastMessage, transport: false });
+            return;
+          }
+        }
+      }
+
+      if (live) setAccess({ state: 'error', message: lastMessage, transport });
+    }
+
+    void validateAccess();
+
     return () => {
       live = false;
     };
-  }, [session]);
+  }, [session, validationKey]);
 
   if (configError) {
     return (
@@ -78,10 +139,19 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
     return (
       <Card title="No fue posible validar el acceso">
         <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
-          La sesión se autenticó, pero la consulta a la lista de habilitación falló.
+          {access.transport
+            ? 'La sesión está autenticada, pero la comunicación con la capa de datos falló después de varios intentos. Esto no significa que tu cuenta esté deshabilitada.'
+            : 'La sesión está autenticada, pero la capa de autorización respondió con un error.'}
         </p>
         <div className="note note-warn">{access.message}</div>
-        <SignOutButton />
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: 18 }}
+          onClick={() => setValidationKey((value) => value + 1)}
+        >
+          Reintentar validación
+        </button>
+        <SignOutButton marginTop={10} />
       </Card>
     );
   }
@@ -144,11 +214,11 @@ function SignIn() {
   );
 }
 
-function SignOutButton() {
+function SignOutButton({ marginTop = 18 }: { marginTop?: number }) {
   return (
     <button
       className="btn"
-      style={{ width: '100%', marginTop: 18 }}
+      style={{ width: '100%', marginTop }}
       onClick={() => supabase.auth.signOut()}
     >
       Cerrar sesión
