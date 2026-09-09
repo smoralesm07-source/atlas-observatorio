@@ -8,20 +8,35 @@ export interface AsyncState<T> {
   reload: () => void;
 }
 
+type RpcError = { message?: string; hint?: string; code?: string } | null;
+
+function isStatementTimeout(e: unknown): boolean {
+  const err = e as RpcError;
+  return Boolean(
+    err && (
+      err.code === '57014'
+      || /statement timeout|canceling statement due to statement timeout/i.test(err.message ?? '')
+    )
+  );
+}
+
 function message(e: unknown): string {
-  const err = e as { message?: string; hint?: string; code?: string } | null;
+  const err = e as RpcError;
   if (!err) return 'Error desconocido.';
   if (err.code === 'PGRST301' || err.code === '42501') {
     return 'Tu cuenta no está habilitada en la lista de acceso del Observatorio.';
   }
-  if (err.code === '57014' || /statement timeout|canceling statement due to statement timeout/i.test(err.message ?? '')) {
+  if (isStatementTimeout(err)) {
     return 'La consulta excedió el tiempo máximo. Atlas detuvo ese intento para proteger el servicio; reintenta o completa más caracteres del nombre.';
   }
   return err.message ?? 'Error desconocido.';
 }
 
 /** Calls an obs_* contract and tracks its lifecycle. Late responses from a
- *  superseded call are dropped, so a fast typist never sees stale results. */
+ *  superseded call are dropped, so a fast typist never sees stale results.
+ *  Entity 360 retries one statement-timeout automatically: its lookup is an
+ *  exact entity-id request, so a second attempt is safe and absorbs transient
+ *  database contention without making broad searches run twice. */
 export function useRpc<T>(
   fn: string,
   args: Record<string, unknown>,
@@ -43,21 +58,53 @@ export function useRpc<T>(
       setLoading(false);
       return;
     }
+
     const my = ++seq.current;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const parsedArgs = JSON.parse(argKey) as Record<string, unknown>;
+    const mayRetryTimeout = fn === 'obs_entity_detail';
+
+    setError(null);
     setLoading(true);
-    supabase
-      .rpc(fn, JSON.parse(argKey))
-      .then(({ data: d, error: e }) => {
-        if (my !== seq.current) return;
-        if (e) {
+
+    const run = (attempt: number) => {
+      supabase
+        .rpc(fn, parsedArgs)
+        .then(({ data: d, error: e }) => {
+          if (my !== seq.current) return;
+
+          if (e && mayRetryTimeout && isStatementTimeout(e) && attempt === 0) {
+            // Breve backoff para dejar salir la consulta cancelada y reintentar
+            // el expediente exacto sin mostrar un falso fallo permanente.
+            retryTimer = setTimeout(() => {
+              if (my === seq.current) run(1);
+            }, 450);
+            return;
+          }
+
+          if (e) {
+            setError(message(e));
+            setData(null);
+          } else {
+            setError(null);
+            setData(d as T);
+          }
+          setLoading(false);
+        })
+        .catch((e: unknown) => {
+          if (my !== seq.current) return;
           setError(message(e));
           setData(null);
-        } else {
-          setError(null);
-          setData(d as T);
-        }
-        setLoading(false);
-      });
+          setLoading(false);
+        });
+    };
+
+    run(0);
+
+    return () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      if (seq.current === my) ++seq.current;
+    };
   }, [fn, argKey, opts.skip, nonce]);
 
   const reload = useCallback(() => setNonce((v) => v + 1), []);
