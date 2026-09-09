@@ -36,7 +36,9 @@ function message(e: unknown, fn?: string): string {
 }
 
 /** Calls an obs_* contract and tracks its lifecycle. Late responses from a
- *  superseded call are dropped, so a fast typist never sees stale results.
+ *  superseded call are dropped, and data from the superseded request is also
+ *  cleared immediately. This is important for search screens: the query shown
+ *  in the input must never coexist with rows returned for a previous query.
  *  Entity 360 retries one statement-timeout automatically: its lookup is an
  *  exact entity-id request, so a second attempt is safe and absorbs transient
  *  database contention without making broad searches run twice. */
@@ -57,6 +59,7 @@ export function useRpc<T>(
       // Invalida cualquier respuesta tardía de una consulta que dejó de ser
       // pertinente (p. ej. porque el analista borró o cambió el texto).
       ++seq.current;
+      setData(null);
       setError(null);
       setLoading(false);
       return;
@@ -67,6 +70,10 @@ export function useRpc<T>(
     const parsedArgs = JSON.parse(argKey) as Record<string, unknown>;
     const mayRetryTimeout = fn === 'obs_entity_detail';
 
+    // No conservar resultados de los argumentos anteriores mientras llega la
+    // nueva respuesta. De lo contrario una búsqueda nueva puede rotular como
+    // propios resultados que en realidad pertenecen a la consulta anterior.
+    setData(null);
     setError(null);
     setLoading(true);
 
