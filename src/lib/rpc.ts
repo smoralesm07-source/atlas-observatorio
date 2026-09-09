@@ -20,13 +20,16 @@ function isStatementTimeout(e: unknown): boolean {
   );
 }
 
-function message(e: unknown): string {
+function message(e: unknown, fn?: string): string {
   const err = e as RpcError;
   if (!err) return 'Error desconocido.';
   if (err.code === 'PGRST301' || err.code === '42501') {
     return 'Tu cuenta no está habilitada en la lista de acceso del Observatorio.';
   }
   if (isStatementTimeout(err)) {
+    if (fn === 'obs_entity_detail') {
+      return 'La ficha completa tardó más de lo esperado incluso después de un reintento automático. Puedes reintentar sin perder la entidad seleccionada.';
+    }
     return 'La consulta excedió el tiempo máximo. Atlas detuvo ese intento para proteger el servicio; reintenta o completa más caracteres del nombre.';
   }
   return err.message ?? 'Error desconocido.';
@@ -83,7 +86,7 @@ export function useRpc<T>(
           }
 
           if (e) {
-            setError(message(e));
+            setError(message(e, fn));
             setData(null);
           } else {
             setError(null);
@@ -93,7 +96,7 @@ export function useRpc<T>(
         })
         .catch((e: unknown) => {
           if (my !== seq.current) return;
-          setError(message(e));
+          setError(message(e, fn));
           setData(null);
           setLoading(false);
         });
