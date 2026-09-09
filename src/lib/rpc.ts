@@ -20,16 +20,33 @@ function isStatementTimeout(e: unknown): boolean {
   );
 }
 
+/**
+ * Errores que pueden aparecer durante un reinicio, failover o recuperación
+ * breve de Postgres/PostgREST. No significan que el contrato esté roto y, para
+ * una consulta exacta por entity_id, es seguro reintentar con backoff.
+ */
+function isTransientRpcError(e: unknown): boolean {
+  const err = e as RpcError;
+  const code = err?.code ?? '';
+  const msg = err?.message ?? (e instanceof Error ? e.message : '');
+
+  return Boolean(
+    isStatementTimeout(e)
+    || ['57P03', '53300', '08000', '08001', '08003', '08004', '08006', 'PGRST000', 'PGRST001', 'PGRST002'].includes(code)
+    || /database system is (starting up|not accepting connections)|connection (?:reset|refused|terminated)|failed to fetch|networkerror|fetch failed|temporarily unavailable|upstream.*timeout/i.test(msg)
+  );
+}
+
 function message(e: unknown, fn?: string): string {
   const err = e as RpcError;
   if (!err) return 'Error desconocido.';
   if (err.code === 'PGRST301' || err.code === '42501') {
     return 'Tu cuenta no está habilitada en la lista de acceso del Observatorio.';
   }
+  if (fn === 'obs_entity_detail' && isTransientRpcError(err)) {
+    return 'Atlas no recibió una respuesta estable de la base de datos después de varios intentos automáticos. La entidad sigue seleccionada; puedes reintentar sin volver a buscarla.';
+  }
   if (isStatementTimeout(err)) {
-    if (fn === 'obs_entity_detail') {
-      return 'La ficha completa tardó más de lo esperado incluso después de un reintento automático. Puedes reintentar sin perder la entidad seleccionada.';
-    }
     return 'La consulta excedió el tiempo máximo. Atlas detuvo ese intento para proteger el servicio; reintenta o completa más caracteres del nombre.';
   }
   return err.message ?? 'Error desconocido.';
@@ -39,9 +56,12 @@ function message(e: unknown, fn?: string): string {
  *  superseded call are dropped, and data from the superseded request is also
  *  cleared immediately. This is important for search screens: the query shown
  *  in the input must never coexist with rows returned for a previous query.
- *  Entity 360 retries one statement-timeout automatically: its lookup is an
- *  exact entity-id request, so a second attempt is safe and absorbs transient
- *  database contention without making broad searches run twice. */
+ *
+ *  Entity 360 is different from a broad search: it is an exact entity-id
+ *  lookup. Por eso puede absorber una ventana breve de recuperación de
+ *  Supabase sin duplicar trabajo ambiguo. Se hacen hasta tres intentos con
+ *  backoff creciente y también se consideran transitorios los errores de
+ *  conexión/failover, no sólo statement_timeout. */
 export function useRpc<T>(
   fn: string,
   args: Record<string, unknown>,
@@ -68,7 +88,11 @@ export function useRpc<T>(
     const my = ++seq.current;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const parsedArgs = JSON.parse(argKey) as Record<string, unknown>;
-    const mayRetryTimeout = fn === 'obs_entity_detail';
+    const resilientEntityDetail = fn === 'obs_entity_detail';
+    const maxAttempts = resilientEntityDetail ? 3 : 1;
+    // El primer reintento deja pasar un microcorte; el segundo cubre una
+    // recuperación algo más larga sin martillar la base de datos.
+    const retryDelays = [1400, 3600];
 
     // No conservar resultados de los argumentos anteriores mientras llega la
     // nueva respuesta. De lo contrario una búsqueda nueva puede rotular como
@@ -77,19 +101,24 @@ export function useRpc<T>(
     setError(null);
     setLoading(true);
 
+    const scheduleRetry = (attempt: number, cause: unknown): boolean => {
+      if (!resilientEntityDetail || !isTransientRpcError(cause) || attempt + 1 >= maxAttempts) {
+        return false;
+      }
+
+      const delay = retryDelays[attempt] ?? retryDelays[retryDelays.length - 1];
+      retryTimer = setTimeout(() => {
+        if (my === seq.current) void run(attempt + 1);
+      }, delay);
+      return true;
+    };
+
     const run = async (attempt: number): Promise<void> => {
       try {
         const { data: d, error: e } = await supabase.rpc(fn, parsedArgs);
         if (my !== seq.current) return;
 
-        if (e && mayRetryTimeout && isStatementTimeout(e) && attempt === 0) {
-          // Breve backoff para dejar salir la consulta cancelada y reintentar
-          // el expediente exacto sin mostrar un falso fallo permanente.
-          retryTimer = setTimeout(() => {
-            if (my === seq.current) void run(1);
-          }, 450);
-          return;
-        }
+        if (e && scheduleRetry(attempt, e)) return;
 
         if (e) {
           setError(message(e, fn));
@@ -101,6 +130,7 @@ export function useRpc<T>(
         setLoading(false);
       } catch (e) {
         if (my !== seq.current) return;
+        if (scheduleRetry(attempt, e)) return;
         setError(message(e, fn));
         setData(null);
         setLoading(false);
