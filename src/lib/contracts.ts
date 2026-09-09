@@ -1083,3 +1083,116 @@ export interface LifecycleNotes {
   sales_band_note: string;
   sanction_document_note: string;
 }
+
+/* ─────────────────────────────────── potenciales sujetos obligados
+
+   Quiénes podrían estar obligados a inscribirse y no figuran en el padrón.
+   Cada candidato es una HIPÓTESIS DE REGISTRO construida sobre actividad
+   económica pública: ordena revisar, y no acredita incumplimiento. */
+
+/** Un sumando del IVO, con el peso que le toca dentro del índice. */
+export interface UafIvoComponent {
+  code: string;
+  label: string;
+  /** 0..100 dentro del propio componente. */
+  value: number;
+  /** Cuánto pesa el componente en el índice, en puntos. */
+  weight: number;
+  tier?: string | null;
+  type_share?: number | null;
+}
+
+export interface UafPotentialCandidate {
+  rut: string;
+  entity_id: string | null;
+  name: string;
+  /** Sector obligado que su giro sugiere. No es una calificación jurídica. */
+  implied_sector: string | null;
+  uaf_sectors: string[] | null;
+  matched_activity: string | null;
+  activity_codes: string[] | null;
+  /** Fracción de los inscritos del sector que declara este mismo giro (0..1). */
+  activity_concentration: number | null;
+  activity_registered_n: number | null;
+  activity_universe_n: number | null;
+  evidence_class: string | null;
+  detection_tier: string | null;
+  type_coherence_class: string | null;
+  type_share_in_sector: number | null;
+  /** Ordena revisión. No es probabilidad de obligación ni de LA/FT. */
+  ivo_score: number | null;
+  ivo_band: string | null;
+  /** Cuánta de la evidencia esperada estaba disponible. No es certeza. */
+  ivo_credibility_pct: number | null;
+  ivo_components: UafIvoComponent[] | null;
+  /** Costo de incorporar al padrón. No mide gravedad. */
+  materiality_score: number | null;
+  materiality_components: Record<string, unknown> | null;
+  region: string | null;
+  commune: string | null;
+  sii_status: string | null;
+  sii_activity_start_date: string | null;
+  activity_years: number | null;
+  sales_band_rank: number | null;
+  sales_band_uf: string | null;
+  sales_band_size: string | null;
+  workers: number | null;
+  ownership_edge_count: number | null;
+  legal_entity_partner_count: number | null;
+  societies_as_partner_count: number | null;
+  source_count: number | null;
+  screening_evidence_count: number | null;
+  res_available: boolean;
+  res_constitution_date: string | null;
+  uaf_sanction_events: number;
+  uaf_sanction_last_date: string | null;
+  flags: string[] | null;
+  review_state: string | null;
+  review_reason_code: string | null;
+  review_rationale: string | null;
+  reviewed_at: string | null;
+  reviewed_by_email: string | null;
+  semantics: string | null;
+}
+
+export interface UafPotential {
+  contract: 'ATLAS_OBS_UAF_POTENTIAL_V1';
+  disponible: boolean;
+  corte: {
+    sii_periodo: string | null;
+    uaf_corte: string | null;
+    index_version: string | null;
+    refreshed_at: string | null;
+    fuente: string;
+    fuente_url: string;
+  };
+  totales: {
+    observadas: number;
+    con_res: number;
+    accionables: number;
+    revisados: number;
+    sin_revisar: number;
+    sectores: number;
+    ivo_medio: number | null;
+    ivo_max: number | null;
+    materialidad_media: number | null;
+  } | null;
+  /** De qué universo se parte y con cuántas entidades termina el analista. */
+  embudo: { orden: number; etiqueta: string; n: number; glosa: string }[];
+  mix: {
+    banda: { banda: string; n: number; ivo_medio: number | null }[];
+    coherencia: { clase: string; n: number }[];
+    region: { region: string; n: number; ivo_medio: number | null }[];
+    escala: { tramo: string; orden: number; n: number }[];
+  };
+  sectores: {
+    sector: string;
+    observadas: number;
+    con_res: number;
+    accionables: number;
+    ivo_medio: number | null;
+    materialidad_media: number | null;
+  }[];
+  candidatos: UafPotentialCandidate[];
+  semantics: string;
+}

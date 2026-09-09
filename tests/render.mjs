@@ -117,6 +117,7 @@ const RPC = {
   obs_spend_actor_detail: F.spendActor,
   obs_uaf_pulse: F.uafPulse,
   obs_uaf_screening_block: F.uafPulse.screening,
+  obs_uaf_potential: F.uafPotential,
   obs_uaf_cohort: F.uafCohort,
   obs_uaf_subject_dossier: F.uafDossier,
 };
@@ -379,19 +380,32 @@ const checks = [
     'sin monto publicado en la fuente',
     'Sector UAF que obliga', 'Usuarios de Zonas Francas',
     'Industria según el SII', 'Actividades Financieras y de Seguros']],
-  // Cobertura: la brecha SII<->UAF, que antes vivia comprimida en tres
-  // recuadros dentro de un panel del Pulso que trataba de otra cosa.
-  ['cobertura', '#/cobertura', ['Cobertura del padrón obligado',
-    'Universo observable', '79.449', 'BASELINE_DECLARED',
-    'De riesgo alto', '36.379', 'Gatillantes ACTECO', '682000',
-    'Brecha por sector obligado', 'Corredores de Propiedades', '25.062',
-    'escala logarítmica',
-    'Qué parte del padrón admite screening por giro', 'Sin gatillante A',
-    'Sectores que no se leen desde el giro', 'Poder Judicial',
-    'Aduanas / administración de Zona Franca',
-    // El limite va en la pantalla: un giro alcanzado no prueba la obligacion.
+  // Cobertura: la pantalla dejo de decir CUANTOS faltan y dice QUIENES son.
+  // El embudo da el encuadre y cada entidad de la cola trae su ficha, con el
+  // desglose del indice que la ordena y el limite que la acompana.
+  ['cobertura', '#/cobertura', ['Quiénes podrían ser sujetos obligados',
+    // El embudo, con su caida declarada paso a paso.
+    'Observadas por giro', '74.087', 'Con constitución verificable', '44.799',
+    'Con hipótesis accionable', '115', 'Con revisión registrada',
+    'Escala logarítmica',
+    // Las cifras de mando de la cola.
+    'Cola accionable', 'Sin revisar', '110', 'IVO medio', 'Materialidad media',
+    // De donde salen y como se reparte la cola.
+    'De dónde salen los candidatos', 'Perfil de la cola',
+    'Administradoras de Fondos de Inversión', 'Tipo coherente', 'Mediana',
+    // El triage. El marcador de posicion del buscador no entra: no es texto
+    // del documento y una comprobacion sobre el no probaria que se ve.
+    'Sólo sin revisar', 'Antigüedad',
+    // La ficha: identidad, indice, giro, atributos y estado de revision.
+    'Candelaria Goyenechea', '76.736.702-3',
+    'Giro principal', 'lo declara el', 'Territorio', 'Vitacura',
+    'Tamaño', '50.000,01 a 100.000 UF', 'Personal', '39 trabajadores',
+    'Estructura', 'Materialidad', 'credibilidad',
+    'Constitución verificable', 'Seleccionado como candidato',
+    // El limite se declara en la propia pantalla, no en la documentacion.
     'no prueba que la entidad reúna los elementos',
-    'no está materializada RUT a RUT']],
+    'no acredita que reúna los elementos',
+    'no es probabilidad de obligación']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   // El listado ya no dice sólo quién es la entidad: dice desde cuándo existe,
   // a qué se dedica y de qué tamaño es.

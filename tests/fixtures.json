@@ -3373,5 +3373,431 @@
     "commune": null
    }
   ]
+ },
+ "uafPotential": {
+  "contract": "ATLAS_OBS_UAF_POTENTIAL_V1",
+  "disponible": true,
+  "corte": {
+   "sii_periodo": "2026-05",
+   "uaf_corte": "2026-06-30",
+   "index_version": "IVO-2.0",
+   "refreshed_at": "2026-09-09T19:17:42.994589+00:00",
+   "fuente": "Radar_SII · homologación empírica UAF–SII sobre la nómina de personas jurídicas",
+   "fuente_url": "https://www.sii.cl/sobre_el_sii/nominapersonasjuridicas.html"
+  },
+  "totales": {
+   "observadas": 74087,
+   "con_res": 44799,
+   "accionables": 115,
+   "revisados": 5,
+   "sin_revisar": 110,
+   "sectores": 29,
+   "ivo_medio": 33.8,
+   "ivo_max": 54.3,
+   "materialidad_media": 15.3
+  },
+  "embudo": [
+   {
+    "orden": 1,
+    "etiqueta": "Observadas por giro",
+    "n": 74087,
+    "glosa": "RUT que el SII observa declarando un giro característico de un sector obligado y que no figuran en el padrón UAF."
+   },
+   {
+    "orden": 2,
+    "etiqueta": "Con constitución verificable",
+    "n": 44799,
+    "glosa": "Además aparecen en el Registro de Empresas y Sociedades, de modo que su existencia y su fecha de constitución son comprobables."
+   },
+   {
+    "orden": 3,
+    "etiqueta": "Con hipótesis accionable",
+    "n": 115,
+    "glosa": "Operación vigente en el corte y giro característico calificado por el índice IVO. Es la cola que un analista puede efectivamente revisar."
+   },
+   {
+    "orden": 4,
+    "etiqueta": "Con revisión registrada",
+    "n": 5,
+    "glosa": "Alguien ya se pronunció sobre la entidad y dejó constancia de por qué."
+   }
+  ],
+  "mix": {
+   "banda": [
+    {
+     "banda": "BAJA",
+     "n": 80,
+     "ivo_medio": 29.7
+    },
+    {
+     "banda": "MEDIA",
+     "n": 35,
+     "ivo_medio": 43.1
+    }
+   ],
+   "coherencia": [
+    {
+     "clase": "SIN_REFERENCIA_DE_TIPO",
+     "n": 61
+    },
+    {
+     "clase": "COHERENTE",
+     "n": 45
+    },
+    {
+     "clase": "RARO",
+     "n": 9
+    }
+   ],
+   "region": [
+    {
+     "region": "Metropolitana de Santiago",
+     "n": 64,
+     "ivo_medio": 35.7
+    },
+    {
+     "region": "Valparaíso",
+     "n": 9,
+     "ivo_medio": 34.2
+    },
+    {
+     "region": "Sin territorio observado",
+     "n": 5,
+     "ivo_medio": 29.1
+    }
+   ],
+   "escala": [
+    {
+     "tramo": "Sin información",
+     "orden": 0,
+     "n": 67
+    },
+    {
+     "tramo": "Micro",
+     "orden": 2,
+     "n": 25
+    },
+    {
+     "tramo": "Pequeña",
+     "orden": 5,
+     "n": 10
+    },
+    {
+     "tramo": "Mediana",
+     "orden": 7,
+     "n": 10
+    },
+    {
+     "tramo": "Grande",
+     "orden": 11,
+     "n": 3
+    }
+   ]
+  },
+  "sectores": [
+   {
+    "sector": "Organizaciones Deportivas Profesionales regidas por la Ley N° 20.019",
+    "observadas": 45,
+    "con_res": 5,
+    "accionables": 45,
+    "ivo_medio": 29.9,
+    "materialidad_media": 11.0
+   },
+   {
+    "sector": "Administradoras de Fondos de Inversión",
+    "observadas": 20,
+    "con_res": 0,
+    "accionables": 20,
+    "ivo_medio": 42.4,
+    "materialidad_media": 18.0
+   },
+   {
+    "sector": "Corredores de Propiedades",
+    "observadas": 17,
+    "con_res": 5,
+    "accionables": 17,
+    "ivo_medio": 36.6,
+    "materialidad_media": 14.5
+   },
+   {
+    "sector": "Empresas Dedicadas a la Gestión Inmobiliaria",
+    "observadas": 10,
+    "con_res": 0,
+    "accionables": 10,
+    "ivo_medio": 34.9,
+    "materialidad_media": 29.6
+   },
+   {
+    "sector": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+    "observadas": 8,
+    "con_res": 3,
+    "accionables": 8,
+    "ivo_medio": 33.5,
+    "materialidad_media": 16.3
+   },
+   {
+    "sector": "Vehículos: Empresas de Arriendo de Vehículos",
+    "observadas": 21788,
+    "con_res": 12000,
+    "accionables": 5,
+    "ivo_medio": 28.6,
+    "materialidad_media": 13.3
+   },
+   {
+    "sector": "Comerciantes de Joyas y Piedras Preciosas",
+    "observadas": 11052,
+    "con_res": 9112,
+    "accionables": 5,
+    "ivo_medio": 27.1,
+    "materialidad_media": 13.2
+   }
+  ],
+  "candidatos": [
+   {
+    "entity_id": "ENT-RUT-76736702-3",
+    "semantics": "REGISTRATION_HYPOTHESIS_NOT_PROVEN_NON_COMPLIANCE",
+    "sii_status": "ACTIVE_AS_PUBLISHED",
+    "flags": [
+     "GIRO_PRINCIPAL_CARACTERISTICO",
+     "DETECTION_A_ALTA"
+    ],
+    "detection_tier": "A_ALTA",
+    "evidence_class": "GIRO_PRINCIPAL_CARACTERISTICO",
+    "ivo_credibility_pct": 90,
+    "ivo_band": "MEDIA",
+    "type_coherence_class": "COHERENTE",
+    "uaf_sanction_events": 0,
+    "uaf_sanction_last_date": null,
+    "review_state": "CANDIDATO_SELECCIONADO",
+    "review_reason_code": null,
+    "review_rationale": "test",
+    "reviewed_at": "2026-08-28T19:46:02.460288+00:00",
+    "reviewed_by_email": "analista@uaf.gob.cl",
+    "res_available": false,
+    "res_constitution_date": null,
+    "societies_as_partner_count": 0,
+    "refreshed_at": "2026-09-09T19:17:42.994589+00:00",
+    "screening_evidence_count": 1,
+    "rut": "76736702-3",
+    "name": "INMOBILIARIA CANDELARIA GOYENECHEA SPA",
+    "implied_sector": "Corredores de Propiedades",
+    "uaf_sectors": [
+     "Corredores de propiedades"
+    ],
+    "matched_activity": "ACTIVIDADES INMOBILIARIAS REALIZADAS A CAMBIO DE UNA RETRIBUCION O POR CONTRATA",
+    "activity_codes": [
+     "682000"
+    ],
+    "activity_concentration": 0.8731,
+    "activity_registered_n": 392,
+    "activity_universe_n": 449,
+    "type_share_in_sector": 0.544893762851268,
+    "ivo_score": 54.29,
+    "ivo_components": [
+     {
+      "code": "EVR",
+      "label": "Evidencia regulatoria directa",
+      "value": 0,
+      "weight": 40
+     },
+     {
+      "code": "CGA",
+      "tier": "A_ALTA",
+      "label": "Coincidencia de giro",
+      "value": 87.31,
+      "weight": 45,
+      "type_share": 0.544893762851268
+     },
+     {
+      "code": "VIG",
+      "label": "Vigencia operativa",
+      "value": 100,
+      "weight": 15
+     }
+    ],
+    "materiality_score": 43.03,
+    "materiality_components": {
+     "escala": "9",
+     "fuentes": 2,
+     "trabajadores": 4,
+     "lectura": "Materialidad de incorporación; no acredita obligación."
+    },
+    "region": "Metropolitana de Santiago",
+    "commune": "Vitacura",
+    "sii_activity_start_date": "2017-05-08",
+    "activity_years": 9,
+    "sales_band_rank": 9,
+    "sales_band_uf": "50.000,01 a 100.000 UF",
+    "sales_band_size": "Mediana",
+    "workers": 4,
+    "ownership_edge_count": 1,
+    "legal_entity_partner_count": 1,
+    "source_count": 2
+   },
+   {
+    "entity_id": "ENT-RUT-76877315-7",
+    "semantics": "REGISTRATION_HYPOTHESIS_NOT_PROVEN_NON_COMPLIANCE",
+    "sii_status": "ACTIVE_AS_PUBLISHED",
+    "flags": [
+     "GIRO_PRINCIPAL_CARACTERISTICO",
+     "DETECTION_A_ALTA"
+    ],
+    "detection_tier": "A_ALTA",
+    "evidence_class": "GIRO_PRINCIPAL_CARACTERISTICO",
+    "ivo_credibility_pct": 90,
+    "ivo_band": "MEDIA",
+    "type_coherence_class": "COHERENTE",
+    "uaf_sanction_events": 0,
+    "uaf_sanction_last_date": null,
+    "review_state": null,
+    "review_reason_code": null,
+    "review_rationale": null,
+    "reviewed_at": null,
+    "reviewed_by_email": null,
+    "res_available": true,
+    "res_constitution_date": "2018-06-06",
+    "societies_as_partner_count": 0,
+    "refreshed_at": "2026-09-09T19:17:42.994589+00:00",
+    "screening_evidence_count": 2,
+    "rut": "76877315-7",
+    "name": "COMERCIALIZADORA DE VEHÍCULOS EDUARDO OLIVARES E.I.R.L.",
+    "implied_sector": "Vehículos: Comercializadoras de Vehículos Nuevos o Usados",
+    "uaf_sectors": [
+     "Vehículos: Automotoras",
+     "Vehículos: Comercializadoras de Vehículos Nuevos o Usados"
+    ],
+    "matched_activity": "VENTA AL POR MENOR DE VEHICULOS AUTOMOTORES NUEVOS O USADOS (INCLUYE COMPRAVENTA)",
+    "activity_codes": [
+     "451002"
+    ],
+    "activity_concentration": 0.7436,
+    "activity_registered_n": 348,
+    "activity_universe_n": 468,
+    "type_share_in_sector": 0.9776951672862454,
+    "ivo_score": 48.46,
+    "ivo_components": [
+     {
+      "code": "EVR",
+      "label": "Evidencia regulatoria directa",
+      "value": 0,
+      "weight": 40
+     },
+     {
+      "code": "CGA",
+      "tier": "A_ALTA",
+      "label": "Coincidencia de giro",
+      "value": 74.36,
+      "weight": 45,
+      "type_share": 0.9776951672862454
+     },
+     {
+      "code": "VIG",
+      "label": "Vigencia operativa",
+      "value": 100,
+      "weight": 15
+     }
+    ],
+    "materiality_score": 17.25,
+    "materiality_components": {
+     "escala": "4",
+     "fuentes": 2,
+     "trabajadores": 0,
+     "lectura": "Materialidad de incorporación; no acredita obligación."
+    },
+    "region": "Metropolitana de Santiago",
+    "commune": "Macul",
+    "sii_activity_start_date": "2018-06-21",
+    "activity_years": 8,
+    "sales_band_rank": 4,
+    "sales_band_uf": "600,01 a 2.400 UF",
+    "sales_band_size": "Micro",
+    "workers": 0,
+    "ownership_edge_count": 1,
+    "legal_entity_partner_count": 0,
+    "source_count": 2
+   },
+   {
+    "entity_id": "ENT-RUT-76976107-1",
+    "semantics": "REGISTRATION_HYPOTHESIS_NOT_PROVEN_NON_COMPLIANCE",
+    "sii_status": "ACTIVE_AS_PUBLISHED",
+    "flags": [
+     "GIRO_PRINCIPAL_CARACTERISTICO",
+     "DETECTION_A_ALTA"
+    ],
+    "detection_tier": "A_ALTA",
+    "evidence_class": "GIRO_PRINCIPAL_CARACTERISTICO",
+    "ivo_credibility_pct": 90,
+    "ivo_band": "MEDIA",
+    "type_coherence_class": "COHERENTE",
+    "uaf_sanction_events": 0,
+    "uaf_sanction_last_date": null,
+    "review_state": null,
+    "review_reason_code": null,
+    "review_rationale": null,
+    "reviewed_at": null,
+    "reviewed_by_email": null,
+    "res_available": false,
+    "res_constitution_date": null,
+    "societies_as_partner_count": 0,
+    "refreshed_at": "2026-09-09T19:17:42.994589+00:00",
+    "screening_evidence_count": 1,
+    "rut": "76976107-1",
+    "name": "ADMINISTRADORA BL CAPITAL GESTION S.A.",
+    "implied_sector": "Administradoras de Fondos de Inversión",
+    "uaf_sectors": [
+     "Administradoras de fondos de inversión"
+    ],
+    "matched_activity": "ADMINISTRADORAS DE FONDOS DE INVERSION",
+    "activity_codes": [
+     "663091"
+    ],
+    "activity_concentration": 0.6538,
+    "activity_registered_n": 119,
+    "activity_universe_n": 182,
+    "type_share_in_sector": 1.0,
+    "ivo_score": 44.42,
+    "ivo_components": [
+     {
+      "code": "EVR",
+      "label": "Evidencia regulatoria directa",
+      "value": 0,
+      "weight": 40
+     },
+     {
+      "code": "CGA",
+      "tier": "A_ALTA",
+      "label": "Coincidencia de giro",
+      "value": 65.38,
+      "weight": 45,
+      "type_share": 1.0
+     },
+     {
+      "code": "VIG",
+      "label": "Vigencia operativa",
+      "value": 100,
+      "weight": 15
+     }
+    ],
+    "materiality_score": 55.52,
+    "materiality_components": {
+     "escala": "9",
+     "fuentes": 2,
+     "trabajadores": 39,
+     "lectura": "Materialidad de incorporación; no acredita obligación."
+    },
+    "region": "Metropolitana de Santiago",
+    "commune": "Las Condes",
+    "sii_activity_start_date": "2019-02-25",
+    "activity_years": 7,
+    "sales_band_rank": 9,
+    "sales_band_uf": "50.000,01 a 100.000 UF",
+    "sales_band_size": "Mediana",
+    "workers": 39,
+    "ownership_edge_count": 3,
+    "legal_entity_partner_count": 3,
+    "source_count": 2
+   }
+  ],
+  "semantics": "Cada candidato es una hipótesis de registro construida sobre actividad económica pública: la entidad declara ante el SII un giro característico de un sector obligado y no figura en el corte público del padrón UAF. Eso ordena revisarla, y no acredita que reúna los elementos que activan la obligación de inscribirse ni que esté incumpliendo. El IVO ordena esa revisión y no es probabilidad de obligación ni de LA/FT; la materialidad describe el costo de incorporar y no la gravedad de nada. Ausencia del corte público UAF no equivale a no estar inscrita."
  }
 }

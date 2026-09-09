@@ -1341,11 +1341,193 @@ button.gap-row:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .cov-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1080px) { .cov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .cov-kpis { grid-template-columns: minmax(0, 1fr); } }
-.cov-univ { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.cov-univ b { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: var(--sig-high); }
-.cov-univ span { font-size: 11.5px; color: var(--ink-3); max-width: 30ch; line-height: 1.45; }
-.cov-rows { display: flex; flex-direction: column; gap: 8px; }
-.cov-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 66px; gap: 10px; align-items: center; font-size: 11.5px; color: var(--ink-2); }
-.cov-row-track { height: 9px; border-radius: 2px; background: var(--bg-input); overflow: hidden; }
-.cov-row-track i { display: block; height: 100%; border-radius: 2px; }
-.cov-row b { text-align: right; font-size: 11.5px; color: var(--ink); }
+/* El bloque de composicion del universo se retiro con el rediseno de
+   Cobertura: la vista dejo de describir un agregado y pasó a listar entidades. */
+
+/* ───────────────────────────────── potenciales sujetos obligados
+
+   La vista dejó de describir un agregado: ahora lista entidades y el analista
+   discrimina desde la tarjeta. El embudo da el encuadre, las fichas dan el
+   trabajo. */
+
+.btn-sm { padding: 5px 11px; font-size: 11.5px; }
+
+/* El embudo: cuatro pasos con su caída declarada. */
+.funnel {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+  margin-top: 16px;
+}
+@media (max-width: 900px) { .funnel { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .funnel { grid-template-columns: minmax(0, 1fr); } }
+.funnel-step {
+  position: relative; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-panel); padding: 14px 15px 13px;
+}
+.funnel-step[data-focus='true'] {
+  border-color: color-mix(in srgb, var(--sig-high) 34%, transparent);
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--sig-high) 7%, transparent), transparent 55%),
+    var(--bg-panel);
+}
+.funnel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.funnel-n { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); }
+.funnel-step[data-focus='true'] .funnel-n { color: var(--sig-high); }
+.funnel-drop { font-size: 11px; color: var(--ink-4); }
+.funnel-bar { height: 5px; border-radius: 3px; background: var(--bg-input); overflow: hidden; margin: 9px 0 10px; }
+.funnel-bar i { display: block; height: 100%; border-radius: 3px; background: var(--ink-4); }
+.funnel-step[data-focus='true'] .funnel-bar i { background: var(--sig-high); }
+.funnel-label { font-size: 12.5px; font-weight: 620; color: var(--ink); }
+.funnel-glosa { margin: 4px 0 0; font-size: 11px; color: var(--ink-3); line-height: 1.45; }
+.funnel-arrow {
+  position: absolute; right: -11px; top: 26px; z-index: 1;
+  color: var(--line-strong); font-size: 13px;
+}
+@media (max-width: 900px) { .funnel-arrow { display: none; } }
+.funnel-note { margin: 10px 0 16px; font-size: 11px; color: var(--ink-4); line-height: 1.5; max-width: 82ch; }
+
+/* Sector: todo lo observado contra lo que quedó calificado. */
+.sect-rows { display: flex; flex-direction: column; gap: 3px; }
+.sect-row {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 84px;
+  gap: 12px; align-items: center; width: 100%; text-align: left;
+  font: inherit; color: var(--ink-2); font-size: 11.5px;
+  background: transparent; border: 0; border-radius: var(--radius-sm);
+  padding: 7px 8px; cursor: pointer;
+}
+.sect-row:hover { background: var(--bg-panel-2); color: var(--ink); }
+.sect-row[data-on='true'] { background: var(--bg-raised); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.sect-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sect-track { position: relative; height: 10px; border-radius: 2px; overflow: hidden; }
+.sect-track i { position: absolute; inset: 0 auto 0 0; display: block; height: 100%; border-radius: 2px; }
+.sect-obs { background: var(--bg-input); }
+.sect-acc { background: var(--sig-high); min-width: 2px; }
+.sect-nums { text-align: right; font-size: 11.5px; }
+.sect-nums b { color: var(--sig-high); font-weight: 650; }
+.sect-nums em { font-style: normal; color: var(--ink-4); margin-left: 4px; font-size: 10.5px; }
+
+/* Fichas de mezcla: cada chip es también un filtro. */
+.mixrow { display: flex; flex-wrap: wrap; gap: 7px; }
+.mixchip {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg-panel-2);
+  padding: 5px 11px; font: inherit; font-size: 11.5px; color: var(--ink-2); cursor: pointer;
+}
+.mixchip:hover { border-color: var(--line-strong); color: var(--ink); }
+.mixchip[data-on='true'] { border-color: var(--mix-tone); color: var(--ink); background: var(--bg-raised); }
+.mixchip i { width: 7px; height: 7px; border-radius: 2px; background: var(--mix-tone); flex-shrink: 0; }
+.mixchip b { font-size: 11.5px; font-weight: 650; color: var(--ink); }
+.mixchip em { font-style: normal; font-size: 10.5px; color: var(--ink-4); }
+
+.escala { display: flex; flex-direction: column; gap: 6px; }
+.escala-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 11.5px; color: var(--ink-2); }
+.escala-bar { height: 8px; border-radius: 2px; background: var(--bg-input); overflow: hidden; }
+.escala-bar i { display: block; height: 100%; border-radius: 2px; background: var(--unknown); }
+.escala-row b { text-align: right; font-size: 11.5px; color: var(--ink); }
+
+/* Barra de triage. */
+.triage {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-panel); padding: 10px 12px; margin-bottom: 14px;
+  position: sticky; top: 0; z-index: 4;
+}
+.triage-search { flex: 1 1 260px; min-width: 0; }
+.triage-search input {
+  width: 100%; font: inherit; font-size: 12.5px; color: var(--ink);
+  background: var(--bg-input); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+.triage-search input::placeholder { color: var(--ink-4); }
+.triage-search input:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.triage-count { font-size: 13px; font-weight: 650; color: var(--ink); }
+.triage-count em { font-style: normal; font-size: 11.5px; font-weight: 400; color: var(--ink-4); }
+
+/* La ficha del candidato. */
+.cand-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+@media (max-width: 1080px) { .cand-grid { grid-template-columns: minmax(0, 1fr); } }
+.cand {
+  border: 1px solid var(--line); border-left: 2px solid var(--cand-tone);
+  border-radius: var(--radius); background: var(--bg-panel);
+  padding: 14px 16px 13px; min-width: 0;
+}
+.cand-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.cand-head h3 {
+  margin: 0; font-size: 14px; font-weight: 640; letter-spacing: -0.01em; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cand-sub { display: flex; align-items: baseline; gap: 6px; margin-top: 3px; font-size: 11px; color: var(--ink-4); flex-wrap: wrap; }
+.cand-sub em { font-style: normal; font-family: var(--font); color: var(--ink-3); }
+.cand-score { text-align: right; flex-shrink: 0; }
+.cand-score b { display: block; font-size: 21px; font-weight: 700; letter-spacing: -0.03em; color: var(--cand-tone); line-height: 1; }
+.cand-score em {
+  display: block; font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 4px;
+}
+
+/* Desglose del índice: cada segmento vale lo que pesa y se llena con lo que
+   aporta. Un tramo vacío dice, sin texto, qué evidencia falta. */
+.ivo { margin: 12px 0 11px; }
+.ivo-track { display: flex; gap: 3px; height: 9px; }
+/* El tramo sin llenar tiene que leerse como una casilla vacía y no como un
+   hueco entre barras: es la forma en que la ficha dice qué evidencia falta. */
+.ivo-seg { display: block; height: 100%; border-radius: 2px; background: var(--bg-raised); overflow: hidden; }
+.ivo-seg i { display: block; height: 100%; border-radius: 2px; }
+.ivo-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; font-size: 10px; color: var(--ink-3); }
+.ivo-legend b { color: var(--ink-2); font-weight: 600; }
+.ivo-legend span[data-vacio='true'] { color: var(--ink-4); }
+.ivo-legend span[data-vacio='true'] b { color: var(--ink-4); }
+.ivo-cred { margin-left: auto; color: var(--ink-4); }
+
+.cand-giro { border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.cand-giro-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.cand-giro-text { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.45; margin-top: 3px; }
+.cand-giro-conc { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.cand-giro-conc b { color: var(--ink); font-weight: 650; }
+.cand-giro-conc em { font-style: normal; color: var(--ink-4); }
+
+.cand-attrs {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px;
+  margin: 12px 0 0; padding: 11px 0 0; border-top: 1px solid var(--line-soft);
+}
+@media (max-width: 620px) { .cand-attrs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.attr { min-width: 0; }
+.attr dt {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.attr dd { margin: 3px 0 0; font-size: 11.5px; color: var(--ink-2); line-height: 1.35; }
+.attr dd em { display: block; font-style: normal; font-size: 10px; color: var(--ink-4); margin-top: 1px; }
+.attr .attr-vacio, .attr-vacio { color: var(--ink-4); font-style: italic; }
+
+.cand-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; color: var(--ink-2);
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+  border-radius: 999px; padding: 3px 9px;
+}
+.fchip i { width: 5px; height: 5px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+
+.cand-rev {
+  margin-top: 11px; padding: 9px 11px; border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--r) 28%, transparent);
+  background: color-mix(in srgb, var(--r) 7%, transparent);
+  font-size: 11px; color: var(--ink-3); line-height: 1.5;
+}
+.cand-rev b { display: block; color: var(--r); font-size: 11.5px; font-weight: 650; }
+.cand-rev span { display: block; color: var(--ink-2); margin-top: 2px; }
+.cand-rev em { display: block; font-style: normal; color: var(--ink-4); margin-top: 3px; font-size: 10.5px; }
+
+.cand-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+.desglose { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.desglose-table td, .desglose-table th { font-size: 11.5px; }
+.desglose-note { margin: 8px 0 0; font-size: 11px; color: var(--ink-3); line-height: 1.5; }
+.desglose-mat { display: flex; flex-wrap: wrap; gap: 14px; }
+.desglose-mat span { display: flex; flex-direction: column; gap: 2px; }
+.desglose-mat em { font-style: normal; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4); }
+.desglose-mat b { font-size: 13px; color: var(--ink); font-weight: 650; }
