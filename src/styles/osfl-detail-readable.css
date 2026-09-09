@@ -1,0 +1,28 @@
+/* OSFL · ficha rápida de entidad: ajuste de legibilidad (+1 px) */
+.osfl-detail-panel .osfl-detail-placeholder { font-size:10.5px; }
+.osfl-detail-panel .osfl-detail-placeholder b { font-size:12px; }
+
+.osfl-detail-panel .osfl-detail-kicker { font-size:8.5px; }
+.osfl-detail-panel .osfl-detail-head h3 { font-size:13.5px; }
+.osfl-detail-panel .osfl-detail-head p { font-size:8.8px; }
+
+.osfl-detail-panel .osfl-fact span { font-size:8.2px; }
+.osfl-detail-panel .osfl-fact b { font-size:9.6px; }
+.osfl-detail-panel .osfl-detail-crosses > div:first-child > span { font-size:8.2px; }
+.osfl-detail-panel .osfl-source-badges span { font-size:7.9px; }
+.osfl-detail-panel .osfl-source-badges em { font-size:8px; }
+
+.osfl-detail-panel .osfl-detail-tabs button { font-size:9px; }
+
+.osfl-detail-panel .osfl-timeline-event b { font-size:8.8px; }
+.osfl-detail-panel .osfl-timeline-event span { font-size:9px; }
+.osfl-detail-panel .osfl-timeline-event small { font-size:8px; }
+.osfl-detail-panel .osfl-timeline-note { font-size:8.2px; }
+.osfl-detail-panel .osfl-no-timeline b { font-size:10px; }
+.osfl-detail-panel .osfl-no-timeline span { font-size:8.5px; }
+
+.osfl-detail-panel .osfl-background-row span { font-size:8.5px; }
+.osfl-detail-panel .osfl-background-row b { font-size:9px; }
+.osfl-detail-panel .osfl-background-row small { font-size:8px; }
+
+.osfl-detail-panel .osfl-full-button { font-size:9.5px; }
