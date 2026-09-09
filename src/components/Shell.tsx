@@ -7,6 +7,7 @@ import { Mark } from './Mark';
 const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
   { label: 'Pulso', route: { view: 'pulso' }, match: ['pulso'] },
   { label: 'OSFL', route: { view: 'osfl' }, match: ['osfl'] },
+  { label: 'Fintech', route: { view: 'fintech' }, match: ['fintech'] },
   { label: 'Señales', route: { view: 'senales' }, match: ['senales'] },
   { label: 'Entidades', route: { view: 'entidades' }, match: ['entidades', 'ficha'] },
   { label: 'Territorio', route: { view: 'territorio' }, match: ['territorio'] },
