@@ -1,23 +1,92 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { UafPulse } from '../../lib/contracts';
-import { Bars } from '../../components/charts';
-import { Empty, Panel } from '../../components/primitives';
-import { fecha, n, n1, titleCase } from '../../lib/format';
+import { useDebounced, useRpc } from '../../lib/rpc';
+import { hrefFor } from '../../lib/router';
+import { Empty, ErrorBox, Loading } from '../../components/primitives';
+import { n, n1, rutFormat, titleCase } from '../../lib/format';
 import type { CohortRequest } from '../../components/CohortDrawer';
+import '../../styles/pulso-ciclo.css';
 
-/* LENTE · CICLO
-   ─────────────
-   El padrón en el tiempo: quién entra a la actividad, quién la cierra y sigue
-   inscrito, y qué sanciones se han cursado sobre él. Debajo, el contraste entre
-   el sector que obliga y la industria real declarada ante el SII.
+/* LENTE · CICLO REGISTRAL
+   ───────────────────────
+   Esta lente ya no mezcla el ciclo tributario, las sanciones y dos rankings de
+   actividad. Responde una pregunta más precisa: cómo cambia el padrón UAF en
+   el tiempo, qué sectores explican sus mayores expansiones/contracciones y qué
+   sujetos componen el corte vigente.
 
-   Las altas de actividad ya venían en el contrato y nunca se habían dibujado.
-   Sin ellas la serie de términos no se podía leer: una subida de cierres dice
-   una cosa si las aperturas suben y otra distinta si están cayendo. */
+   La UAF publica stock por corte, no la fecha individual de alta o baja. Por
+   eso una caída sectorial se denomina contracción del stock inscrito y no se
+   presenta como una baja individual identificada. */
 
-/** Años que se muestran en el ciclo de vida. Antes de eso la serie de términos
- *  es tan rala que el par no compara nada. */
-const DESDE = 2016;
+const PAGE = 40;
+
+type RegistryTotal = {
+  year: number;
+  total: number;
+  as_of_date: string;
+  source_kind: string;
+  source_label: string;
+  source_url: string | null;
+  note: string | null;
+};
+
+type TrendPoint = { year: number; subjects: number };
+type TrendRow = {
+  sector: string;
+  delta: number;
+  first_value: number;
+  last_value: number;
+  points: TrendPoint[];
+};
+
+type RegistryEvolution = {
+  total: RegistryTotal[];
+  increases: TrendRow[];
+  decreases: TrendRow[];
+  note: string;
+};
+
+type SubjectRow = {
+  entity_id: string;
+  rut: string | null;
+  name: string;
+  subject_nature: string | null;
+  uaf_sector: string | null;
+  sii_status: string | null;
+  sii_termination_date: string | null;
+  region: string | null;
+  commune: string | null;
+  main_activity: string | null;
+  sales_band: string | null;
+  workers: number | null;
+  ipf_score: number | null;
+  ipf_band: string | null;
+  sanction_evidence_count: number | null;
+  press_evidence_count: number | null;
+  alert_count: number | null;
+  is_osfl: boolean | null;
+  attention_motive: string | null;
+  attention_rank: number | null;
+};
+
+type SubjectTable = { total: number; rows: SubjectRow[] };
+type Order = 'relevancia' | 'ipf' | 'antecedentes' | 'nombre';
+
+const SII_LABEL: Record<string, string> = {
+  ACTIVE_AS_PUBLISHED: 'Activo ante el SII',
+  TERMINATED_AS_PUBLISHED: 'Término de giro',
+  SIN_PERFIL_SII: 'Sin perfil SII',
+};
+
+const MOTIVE_LABEL: Record<string, string> = {
+  SANCION_RECIENTE: 'Sanción reciente',
+  SANCION_HISTORICA: 'Sanción histórica',
+  TERMINO_GIRO: 'Término de giro',
+  IPF_ALTA: 'IPF alta',
+  SECTOR_SIN_ROS: 'Sector sin ROS',
+  GIRO_ATIPICO: 'Giro atípico',
+  SIN_TERRITORIO: 'Sin territorio',
+};
 
 export function LenteCiclo({
   data,
@@ -26,176 +95,345 @@ export function LenteCiclo({
   data: UafPulse;
   onCohort: (req: CohortRequest) => void;
 }) {
+  const [query, setQuery] = useState('');
+  const q = useDebounced(query, 240);
+  const [sector, setSector] = useState('');
+  const [status, setStatus] = useState('');
+  const [order, setOrder] = useState<Order>('relevancia');
+  const [page, setPage] = useState(0);
+
+  const evolution = useRpc<RegistryEvolution>('obs_uaf_registry_evolution', {});
+  const subjects = useRpc<SubjectTable>('obs_uaf_subjects_table', {
+    p_q: q.trim() || null,
+    p_sector: sector || null,
+    p_status: status || null,
+    p_order: order,
+    p_limit: PAGE,
+    p_offset: page * PAGE,
+  });
+
+  const sectorOptions = useMemo(() => {
+    const values = (data.reporting?.sectores ?? [])
+      .map((row) => row.sector_canonical)
+      .filter((value): value is string => Boolean(value));
+    return [...new Set(values)].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [data.reporting?.sectores]);
+
   const u = data.universe;
-
-  /* Las dos series del ciclo de vida comparten eje: se dibujan sobre el mismo
-     máximo o la comparación mentiría. */
-  const ciclo = useMemo(() => {
-    const altas = new Map(data.lifecycle.started_by_year.map((x) => [x.ano, x.n]));
-    const fines = new Map(data.lifecycle.terminated_by_year.map((x) => [x.ano, x.n]));
-    const anos = [...new Set([...altas.keys(), ...fines.keys()])]
-      .filter((a) => a >= DESDE)
-      .sort((a, b) => a - b);
-    return anos.map((ano) => ({ ano, altas: altas.get(ano) ?? 0, fines: fines.get(ano) ?? 0 }));
-  }, [data.lifecycle]);
-  const cicloMax = Math.max(1, ...ciclo.flatMap((c) => [c.altas, c.fines]));
-  const ultimo = ciclo[ciclo.length - 1];
-
-  const sanciones = useMemo(
-    () => data.sanctions.by_year.slice().sort((a, b) => a.ano - b.ano),
-    [data.sanctions.by_year],
-  );
-  const sancMax = Math.max(1, ...sanciones.map((s) => s.eventos));
-  const montoMax = Math.max(1, ...sanciones.map((s) => s.monto_uf ?? 0));
-  const conMonto = sanciones.filter((s) => s.monto_uf != null && s.monto_uf > 0);
-
   if (!u) return <Empty title="Sin padrón publicado" />;
+
+  const total = subjects.data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  const start = total === 0 ? 0 : page * PAGE + 1;
+  const end = Math.min(total, (page + 1) * PAGE);
+
+  function changeFilter(next: () => void) {
+    next();
+    setPage(0);
+  }
+
+  function clearFilters() {
+    setQuery('');
+    setSector('');
+    setStatus('');
+    setOrder('relevancia');
+    setPage(0);
+  }
+
+  return (
+    <div className="pulse-cycle">
+      <div className="pulse-cycle-summary">
+        <section className="pulse-cycle-panel">
+          <div className="pulse-cycle-head">
+            <div>
+              <h3>Evolución publicada del padrón UAF</h3>
+              <p>Stock de sujetos obligados inscritos · 2020–2026</p>
+            </div>
+            <div className="pulse-cycle-meta">
+              <strong>{n(evolution.data?.total.at(-1)?.total ?? u.total)}</strong>
+              <span>inscritos al 30-06-2026</span>
+            </div>
+          </div>
+          {evolution.loading && !evolution.data ? (
+            <Loading label="Leyendo la serie publicada del padrón…" />
+          ) : evolution.error ? (
+            <ErrorBox error={evolution.error} onRetry={evolution.reload} />
+          ) : evolution.data?.total.length ? (
+            <RegistryChart points={evolution.data.total} />
+          ) : (
+            <Empty title="Sin serie de padrón disponible" />
+          )}
+        </section>
+
+        <RegistryFacts points={evolution.data?.total ?? []} sectors={u.sectores_uaf} current={u.total} />
+      </div>
+
+      <div className="pulse-sector-trends">
+        <TrendPanel
+          title="Sectores que más aumentaron"
+          hint="Top 5 · variación neta del stock 2020 → 2026"
+          rows={evolution.data?.increases ?? []}
+          loading={evolution.loading}
+          tone="var(--present)"
+          onPick={(row) => onCohort({ cohort: 'SECTOR', value: row.sector, title: row.sector })}
+        />
+        <TrendPanel
+          title="Sectores con mayor contracción"
+          hint="Top 5 · menor stock inscrito entre 2020 y 2026"
+          rows={evolution.data?.decreases ?? []}
+          loading={evolution.loading}
+          tone="var(--sig-high)"
+          onPick={(row) => onCohort({ cohort: 'SECTOR', value: row.sector, title: row.sector })}
+          note={evolution.data?.note}
+        />
+      </div>
+
+      <section className="pulse-so-panel">
+        <div className="pulse-so-head">
+          <div>
+            <h3>Directorio de sujetos obligados</h3>
+            <p>El padrón vigente, con señales útiles para orientar una revisión rápida y acceso directo a Entidad 360.</p>
+          </div>
+          <div className="pulse-so-total">{subjects.loading && !subjects.data ? '…' : n(total)} SO</div>
+        </div>
+
+        <div className="pulse-so-tools">
+          <label className="pulse-so-search">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => changeFilter(() => setQuery(event.target.value))}
+              placeholder="Buscar por razón social o RUT…"
+              aria-label="Buscar sujeto obligado"
+            />
+          </label>
+          <select value={sector} onChange={(event) => changeFilter(() => setSector(event.target.value))} aria-label="Filtrar por sector UAF">
+            <option value="">Todos los sectores UAF</option>
+            {sectorOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <select value={status} onChange={(event) => changeFilter(() => setStatus(event.target.value))} aria-label="Filtrar por estado SII">
+            <option value="">Todo estado SII</option>
+            <option value="ACTIVE_AS_PUBLISHED">Activo ante el SII</option>
+            <option value="TERMINATED_AS_PUBLISHED">Término de giro</option>
+            <option value="SIN_PERFIL_SII">Sin perfil SII</option>
+          </select>
+          <select value={order} onChange={(event) => changeFilter(() => setOrder(event.target.value as Order))} aria-label="Ordenar sujetos obligados">
+            <option value="relevancia">Orden: relevancia</option>
+            <option value="ipf">Orden: IPF</option>
+            <option value="antecedentes">Orden: antecedentes</option>
+            <option value="nombre">Orden: nombre</option>
+          </select>
+          <button className="pulse-so-clear" onClick={clearFilters}>Limpiar</button>
+        </div>
+
+        {subjects.error ? (
+          <ErrorBox error={subjects.error} onRetry={subjects.reload} />
+        ) : subjects.loading && !subjects.data ? (
+          <div className="pulse-so-statebar">Actualizando padrón…</div>
+        ) : !(subjects.data?.rows.length) ? (
+          <div className="pulse-so-statebar">No hay sujetos que coincidan con los filtros.</div>
+        ) : (
+          <SubjectRows rows={subjects.data.rows} />
+        )}
+
+        <div className="pulse-so-footer">
+          <span className="pulse-so-range">{n(start)}–{n(end)} de {n(total)}</span>
+          <div className="pulse-so-pages">
+            <button disabled={page === 0 || subjects.loading} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Anterior</button>
+            <button disabled={page + 1 >= pages || subjects.loading} onClick={() => setPage((value) => Math.min(pages - 1, value + 1))}>Siguiente →</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RegistryChart({ points }: { points: RegistryTotal[] }) {
+  const W = 760, H = 154, L = 38, R = 38, T = 28, B = 28;
+  const values = points.map((point) => point.total);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = Math.max(200, (max - min) * 0.12);
+  const low = Math.max(0, min - pad);
+  const high = max + pad * 0.35;
+  const span = Math.max(1, high - low);
+  const x = (index: number) => L + index * ((W - L - R) / Math.max(1, points.length - 1));
+  const y = (value: number) => T + (H - T - B) * (1 - (value - low) / span);
+  const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(index).toFixed(1)} ${y(point.total).toFixed(1)}`).join(' ');
+  const baseline = H - B;
+  const area = `${line} L ${x(points.length - 1).toFixed(1)} ${baseline} L ${x(0).toFixed(1)} ${baseline} Z`;
+  const last = points[points.length - 1];
 
   return (
     <>
-      <div className="grid grid-2" style={{ marginBottom: 16 }}>
-        <Panel
-          title="Altas de actividad contra términos de giro"
-          meta={ultimo ? `${n(ultimo.altas)} altas · ${n(ultimo.fines)} términos en ${ultimo.ano}` : undefined}
-        >
-          {ciclo.length === 0 ? (
-            <Empty title="Sin ciclo de vida registrado" />
-          ) : (
-            <>
-              <div className="life">
-                {ciclo.map((c) => (
-                  <div className="life-year" key={c.ano}>
-                    <span className="life-pair">
-                      <i
-                        style={{ height: `${(c.altas / cicloMax) * 100}%`, background: 'var(--accent)' }}
-                        title={`${n(c.altas)} inicios de actividad en ${c.ano}`}
-                      />
-                      <i
-                        style={{ height: `${(c.fines / cicloMax) * 100}%`, background: 'var(--sig-high)' }}
-                        title={`${n(c.fines)} términos de giro en ${c.ano}`}
-                      />
-                    </span>
-                    <em>{String(c.ano).slice(2)}</em>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                <span className="chip" style={{ cursor: 'default' }}>
-                  <i style={{ width: 7, height: 7, borderRadius: 2, background: 'var(--accent)' }} />
-                  Inicio de actividades
-                </span>
-                <button
-                  className="chip"
-                  onClick={() => onCohort({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro', hint: 'siguen inscritos en el registro UAF' })}
-                >
-                  <i style={{ width: 7, height: 7, borderRadius: 2, background: 'var(--sig-high)' }} />
-                  Término de giro
-                  <b className="num" style={{ color: 'var(--ink)' }}>{n(u.terminados)}</b>
-                </button>
-              </div>
-              <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-                Ambas series describen el ciclo de vida ante el SII de quienes hoy están
-                inscritos: no son altas ni bajas del registro UAF, que no publica fecha de
-                inscripción. Un sujeto que cerró su giro y sigue inscrito es candidato a contacto
-                y evaluación de desvinculación del registro; el cierre tributario no extingue por
-                sí solo la obligación de estar inscrito.
-              </p>
-            </>
-          )}
-        </Panel>
-
-        <Panel
-          title="Sanciones sobre el padrón"
-          meta={`${n(data.sanctions.eventos)} eventos · ${n(data.sanctions.con_documento)} con documento`}
-        >
-          {sanciones.length === 0 ? (
-            <Empty title="Sin eventos sancionatorios fechados" />
-          ) : (
-            <>
-              <div className="life">
-                {sanciones.map((s) => (
-                  <div className="life-year" key={s.ano}>
-                    <span className="life-pair">
-                      <i
-                        style={{ height: `${(s.eventos / sancMax) * 100}%`, background: 'var(--sig-critical)' }}
-                        title={`${n(s.eventos)} eventos sobre ${n(s.sujetos)} sujeto${s.sujetos === 1 ? '' : 's'} en ${s.ano}`}
-                      />
-                    </span>
-                    <em>{String(s.ano).slice(2)}</em>
-                  </div>
-                ))}
-              </div>
-              {/* El monto cursado ya venía por año en el contrato y el Pulso sólo
-                  contaba eventos. Un año sin monto publicado no dibuja barra:
-                  un cero diría que no hubo multa, y lo que hay es un dato ausente. */}
-              {conMonto.length > 0 && (
-                <>
-                  <div className="panel-sub" style={{ marginTop: 16 }}>
-                    Monto cursado, en UF · {n(data.sanctions.monto_uf ?? 0)} en total
-                  </div>
-                  <Bars
-                    height={0}
-                    data={conMonto.map((s) => ({
-                      label: String(s.ano),
-                      value: s.monto_uf ?? 0,
-                      tone: 'medium' as const,
-                    }))}
-                    max={montoMax}
-                  />
-                </>
-              )}
-              <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-                Eventos resueltos por RUT sobre el padrón, con su resolución cuando la fuente
-                publica el documento. Último registrado: {fecha(data.sanctions.ultimo)}.
-                {conMonto.length < sanciones.length && (
-                  <> {n(sanciones.length - conMonto.length)} año{sanciones.length - conMonto.length === 1 ? '' : 's'} sin monto publicado en la fuente no dibujan barra.</>
-                )}{' '}
-                {data.coverage.sanction_note}
-              </p>
-            </>
-          )}
-        </Panel>
+      <div className="pulse-registry-chart">
+        <svg className="pulse-registry-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Evolución del padrón UAF entre 2020 y 2026">
+          {[0.2, 0.5, 0.8].map((p) => <line key={p} className="pulse-registry-grid" x1={L} x2={W - R} y1={T + (H - T - B) * p} y2={T + (H - T - B) * p} />)}
+          <path className="pulse-registry-area" d={area} />
+          <path className="pulse-registry-line" d={line} />
+          {points.map((point, index) => (
+            <g key={point.year}>
+              <circle className="pulse-registry-dot" data-current={point.year === last.year} cx={x(index)} cy={y(point.total)} r={point.year === last.year ? 4.3 : 3.2} />
+              <text className={point.year === last.year ? 'pulse-registry-current' : 'pulse-registry-value'} x={x(index)} y={y(point.total) - 9}>{n(point.total)}</text>
+              <text className="pulse-registry-year" x={x(index)} y={H - 7}>{point.year}</text>
+            </g>
+          ))}
+        </svg>
       </div>
-
-      <div className="grid grid-2">
-        <Panel title="Sector UAF que obliga" meta={`${n(u.sectores_uaf)} sectores`}>
-          <Bars
-            data={data.by_sector.slice(0, 12).map((s) => ({
-              label: titleCase(s.sector),
-              value: s.sujetos,
-              tone: s.sancionados > 0 ? 'high' : 'watch',
-              sub: s.sancionados ? `${s.sancionados} con sanción` : undefined,
-            }))}
-            onPick={(label) => {
-              const hit = data.by_sector.find((s) => titleCase(s.sector) === label);
-              if (hit) onCohort({ cohort: 'SECTOR', value: hit.sector, title: hit.sector });
-            }}
-          />
-        </Panel>
-
-        <Panel title="Industria según el SII" meta={`${n(u.industrias)} rubros económicos`}>
-          <Bars
-            data={data.by_industry.map((i) => ({
-              label: titleCase(i.industria),
-              value: i.sujetos,
-              tone: i.sancionados > 0 ? 'high' : 'watch',
-              sub: i.sancionados ? `${i.sancionados} con sanción` : undefined,
-            }))}
-            onPick={(label) => {
-              const hit = data.by_industry.find((i) => titleCase(i.industria) === label);
-              if (hit) onCohort({ cohort: 'INDUSTRIA', value: hit.industria, title: hit.industria });
-            }}
-          />
-          <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-            El sector UAF dice por qué el sujeto está obligado. La industria dice a qué se
-            dedica de verdad según su giro tributario. Cuando divergen, la diferencia es la
-            que interesa mirar: {n(u.giro_atipico)} sujetos declaran un giro poco frecuente
-            entre sus pares de sector. La antigüedad media del padrón es de{' '}
-            {n1(u.antiguedad_media ?? 0)} años, calculada sobre los {n(u.con_inicio)} sujetos
-            con inicio de actividades ante el SII.
-          </p>
-        </Panel>
+      <div className="pulse-registry-note">
+        <i />
+        <span>2020–2025 son cierres anuales publicados en los Informes Estadísticos UAF. El punto 2026 corresponde al padrón semestral al 30-06-2026: <b>{n(last.total)} inscritos</b>, no una proyección.</span>
       </div>
     </>
   );
+}
+
+function RegistryFacts({ points, sectors, current }: { points: RegistryTotal[]; sectors: number; current: number }) {
+  const first = points[0];
+  const last = points[points.length - 1];
+  const previous = points.length > 1 ? points[points.length - 2] : null;
+  const longDelta = first && last ? last.total - first.total : null;
+  const longPct = first && longDelta != null ? (longDelta / first.total) * 100 : null;
+  const shortDelta = previous && last ? last.total - previous.total : null;
+  const shortPct = previous && shortDelta != null ? (shortDelta / previous.total) * 100 : null;
+
+  return (
+    <section className="pulse-cycle-panel">
+      <div className="pulse-cycle-head">
+        <div>
+          <h3>Lectura del padrón vigente</h3>
+          <p>Escala, variación y consistencia del último corte</p>
+        </div>
+      </div>
+      <div className="pulse-cycle-facts">
+        <div className="pulse-cycle-fact"><span>Stock vigente</span><strong>{n(last?.total ?? current)}</strong><em>coincide con el padrón operativo de Atlas</em></div>
+        <div className="pulse-cycle-fact"><span>Variación 2020 → 2026</span><strong>{longDelta == null ? '—' : `+${n(longDelta)}`}</strong><em>{longPct == null ? '—' : `+${n1(longPct)}% en el período`}</em></div>
+        <div className="pulse-cycle-fact"><span>Último cambio publicado</span><strong>{shortDelta == null ? '—' : `${shortDelta >= 0 ? '+' : ''}${n(shortDelta)}`}</strong><em>{shortPct == null ? '—' : `${shortPct >= 0 ? '+' : ''}${n1(shortPct)}% vs. cierre 2025`}</em></div>
+        <div className="pulse-cycle-fact"><span>Sectores del padrón</span><strong>{n(sectors)}</strong><em>clasificación UAF observada en el corte</em></div>
+      </div>
+      {last?.source_url && <a className="pulse-cycle-source" href={last.source_url} target="_blank" rel="noreferrer">Fuente del corte 2026 · {last.source_label} →</a>}
+    </section>
+  );
+}
+
+function TrendPanel({
+  title, hint, rows, loading, tone, onPick, note,
+}: {
+  title: string;
+  hint: string;
+  rows: TrendRow[];
+  loading: boolean;
+  tone: string;
+  onPick: (row: TrendRow) => void;
+  note?: string;
+}) {
+  return (
+    <section className="pulse-cycle-panel">
+      <div className="pulse-cycle-head"><div><h3>{title}</h3><p>{hint}</p></div></div>
+      {loading && rows.length === 0 ? (
+        <div className="pulse-so-statebar">Calculando variación sectorial…</div>
+      ) : rows.length === 0 ? (
+        <div className="pulse-so-statebar">Sin serie sectorial comparable.</div>
+      ) : (
+        <div className="pulse-trend-list">
+          {rows.map((row) => (
+            <button key={row.sector} className="pulse-trend-row" style={{ ['--trend-tone' as string]: tone }} onClick={() => onPick(row)} title={`Abrir sujetos de ${row.sector}`}>
+              <span className="pulse-trend-name">
+                <b>{titleCase(row.sector)}</b>
+                <span>{n(row.first_value)} → {n(row.last_value)} SO</span>
+              </span>
+              <Sparkline points={row.points} />
+              <span className="pulse-trend-delta">{row.delta > 0 ? '+' : ''}{n(row.delta)}<small>SO netos</small></span>
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="pulse-trend-foot">{note ?? 'Ranking sobre sectores comparables con observación continua en los siete cortes 2020–2026. Pincha una serie para abrir sus sujetos.'}</p>
+    </section>
+  );
+}
+
+function Sparkline({ points }: { points: TrendPoint[] }) {
+  const W = 170, H = 30, P = 2;
+  const values = points.map((point) => point.subjects);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(1, max - min);
+  const x = (index: number) => P + index * ((W - P * 2) / Math.max(1, points.length - 1));
+  const y = (value: number) => P + (H - P * 2) * (1 - (value - min) / span);
+  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(index).toFixed(1)} ${y(point.subjects).toFixed(1)}`).join(' ');
+  return (
+    <svg className="pulse-trend-spark" viewBox={`0 0 ${W} ${H}`} aria-hidden>
+      <path d={path} />
+      {points.map((point, index) => <circle key={point.year} cx={x(index)} cy={y(point.subjects)} r={index === points.length - 1 ? 2.2 : 1.4} />)}
+    </svg>
+  );
+}
+
+function SubjectRows({ rows }: { rows: SubjectRow[] }) {
+  return (
+    <div className="pulse-so-scroll">
+      <table className="pulse-so-table">
+        <thead><tr>
+          <th>Sujeto obligado</th>
+          <th>Sector UAF</th>
+          <th>Situación / territorio</th>
+          <th>Escala</th>
+          <th>Elementos de interés</th>
+          <th>IPF</th>
+          <th />
+        </tr></thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.entity_id}>
+              <td className="pulse-so-name">
+                <b>{titleCase(row.name)}</b>
+                <span className="pulse-so-rut">{rutFormat(row.rut)} · {row.main_activity ? titleCase(row.main_activity) : 'sin actividad principal observada'}</span>
+              </td>
+              <td className="pulse-so-sector">{row.uaf_sector ? titleCase(row.uaf_sector) : '—'}</td>
+              <td className="pulse-so-location">
+                <span className="pulse-so-state" style={{ ['--state-tone' as string]: stateTone(row.sii_status) }}>{stateLabel(row.sii_status)}</span>
+                <small>{row.commune ? `${titleCase(row.commune)} · ${titleCase(row.region)}` : (row.region ? titleCase(row.region) : 'sin territorio observado')}</small>
+              </td>
+              <td className="pulse-so-scale">
+                <span>{row.sales_band ? `Tramo ventas ${row.sales_band}` : 'Ventas s/d'}</span>
+                <small>{row.workers == null ? 'trabajadores s/d' : `${n(row.workers)} trabajador${row.workers === 1 ? '' : 'es'}`}</small>
+              </td>
+              <td><SignalStrip row={row} /></td>
+              <td className="pulse-so-ipf">
+                <b>{row.ipf_score == null ? '—' : n1(row.ipf_score)}</b>
+                <span>{row.ipf_band ? titleCase(row.ipf_band.replace(/_/g, ' ')) : (row.attention_motive ? MOTIVE_LABEL[row.attention_motive] ?? titleCase(row.attention_motive.replace(/_/g, ' ')) : 'sin banda')}</span>
+              </td>
+              <td><a className="pulse-so-360" href={hrefFor({ view: 'ficha', entityId: row.entity_id })}>Entidad 360 →</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SignalStrip({ row }: { row: SubjectRow }) {
+  const sanctions = row.sanction_evidence_count ?? 0;
+  const press = row.press_evidence_count ?? 0;
+  const alerts = row.alert_count ?? 0;
+  if (sanctions + press + alerts === 0 && !row.is_osfl) return <span style={{ color: 'var(--ink-4)', fontSize: 8.5 }}>sin marca en estos cruces</span>;
+  return (
+    <div className="pulse-so-signals">
+      {sanctions > 0 && <span className="pulse-so-signal" data-kind="sanction">Sanción · {n(sanctions)}</span>}
+      {press > 0 && <span className="pulse-so-signal" data-kind="press">Prensa · {n(press)}</span>}
+      {alerts > 0 && <span className="pulse-so-signal" data-kind="alert">Señal · {n(alerts)}</span>}
+      {row.is_osfl && <span className="pulse-so-signal" data-kind="osfl">OSFL</span>}
+    </div>
+  );
+}
+
+function stateLabel(status: string | null): string {
+  return status ? (SII_LABEL[status] ?? titleCase(status.replace(/_/g, ' '))) : 'Estado SII s/d';
+}
+
+function stateTone(status: string | null): string {
+  if (status === 'ACTIVE_AS_PUBLISHED') return 'var(--present)';
+  if (status === 'TERMINATED_AS_PUBLISHED') return 'var(--sig-high)';
+  return 'var(--unknown)';
 }
