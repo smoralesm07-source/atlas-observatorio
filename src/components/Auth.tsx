@@ -54,6 +54,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
       return;
     }
 
+    const userId = session.user.id;
     let live = true;
 
     async function validateAccess() {
@@ -69,7 +70,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
           const { data, error } = await supabase
             .from('aml_allowed_users')
             .select('role, enabled')
-            .eq('user_id', session.user.id)
+            .eq('user_id', userId)
             .maybeSingle();
 
           if (!live) return;
