@@ -7,6 +7,7 @@ import './styles/osfl.css';
 import './styles/fintech.css';
 import './styles/territorio-map.css';
 import './styles/entity-expediente.css';
+import './styles/entities-search.css';
 import './styles/ui-fixes.css';
 
 const root = document.getElementById('root');
