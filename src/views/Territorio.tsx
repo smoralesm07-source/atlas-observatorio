@@ -36,6 +36,10 @@ interface TerritoryIgrComparisonRow {
   vigente_level: string | null;
   candidate_level: string | null;
   candidate_level_status: 'comparison_only';
+  provisional_level: string | null;
+  provisional_level_status: 'diagnostic_only' | null;
+  provisional_boundary_distance: number | null;
+  provisional_boundary_status: 'borderline' | 'stable_relative_to_thresholds' | 'unavailable' | null;
   vigente_rank: number;
   candidate_rank: number;
   rank_delta: number;
@@ -72,6 +76,9 @@ interface TerritoryIgrComparison {
     confianza_media: number;
     confianza_baja: number;
     cambios_nivel_comparativo: number;
+    cambios_nivel_provisional: number;
+    provisional_borderline: number;
+    provisional_estables: number;
     correlacion_score: number | null;
     correlacion_ranking: number | null;
     sesgo_poblacion_vigente: number | null;
@@ -275,8 +282,8 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                   <span>Varía por comuna según cobertura temática/temporal, fuente, estabilidad y denominador.</span>
                 </div>
                 <div>
-                  <strong>Nivel v1.1</strong>
-                  <span>Se conserva sólo para comparar. Sus cortes deben recalibrarse antes de cualquier promoción.</span>
+                  <strong>Banda v1.1 provisional</strong>
+                  <span>Recalibrada para candidate.3; sirve para diagnóstico y no reemplaza el nivel IGR vigente.</span>
                 </div>
               </div>
               <p className="territory-method-muted">
@@ -291,10 +298,10 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                   <div><span>Confianza media</span><strong>{n1(cmp.confianza_candidate_media)}%</strong><small>{n1(cmp.confianza_candidate_min)}–{n1(cmp.confianza_candidate_max)}</small></div>
                   <div><span>Correlación ranking</span><strong>{n1((cmp.correlacion_ranking ?? 0) * 100)}%</strong><small>respecto del IGR vigente</small></div>
                   <div><span>Sesgo población</span><strong>{n1(cmp.sesgo_poblacion_candidate)}</strong><small>vigente {n1(cmp.sesgo_poblacion_vigente)}</small></div>
-                  <div><span>Cambios de nivel</span><strong>{n(cmp.cambios_nivel_comparativo)}</strong><small>sólo comparación; cortes no promovidos</small></div>
+                  <div><span>Cambios banda provisional</span><strong>{n(cmp.cambios_nivel_provisional)}</strong><small>{n(cmp.provisional_borderline)} cerca de una frontera</small></div>
                 </div>
                 <p>
-                  El candidato reemplaza la anomalía transversal por <strong>anomalía temporal</strong>, combina
+                  El candidate.3 reemplaza la anomalía transversal por <strong>anomalía temporal estabilizada por soporte</strong>, combina
                   volumen y tasa por 100 mil con contracción del peso de tasa en comunas pequeñas, y calcula una
                   confianza comunal separada del IGR. <strong>El mapa y el ranking oficial siguen usando v1.0.</strong>
                 </p>
@@ -348,18 +355,18 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
             <div className="territory-candidate-kpis">
               <div><span>Correlación score</span><strong>{n1((cmp.correlacion_score ?? 0) * 100)}%</strong></div>
               <div><span>Correlación ranking</span><strong>{n1((cmp.correlacion_ranking ?? 0) * 100)}%</strong></div>
-              <div><span>Confianza candidata</span><strong>{n1(cmp.confianza_candidate_media)}%</strong><small>{n1(cmp.confianza_candidate_min)}–{n1(cmp.confianza_candidate_max)}</small></div>
-              <div><span>Sesgo por tamaño</span><strong>{n1(cmp.sesgo_poblacion_candidate)}</strong><small>antes {n1(cmp.sesgo_poblacion_vigente)}</small></div>
+              <div><span>Cambios banda provisional</span><strong>{n(cmp.cambios_nivel_provisional)}</strong><small>de {n(cmp.comunas)} comunas</small></div>
+              <div><span>Cerca de frontera</span><strong>{n(cmp.provisional_borderline)}</strong><small>{n(cmp.provisional_estables)} estables respecto de cortes</small></div>
             </div>
             <div className="territory-candidate-note">
-              <strong>Qué cambió:</strong> anomalía temporal en vez de anomalía transversal; intensidad con volumen + tasa
-              estabilizada; confianza separada en cinco dimensiones. Los {n(cmp.cambios_nivel_comparativo)} cambios de nivel
-              se muestran sólo como diagnóstico: las bandas candidatas aún no están calibradas para promoción.
+              <strong>Qué cambió:</strong> anomalía temporal estabilizada según soporte; intensidad con volumen + tasa
+              estabilizada; confianza separada en cinco dimensiones. Candidate.3 incorpora bandas recalibradas para
+              diagnóstico, pero <strong>no las promueve como clasificación oficial</strong>. El score continuo sigue siendo la salida primaria.
             </div>
             <div className="territory-candidate-table-title">Mayores movimientos de puntaje · muestra de diagnóstico</div>
             <div className="territory-candidate-table-wrap">
               <table className="table">
-                <thead><tr><th>Comuna</th><th>Región</th><th className="right">IGR v1</th><th className="right">v1.1</th><th className="right">Δ score</th><th className="right">Δ ranking</th><th className="right">Confianza</th></tr></thead>
+                <thead><tr><th>Comuna</th><th>Región</th><th className="right">IGR v1</th><th className="right">v1.1</th><th>Banda provisional</th><th className="right">Δ score</th><th className="right">Confianza</th></tr></thead>
                 <tbody>
                   {largestCandidateMoves.map((r) => (
                     <tr key={r.territory_id} onClick={() => setCommune(r.territory_id)} style={{ cursor: 'pointer' }}>
@@ -367,8 +374,14 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                       <td style={{ color: 'var(--ink-3)' }}>{r.region_name}</td>
                       <td className="right num">{n1(r.vigente_score)}</td>
                       <td className="right num">{n1(r.candidate_score)}</td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <i style={{ width: 8, height: 8, borderRadius: 2, background: `var(--igr-${levelStep(r.provisional_level)})` }} />
+                          {r.provisional_level ?? '—'}
+                          {r.provisional_boundary_status === 'borderline' && <span title="Cerca de una frontera provisional">· frontera</span>}
+                        </span>
+                      </td>
                       <td className="right num" style={{ fontWeight: 650 }}>{r.score_delta > 0 ? '+' : ''}{n1(r.score_delta)}</td>
-                      <td className="right num">{r.rank_delta > 0 ? '+' : ''}{n(r.rank_delta)}</td>
                       <td className="right num">{n1(r.candidate_confidence)}%</td>
                     </tr>
                   ))}
@@ -641,15 +654,18 @@ function ComunaDetalle({
 
         <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
           {candidate && (
-            <Panel title="IGR v1.1 · experimental" meta="comparación · no reemplaza vigente">
+            <Panel title="IGR v1.1 · experimental" meta={`${candidate.provisional_level ?? 'sin banda'} · diagnóstico`}>
               <div className="territory-candidate-detail-scores">
                 <div><span>Vigente</span><strong>{n1(candidate.vigente_score)}</strong><small>rango {n(candidate.vigente_rank)}</small></div>
-                <div><span>Candidato</span><strong>{n1(candidate.candidate_score)}</strong><small>rango {n(candidate.candidate_rank)}</small></div>
+                <div><span>Candidato</span><strong>{n1(candidate.candidate_score)}</strong><small>banda prov. {candidate.provisional_level ?? '—'}</small></div>
                 <div><span>Confianza</span><strong>{n1(candidate.candidate_confidence)}%</strong><small>{candidate.candidate_confidence_level ?? '—'}</small></div>
               </div>
               <dl className="kv" style={{ marginTop: 12 }}>
                 <dt>Δ puntaje</dt><dd className="num">{candidate.score_delta > 0 ? '+' : ''}{n1(candidate.score_delta)}</dd>
                 <dt>Δ ranking</dt><dd className="num">{candidate.rank_delta > 0 ? '+' : ''}{n(candidate.rank_delta)}</dd>
+                <dt>Banda provisional</dt><dd>{candidate.provisional_level ?? '—'}</dd>
+                <dt>Lectura de frontera</dt><dd>{candidate.provisional_boundary_status === 'borderline' ? 'Cerca de frontera' : candidate.provisional_boundary_status === 'stable_relative_to_thresholds' ? 'Estable respecto de cortes' : '—'}</dd>
+                <dt>Distancia a frontera</dt><dd className="num">{candidate.provisional_boundary_distance == null ? '—' : n1(candidate.provisional_boundary_distance)}</dd>
                 <dt>Estabilidad</dt><dd className="num">{n1(candidate.confidence_components.stability)}%</dd>
                 <dt>Cobertura temática</dt><dd className="num">{n1(candidate.confidence_components.thematic_coverage)}%</dd>
                 <dt>Cobertura temporal</dt><dd className="num">{n1(candidate.confidence_components.temporal_coverage)}%</dd>
@@ -658,8 +674,9 @@ function ComunaDetalle({
                 <dt>Población Censo 2024</dt><dd className="num">{n(candidate.population)}</dd>
               </dl>
               <div className="note" style={{ marginTop: 12 }}>
-                El nivel candidato “{candidate.candidate_level ?? '—'}” usa los cortes antiguos sólo para comparar.
-                No es una nueva clasificación aprobada y no modifica el mapa vigente.
+                La banda provisional “{candidate.provisional_level ?? '—'}” usa los cortes recalibrados de candidate.3 y sirve sólo como ayuda diagnóstica.
+                {candidate.provisional_boundary_status === 'borderline' && ' Está cerca de una frontera según su estabilidad: conviene priorizar el score continuo y revisar la evidencia antes de interpretar el cambio de banda.'}
+                {' '}No es una clasificación aprobada y no modifica el mapa vigente. El nivel legado “{candidate.candidate_level ?? '—'}” se conserva sólo para comparar con v1.0.
               </div>
             </Panel>
           )}
