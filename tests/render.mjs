@@ -116,6 +116,7 @@ const RPC = {
   obs_spend_finding_feed: F.spendFeed,
   obs_spend_actor_detail: F.spendActor,
   obs_uaf_pulse: F.uafPulse,
+  obs_uaf_screening_block: F.uafPulse.screening,
   obs_uaf_cohort: F.uafCohort,
   obs_uaf_subject_dossier: F.uafDossier,
 };
@@ -331,44 +332,66 @@ page.on('console', (m) => {
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 
 const checks = [
-  // Pulso: la composicion del padron, lo que el universo obligado reporta,
-  // la cola de revision con su motivo, el territorio y la industria. Las
-  // senales de patron NO deben estar desplegadas de entrada.
+  // Pulso: la zona fija responde siempre lo mismo —de que esta hecho el padron,
+  // que dice la lectura curada del corte y cuanto universo queda fuera— y
+  // debajo se elige una de cuatro lentes. Sin lente en la URL abre la primera,
+  // asi que esta comprobacion tiene que ir ANTES que las de lente: la eleccion
+  // se recuerda entre visitas y una lente pegada rompería el orden.
   ['pulso', '#/pulso', ['Pulso del universo obligado', '10.294',
-    // Composicion y estado registral.
+    // Composicion del padron y escala declarada.
     'Con término de giro', '445', 'Sin perfil SII', '2.110',
-    'Estado registral ante el SII', 'Activos con SII', '7.739',
-    // Reportabilidad publicada: la pregunta que el Pulso no respondia.
+    'Activos ante el SII', '7.739', 'Piden revisión', '2.728',
+    '936.205 trabajadores',
+    // La lectura del corte: texto escrito, no derivado de umbrales.
+    'La lectura del corte', 'texto curado', '76,6%',
+    'Tres sectores explican tres de cada cuatro ROS de 2025',
+    'En 2026 el padrón deja de crecer por primera vez',
+    // La puerta a la cobertura: el Pulso publica la cifra y el enlace, no la vista.
+    '79.449', 'El universo observable supera al padrón', 'Abrir Cobertura',
+    'no admiten screening por giro',
+    // Las cuatro lentes, con la primera abierta.
+    'Reportabilidad', 'Revisión', 'Territorio', 'Ciclo',
     'Lo que el universo obligado reporta', '21.828', 'sin publicar',
     'Quién sostiene la reportabilidad', 'Tres sectores explican',
     'sectores no registran ningún ROS', 'sin ROS 5 años',
-    'Informe Estadístico UAF',
-    // Cola de revision, con el motivo de mayor precedencia por sujeto.
-    'Piden revisión', '2.728', 'Sujetos que piden revisión',
-    'Sanción últimos 5 años', 'Casino Luckia Arica S.A.', 'Motivo de revisión',
-    // Prioridad fiscalizadora, territorio e industria.
-    'Prioridad fiscalizadora (IPF)', 'Muy alta',
-    'Sujetos obligados por región', 'Tarapacá',
-    'Sector UAF que obliga', 'Usuarios de Zonas Francas',
-    'Industria según el SII', 'Actividades Financieras y de Seguros',
-    'Término de giro por año', 'Caracterización cruzada',
-    'Con antecedente sancionatorio', '372', 'Proveedores del Estado',
-    // Brecha de screening: el universo SII que declara un giro alcanzado por la
-    // Ley 19.913 y no figura en el padron. Reemplaza a la nota en prosa que
-    // ocupaba el pie del estado registral.
-    'Potenciales sujetos obligados', '79.449', 'Gatillantes de prioridad A', '23',
-    'Qué parte del padrón admite screening por giro', 'Universo construible',
-    'Exige registro sectorial', 'Sin gatillante de prioridad A',
-    'Cuatro códigos explican', 'Brecha por sector',
-    'Corredores de Propiedades', '25.062',
-    'Sectores cuyo universo no se puede construir desde el giro declarado',
-    'Aduanas / administración de Zona Franca', 'Poder Judicial',
-    'escala logarítmica', 'Un giro alcanzado no prueba la obligación',
-    'Nómina de personas jurídicas SII',
+    'Δ 25/24', 'Informe Estadístico UAF',
     // Los limites se declaran en la propia pantalla, no en la documentacion.
-    'no publica fecha de inscripción', 'Describe el entorno, nunca al sujeto',
-    'no existe ROS por sujeto', 'no prueba incumplimiento',
-    'Entorno territorial donde operan', 'Muy alto']],
+    'no publica fecha de inscripción', 'no existe ROS por sujeto',
+    'no prueba incumplimiento']],
+  // Cada lente se abre por URL y esa URL es compartible.
+  ['pulso-revision', '#/pulso?lente=revision', ['Sujetos que piden revisión',
+    'Sanción últimos 5 años', 'Casino Luckia Arica S.A.', 'Motivo de revisión',
+    // El cruce motivo x IPF alto: el campo ya venia en el contrato y no se usaba.
+    'Qué motivo concentra prioridad', 'Prioridad fiscalizadora (IPF)', 'Muy alta',
+    // La caracterizacion cruzada baja a la cola de trabajo, que es donde se usa.
+    'Caracterización cruzada', 'Con antecedente sancionatorio', '372',
+    'Estructura societaria amplia', 'Proveedores del Estado',
+    'no imputa incumplimiento']],
+  ['pulso-territorio', '#/pulso?lente=territorio', ['Sujetos obligados por región',
+    'Tarapacá', 'Entorno territorial donde operan', 'Muy alto',
+    // La cobertura territorial deja de ser una nota al pie y es una cifra.
+    'Cobertura territorial del padrón', 'Sin comuna observable', '2.119',
+    'Describe el entorno, nunca al sujeto']],
+  ['pulso-ciclo', '#/pulso?lente=ciclo', [
+    // Las altas de actividad ya venian en el contrato y nunca se dibujaban.
+    'Altas de actividad contra términos de giro', 'Inicio de actividades',
+    'Sanciones sobre el padrón', 'Monto cursado, en UF', '5.850',
+    'sin monto publicado en la fuente',
+    'Sector UAF que obliga', 'Usuarios de Zonas Francas',
+    'Industria según el SII', 'Actividades Financieras y de Seguros']],
+  // Cobertura: la brecha SII<->UAF, que antes vivia comprimida en tres
+  // recuadros dentro de un panel del Pulso que trataba de otra cosa.
+  ['cobertura', '#/cobertura', ['Cobertura del padrón obligado',
+    'Universo observable', '79.449', 'BASELINE_DECLARED',
+    'De riesgo alto', '36.379', 'Gatillantes ACTECO', '682000',
+    'Brecha por sector obligado', 'Corredores de Propiedades', '25.062',
+    'escala logarítmica',
+    'Qué parte del padrón admite screening por giro', 'Sin gatillante A',
+    'Sectores que no se leen desde el giro', 'Poder Judicial',
+    'Aduanas / administración de Zona Franca',
+    // El limite va en la pantalla: un giro alcanzado no prueba la obligacion.
+    'no prueba que la entidad reúna los elementos',
+    'no está materializada RUT a RUT']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   // El listado ya no dice sólo quién es la entidad: dice desde cuándo existe,
   // a qué se dedica y de qué tamaño es.

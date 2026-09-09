@@ -585,13 +585,24 @@ button.state-card:hover { border-color: var(--line-strong); }
 /* Fila de intensidad sectorial: padrón a la izquierda, reporte a la derecha,
    y entre medio la barra que los relaciona. */
 .rep-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 78px 96px 74px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 78px 96px 74px 62px;
   gap: 4px 14px; align-items: center; width: 100%; text-align: left;
   padding: 10px 18px; border: 0; border-bottom: 1px solid var(--line-soft);
   background: transparent; cursor: pointer; font: inherit; color: inherit;
   transition: background 0.13s var(--ease);
 }
 .rep-row:hover { background: var(--bg-panel-2); }
+/* La cabecera comparte la rejilla de las filas para que las columnas queden a
+   plomo; no es una fila pinchable y por eso no toma el hover ni el cursor. */
+.rep-row.rep-head {
+  cursor: default; border-bottom-color: var(--line); padding-top: 4px; padding-bottom: 8px;
+}
+.rep-row.rep-head:hover { background: transparent; }
+.rep-row.rep-head > span {
+  font-size: 10.5px; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-3); text-align: right;
+}
+.rep-row.rep-head > span:first-child { text-align: left; }
 .rep-name { font-size: 12.5px; font-weight: 570; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .rep-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rep-sub { grid-column: 1 / 2; font-size: 11px; color: var(--ink-4); }
@@ -655,6 +666,11 @@ button.gap-row:focus-visible { outline: 2px solid var(--accent); outline-offset:
   color: var(--ink-4);
   font-family: var(--mono);
   margin-top: 2px;
+  /* El bloque hijo no hereda el recorte con puntos suspensivos del padre y se
+     cortaba a media palabra. Texto cortado en seco es un error, no un ajuste. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Dos barras apiladas sobre la misma escala: la comparación es vertical y no
@@ -1185,3 +1201,151 @@ button.gap-row:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .sector-group-row:not(:disabled):hover .sector-group-row-arrow {
   color: var(--accent);
 }
+
+/* ─────────────────────────────────────────────── el Pulso en cuatro lentes
+
+   La zona fija del Pulso responde siempre lo mismo y debajo el analista elige
+   una de cuatro preguntas. Sólo una lente ocupa pantalla a la vez: la página
+   pasó de nueve bloques desplegados a la vez a una pantalla y media más la
+   lente activa. */
+
+.lensbar {
+  display: flex; gap: 4px; margin: 18px 0 0; overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+  background: var(--bg-canvas);
+}
+.lensbar button {
+  font: inherit; font-size: 13px; font-weight: 550; white-space: nowrap;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px 9px; cursor: pointer;
+  color: var(--ink-3); background: none; border: 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.13s var(--ease), border-color 0.13s var(--ease);
+}
+.lensbar button:hover { color: var(--ink-2); }
+.lensbar button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--accent); }
+.lensbar button b {
+  font-size: 10.5px; font-weight: 600; color: var(--ink-4);
+  border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px;
+}
+.lensbar button[aria-selected='true'] b { color: var(--accent); border-color: var(--accent-dim); }
+.lens { padding-top: 16px; }
+
+/* La lectura del corte: hallazgos escritos por corte, nunca derivados de un
+   umbral. Si el snapshot no los trae, la franja entera no existe. */
+.pulse-reads-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin: 18px 0 9px;
+}
+.pulse-reads-head h2 {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0;
+}
+.pulse-reads-head span {
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-4);
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+}
+.pulse-reads { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .pulse-reads { grid-template-columns: minmax(0, 1fr); } }
+.pulse-read {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px;
+  align-items: start; text-align: left; font: inherit; color: inherit;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-panel-2); padding: 14px 15px; cursor: pointer;
+  transition: border-color 0.13s var(--ease);
+}
+.pulse-read:disabled { cursor: default; }
+.pulse-read:not(:disabled):hover { border-color: var(--line-strong); }
+.pulse-read-big {
+  grid-row: span 2; font-size: 27px; font-weight: 700; line-height: 1;
+  letter-spacing: -0.03em; color: var(--read-tone); padding-top: 2px;
+}
+.pulse-read-title { font-size: 12.5px; font-weight: 620; color: var(--ink); }
+.pulse-read-glosa { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; }
+.pulse-read-go {
+  grid-column: 2; font-family: var(--mono); font-size: 10.5px;
+  color: var(--read-tone); margin-top: 5px;
+}
+
+/* La puerta a Cobertura. No es un panel más: es el enlace a otra sección, y el
+   color caliente lo separa del resto del tablero. */
+.cov-gate {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 22px;
+  align-items: center; width: 100%; text-align: left; font: inherit; color: inherit;
+  margin-top: 12px; padding: 15px 18px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--sig-high) 30%, transparent);
+  border-left: 2px solid var(--sig-high); border-radius: var(--radius);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--sig-high) 8%, transparent), transparent 52%),
+    var(--bg-panel);
+  transition: border-color 0.13s var(--ease);
+}
+.cov-gate:hover { border-color: var(--sig-high); }
+@media (max-width: 860px) { .cov-gate { grid-template-columns: minmax(0, 1fr); gap: 12px; } }
+.cov-gate-fig b { display: block; font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: var(--sig-high); line-height: 1; }
+.cov-gate-fig em {
+  display: block; font-style: normal; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); margin-top: 5px;
+}
+.cov-gate-title { display: block; font-size: 13px; font-weight: 620; color: var(--ink); }
+.cov-gate-lede { display: block; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; margin-top: 3px; max-width: 78ch; }
+.cov-gate-mini { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 9px; }
+.cov-gate-mini span { font-size: 10.5px; color: var(--ink-3); }
+.cov-gate-mini b { font-size: 11.5px; font-weight: 650; color: var(--ink); }
+.cov-gate-cta {
+  font-family: var(--mono); font-size: 11.5px; color: var(--sig-high); white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--sig-high) 34%, transparent);
+  border-radius: 999px; padding: 7px 14px;
+}
+
+/* Motivo contra IPF alto: dos condiciones medidas por separado. Coincidir en
+   ambas no agrava nada, sólo dice dónde una cola corta concentra prioridad. */
+.cross-ipf { display: flex; flex-direction: column; gap: 8px; }
+.cross-ipf-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 84px;
+  gap: 12px; align-items: center; width: 100%; text-align: left;
+  font: inherit; color: var(--ink-2); font-size: 11.5px;
+  background: none; border: 0; padding: 2px 0; cursor: pointer;
+}
+.cross-ipf-row:hover { color: var(--ink); }
+.cross-ipf-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cross-ipf-track { position: relative; height: 11px; border-radius: 3px; background: var(--bg-input); overflow: hidden; }
+.cross-ipf-track i { position: absolute; inset: 0 auto 0 0; display: block; height: 100%; border-radius: 3px; }
+.cross-ipf-num { text-align: right; font-size: 12px; font-weight: 650; color: var(--ink); }
+.cross-ipf-num em { font-style: normal; font-weight: 400; color: var(--ink-4); }
+
+.cross-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.cross-card {
+  display: flex; flex-direction: column; gap: 3px; text-align: left; font: inherit; color: inherit;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--bg-panel-2); padding: 12px 13px; cursor: pointer;
+  transition: border-color 0.13s var(--ease);
+}
+.cross-card:hover { border-color: var(--line-strong); }
+.cross-card-label { font-size: 11.5px; color: var(--ink); }
+.cross-card-sub { font-size: 10.5px; color: var(--ink-4); line-height: 1.4; }
+
+/* Ciclo de vida y sanciones: dos series por año sobre un eje común. */
+.life { display: flex; gap: 8px; align-items: flex-end; height: 148px; padding-top: 14px; }
+.life-year { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; min-width: 0; }
+.life-pair { display: flex; gap: 3px; align-items: flex-end; width: 100%; height: 100%; }
+.life-pair i { flex: 1; display: block; border-radius: 3px 3px 0 0; min-height: 1px; }
+.life-year em { font-style: normal; font-family: var(--mono); font-size: 9.5px; color: var(--ink-4); }
+
+/* ─────────────────────────────────────────────────── vista Cobertura */
+
+.cov-command { border-left-color: var(--sig-high); }
+.cov-command .pulse-kicker { color: var(--sig-high); }
+.cov-command .pulse-meta-item i { background: var(--sig-high); }
+.cov-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1080px) { .cov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .cov-kpis { grid-template-columns: minmax(0, 1fr); } }
+.cov-univ { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.cov-univ b { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: var(--sig-high); }
+.cov-univ span { font-size: 11.5px; color: var(--ink-3); max-width: 30ch; line-height: 1.45; }
+.cov-rows { display: flex; flex-direction: column; gap: 8px; }
+.cov-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 66px; gap: 10px; align-items: center; font-size: 11.5px; color: var(--ink-2); }
+.cov-row-track { height: 9px; border-radius: 2px; background: var(--bg-input); overflow: hidden; }
+.cov-row-track i { display: block; height: 100%; border-radius: 2px; }
+.cov-row b { text-align: right; font-size: 11.5px; color: var(--ink); }

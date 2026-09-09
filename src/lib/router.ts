@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { UafLens } from './contracts';
+
+const LENTES: UafLens[] = ['reportabilidad', 'revision', 'territorio', 'ciclo'];
+
+function asLens(v: string | null): UafLens | undefined {
+  return LENTES.includes(v as UafLens) ? (v as UafLens) : undefined;
+}
 
 export type Route =
-  | { view: 'pulso' }
+  /** La lente activa viaja en la URL: un enlace al Pulso abre la misma lente. */
+  | { view: 'pulso'; lente?: UafLens }
+  | { view: 'cobertura' }
   | { view: 'osfl' }
   | { view: 'fintech' }
   | { view: 'sanciones' }
@@ -24,6 +33,10 @@ export function parseHash(hash: string): Route {
   const seg = path.split('/').filter(Boolean);
 
   switch (seg[0]) {
+    case 'pulso':
+      return { view: 'pulso', lente: asLens(params.get('lente')) };
+    case 'cobertura':
+      return { view: 'cobertura' };
     case 'osfl':
       return { view: 'osfl' };
     case 'fintech':
@@ -65,6 +78,8 @@ export function parseHash(hash: string): Route {
 
 export function hrefFor(r: Route): string {
   switch (r.view) {
+    case 'cobertura':
+      return '#/cobertura';
     case 'osfl':
       return '#/osfl';
     case 'fintech':
@@ -94,6 +109,8 @@ export function hrefFor(r: Route): string {
       return '#/fuentes';
     case 'metodologia':
       return '#/metodologia';
+    case 'pulso':
+      return r.lente ? `#/pulso?lente=${r.lente}` : '#/pulso';
     default:
       return '#/pulso';
   }
