@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AuthGate } from './components/Auth';
 import { Shell } from './components/Shell';
+import { Entity360StatusMarks } from './components/Entity360StatusMarks';
 import { useRoute } from './lib/router';
 import { Pulso } from './views/Pulso';
 import { Osfl } from './views/Osfl';
@@ -39,7 +40,12 @@ function Routed({ session }: { session: Session }) {
           onNavigate={go}
         />
       )}
-      {route.view === 'ficha' && <EntityExpediente entityId={route.entityId} onNavigate={go} />}
+      {route.view === 'ficha' && (
+        <>
+          <EntityExpediente entityId={route.entityId} onNavigate={go} />
+          <Entity360StatusMarks entityId={route.entityId} />
+        </>
+      )}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
       {route.view === 'sectores' && <Sectores onNavigate={go} />}
       {route.view === 'gasto' && <GastoPublico familiaInicial={route.familia} onNavigate={go} />}
