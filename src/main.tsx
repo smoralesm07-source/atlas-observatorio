@@ -7,6 +7,7 @@ import './styles/osfl.css';
 import './styles/osfl-detail-readable.css';
 import './styles/fintech.css';
 import './styles/fintech-accessibility.css';
+import './styles/fintech-ui-cleanup.css';
 import './styles/territorio-map.css';
 import './styles/entity-expediente.css';
 import './styles/entities-search.css';
