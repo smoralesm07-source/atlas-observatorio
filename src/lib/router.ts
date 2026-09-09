@@ -4,6 +4,7 @@ export type Route =
   | { view: 'pulso' }
   | { view: 'osfl' }
   | { view: 'fintech' }
+  | { view: 'sanciones' }
   | { view: 'senales'; family?: string }
   | { view: 'entidades'; q?: string; region?: string }
   | { view: 'ficha'; entityId: string }
@@ -27,6 +28,8 @@ export function parseHash(hash: string): Route {
       return { view: 'osfl' };
     case 'fintech':
       return { view: 'fintech' };
+    case 'sanciones':
+      return { view: 'sanciones' };
     case 'senales':
       return { view: 'senales', family: params.get('familia') ?? undefined };
     case 'entidades':
@@ -66,6 +69,8 @@ export function hrefFor(r: Route): string {
       return '#/osfl';
     case 'fintech':
       return '#/fintech';
+    case 'sanciones':
+      return '#/sanciones';
     case 'senales':
       return r.family ? `#/senales?familia=${encodeURIComponent(r.family)}` : '#/senales';
     case 'entidades': {
