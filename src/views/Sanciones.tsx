@@ -2,719 +2,294 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/sanciones.css';
 
-type Overview = {
-  event_count: number | null;
-  regulatory_sanction_event_count: number | null;
-  cgr_enforcement_event_count: number | null;
-  entity_key_count: number | null;
-  sanctioned_universe_entity_count: number | null;
-  events_with_document: number | null;
-  events_with_amount_uf: number | null;
-  amount_uf_total: number | string | null;
-  amount_clp_total: number | string | null;
-  first_event_date: string | null;
-  last_event_date: string | null;
-  refreshed_at: string | null;
+type Filters = {
+  q: string;
+  universe: string;
+  regulator: string;
+  region: string;
+  event_kind: string;
+  year: string;
+  amount_band: string;
 };
 
-type SanctionEvent = {
+type Dashboard = {
+  snapshot_id?: string;
+  metrics?: {
+    unified_universe_count?: number | string;
+    entity_count?: number | string;
+    event_count?: number | string;
+    regulatory_event_count?: number | string;
+    cgr_event_count?: number | string;
+    document_count?: number | string;
+    supervisor_count?: number | string;
+    amount_clp?: number | string;
+    amount_uf?: number | string;
+  };
+  universes?: Array<{ code: string; evaluated_count: number | string; entity_count: number | string; event_count?: number | string }>;
+  supervisors?: Array<{ regulator: string; event_count: number | string; entity_count?: number | string; regulatory_event_count?: number | string; cgr_event_count?: number | string }>;
+  regions?: Array<{ region: string; event_count: number | string; entity_count?: number | string }>;
+  types?: Array<{ event_kind: string; event_count: number | string; entity_count?: number | string }>;
+  years?: Array<{ event_year: number | string; event_count: number | string; entity_count?: number | string }>;
+  filters?: { regulators?: string[]; regions?: string[]; types?: string[]; years?: Array<number | string> };
+  semantics?: { regulatory?: string; cgr?: string; currency?: string; priority?: string };
+};
+
+type EventItem = {
   event_id: string;
-  event_date: string | null;
-  event_year: number | null;
-  regulator: string | null;
-  event_class: string | null;
-  event_kind: string | null;
-  sanction_record: boolean | null;
-  entity_id: string | null;
+  event_date?: string | null;
+  event_year?: number | null;
+  regulator?: string | null;
+  event_class?: string | null;
+  event_kind?: string | null;
+  entity_id?: string | null;
   entity_key?: string | null;
-  rut: string | null;
-  canonical_name: string | null;
-  source_entity_name: string | null;
-  identity_status: string | null;
-  identity_method?: string | null;
+  rut?: string | null;
+  canonical_name?: string | null;
+  source_entity_name?: string | null;
+  identity_status?: string | null;
   identity_confidence?: number | string | null;
-  region: string | null;
-  commune: string | null;
-  territory_basis?: string | null;
-  current_condition: string | null;
-  condition_basis?: string | null;
-  is_uaf_registered: boolean | null;
-  is_potential_screening: boolean | null;
-  uaf_sector: string | null;
-  amount_uf: number | string | null;
-  amount_clp: number | string | null;
-  reason: string | null;
-  resolution_ref: string | null;
-  evidence_id?: string | null;
-  document_url: string | null;
-  document_quality: string | null;
+  region?: string | null;
+  amount_clp?: number | string | null;
+  amount_uf?: number | string | null;
+  reason?: string | null;
+  resolution_ref?: string | null;
+  document_url?: string | null;
+  document_quality?: string | null;
   document_excerpt?: string | null;
   cgr_stage?: string | null;
   cgr_risk_family?: string | null;
   cgr_severity?: string | null;
-  in_sii_registry?: boolean | null;
   in_uaf_registry?: boolean | null;
+  in_sii_registry?: boolean | null;
   in_osfl_registry?: boolean | null;
-  in_unified_universe: boolean | null;
+  priority_score?: number | string | null;
 };
 
-type Filters = { year: string; regulator: string; sector: string };
-type ActorSummary = {
-  key: string;
-  name: string;
-  rut: string;
-  events: number;
-  amountUf: number;
-  lastDate: string | null;
-  regulator: string;
-  sector: string;
-  region: string;
-  entityId: string | null;
-  rows: SanctionEvent[];
+type EventsResponse = {
+  page?: { limit?: number; offset?: number; total?: number | string };
+  items?: EventItem[];
 };
 
-type RegulatorSummary = {
-  regulator: string;
-  events: number;
-  entities: number;
-  years: number;
-  amountUf: number;
-  lastDate: string | null;
-};
+type DetailResponse = { event?: EventItem; related_events?: EventItem[] };
 
-type RegionSummary = {
-  region: string;
-  events: number;
-  entities: number;
-  amountUf: number;
-};
+const EMPTY: Filters = { q: '', universe: '', regulator: '', region: '', event_kind: '', year: '', amount_band: '' };
+const TYPE_COLORS = ['#ff8a1f', '#19c6df', '#7b78ff', '#f0618f', '#79d59c', '#8fa3b5', '#e3b341'];
+const PAGE_SIZE = 12;
+const NF = new Intl.NumberFormat('es-CL');
+const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-const EMPTY_FILTERS: Filters = { year: '', regulator: '', sector: '' };
-const PAGE = 1000;
-const SOURCE_NAMES: Record<string, string> = {
-  CMF: 'Comisión para el Mercado Financiero',
-  UAF: 'Unidad de Análisis Financiero',
-  SCJ: 'Superintendencia de Casinos de Juego',
-  CGR: 'Contraloría General de la República',
-};
+function n(v: unknown) { const x = Number(v); return Number.isFinite(x) ? x : 0; }
+function count(v: unknown) { return NF.format(n(v)); }
+function pct(v: unknown) { return `${n(v).toLocaleString('es-CL', { maximumFractionDigits: 1 })}%`; }
+function amountCLP(v: unknown, compact = false) {
+  const x = n(v); if (x <= 0) return '—';
+  if (compact && x >= 1e6) return `$ ${Number(x / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 1 })} MM`;
+  return CLP.format(Math.round(x));
+}
+function amountUF(v: unknown) { const x = n(v); return x > 0 ? `${x.toLocaleString('es-CL', { maximumFractionDigits: 1 })} UF` : '—'; }
+function formatDate(v?: string | null, long = false) {
+  if (!v) return 'Sin fecha';
+  const d = new Date(v); if (Number.isNaN(d.getTime())) return String(v);
+  if (long) return d.toLocaleDateString('es-CL', { year: 'numeric', month: 'short', day: '2-digit' }).replace(/\./g, '');
+  return d.toLocaleDateString('es-CL');
+}
+function universeLabel(e: EventItem) {
+  const values: string[] = [];
+  if (e.in_uaf_registry) values.push('UAF');
+  if (e.in_sii_registry) values.push('SII');
+  if (e.in_osfl_registry) values.push('OSFL');
+  return values.join(' · ') || 'Fuera de padrón consolidado';
+}
+function priority(v: unknown): [string, string] {
+  const x = n(v); if (x >= 70) return ['Alta', 'high']; if (x >= 45) return ['Media', 'medium']; return ['Contextual', 'low'];
+}
+async function sanctionsRpc<T>(request: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.rpc('atlas_v2_sanctions_query', { p_request: request });
+  if (error) throw error;
+  return data as T;
+}
 
 export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }) {
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [events, setEvents] = useState<SanctionEvent[]>([]);
+  const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [searchDraft, setSearchDraft] = useState('');
+  const [offset, setOffset] = useState(0);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [events, setEvents] = useState<EventsResponse | null>(null);
+  const [selected, setSelected] = useState<EventItem | null>(null);
+  const [detail, setDetail] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [query, setQuery] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const [selectedActor, setSelectedActor] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchPaged<T>(table: string): Promise<T[]> {
-      const all: T[] = [];
-      for (let start = 0; ; start += PAGE) {
-        const { data, error: pageError } = await supabase
-          .from(table)
-          .select('*')
-          .order('event_date', { ascending: false, nullsFirst: false })
-          .range(start, start + PAGE - 1);
-        if (pageError) throw pageError;
-        const rows = (data ?? []) as T[];
-        all.push(...rows);
-        if (rows.length < PAGE) break;
-      }
-      return all;
-    }
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [overviewResult, eventRows] = await Promise.all([
-          supabase.from('aml_v_sanctions_overview_current_v0960').select('*').limit(1).maybeSingle(),
-          fetchPaged<SanctionEvent>('aml_v_sanctions_radiography_current_v0960'),
-        ]);
-        if (overviewResult.error) throw overviewResult.error;
-        if (!cancelled) {
-          setOverview((overviewResult.data ?? null) as Overview | null);
-          setEvents(eventRows);
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'No fue posible cargar el universo sancionatorio.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
+    setLoading(true); setError(null);
+    const payload = { ...filters };
+    Promise.all([
+      sanctionsRpc<Dashboard>({ kind: 'dashboard', ...payload }),
+      sanctionsRpc<EventsResponse>({ kind: 'events', ...payload, limit: PAGE_SIZE, offset }),
+    ]).then(([d, e]) => {
+      if (cancelled) return;
+      setDashboard(d); setEvents(e); setSelected(e.items?.[0] ?? null);
+    }).catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'No fue posible cargar Sanciones.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [reloadKey]);
-
-  const options = useMemo(() => ({
-    years: unique(events.map((e) => e.event_year).filter((v): v is number => v != null)).sort((a, b) => b - a),
-    regulators: unique(events.map((e) => clean(e.regulator)).filter(Boolean)).sort(),
-    sectors: unique(events.map((e) => sectorOf(e)).filter(Boolean)).sort(),
-  }), [events]);
-
-  const globalRows = useMemo(() => events.filter((e) => {
-    if (filters.year && String(e.event_year ?? '') !== filters.year) return false;
-    if (filters.regulator && clean(e.regulator) !== filters.regulator) return false;
-    if (filters.sector && sectorOf(e) !== filters.sector) return false;
-    return true;
-  }), [events, filters]);
+  }, [filters, offset, reload]);
 
   useEffect(() => {
-    if (selectedRegion && !globalRows.some((e) => regionOf(e) === selectedRegion)) {
-      setSelectedRegion(null);
-      setSelectedActor(null);
-    }
-  }, [globalRows, selectedRegion]);
+    let cancelled = false;
+    if (!selected?.event_id) { setDetail(null); return; }
+    sanctionsRpc<DetailResponse>({ kind: 'detail', event_id: selected.event_id })
+      .then((d) => { if (!cancelled) setDetail(d); })
+      .catch(() => { if (!cancelled) setDetail({ event: selected, related_events: [] }); });
+    return () => { cancelled = true; };
+  }, [selected]);
 
-  const regionScopedRows = useMemo(
-    () => selectedRegion ? globalRows.filter((e) => regionOf(e) === selectedRegion) : globalRows,
-    [globalRows, selectedRegion],
-  );
+  const metrics = dashboard?.metrics ?? {};
+  const options = dashboard?.filters ?? {};
+  const universeRows = dashboard?.universes ?? [];
+  const supervisors = dashboard?.supervisors ?? [];
+  const regions = (dashboard?.regions ?? []).filter((r) => r.region !== 'Sin región informada');
+  const types = dashboard?.types ?? [];
+  const years = dashboard?.years ?? [];
+  const page = events?.page ?? {};
+  const items = events?.items ?? [];
 
-  useEffect(() => {
-    if (selectedActor && !regionScopedRows.some((e) => actorKey(e) === selectedActor)) setSelectedActor(null);
-  }, [regionScopedRows, selectedActor]);
+  const typeTop = useMemo(() => types.slice(0, 6), [types]);
+  const donut = useMemo(() => {
+    const total = typeTop.reduce((s, r) => s + n(r.event_count), 0) || 1;
+    let acc = 0;
+    return { total, gradient: typeTop.map((r, i) => { const start = acc; acc += n(r.event_count) / total * 100; return `${TYPE_COLORS[i % TYPE_COLORS.length]} ${start}% ${acc}%`; }).join(',') };
+  }, [typeTop]);
 
-  const visibleRows = useMemo(
-    () => selectedActor ? regionScopedRows.filter((e) => actorKey(e) === selectedActor) : regionScopedRows,
-    [regionScopedRows, selectedActor],
-  );
+  function patch(next: Partial<Filters>) { setFilters((f) => ({ ...f, ...next })); setOffset(0); }
+  function clear() { setFilters(EMPTY); setSearchDraft(''); setOffset(0); }
+  function runSearch() { patch({ q: searchDraft.trim() }); }
 
-  const stats = useMemo(() => deriveStats(visibleRows), [visibleRows]);
-  const regulatorRows = useMemo(() => deriveRegulators(globalRows), [globalRows]);
-  const regionRows = useMemo(() => deriveRegions(globalRows), [globalRows]);
-  const regionalActors = useMemo(() => deriveActors(regionScopedRows).slice(0, 2), [regionScopedRows]);
-  const selectedActorSummary = useMemo(
-    () => selectedActor ? deriveActors(regionScopedRows).find((a) => a.key === selectedActor) ?? null : null,
-    [regionScopedRows, selectedActor],
-  );
-  const searchResults = useMemo(() => {
-    const q = normalize(query);
-    if (q.length < 2) return [] as ActorSummary[];
-    return deriveActors(globalRows.filter((e) => normalize([
-      actorName(e), e.rut, e.reason, e.resolution_ref, e.regulator, e.uaf_sector, e.region,
-    ].filter(Boolean).join(' ')).includes(q))).slice(0, 6);
-  }, [globalRows, query]);
+  if (loading && !dashboard) return <div className="san-loading"><span className="san-spinner" /><strong>Construyendo monitor de sanciones…</strong></div>;
+  if (error && !dashboard) return <div className="san-error"><strong>No fue posible cargar Sanciones.</strong><span>{error}</span><button onClick={() => setReload((x) => x + 1)}>Reintentar</button></div>;
 
-  const costly = useMemo(
-    () => [...visibleRows].filter((e) => num(e.amount_uf) > 0).sort((a, b) => num(b.amount_uf) - num(a.amount_uf)).slice(0, 5),
-    [visibleRows],
-  );
-  const recent = useMemo(
-    () => [...visibleRows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date)).slice(0, 5),
-    [visibleRows],
-  );
-  const recent50 = useMemo(
-    () => [...visibleRows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date)).slice(0, 50),
-    [visibleRows],
-  );
-  const quality = useMemo(() => deriveQuality(visibleRows), [visibleRows]);
-  const years = useMemo(() => deriveYears(visibleRows), [visibleRows]);
+  const totalAmounts = [amountCLP(metrics.amount_clp, true) !== '—' ? `${amountCLP(metrics.amount_clp, true)} CLP` : '', amountUF(metrics.amount_uf) !== '—' ? amountUF(metrics.amount_uf) : ''].filter(Boolean).join(' · ') || 'Sin monto agregado';
 
-  function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
-    setFilters((current) => ({ ...current, [key]: value }));
-    setSelectedRegion(null);
-    setSelectedActor(null);
-  }
-
-  function toggleRegulator(value: string) {
-    setFilter('regulator', filters.regulator === value ? '' : value);
-  }
-
-  function chooseRegion(region: string) {
-    const next = selectedRegion === region ? null : region;
-    setSelectedRegion(next);
-    setSelectedActor(null);
-  }
-
-  function chooseActor(actor: ActorSummary) {
-    if (actor.region && actor.region !== 's/i') setSelectedRegion(actor.region);
-    setSelectedActor(actor.key);
-  }
-
-  function clearAll() {
-    setFilters(EMPTY_FILTERS);
-    setSelectedRegion(null);
-    setSelectedActor(null);
-    setQuery('');
-  }
-
-  if (loading) return <div className="sanctions-state"><span className="sanctions-spinner" />Construyendo inteligencia sancionatoria…</div>;
-  if (error) return <div className="sanctions-state sanctions-error"><b>No fue posible abrir Sanciones</b><span>{error}</span><button onClick={() => setReloadKey((x) => x + 1)}>Reintentar</button></div>;
-
-  const anyContext = Boolean(filters.year || filters.regulator || filters.sector || selectedRegion || selectedActor || query);
-  const maxRegion = Math.max(...regionRows.map((r) => r.events), 1);
-  const maxYear = Math.max(...years.map((r) => r.events), 1);
-
-  return <div className="sanctions-v12 fade-in" data-sanctions-v12-root="true">
-    <header className="san12-head">
-      <div className="san12-title">
-        <span className="san12-kicker">RADAR SANCIONATORIO · FUENTES ABIERTAS</span>
-        <h1>Sanciones</h1>
-        <p>Lectura integrada de sanciones administrativas y acciones de enforcement, con filtros globales y profundización progresiva por territorio y actor.</p>
-      </div>
-      <div className="san12-cut">
-        <span>Corte ATLAS</span>
-        <b>{formatDateTime(overview?.refreshed_at)}</b>
-        <small>{fmt(overview?.event_count ?? events.length)} eventos en el read model</small>
-      </div>
+  return <div className="atlas-v2-sanctions san-command-center fade-in" data-sanctions-command-center="v2">
+    <header className="san-command-head">
+      <div><div className="atlas-v2-eyebrow">RADAR SANCIONATORIO · V2</div><h1>Sanciones</h1><p>Monitoreo consolidado de sanciones sobre universos UAF, SII y OSFL.</p></div>
+      <div className="san-freshness"><span>Última actualización</span><strong>{formatDate(dashboard?.snapshot_id, true)}</strong><small>{count(metrics.document_count)} eventos con documento público</small></div>
     </header>
 
-    <section className="san12-command" aria-label="Filtros globales">
-      <Filter label="Año" value={filters.year} onChange={(v) => setFilter('year', v)} options={options.years.map(String)} />
-      <Filter label="Institución" value={filters.regulator} onChange={(v) => setFilter('regulator', v)} options={options.regulators} />
-      <Filter label="Industria" value={filters.sector} onChange={(v) => setFilter('sector', v)} options={options.sectors} />
-      <button className="san12-clear" disabled={!anyContext} onClick={clearAll}>Limpiar filtros</button>
+    <section className="san-filterbar">
+      <Select label="Universo" value={filters.universe} options={['UAF', 'SII', 'OSFL']} onChange={(v) => patch({ universe: v })} />
+      <Select label="Supervisor" value={filters.regulator} options={options.regulators ?? []} onChange={(v) => patch({ regulator: v })} />
+      <Select label="Región" value={filters.region} options={options.regions ?? []} onChange={(v) => patch({ region: v })} all="Todas" />
+      <Select label="Tipo de sanción" value={filters.event_kind} options={options.types ?? []} onChange={(v) => patch({ event_kind: v })} />
+      <Select label="Año" value={filters.year} options={(options.years ?? []).map(String)} onChange={(v) => patch({ year: v })} />
+      <Select label="Monto multa" value={filters.amount_band} options={[{ value: 'CLP', label: 'Con monto CLP' }, { value: 'UF', label: 'Con monto UF' }, { value: 'NO_AMOUNT', label: 'Sin monto publicado' }]} onChange={(v) => patch({ amount_band: v })} />
+      <div className="san-filter-search"><input type="search" value={searchDraft} onChange={(e) => setSearchDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }} placeholder="Buscar por RUT, entidad, motivo o resolución…" /><button className="san-search-button" onClick={runSearch}>Buscar</button></div>
+      <button className="san-reset" onClick={clear}>Limpiar</button>
     </section>
 
-    <section className="san12-kpis">
-      <Kpi label="Eventos" value={fmt(stats.events)} hint={selectedRegion ? `corte: ${selectedRegion}` : `${fmt(globalRows.length)} bajo filtros globales`} />
-      <Kpi label="Entidades" value={fmt(stats.entities)} hint={`${fmt(stats.resolvedEntities)} con identidad enlazable`} />
-      <Kpi label="Instituciones" value={fmt(stats.regulators)} hint={stats.topRegulator ? `mayor volumen: ${stats.topRegulator}` : 's/i'} />
-      <Kpi label="Monto observable" value={`${fmtUf(stats.amountUf)} UF`} hint={`${fmt(stats.withAmount)} eventos con monto UF`} emphasis />
-    </section>
+    <div className="san-kpis">
+      <Kpi label="Entidades evaluadas" value={count(metrics.unified_universe_count)} detail="Universo SII + UAF + OSFL deduplicado" glyph="▤" tone="cyan" />
+      <Kpi label="Entidades sancionadas" value={count(metrics.entity_count)} detail={n(metrics.unified_universe_count) ? `${pct(n(metrics.entity_count) / n(metrics.unified_universe_count) * 100)} del universo` : 'Identidad resuelta'} glyph="◎" tone="orange" />
+      <Kpi label="Eventos sancionatorios" value={count(metrics.event_count)} detail={`${count(metrics.regulatory_event_count)} regulatorios · ${count(metrics.cgr_event_count)} CGR`} glyph="⚖" tone="cyan" />
+      <Kpi label="Monto total multas" value={totalAmounts} detail="UF y CLP se mantienen separados" glyph="◉" tone="orange" />
+      <Kpi label="Supervisores activos" value={count(metrics.supervisor_count)} detail="CMF · UAF · SCJ · CGR" glyph="✦" tone="cyan" />
+    </div>
 
-    <section className="san12-searchbox">
-      <div>
-        <span>BÚSQUEDA DIRECTA</span>
-        <b>Entidad, RUT, motivo o resolución</b>
-      </div>
-      <label>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} type="search" autoComplete="off" placeholder="Buscar en el corte actual…" />
-        <span aria-hidden="true">⌕</span>
-      </label>
-      {query.trim().length >= 2 && <div className="san12-search-results">
-        {searchResults.length ? searchResults.map((actor) => <button key={actor.key} onClick={() => chooseActor(actor)}>
-          <span><b>{actor.name}</b><small>{actor.rut !== 's/i' ? actor.rut : actor.sector}</small></span>
-          <em>{fmt(actor.events)} eventos</em>
-        </button>) : <div className="san12-empty-inline">Sin coincidencias en los filtros actuales.</div>}
-      </div>}
-    </section>
+    <div className="san-top-grid">
+      <section className="san-panel san-universes">
+        <PanelHead title="Universos analizados" subtitle="Membresías superpuestas: no deben sumarse entre sí." />
+        <div className="san-universe-grid">{universeRows.map((r) => {
+          const ratio = n(r.evaluated_count) ? n(r.entity_count) / n(r.evaluated_count) * 100 : 0;
+          return <button key={r.code} className={`san-universe ${filters.universe === r.code ? 'active' : ''}`} onClick={() => patch({ universe: filters.universe === r.code ? '' : r.code })}>
+            <div className="san-universe-title"><span className={`san-icon ${r.code === 'OSFL' ? 'orange' : 'cyan'}`}>{r.code === 'OSFL' ? '◇' : r.code === 'UAF' ? '◉' : '▦'}</span><strong>{r.code}</strong></div>
+            <strong className="san-universe-total">{count(r.evaluated_count)}</strong><span>evaluadas</span>
+            <div className="san-universe-foot"><strong>{count(r.entity_count)} sancionadas</strong><span>{pct(ratio)}</span></div>
+            <div className="san-mini-track"><span style={{ width: `${Math.max(1, Math.min(100, ratio))}%` }} /></div>
+          </button>;
+        })}</div>
+      </section>
 
-    {(selectedRegion || selectedActor) && <div className="san12-contextbar">
-      <span>Profundización activa</span>
-      {selectedRegion && <button onClick={() => { setSelectedRegion(null); setSelectedActor(null); }}>Región · {selectedRegion} ×</button>}
-      {selectedActorSummary && <button onClick={() => setSelectedActor(null)}>Actor · {selectedActorSummary.name} ×</button>}
-      <button className="san12-back" onClick={() => selectedActor ? setSelectedActor(null) : chooseRegion(selectedRegion ?? '')}>← Volver</button>
-    </div>}
+      <section className="san-panel san-supervisors">
+        <PanelHead title="Sanciones por supervisor" subtitle="Naranja: sanción regulatoria · Cian: acciones CGR / enforcement" />
+        <div className="san-supervisor-chart">{supervisors.map((r) => {
+          const max = Math.max(1, ...supervisors.map((x) => n(x.event_count))); const total = n(r.event_count); const reg = n(r.regulatory_event_count); const cgr = n(r.cgr_event_count); const regShare = total ? reg / total * 100 : 0;
+          return <button key={r.regulator} className={`san-supervisor-column ${filters.regulator === r.regulator ? 'active' : ''}`} onClick={() => patch({ regulator: filters.regulator === r.regulator ? '' : r.regulator })}>
+            <strong>{count(total)}</strong><div className="san-stack" style={{ height: `${Math.max(8, total / max * 100)}%` }}>{reg > 0 && <span className="regulatory" style={{ height: `${regShare}%` }} />}{cgr > 0 && <span className="cgr" style={{ height: `${100 - regShare}%` }} />}</div><span>{r.regulator || 'S/F'}</span>
+          </button>;
+        })}</div>
+      </section>
+    </div>
 
-    <section className="san12-section">
-      <SectionHead index="A" title="Actores clave" subtitle="Instituciones con mayor presencia en el universo sancionatorio visible. Selecciona una para cruzar el tablero." />
-      <div className="san12-actor-grid">
-        {regulatorRows.map((r) => <button key={r.regulator} className="san12-actor-card" data-active={filters.regulator === r.regulator} onClick={() => toggleRegulator(r.regulator)}>
-          <span>{r.regulator}</span>
-          <small>{SOURCE_NAMES[r.regulator] ?? 'Institución supervisora'}</small>
-          <div><b>{fmt(r.events)}</b><em>eventos</em></div>
-          <footer><span>{fmt(r.entities)} entidades</span><span>{fmt(r.years)} años</span><span>{fmtUf(r.amountUf)} UF</span></footer>
-        </button>)}
-        {!regulatorRows.length && <Empty text="No hay instituciones para el corte actual." />}
-      </div>
-    </section>
+    <div className="san-analytics-grid">
+      <RegionPanel rows={regions} selected={filters.region} onSelect={(region) => patch({ region: filters.region === region ? '' : region })} />
+      <section className="san-panel san-types"><PanelHead title="Sanciones por tipo" subtitle="Tipología observada en las fuentes públicas." /><div className="san-type-layout">
+        <div className="san-donut" style={{ background: `conic-gradient(${donut.gradient})` }}><span><strong>{count(donut.total)}</strong><small>eventos</small></span></div>
+        <div className="san-type-legend">{typeTop.map((r, i) => <button key={r.event_kind} className={filters.event_kind === r.event_kind ? 'active' : ''} onClick={() => patch({ event_kind: filters.event_kind === r.event_kind ? '' : r.event_kind })}><i style={{ background: TYPE_COLORS[i % TYPE_COLORS.length] }} /><span>{r.event_kind}</span><strong>{count(r.event_count)}</strong></button>)}</div>
+      </div></section>
+      <EvolutionPanel rows={years} selected={filters.year} onSelect={(year) => patch({ year: filters.year === String(year) ? '' : String(year) })} />
+    </div>
 
-    <section className="san12-section">
-      <SectionHead index="B" title="Matriz regional" subtitle="Selecciona una región para abrir sus actores principales. La profundización se aplica al resto del módulo." />
-      <div className="san12-region-layout">
-        <article className="san12-panel san12-region-panel">
-          <PanelHead title="Distribución territorial" meta={`${fmt(regionRows.length)} regiones observables`} />
-          <div className="san12-region-list">
-            {regionRows.map((r) => <div key={r.region} className="san12-region-item" data-active={selectedRegion === r.region}>
-              <button className="san12-region-main" onClick={() => chooseRegion(r.region)}>
-                <span className="san12-region-name">{r.region}</span>
-                <span className="san12-track"><i style={{ width: `${Math.max(3, (r.events / maxRegion) * 100)}%` }} /></span>
-                <b>{fmt(r.events)}</b>
-                <small>{fmt(r.entities)} ent.</small>
-                <em>{fmtUf(r.amountUf)} UF</em>
-              </button>
-              {selectedRegion === r.region && <div className="san12-region-actors">
-                <span>Actores principales · máximo 2</span>
-                {regionalActors.length ? regionalActors.map((actor) => <button key={actor.key} data-active={selectedActor === actor.key} onClick={() => setSelectedActor(selectedActor === actor.key ? null : actor.key)}>
-                  <div><b>{actor.name}</b><small>{actor.rut !== 's/i' ? actor.rut : actor.sector}</small></div>
-                  <span>{fmt(actor.events)} eventos</span>
-                  <em>{fmtUf(actor.amountUf)} UF</em>
-                </button>) : <Empty text="No hay actores identificables en esta región." compact />}
-              </div>}
-            </div>)}
-          </div>
-        </article>
+    <div className="san-workspace">
+      <section className="san-panel san-events">
+        <PanelHead title={`Casos prioritarios · ${count(page.total)}`} subtitle="Orden explicable para revisión: recurrencia, condición UAF/OSFL, monto, evidencia e identidad." />
+        <div className="san-table-head"><span>Entidad / RUT</span><span>Universo</span><span>Supervisor</span><span>Región</span><span>Tipo de sanción</span><span>Monto</span><span>Fecha</span><span>Prioridad</span><span /></div>
+        <div className="san-event-rows">{items.length ? items.map((item) => <EventRow key={item.event_id} item={item} onClick={() => setSelected(item)} active={selected?.event_id === item.event_id} />) : <div className="san-empty">Sin eventos para los filtros seleccionados.</div>}</div>
+        <div className="san-pager"><span>{n(page.total) ? `${count(n(page.offset) + 1)}–${count(Math.min(n(page.total), n(page.offset) + n(page.limit || PAGE_SIZE)))} de ${count(page.total)}` : '0 resultados'}</span><div><button disabled={n(page.offset) <= 0} onClick={() => setOffset(Math.max(0, n(page.offset) - n(page.limit || PAGE_SIZE)))}>← Anterior</button><button disabled={n(page.offset) + n(page.limit || PAGE_SIZE) >= n(page.total)} onClick={() => setOffset(n(page.offset) + n(page.limit || PAGE_SIZE))}>Siguiente →</button></div></div>
+      </section>
+      <DetailCard detail={detail} fallback={selected} onNavigate={onNavigate} />
+    </div>
 
-        <article className="san12-panel san12-inspector" data-open={Boolean(selectedActorSummary)}>
-          {selectedActorSummary ? <ActorInspector actor={selectedActorSummary} onBack={() => setSelectedActor(null)} onNavigate={onNavigate} /> : <>
-            <PanelHead title="Inspector de actor" meta="profundización contextual" />
-            <div className="san12-inspector-placeholder">
-              <span>◎</span>
-              <b>Selecciona un actor regional</b>
-              <p>La ficha concentra identidad, territorio, sector, recurrencia, monto y trazabilidad documental sin abandonar el radar.</p>
-            </div>
-          </>}
-        </article>
-      </div>
-    </section>
-
-    <section className="san12-section">
-      <SectionHead index="C" title="Rigor e intensidad regulatoria" subtitle="Se preserva el bloque IER de la referencia aprobada. El read model de Atlas no contiene el IER original, por lo que se marca s/i y se muestran métricas observables sin sustituirlo por un índice inventado." />
-      <div className="san12-rigor-grid">
-        {deriveRegulators(visibleRows).map((r) => <article key={r.regulator} className="san12-panel san12-rigor-card">
-          <header><span>{r.regulator}</span><small>{SOURCE_NAMES[r.regulator] ?? 'Institución'}</small></header>
-          <div className="san12-ier"><span>IER 0–100</span><b>s/i</b><small>No disponible en contrato actual</small></div>
-          <div className="san12-rigor-metrics">
-            <Metric label="Eventos" value={fmt(r.events)} />
-            <Metric label="Entidades" value={fmt(r.entities)} />
-            <Metric label="UF observadas" value={fmtUf(r.amountUf)} />
-            <Metric label="Último caso" value={formatDate(r.lastDate)} />
-          </div>
-        </article>)}
-        {!deriveRegulators(visibleRows).length && <Empty text="Sin actividad institucional para este corte." />}
-      </div>
-    </section>
-
-    <section className="san12-section">
-      <SectionHead index="D" title="Calidad del enforcement" subtitle="Cobertura documental y de identificación del corte visible. Los faltantes se reportan como no observables, nunca como ausencia de riesgo o incumplimiento." />
-      <div className="san12-quality-layout">
-        <article className="san12-panel">
-          <PanelHead title="Cobertura de evidencia" meta={`${fmt(visibleRows.length)} eventos evaluados`} />
-          <div className="san12-quality-list">
-            <Quality label="Documento enlazado" value={quality.documentPct} count={quality.withDocument} total={visibleRows.length} />
-            <Quality label="Referencia / resolución" value={quality.resolutionPct} count={quality.withResolution} total={visibleRows.length} />
-            <Quality label="Identidad resuelta" value={quality.identityPct} count={quality.withIdentity} total={visibleRows.length} />
-            <Quality label="Monto observable" value={quality.amountPct} count={quality.withAmount} total={visibleRows.length} />
-          </div>
-          {quality.qualityClasses <= 1 && <div className="san12-warning"><b>Lectura incompleta</b><span>La clasificación de calidad documental tiene cobertura o diversidad insuficiente para interpretar diferencias de calidad entre casos.</span></div>}
-        </article>
-
-        <article className="san12-panel">
-          <PanelHead title="Evolución del corte" meta="eventos por año" />
-          <div className="san12-year-bars">
-            {years.map((r) => <button key={r.year} data-active={filters.year === String(r.year)} onClick={() => setFilter('year', filters.year === String(r.year) ? '' : String(r.year))}>
-              <b>{r.events}</b><i style={{ height: `${Math.max(5, (r.events / maxYear) * 100)}%` }} /><span>{r.year}</span>
-            </button>)}
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section className="san12-section">
-      <SectionHead index="E" title="Casos prioritarios" subtitle="Dos lecturas complementarias: mayor monto UF observado y mayor recencia. El ranking monetario se ordena numéricamente antes de formatear y no usa un corte temporal arbitrario." />
-      <div className="san12-top-grid">
-        <TopList title="Sanciones más costosas" eyebrow="TOP 5 · MONTO UF" rows={costly} mode="cost" onActor={(row) => chooseActor(actorFromRow(row))} />
-        <TopList title="Sanciones más recientes" eyebrow="TOP 5 · FECHA" rows={recent} mode="recent" onActor={(row) => chooseActor(actorFromRow(row))} />
-      </div>
-    </section>
-
-    <section className="san12-section san12-final-section">
-      <SectionHead index="F" title="Detalle de sanciones recientes" subtitle="Expedientes visibles bajo el contexto activo. La tabla conserva trazabilidad hacia documento oficial y Entidad 360 cuando existe identidad enlazada." />
-      <article className="san12-panel san12-table-panel">
-        <div className="san12-table-head"><span>{fmt(recent50.length)} de {fmt(visibleRows.length)} eventos visibles</span><small>Orden: fecha descendente</small></div>
-        <div className="san12-table-wrap">
-          <table className="san12-table">
-            <thead><tr><th>Fecha</th><th>Entidad</th><th>Institución</th><th>Industria</th><th>Región</th><th>UF</th><th>Motivo / referencia</th><th>Documento</th></tr></thead>
-            <tbody>{recent50.map((row) => <tr key={row.event_id}>
-              <td>{formatDate(row.event_date)}</td>
-              <td><button className="san12-entity-link" onClick={() => chooseActor(actorFromRow(row))}>{actorName(row)}</button><small>{safe(row.rut)}</small></td>
-              <td><span className="san12-reg-badge">{safe(row.regulator)}</span></td>
-              <td>{sectorOf(row)}</td>
-              <td>{regionOf(row)}</td>
-              <td className="num">{num(row.amount_uf) > 0 ? fmtUf(num(row.amount_uf)) : 's/i'}</td>
-              <td><span className="san12-reason">{short(row.reason || row.resolution_ref, 110)}</span></td>
-              <td>{safeUrl(row.document_url) ? <a href={safeUrl(row.document_url)} target="_blank" rel="noreferrer">Abrir ↗</a> : <span className="san12-muted">s/i</span>}</td>
-            </tr>)}</tbody>
-          </table>
-          {!recent50.length && <Empty text="No hay expedientes para el contexto activo." />}
-        </div>
-      </article>
-    </section>
+    <div className="san-method-note"><strong>Lectura metodológica. </strong><span>{`${dashboard?.semantics?.regulatory ?? 'CMF/UAF/SCJ son sanciones regulatorias observadas.'} ${dashboard?.semantics?.cgr ?? 'CGR se presenta como acciones de enforcement separadas.'} ${dashboard?.semantics?.currency ?? 'UF y CLP permanecen separados.'}`}</span></div>
   </div>;
 }
 
-function Filter({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  return <label className="san12-filter"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}><option value="">Todos</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+function Select({ label, value, options, onChange, all = 'Todos' }: { label: string; value: string; options: Array<string | { value: string; label: string }>; onChange: (v: string) => void; all?: string }) {
+  return <label className="san-filter"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}><option value="">{all}</option>{options.map((o) => typeof o === 'string' ? <option key={o} value={o}>{o}</option> : <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
+}
+function Kpi({ label, value, detail, glyph, tone }: { label: string; value: string; detail: string; glyph: string; tone: string }) {
+  return <article className="san-kpi"><span className={`san-icon ${tone}`}>{glyph}</span><div><small>{label}</small><strong title={value}>{value}</strong><span>{detail}</span></div></article>;
+}
+function PanelHead({ title, subtitle }: { title: string; subtitle: string }) { return <div className="san-panel-head"><div><h2>{title}</h2><p>{subtitle}</p></div></div>; }
+
+function RegionPanel({ rows, selected, onSelect }: { rows: Dashboard['regions']; selected: string; onSelect: (r: string) => void }) {
+  const all = rows ?? []; const top = all.slice(0, 10); const total = all.reduce((s, r) => s + n(r.event_count), 0) || 1; const max = Math.max(1, ...top.map((r) => n(r.event_count)));
+  const sum = (limit: number) => all.slice(0, limit).reduce((s, r) => s + n(r.event_count), 0); const leader = all[0];
+  return <section className="san-panel san-regions"><PanelHead title="Sanciones por región" subtitle="Ranking interactivo y concentración territorial sobre eventos con región informada." /><div className="san-region-layout">
+    <div className="san-region-list">{top.map((r, i) => <button key={r.region} className={selected === r.region ? 'active' : ''} onClick={() => onSelect(r.region)}><b>{i + 1}</b><span>{r.region}</span><i><em style={{ width: `${Math.max(2, n(r.event_count) / max * 100)}%` }} /></i><strong>{count(r.event_count)}</strong><span className="san-region-share">{pct(n(r.event_count) / total * 100)}</span></button>)}</div>
+    <aside className="san-region-metrics"><RegionMetric label="Región líder" value={leader ? pct(n(leader.event_count) / total * 100) : '—'} detail={leader?.region ?? 'Sin datos'} orange /><RegionMetric label="Concentración Top 3" value={pct(sum(3) / total * 100)} detail={`${count(sum(3))} eventos`} /><RegionMetric label="Concentración Top 5" value={pct(sum(5) / total * 100)} detail={`${count(sum(5))} eventos`} /><RegionMetric label="Cobertura territorial" value={count(all.length)} detail="regiones con eventos informados" /></aside>
+  </div></section>;
+}
+function RegionMetric({ label, value, detail, orange = false }: { label: string; value: string; detail: string; orange?: boolean }) { return <article className={`san-region-metric ${orange ? 'orange' : ''}`}><small>{label}</small><strong>{value}</strong><span>{detail}</span></article>; }
+
+function EvolutionPanel({ rows, selected, onSelect }: { rows: Dashboard['years']; selected: string; onSelect: (y: string | number) => void }) {
+  const data = rows ?? []; const width = 520, height = 210, pad = 28, innerW = width - pad * 2, innerH = height - 54; const max = Math.max(1, ...data.map((r) => n(r.event_count)));
+  const points = data.map((r, i) => { const x = pad + (data.length <= 1 ? innerW / 2 : i * innerW / (data.length - 1)); const y = 12 + innerH - n(r.entity_count) / max * innerH; return { x, y }; });
+  return <section className="san-panel san-evolution"><PanelHead title="Evolución de sanciones" subtitle="Barras: eventos · línea: entidades identificadas" /><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolución anual de sanciones">
+    {data.map((r, i) => { const x = pad + (data.length <= 1 ? innerW / 2 : i * innerW / (data.length - 1)); const barW = Math.max(8, innerW / Math.max(12, data.length) * .58); const y = 12 + innerH - n(r.event_count) / max * innerH; return <g key={String(r.event_year)} onClick={() => onSelect(r.event_year)} className={selected === String(r.event_year) ? 'active' : ''}><rect x={x - barW / 2} y={y} width={barW} height={12 + innerH - y} rx="3" className="san-year-bar" /><text x={x} y={height - 13} textAnchor="middle" className="san-chart-label">{r.event_year}</text></g>; })}
+    {points.length > 1 && <polyline points={points.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" className="san-year-line" />}{points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" className="san-year-point" />)}
+  </svg></section>;
 }
 
-function Kpi({ label, value, hint, emphasis = false }: { label: string; value: string; hint: string; emphasis?: boolean }) {
-  return <article className="san12-kpi" data-emphasis={emphasis}><span>{label}</span><b>{value}</b><small>{hint}</small></article>;
+function EventRow({ item, onClick, active }: { item: EventItem; onClick: () => void; active: boolean }) {
+  const [label, cls] = priority(item.priority_score); const amount = n(item.amount_clp) > 0 ? amountCLP(item.amount_clp, true) : n(item.amount_uf) > 0 ? amountUF(item.amount_uf) : '—';
+  return <button className={`san-event ${active ? 'active' : ''}`} onClick={onClick}><span className="san-cell entity"><strong>{item.canonical_name || item.source_entity_name || 'Entidad no resuelta'}</strong><small>{item.rut || item.identity_status || 'Sin RUT'}</small></span><span className="san-cell">{universeLabel(item)}</span><span className="san-cell">{item.regulator || '—'}</span><span className="san-cell">{item.region || 'Sin región'}</span><span className="san-cell type">{item.event_kind || item.event_class || 'Sin clasificación'}</span><span className="san-cell">{amount}</span><span className="san-cell">{formatDate(item.event_date)}</span><span className={`san-priority ${cls}`}><i /><b>{label} {count(item.priority_score)}</b></span><span className="san-row-arrow">›</span></button>;
 }
 
-function SectionHead({ index, title, subtitle }: { index: string; title: string; subtitle: string }) {
-  return <header className="san12-section-head"><span>{index}</span><div><h2>{title}</h2><p>{subtitle}</p></div></header>;
+function DetailCard({ detail, fallback, onNavigate }: { detail: DetailResponse | null; fallback: EventItem | null; onNavigate: (hash: string) => void }) {
+  const e = detail?.event ?? fallback; if (!e) return <aside className="san-detail san-detail-empty"><span className="san-icon cyan">⚖</span><h2>Ficha de sanción</h2><p>Selecciona un evento de la tabla para revisar identidad, resolución, motivo, recurrencia y documento público.</p></aside>;
+  const related = detail?.related_events ?? []; const [label, cls] = priority(e.priority_score);
+  const entityRoute = e.entity_id ? `#/entidad/${encodeURIComponent(e.entity_id)}` : e.rut ? `#/entidades?q=${encodeURIComponent(e.rut)}` : '';
+  return <aside className="san-detail"><div className="san-detail-head"><div><small>{e.event_id || 'EVENTO'}</small><h2>Ficha de sanción</h2></div><span className={`san-priority ${cls}`}><i /><b>{label} · prioridad analítica</b></span></div>
+    <div className="san-detail-entity"><span className="san-icon cyan">▦</span><div><strong>{e.canonical_name || e.source_entity_name || 'Entidad no resuelta'}</strong><span>{e.rut || e.identity_status || 'Sin RUT resuelto'}</span></div></div>
+    <div className="san-detail-grid"><DetailField label="Universo" value={universeLabel(e)} /><DetailField label="Supervisor" value={e.regulator} /><DetailField label="Región" value={e.region} /><DetailField label="Fecha" value={formatDate(e.event_date, true)} /><DetailField label="Tipo" value={e.event_kind || e.event_class} /><DetailField label="Resolución" value={e.resolution_ref} /></div>
+    <section className="san-detail-block"><h3>Monto informado</h3><div className="san-amount-pair"><strong>{amountCLP(e.amount_clp)}</strong><span>CLP</span><strong>{amountUF(e.amount_uf)}</strong><span>UF</span></div><small>Las monedas permanecen separadas; Atlas no realiza conversión implícita.</small></section>
+    <section className="san-detail-block"><h3>Motivo / evidencia actual</h3><p>{e.reason || e.document_excerpt || 'La fuente no publica un resumen textual adicional.'}</p></section>
+    {e.event_class === 'CGR_ENFORCEMENT_ACTION' && <div className="san-cgr-note"><strong>CGR · enforcement</strong><span>{[e.cgr_stage, e.cgr_risk_family, e.cgr_severity].filter(Boolean).join(' · ') || 'Acción administrativa contextual'}</span><small>No se interpreta automáticamente como sanción regulatoria firme.</small></div>}
+    <section className="san-detail-block"><h3>Recurrencia observada · {count(related.length)} eventos</h3><div className="san-timeline">{related.slice(0, 6).map((r) => <div key={r.event_id}><i /><time>{formatDate(r.event_date)}</time><span>{r.regulator || ''} · {r.event_kind || r.event_class || ''}</span></div>)}</div></section>
+    <section className="san-document"><h3>Documento de la sanción</h3>{e.document_url ? <a href={e.document_url} target="_blank" rel="noopener noreferrer"><span className="san-icon orange">↗</span><div><strong>{e.resolution_ref || 'Documento público'}</strong><span>{e.document_quality || 'Evidencia pública registrada'}</span></div></a> : <p>Sin enlace documental publicado.</p>}</section>
+    {entityRoute && <button className="san-detail-cta" onClick={() => onNavigate(entityRoute)}>Abrir detalle en Entidad 360 →</button>}
+    <small className="san-guardrail">Prioridad analítica ≠ probabilidad LA/FT. Una sanción administrativa no equivale por sí sola a evidencia LA/FT.</small>
+  </aside>;
 }
-
-function PanelHead({ title, meta }: { title: string; meta: string }) {
-  return <header className="san12-panel-head"><b>{title}</b><span>{meta}</span></header>;
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="san12-metric"><span>{label}</span><b>{value}</b></div>;
-}
-
-function Quality({ label, value, count, total }: { label: string; value: number; count: number; total: number }) {
-  return <div className="san12-quality-row">
-    <div><b>{label}</b><span>{fmt(count)} de {fmt(total)}</span></div>
-    <span className="san12-quality-track"><i style={{ width: `${Math.max(value ? 2 : 0, value)}%` }} /></span>
-    <em>{value.toLocaleString('es-CL', { maximumFractionDigits: 1 })}%</em>
-  </div>;
-}
-
-function ActorInspector({ actor, onBack, onNavigate }: { actor: ActorSummary; onBack: () => void; onNavigate: (hash: string) => void }) {
-  const latest = [...actor.rows].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date))[0];
-  return <div className="san12-inspector-content">
-    <header><button onClick={onBack}>← Volver</button><span>FICHA DE ACTOR</span></header>
-    <h3>{actor.name}</h3>
-    <p>{actor.rut !== 's/i' ? actor.rut : 'RUT s/i'} · {actor.region}</p>
-    <div className="san12-inspector-kpis">
-      <Metric label="Eventos" value={fmt(actor.events)} />
-      <Metric label="Monto UF" value={fmtUf(actor.amountUf)} />
-      <Metric label="Último evento" value={formatDate(actor.lastDate)} />
-      <Metric label="Institución" value={actor.regulator} />
-    </div>
-    <div className="san12-inspector-detail">
-      <span>Industria / sector</span><b>{actor.sector}</b>
-      <span>Último motivo observable</span><p>{short(latest?.reason, 260)}</p>
-      <span>Referencia</span><b>{safe(latest?.resolution_ref)}</b>
-    </div>
-    <div className="san12-inspector-actions">
-      {actor.entityId && <button onClick={() => onNavigate(`#/entidad/${encodeURIComponent(actor.entityId ?? '')}`)}>Abrir Entidad 360</button>}
-      {safeUrl(latest?.document_url) && <a href={safeUrl(latest?.document_url)} target="_blank" rel="noreferrer">Documento oficial ↗</a>}
-    </div>
-  </div>;
-}
-
-function TopList({ title, eyebrow, rows, mode, onActor }: { title: string; eyebrow: string; rows: SanctionEvent[]; mode: 'cost' | 'recent'; onActor: (row: SanctionEvent) => void }) {
-  return <article className="san12-panel san12-top-list">
-    <header><span>{eyebrow}</span><h3>{title}</h3></header>
-    <div>{rows.map((row, index) => <button key={row.event_id} onClick={() => onActor(row)}>
-      <strong>{index + 1}</strong>
-      <span><b>{actorName(row)}</b><small>{safe(row.regulator)} · {sectorOf(row)}</small></span>
-      <em>{mode === 'cost' ? `${fmtUf(num(row.amount_uf))} UF` : formatDate(row.event_date)}</em>
-    </button>)}</div>
-    {!rows.length && <Empty text="Sin casos para este ranking." compact />}
-  </article>;
-}
-
-function Empty({ text, compact = false }: { text: string; compact?: boolean }) {
-  return <div className="san12-empty" data-compact={compact}>{text}</div>;
-}
-
-function deriveStats(rows: SanctionEvent[]) {
-  const actorKeys = rows.map(actorKey).filter(Boolean);
-  const regulators = unique(rows.map((e) => clean(e.regulator)).filter(Boolean));
-  const withAmount = rows.filter((e) => num(e.amount_uf) > 0).length;
-  const amountUf = rows.reduce((sum, e) => sum + num(e.amount_uf), 0);
-  const top = countBy(rows.map((e) => clean(e.regulator)).filter(Boolean))[0];
-  return {
-    events: rows.length,
-    entities: unique(actorKeys).length,
-    resolvedEntities: unique(rows.filter((e) => e.entity_id).map(actorKey)).length,
-    regulators: regulators.length,
-    amountUf,
-    withAmount,
-    topRegulator: top?.key ?? '',
-  };
-}
-
-function deriveRegulators(rows: SanctionEvent[]): RegulatorSummary[] {
-  const map = new Map<string, SanctionEvent[]>();
-  rows.forEach((e) => {
-    const key = clean(e.regulator) || 's/i';
-    map.set(key, [...(map.get(key) ?? []), e]);
-  });
-  return [...map.entries()].map(([regulator, list]) => ({
-    regulator,
-    events: list.length,
-    entities: unique(list.map(actorKey).filter(Boolean)).length,
-    years: unique(list.map((e) => e.event_year).filter((v): v is number => v != null)).length,
-    amountUf: list.reduce((sum, e) => sum + num(e.amount_uf), 0),
-    lastDate: latestDate(list),
-  })).sort((a, b) => b.events - a.events || b.amountUf - a.amountUf);
-}
-
-function deriveRegions(rows: SanctionEvent[]): RegionSummary[] {
-  const map = new Map<string, SanctionEvent[]>();
-  rows.forEach((e) => {
-    const region = regionOf(e);
-    if (region === 's/i') return;
-    map.set(region, [...(map.get(region) ?? []), e]);
-  });
-  return [...map.entries()].map(([region, list]) => ({
-    region,
-    events: list.length,
-    entities: unique(list.map(actorKey).filter(Boolean)).length,
-    amountUf: list.reduce((sum, e) => sum + num(e.amount_uf), 0),
-  })).sort((a, b) => b.events - a.events || b.amountUf - a.amountUf);
-}
-
-function deriveActors(rows: SanctionEvent[]): ActorSummary[] {
-  const map = new Map<string, SanctionEvent[]>();
-  rows.forEach((e) => {
-    const key = actorKey(e);
-    if (!key) return;
-    map.set(key, [...(map.get(key) ?? []), e]);
-  });
-  return [...map.entries()].map(([key, list]) => {
-    const latest = [...list].sort((a, b) => dateValue(b.event_date) - dateValue(a.event_date))[0];
-    return {
-      key,
-      name: actorName(latest),
-      rut: safe(latest?.rut),
-      events: list.length,
-      amountUf: list.reduce((sum, e) => sum + num(e.amount_uf), 0),
-      lastDate: latestDate(list),
-      regulator: safe(latest?.regulator),
-      sector: sectorOf(latest),
-      region: regionOf(latest),
-      entityId: latest?.entity_id ?? list.find((e) => e.entity_id)?.entity_id ?? null,
-      rows: list,
-    };
-  }).sort((a, b) => b.events - a.events || b.amountUf - a.amountUf || dateValue(b.lastDate) - dateValue(a.lastDate));
-}
-
-function deriveYears(rows: SanctionEvent[]) {
-  const counts = new Map<number, number>();
-  rows.forEach((e) => { if (e.event_year != null) counts.set(e.event_year, (counts.get(e.event_year) ?? 0) + 1); });
-  return [...counts.entries()].map(([year, events]) => ({ year, events })).sort((a, b) => a.year - b.year);
-}
-
-function deriveQuality(rows: SanctionEvent[]) {
-  const withDocument = rows.filter((e) => Boolean(safeUrl(e.document_url))).length;
-  const withResolution = rows.filter((e) => Boolean(clean(e.resolution_ref))).length;
-  const withIdentity = rows.filter((e) => Boolean(e.entity_id || clean(e.rut) || clean(e.canonical_name))).length;
-  const withAmount = rows.filter((e) => num(e.amount_uf) > 0 || num(e.amount_clp) > 0).length;
-  const qualityClasses = unique(rows.map((e) => clean(e.document_quality)).filter(Boolean)).length;
-  return {
-    withDocument,
-    withResolution,
-    withIdentity,
-    withAmount,
-    qualityClasses,
-    documentPct: percentage(withDocument, rows.length),
-    resolutionPct: percentage(withResolution, rows.length),
-    identityPct: percentage(withIdentity, rows.length),
-    amountPct: percentage(withAmount, rows.length),
-  };
-}
-
-function actorFromRow(row: SanctionEvent): ActorSummary {
-  return {
-    key: actorKey(row),
-    name: actorName(row),
-    rut: safe(row.rut),
-    events: 1,
-    amountUf: num(row.amount_uf),
-    lastDate: row.event_date,
-    regulator: safe(row.regulator),
-    sector: sectorOf(row),
-    region: regionOf(row),
-    entityId: row.entity_id,
-    rows: [row],
-  };
-}
-
-function actorKey(e?: SanctionEvent | null) {
-  if (!e) return '';
-  return clean(e.entity_key) || clean(e.entity_id) || clean(e.rut) || normalize(actorName(e)) || clean(e.event_id);
-}
-
-function actorName(e?: SanctionEvent | null) {
-  return clean(e?.canonical_name) || clean(e?.source_entity_name) || clean(e?.rut) || 'Entidad s/i';
-}
-
-function sectorOf(e?: SanctionEvent | null) {
-  return clean(e?.uaf_sector) || 'Sin sector UAF';
-}
-
-function regionOf(e?: SanctionEvent | null) {
-  const raw = clean(e?.region);
-  if (!raw) return 's/i';
-  const n = normalize(raw);
-  if (n.includes('METROPOLITANA')) return 'Metropolitana de Santiago';
-  if (n.includes('OHIGGINS') || n.includes('O HIGGINS') || n.includes('LIBERTADOR GENERAL BERNARDO')) return "Libertador Gral. Bernardo O'Higgins";
-  if (n.includes('AYSEN')) return 'Aysén';
-  if (n.includes('ARICA') && n.includes('PARINACOTA')) return 'Arica y Parinacota';
-  if (n.includes('ARAUCANIA')) return 'La Araucanía';
-  if (n.includes('BIOBIO')) return 'Biobío';
-  if (n.includes('MAGALLANES')) return 'Magallanes y de la Antártica Chilena';
-  return raw;
-}
-
-function countBy(values: string[]) {
-  const map = new Map<string, number>();
-  values.forEach((value) => map.set(value, (map.get(value) ?? 0) + 1));
-  return [...map.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
-}
-
-function latestDate(rows: SanctionEvent[]) {
-  return rows.reduce<string | null>((latest, e) => dateValue(e.event_date) > dateValue(latest) ? e.event_date : latest, null);
-}
-
-function safe(value: unknown) {
-  const text = value == null ? '' : String(value).trim();
-  return text || 's/i';
-}
-
-function clean(value: unknown) {
-  return value == null ? '' : String(value).trim();
-}
-
-function normalize(value: unknown) {
-  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9K]+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function safeUrl(value: unknown) {
-  try {
-    const url = new URL(String(value ?? ''));
-    return /^https?:$/.test(url.protocol) ? url.href : '';
-  } catch {
-    return '';
-  }
-}
-
-function num(value: unknown) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function unique<T>(values: T[]) {
-  return [...new Set(values)];
-}
-
-function percentage(part: number, total: number) {
-  return total ? (part / total) * 100 : 0;
-}
-
-function dateValue(value: unknown) {
-  if (!value) return 0;
-  const n = new Date(String(value)).getTime();
-  return Number.isFinite(n) ? n : 0;
-}
-
-function formatDate(value: unknown) {
-  if (!value) return 's/i';
-  const d = new Date(String(value));
-  return Number.isNaN(d.getTime()) ? safe(value) : d.toLocaleDateString('es-CL');
-}
-
-function formatDateTime(value: unknown) {
-  if (!value) return 's/i';
-  const d = new Date(String(value));
-  return Number.isNaN(d.getTime()) ? safe(value) : d.toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' });
-}
-
-function fmt(value: unknown) {
-  const n = Number(value);
-  return Number.isFinite(n) ? new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(n) : 's/i';
-}
-
-function fmtUf(value: unknown) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 's/i';
-  return new Intl.NumberFormat('es-CL', { maximumFractionDigits: n >= 100 ? 0 : 1 }).format(n);
-}
-
-function short(value: unknown, max = 100) {
-  const text = clean(value);
-  if (!text) return 's/i';
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
+function DetailField({ label, value }: { label: string; value?: string | null }) { return <div className="san-detail-field"><span>{label}</span><strong>{value || '—'}</strong></div>; }
