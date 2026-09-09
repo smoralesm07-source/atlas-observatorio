@@ -7,7 +7,7 @@ import { useRoute } from './lib/router';
 import { Pulso } from './views/Pulso';
 import { UniversoSOEnhanced } from './views/UniversoSOEnhanced';
 import { Osfl } from './views/Osfl';
-import { Fintech } from './views/Fintech';
+import { FintechEnhanced } from './views/FintechEnhanced';
 import { Sanciones } from './views/Sanciones';
 import { Senales } from './views/Senales';
 import { Entidades } from './views/Entidades';
@@ -34,7 +34,7 @@ function Routed({ session }: { session: Session }) {
         <UniversoSOEnhanced onNavigate={go} initialMode={route.mode ?? 'padron'} />
       )}
       {route.view === 'osfl' && <Osfl onNavigate={go} />}
-      {route.view === 'fintech' && <Fintech onNavigate={go} />}
+      {route.view === 'fintech' && <FintechEnhanced onNavigate={go} />}
       {route.view === 'sanciones' && <Sanciones onNavigate={go} />}
       {route.view === 'senales' && <Senales family={route.family} onNavigate={go} />}
       {route.view === 'entidades' && (
