@@ -142,7 +142,7 @@ export function LenteCiclo({
 
   return (
     <div className="pulse-cycle">
-      <div className="pulse-cycle-summary">
+      <div className="pulse-cycle-summary" style={{ gridTemplateColumns: '1fr' }}>
         <section className="pulse-cycle-panel">
           <div className="pulse-cycle-head">
             <div>
@@ -164,8 +164,6 @@ export function LenteCiclo({
             <Empty title="Sin serie de padrón disponible" />
           )}
         </section>
-
-        <RegistryFacts points={evolution.data?.total ?? []} sectors={u.sectores_uaf} current={u.total} />
       </div>
 
       <div className="pulse-sector-trends">
@@ -285,34 +283,6 @@ function RegistryChart({ points }: { points: RegistryTotal[] }) {
         <span>2020–2025 son cierres anuales publicados en los Informes Estadísticos UAF. El punto 2026 corresponde al padrón semestral al 30-06-2026: <b>{n(last.total)} inscritos</b>, no una proyección.</span>
       </div>
     </>
-  );
-}
-
-function RegistryFacts({ points, sectors, current }: { points: RegistryTotal[]; sectors: number; current: number }) {
-  const first = points[0];
-  const last = points[points.length - 1];
-  const previous = points.length > 1 ? points[points.length - 2] : null;
-  const longDelta = first && last ? last.total - first.total : null;
-  const longPct = first && longDelta != null ? (longDelta / first.total) * 100 : null;
-  const shortDelta = previous && last ? last.total - previous.total : null;
-  const shortPct = previous && shortDelta != null ? (shortDelta / previous.total) * 100 : null;
-
-  return (
-    <section className="pulse-cycle-panel">
-      <div className="pulse-cycle-head">
-        <div>
-          <h3>Lectura del padrón vigente</h3>
-          <p>Escala, variación y consistencia del último corte</p>
-        </div>
-      </div>
-      <div className="pulse-cycle-facts">
-        <div className="pulse-cycle-fact"><span>Stock vigente</span><strong>{n(last?.total ?? current)}</strong><em>coincide con el padrón operativo de Atlas</em></div>
-        <div className="pulse-cycle-fact"><span>Variación 2020 → 2026</span><strong>{longDelta == null ? '—' : `+${n(longDelta)}`}</strong><em>{longPct == null ? '—' : `+${n1(longPct)}% en el período`}</em></div>
-        <div className="pulse-cycle-fact"><span>Último cambio publicado</span><strong>{shortDelta == null ? '—' : `${shortDelta >= 0 ? '+' : ''}${n(shortDelta)}`}</strong><em>{shortPct == null ? '—' : `${shortPct >= 0 ? '+' : ''}${n1(shortPct)}% vs. cierre 2025`}</em></div>
-        <div className="pulse-cycle-fact"><span>Sectores del padrón</span><strong>{n(sectors)}</strong><em>clasificación UAF observada en el corte</em></div>
-      </div>
-      {last?.source_url && <a className="pulse-cycle-source" href={last.source_url} target="_blank" rel="noreferrer">Fuente del corte 2026 · {last.source_label} →</a>}
-    </section>
   );
 }
 
