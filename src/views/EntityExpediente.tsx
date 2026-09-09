@@ -53,6 +53,15 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function hasRecordData(value: Record<string, unknown>): boolean {
+  return Object.values(value).some((item) => {
+    if (item == null || item === '') return false;
+    if (Array.isArray(item)) return item.length > 0;
+    if (typeof item === 'object') return Object.keys(item as Record<string, unknown>).length > 0;
+    return true;
+  });
+}
+
 function text(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
@@ -245,7 +254,6 @@ function initials(name: string): string {
 export function EntityExpediente({ entityId, onNavigate }: { entityId: string; onNavigate: (hash: string) => void }) {
   const [tab, setTab] = useState<Tab>('resumen');
   const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
-  const [copied, setCopied] = useState(false);
   const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_detail', { p_entity_id: entityId });
 
   useEffect(() => {
@@ -295,14 +303,15 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const scoreBand = bandLabel(entity.ipa3_band ?? data.priority?.priority_band_shadow);
   const scorePct = Math.max(0, Math.min(100, Number(score ?? 0)));
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    } catch {
-      setCopied(false);
-    }
+  const tabHasData: Record<Tab, boolean> = {
+    resumen: false,
+    tributario: siiCoverage?.status === 'PRESENT' || hasRecordData(tax) || activities.length > 0 || history.length > 0,
+    uaf: uafCoverage?.status === 'PRESENT' || hasRecordData(uaf),
+    sanciones: sanctionCoverage?.status === 'PRESENT' || data.sanctions.length > 0,
+    compras: purchase?.status === 'PRESENT' || Number(purchase?.record_count ?? 0) > 0,
+    registros: osflCoverage?.status === 'PRESENT' || resCoverage?.status === 'PRESENT' || hasRecordData(osfl) || hasRecordData(res),
+    historico: timeline.length > 0,
+    fuentes: data.coverage.some((row) => row.status === 'PRESENT'),
   };
 
   return (
@@ -330,10 +339,6 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
           </div>
         </div>
 
-        <div className="entity360-actions">
-          <button className="entity360-action" onClick={() => void copyLink()}><Glyph name="copy" /> {copied ? 'Enlace copiado' : 'Copiar enlace'}</button>
-        </div>
-
         <div className="entity360-score" data-has-score={score != null && score > 0}>
           <div className="entity360-score-label">IPA3 · prioridad analítica</div>
           <div className="entity360-score-value">{score == null ? '—' : n1(score)}<small>/100</small></div>
@@ -352,7 +357,18 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
       </header>
 
       <nav className="entity360-tabs" aria-label="Secciones del expediente">
-        {TABS.map((item) => <button key={item.id} data-active={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>)}
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            data-active={tab === item.id}
+            data-has-info={tabHasData[item.id]}
+            title={tabHasData[item.id] ? 'Hay información disponible en esta sección' : undefined}
+            onClick={() => setTab(item.id)}
+          >
+            <span>{item.label}</span>
+            {tabHasData[item.id] && <i className="entity360-tab-data-dot" aria-hidden="true" />}
+          </button>
+        ))}
       </nav>
 
       {tab === 'resumen' && <ResumenTab data={data} press={press} articles={articles} timeline={timeline} activities={activities} history={history} purchase={purchase} registry={{ uaf: uafCoverage, sii: siiCoverage, osfl: osflCoverage, res: resCoverage, press: pressCoverage, sanctions: sanctionCoverage }} onNavigate={onNavigate} />}
