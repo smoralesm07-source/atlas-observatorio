@@ -7,48 +7,66 @@ export function FintechEnhanced({ onNavigate }: { onNavigate: (hash: string) => 
   const [marketHost, setMarketHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    const page = document.querySelector<HTMLElement>('.fintech-page');
-    if (!page) return;
+    let cleanupMounted: (() => void) | null = null;
 
-    const sections = Array.from(page.children).filter((node): node is HTMLElement =>
-      node instanceof HTMLElement && node.classList.contains('fintech-section'),
-    );
-    const explorer = sections[3];
-    if (!explorer) return;
+    const mount = () => {
+      if (cleanupMounted) return true;
+      const page = document.querySelector<HTMLElement>('.fintech-page');
+      if (!page) return false;
 
-    const section = document.createElement('section');
-    section.className = 'fintech-section fintech-market-section';
+      const sections = Array.from(page.children).filter((node): node is HTMLElement =>
+        node instanceof HTMLElement && node.classList.contains('fintech-section'),
+      );
+      const explorer = sections[3];
+      if (!explorer) return false;
 
-    const head = document.createElement('div');
-    head.className = 'fintech-section-head';
-    const title = document.createElement('h2');
-    const index = document.createElement('span');
-    index.textContent = '4.';
-    title.append(index, document.createTextNode(' Peso observable por cohortes'));
-    const hint = document.createElement('p');
-    hint.textContent = 'Normalizamos verticales equivalentes y comparamos únicamente métricas homogéneas dentro de cada cohorte.';
-    head.append(title, hint);
+      const section = document.createElement('section');
+      section.className = 'fintech-section fintech-market-section';
 
-    const body = document.createElement('div');
-    body.className = 'fintech-market-cohort-host';
-    section.append(head, body);
-    explorer.before(section);
+      const head = document.createElement('div');
+      head.className = 'fintech-section-head';
+      const title = document.createElement('h2');
+      const index = document.createElement('span');
+      index.textContent = '4.';
+      title.append(index, document.createTextNode(' Peso observable por cohortes'));
+      const hint = document.createElement('p');
+      hint.textContent = 'Normalizamos verticales equivalentes y comparamos únicamente métricas homogéneas dentro de cada cohorte.';
+      head.append(title, hint);
 
-    const explorerIndex = explorer.querySelector<HTMLElement>('.fintech-section-head h2 span');
-    if (explorerIndex) explorerIndex.textContent = '5.';
+      const body = document.createElement('div');
+      body.className = 'fintech-market-cohort-host';
+      section.append(head, body);
+      explorer.before(section);
 
-    const staleNote = page.querySelector<HTMLElement>('.fintech-context-note span');
-    const oldNote = staleNote?.textContent ?? null;
-    if (staleNote && oldNote?.includes('201/200')) {
-      staleNote.textContent = 'La referencia sectorial es agregada; ATLAS mantiene un universo individualizado y deduplicado que se actualiza desde las fuentes integradas. No se presenta una marca o producto como una nueva persona jurídica sin evidencia.';
-    }
+      const explorerIndex = explorer.querySelector<HTMLElement>('.fintech-section-head h2 span');
+      if (explorerIndex) explorerIndex.textContent = '5.';
 
-    setMarketHost(body);
+      const staleNote = page.querySelector<HTMLElement>('.fintech-context-note span');
+      const oldNote = staleNote?.textContent ?? null;
+      if (staleNote && oldNote?.includes('201/200')) {
+        staleNote.textContent = 'La referencia sectorial es agregada; ATLAS mantiene un universo individualizado y deduplicado que se actualiza desde las fuentes integradas. No se presenta una marca o producto como una nueva persona jurídica sin evidencia.';
+      }
+
+      setMarketHost(body);
+      cleanupMounted = () => {
+        setMarketHost(null);
+        section.remove();
+        if (explorerIndex) explorerIndex.textContent = '4.';
+        if (staleNote && oldNote) staleNote.textContent = oldNote;
+      };
+      return true;
+    };
+
+    if (mount()) return () => cleanupMounted?.();
+
+    const observer = new MutationObserver(() => {
+      if (mount()) observer.disconnect();
+    });
+    observer.observe(document.getElementById('root') ?? document.body, { childList: true, subtree: true });
+
     return () => {
-      setMarketHost(null);
-      section.remove();
-      if (explorerIndex) explorerIndex.textContent = '4.';
-      if (staleNote && oldNote) staleNote.textContent = oldNote;
+      observer.disconnect();
+      cleanupMounted?.();
     };
   }, []);
 
