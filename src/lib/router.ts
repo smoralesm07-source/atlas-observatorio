@@ -2,15 +2,24 @@ import { useCallback, useEffect, useState } from 'react';
 import type { UafLens } from './contracts';
 
 const LENTES: UafLens[] = ['reportabilidad', 'revision', 'territorio', 'ciclo'];
+export type UniversoMode = 'padron' | 'brechas' | 'gestion';
+const UNIVERSO_MODES: UniversoMode[] = ['padron', 'brechas', 'gestion'];
 
 function asLens(v: string | null): UafLens | undefined {
   return LENTES.includes(v as UafLens) ? (v as UafLens) : undefined;
 }
 
+function asUniversoMode(v: string | null): UniversoMode | undefined {
+  return UNIVERSO_MODES.includes(v as UniversoMode) ? (v as UniversoMode) : undefined;
+}
+
 export type Route =
   /** La lente activa viaja en la URL: un enlace al Pulso abre la misma lente. */
   | { view: 'pulso'; lente?: UafLens }
+  | { view: 'universo'; mode?: UniversoMode }
+  /** Alias de compatibilidad: los enlaces antiguos siguen resolviendo. */
   | { view: 'cobertura' }
+  | { view: 'sectores' }
   | { view: 'osfl' }
   | { view: 'fintech' }
   | { view: 'sanciones' }
@@ -18,7 +27,6 @@ export type Route =
   | { view: 'entidades'; q?: string; region?: string }
   | { view: 'ficha'; entityId: string }
   | { view: 'territorio' }
-  | { view: 'sectores' }
   | { view: 'gasto'; familia?: string }
   | { view: 'gastoActor'; actorId: string; role: 'BUYER' | 'SUPPLIER' }
   | { view: 'fuentes' }
@@ -35,8 +43,13 @@ export function parseHash(hash: string): Route {
   switch (seg[0]) {
     case 'pulso':
       return { view: 'pulso', lente: asLens(params.get('lente')) };
+    case 'universo-so':
+    case 'universo':
+      return { view: 'universo', mode: asUniversoMode(params.get('vista')) };
     case 'cobertura':
-      return { view: 'cobertura' };
+      return { view: 'universo', mode: 'brechas' };
+    case 'sectores':
+      return { view: 'universo', mode: 'padron' };
     case 'osfl':
       return { view: 'osfl' };
     case 'fintech':
@@ -57,8 +70,6 @@ export function parseHash(hash: string): Route {
         : { view: 'entidades' };
     case 'territorio':
       return { view: 'territorio' };
-    case 'sectores':
-      return { view: 'sectores' };
     case 'gasto':
       if (seg[1] === 'comprador' && seg[2]) {
         return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'BUYER' };
@@ -78,8 +89,14 @@ export function parseHash(hash: string): Route {
 
 export function hrefFor(r: Route): string {
   switch (r.view) {
+    case 'universo':
+      return r.mode && r.mode !== 'padron'
+        ? `#/universo-so?vista=${r.mode}`
+        : '#/universo-so';
     case 'cobertura':
-      return '#/cobertura';
+      return '#/universo-so?vista=brechas';
+    case 'sectores':
+      return '#/universo-so';
     case 'osfl':
       return '#/osfl';
     case 'fintech':
@@ -99,8 +116,6 @@ export function hrefFor(r: Route): string {
       return `#/entidad/${encodeURIComponent(r.entityId)}`;
     case 'territorio':
       return '#/territorio';
-    case 'sectores':
-      return '#/sectores';
     case 'gasto':
       return r.familia ? `#/gasto?familia=${encodeURIComponent(r.familia)}` : '#/gasto';
     case 'gastoActor':
