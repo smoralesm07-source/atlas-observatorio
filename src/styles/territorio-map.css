@@ -6,6 +6,29 @@
 :root { --map-nodata: #243043; }
 :root[data-theme='light'] { --map-nodata: #e2e8f0; }
 
+/* Cabecera de Territorio: ayuda analítica breve para interpretar IGR y CEAD. */
+.fade-in:has(.map-tools) > .view-head { margin-bottom: 10px; }
+.fade-in:has(.map-tools) > .view-head .view-lede { display: none; }
+.fade-in:has(.map-tools) > .view-head + .semantics {
+  margin: 0 0 16px;
+  min-height: 0;
+  padding: 9px 12px;
+  gap: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-panel) 74%, transparent);
+  box-shadow: none;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.fade-in:has(.map-tools) > .view-head + .semantics > * { display: none; }
+.fade-in:has(.map-tools) > .view-head + .semantics::before {
+  content: "IGR · Índice comunal de amenaza territorial relevante para LA (0–100).  ·  Confianza CEAD · Indica la cobertura y consistencia del dato delictual utilizado; una confianza baja exige mayor cautela y no equivale a menor amenaza.";
+  display: block;
+  width: 100%;
+}
+
 .map-host { position: relative; padding: 14px 16px 4px; }
 
 .map-strips {
