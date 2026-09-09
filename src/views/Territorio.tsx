@@ -64,32 +64,147 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
 
   return (
     <div className="fade-in">
-      <header className="view-head">
+      <header className="view-head territory-view-head">
         <h1 className="view-title">Territorio</h1>
-        <p className="view-lede">
-          Dónde hay mayor amenaza territorial relevante para lavado de activos. El indicador
-          vigente es <strong>{m.indicador} {m.version.replace(/^IGR-/, '')}</strong>, en el que{' '}
-          <span className="mono">{m.formula}</span>. Describe el territorio, no a las
-          entidades domiciliadas en él.
-        </p>
       </header>
 
-      {/* La cobertura de delitos base condiciona toda lectura del índice, así que
-          va arriba y no escondida en una nota al pie. */}
-      <div className="semantics" style={{ marginBottom: 16 }}>
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden>
-          <circle cx="8" cy="8" r="6.6" stroke="currentColor" strokeWidth="1.3" opacity=".55" />
-          <path d="M8 7.2v4M8 4.9v.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-        <div>
-          <strong>Qué alcanza a ver hoy este índice.</strong> La capa de amenazas precedentes
-          está materializada principalmente con{' '}
-          {m.cobertura_delitos_base.materializadas.join(', ')}. Todavía{' '}
-          <em>no</em> incorpora {m.cobertura_delitos_base.no_materializadas.join(', ')}, y el
-          Observatorio no las presenta como si tuvieran cobertura territorial suficiente. Un
-          IGR bajo significa poca amenaza de las familias medidas, no ausencia de amenaza.
+      <details className="territory-method">
+        <summary className="territory-method-summary">
+          <div className="territory-method-summary-copy">
+            <strong>IGR y confianza CEAD</strong>
+            <span>
+              IGR = amenaza territorial comunal · Confianza CEAD = solidez del dato delictual para interpretar ese resultado.
+            </span>
+          </div>
+          <span className="territory-method-open">Metodología</span>
+          <span className="territory-method-chevron" aria-hidden>⌄</span>
+        </summary>
+
+        <div className="territory-method-body">
+          <div className="territory-method-lead">
+            <div>
+              <span className="territory-method-kicker">Lectura esencial</span>
+              <strong>El IGR describe el territorio, no a las entidades domiciliadas en él.</strong>
+              <p>
+                Un valor alto orienta dónde existe mayor amenaza territorial observada para LA. La confianza CEAD
+                acompaña esa lectura como medida de cobertura y consistencia del dato: una confianza baja exige
+                cautela y nunca debe interpretarse como menor amenaza.
+              </p>
+            </div>
+            <div className="territory-method-scale">
+              <span>IGR</span>
+              <strong>0–100</strong>
+              <small>mayor valor = mayor amenaza observada</small>
+            </div>
+          </div>
+
+          <div className="territory-method-grid">
+            <section className="territory-method-card territory-method-card-wide">
+              <span className="territory-method-kicker">1 · Fórmula publicada</span>
+              <div className="territory-method-formula mono">{m.formula}</div>
+              <p>
+                El IGR vigente es <strong>{m.indicador} {m.version.replace(/^IGR-/, '')}</strong>. La fórmula y
+                los pesos se leen desde el contrato metodológico vigente, de modo que esta ayuda se mantiene
+                sincronizada con el cálculo publicado.
+              </p>
+            </section>
+
+            <section className="territory-method-card">
+              <span className="territory-method-kicker">2 · Composición del IGR</span>
+              <div className="territory-method-equation mono">
+                IGR = Σ (capa × peso)
+              </div>
+              <dl className="territory-method-dl">
+                <dt>Amenazas precedentes LA</dt>
+                <dd>{n1(m.capas.amenazas_precedentes_la * 100)}%</dd>
+                <dt>Economía criminal y facilitadores</dt>
+                <dd>{n1(m.capas.economia_criminal_facilitadores * 100)}%</dd>
+                <dt>Contexto criminógeno</dt>
+                <dd>{n1(m.capas.contexto_criminogeno * 100)}%</dd>
+              </dl>
+            </section>
+
+            <section className="territory-method-card">
+              <span className="territory-method-kicker">3 · Caracterización de cada capa</span>
+              <div className="territory-method-equation mono">
+                C = I×{n1(m.caracterizacion.intensidad * 100)}% + P×{n1(m.caracterizacion.persistencia * 100)}% + T×{n1(m.caracterizacion.tendencia * 100)}% + A×{n1(m.caracterizacion.anomalia * 100)}%
+              </div>
+              <dl className="territory-method-dl compact">
+                <dt>I · Intensidad</dt><dd>{n1(m.caracterizacion.intensidad * 100)}%</dd>
+                <dt>P · Persistencia</dt><dd>{n1(m.caracterizacion.persistencia * 100)}%</dd>
+                <dt>T · Tendencia</dt><dd>{n1(m.caracterizacion.tendencia * 100)}%</dd>
+                <dt>A · Anomalía</dt><dd>{n1(m.caracterizacion.anomalia * 100)}%</dd>
+              </dl>
+            </section>
+
+            <section className="territory-method-card">
+              <span className="territory-method-kicker">4 · Confianza CEAD</span>
+              <p>
+                Es un <strong>calificador de la evidencia territorial</strong>, no un componente de riesgo.
+                Resume cuánta cobertura y consistencia tiene el dato delictual disponible para la comuna y se
+                publica separado del score.
+              </p>
+              <div className="territory-method-callout">
+                Confianza baja → interpretar el IGR con mayor cautela y buscar corroboración adicional.
+              </div>
+            </section>
+
+            <section className="territory-method-card">
+              <span className="territory-method-kicker">5 · Agregado regional</span>
+              <div className="territory-method-equation mono">
+                IGR región = Σ(IGR comuna × confianza) / Σ(confianza)
+              </div>
+              <p>
+                La vista regional usa una media comunal ponderada por confianza CEAD. Así, una comuna con menor
+                cobertura pesa menos en el agregado y no arrastra artificialmente la lectura de su región.
+              </p>
+            </section>
+
+            <section className="territory-method-card territory-method-card-wide">
+              <span className="territory-method-kicker">6 · Cobertura y límites actuales</span>
+              <div className="territory-method-coverage">
+                <div>
+                  <strong>Materializado hoy</strong>
+                  <p>{m.cobertura_delitos_base.materializadas.join(', ')}.</p>
+                </div>
+                <div>
+                  <strong>Aún no materializado con cobertura territorial suficiente</strong>
+                  <p>{m.cobertura_delitos_base.no_materializadas.join(', ')}.</p>
+                </div>
+              </div>
+              <p className="territory-method-muted">
+                Fuera del índice: {m.excluido_del_indice.join(', ')}. Las cifras de entidades, padrón y sanciones
+                que aparecen junto a cada comuna son contexto descriptivo y no entran en el cálculo.
+              </p>
+            </section>
+
+            <section className="territory-method-card territory-method-card-wide">
+              <span className="territory-method-kicker">7 · Regla práctica para discriminar</span>
+              <div className="territory-read-grid">
+                <div>
+                  <strong>IGR alto + confianza alta</strong>
+                  <span>Lectura territorial más robusta: prioriza revisión del territorio.</span>
+                </div>
+                <div>
+                  <strong>IGR alto + confianza baja</strong>
+                  <span>Señal relevante, pero exige corroborar antes de concluir.</span>
+                </div>
+                <div>
+                  <strong>IGR bajo + confianza alta</strong>
+                  <span>Menor amenaza observada en las familias efectivamente medidas.</span>
+                </div>
+                <div>
+                  <strong>IGR bajo + confianza baja</strong>
+                  <span>No permite concluir baja amenaza: la lectura es débil por cobertura.</span>
+                </div>
+              </div>
+              <p className="territory-method-muted">
+                Esta matriz es una guía de interpretación analítica, no un nuevo umbral ni una regla automática de clasificación.
+              </p>
+            </section>
+          </div>
         </div>
-      </div>
+      </details>
 
       <div className="grid grid-4" style={{ marginBottom: 16 }}>
         <Stat label="Comunas evaluadas" value={n(cob.comunas)} foot={`año ${cob.anio ?? '—'}`} />
