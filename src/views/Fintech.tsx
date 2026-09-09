@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ErrorBox, Loading } from '../components/primitives';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
