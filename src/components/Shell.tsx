@@ -10,8 +10,9 @@ const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
   { label: 'Fintech', route: { view: 'fintech' }, match: ['fintech'] },
   { label: 'Sanciones', route: { view: 'sanciones' }, match: ['sanciones'] },
   { label: 'Entidades', route: { view: 'entidades' }, match: ['entidades', 'ficha'] },
-  { label: 'Territorio', route: { view: 'territorio' }, match: ['territorio'] },
   { label: 'Sectores', route: { view: 'sectores' }, match: ['sectores'] },
+  { label: 'Cobertura', route: { view: 'cobertura' }, match: ['cobertura'] },
+  { label: 'Territorio', route: { view: 'territorio' }, match: ['territorio'] },
   { label: 'Gasto público', route: { view: 'gasto' }, match: ['gasto', 'gastoActor'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
 ];

@@ -1,0 +1,271 @@
+import { useMemo, useState } from 'react';
+import type { UafPulse, UafReportingSector } from '../../lib/contracts';
+import { Columns } from '../../components/charts';
+import { Empty, Panel } from '../../components/primitives';
+import { n, n1, titleCase } from '../../lib/format';
+import type { CohortRequest } from '../../components/CohortDrawer';
+
+/* LENTE · REPORTABILIDAD
+   ──────────────────────
+   Cuánto reporta el universo obligado y quién sostiene ese volumen. La serie
+   nacional viene del Informe Estadístico UAF y describe al país, nunca a una
+   entidad: la reportabilidad es sectorial y jamás se atribuye a un inscrito. */
+
+/* Series nacionales que el Informe Estadístico publica con historia completa.
+   Las de un solo punto no entran al gráfico: una columna sola no es una serie. */
+const SERIES: { key: string; label: string; unit: string; lede: string; accent: string }[] = [
+  { key: 'ros_recibidos', label: 'ROS', unit: 'reportes de operación sospechosa',
+    lede: 'Reportes de operación sospechosa recibidos por la UAF. Se emiten ante una operación sospechosa, no con periodicidad fija.',
+    accent: 'var(--accent)' },
+  { key: 'roe_recibidos_miles', label: 'ROE', unit: 'miles de reportes de operación en efectivo',
+    lede: 'Reportes de operación en efectivo sobre el umbral legal. Su caída sostenida convive con el alza de ROS: miden cosas distintas.',
+    accent: 'var(--sig-watch)' },
+  { key: 'acciones_supervision', label: 'Fiscalización', unit: 'acciones de supervisión',
+    lede: 'Acciones de supervisión ejecutadas por la UAF en el año. Es capacidad desplegada, no cobertura del padrón.',
+    accent: 'var(--sig-medium)' },
+  { key: 'entidades_reportantes_total', label: 'Padrón', unit: 'personas y entidades inscritas',
+    lede: 'Entidades reportantes inscritas al cierre de cada año, según el propio informe. No es el padrón operativo del Observatorio.',
+    accent: 'var(--unknown)' },
+];
+
+export function LenteReportabilidad({
+  data,
+  onCohort,
+}: {
+  data: UafPulse;
+  onCohort: (req: CohortRequest) => void;
+}) {
+  const [serie, setSerie] = useState(SERIES[0].key);
+  const [orden, setOrden] = useState<'padron' | 'intensidad' | 'volumen'>('padron');
+
+  const rep = data.reporting;
+  const sectores = useMemo(() => ordenarSectores(rep?.sectores ?? [], orden), [rep, orden]);
+  const masIntenso = useMemo(
+    () => ordenarSectores(rep?.sectores ?? [], 'volumen')[0] ?? null,
+    [rep],
+  );
+  const masNumerosos = useMemo(
+    () => ordenarSectores(rep?.sectores ?? [], 'padron').slice(0, 3),
+    [rep],
+  );
+
+  const t = rep?.totales;
+  const serieActiva = SERIES.find((s) => s.key === serie) ?? SERIES[0];
+  const serieDatos = rep?.nacional?.[serie];
+
+  /* Concentración: la cifra que cambia la lectura de todo el tablero. Tres
+     sectores de cincuenta explican la mayor parte del volumen reportado, y el
+     contraste con los tres sectores más numerosos del padrón es la lectura. */
+  const concentracion = t?.ros_2025 ? (t.ros_top3 / t.ros_2025) * 100 : null;
+  const rosDeLosNumerosos = masNumerosos.reduce((a, x) => a + (x.ros_2025 ?? 0), 0);
+  const inscritosDeLosNumerosos = masNumerosos.reduce((a, x) => a + (x.padron_sujetos ?? 0), 0);
+
+  if (!rep?.disponible) {
+    return <Empty title="Sin corte de reportabilidad publicado" hint="El Informe Estadístico UAF no está disponible en este snapshot." />;
+  }
+
+  return (
+    <>
+      <div className="pulse-grid-wide" style={{ marginBottom: 16 }}>
+        <Panel
+          title="Lo que el universo obligado reporta"
+          actions={
+            <div className="seg" role="tablist" aria-label="Serie publicada">
+              {SERIES.map((s) => (
+                <button key={s.key} role="tab" aria-selected={s.key === serie}
+                  data-on={s.key === serie} onClick={() => setSerie(s.key)}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <p style={{ margin: '0 0 4px', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: '72ch' }}>
+            {serieActiva.lede}
+          </p>
+          {serieDatos?.puntos?.length ? (
+            <>
+              <Columns
+                accent={serieActiva.accent}
+                data={[
+                  ...serieDatos.puntos
+                    .filter((p) => /^\d{4}$/.test(p.periodo))
+                    .map((p) => ({ label: p.periodo, value: p.valor })),
+                  /* 2026 todavía no tiene informe publicado. Se dibuja el hueco
+                     y se rotula: omitirlo sugeriría que la serie terminó. */
+                  { label: '2026', value: null, ghost: true, note: 'sin publicar' },
+                ]}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
+                  {serieActiva.unit} · corte {serieDatos.corte ?? '—'}
+                </span>
+                {serieDatos.fuente && (
+                  <a className="ev-link" style={{ marginTop: 0, fontSize: 11.5 }}
+                    href={serieDatos.fuente} target="_blank" rel="noreferrer">
+                    Informe Estadístico UAF →
+                  </a>
+                )}
+              </div>
+            </>
+          ) : (
+            <Empty title="Serie no publicada en este corte" />
+          )}
+        </Panel>
+
+        <Panel title="Concentración del volumen" meta={`${n(data.universe?.sectores_uaf ?? 0)} sectores`}>
+          {concentracion != null && t && masIntenso && masNumerosos.length === 3 ? (
+            <>
+              <div className="callout accent">
+                <div>
+                  <b>Tres sectores explican el {n1(concentracion)}% de los ROS de 2025.</b>{' '}
+                  De {n(t.ros_2025 ?? 0)} reportes del año, {n(t.ros_top3)} vienen de los tres
+                  sectores que más reportan, encabezados por {titleCase(masIntenso.etiqueta)} con{' '}
+                  {n(masIntenso.padron_sujetos ?? masIntenso.registered_so_2025 ?? 0)} inscritos.
+                  En el otro extremo, los tres sectores más numerosos del padrón suman{' '}
+                  {n(inscritosDeLosNumerosos)} inscritos y {n(rosDeLosNumerosos)} ROS en el mismo
+                  año. La intensidad de reporte no sigue al tamaño del padrón, y es esa brecha
+                  —no el volumen— la que orienta dónde mirar.
+                </div>
+              </div>
+              {t.sectores_silenciosos > 0 && (
+                <div className="callout" style={{ marginTop: 10 }}>
+                  <div>
+                    <b>{n(t.sectores_silenciosos)} sectores no registran ningún ROS entre 2021 y 2025</b>,
+                    con {n(t.sujetos_en_silencio)} inscritos vigentes entre todos. Otros{' '}
+                    {n(t.sectores_sin_inscritos)} sectores canónicos de la ley no tienen ningún
+                    inscrito en el padrón. {data.coverage.silence_note}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <Empty title="Sin totales de reportabilidad en este corte" />
+          )}
+        </Panel>
+      </div>
+
+      <Panel
+        title="Quién sostiene la reportabilidad"
+        pad={false}
+        actions={
+          <div className="seg">
+            <button data-on={orden === 'padron'} onClick={() => setOrden('padron')}>Tamaño del padrón</button>
+            <button data-on={orden === 'intensidad'} onClick={() => setOrden('intensidad')}>Intensidad</button>
+            <button data-on={orden === 'volumen'} onClick={() => setOrden('volumen')}>Volumen ROS</button>
+          </div>
+        }
+      >
+        <div style={{ padding: '4px 0 0' }}>
+          <div className="rep-row rep-head">
+            <span>Sector obligado</span>
+            <span className="rep-hide">Padrón</span>
+            <span>ROS 2025</span>
+            <span className="rep-hide">Δ 25/24</span>
+            <span className="rep-hide">ICR</span>
+          </div>
+          {sectores.slice(0, 14).map((s) => (
+            <SectorReportRow
+              key={s.sector_official}
+              s={s}
+              peak={Math.max(1, ...sectores.map((x) => x.ros_per_100_so_2025 ?? 0))}
+              onPick={() =>
+                s.sector_canonical
+                  ? onCohort({ cohort: 'SECTOR', value: s.sector_canonical, title: s.sector_canonical })
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+
+        <p style={{ margin: 0, padding: '12px 18px 14px', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55, borderTop: '1px solid var(--line-soft)' }}>
+          <b style={{ color: 'var(--ink-2)' }}>Cómo leer esta tabla.</b>{' '}
+          La intensidad es ROS 2025 por cada 100 inscritos y usa el padrón del Informe
+          Estadístico al {rep.corte.padron_referencia_corte} ({n(rep.corte.padron_referencia)}),
+          que es un corte distinto del padrón operativo. La barra está en escala
+          logarítmica porque la intensidad recorre cinco órdenes de magnitud: conserva
+          el orden entre sectores, no la proporción entre ellos. La variación 25/24 se
+          publica siempre junto al volumen y nunca sola: un sector que pasa de 2 a 11 ROS
+          sube 450% sin que eso describa un cambio de escala. El ICR es la proporción de
+          ROS con indicios LA/FT sobre los ROS enviados en 2021-2025: describe la conversión
+          histórica del sector, no la calidad de un reporte ni el riesgo de una entidad.{' '}
+          {data.coverage.reporting_note}
+        </p>
+      </Panel>
+    </>
+  );
+}
+
+function ordenarSectores(rows: UafReportingSector[], modo: 'padron' | 'intensidad' | 'volumen') {
+  const v = (x: number | null | undefined) => (x == null ? -1 : x);
+  const copia = rows.slice();
+  if (modo === 'intensidad') {
+    return copia.sort((a, b) => v(b.ros_per_100_so_2025) - v(a.ros_per_100_so_2025));
+  }
+  if (modo === 'volumen') return copia.sort((a, b) => v(b.ros_2025) - v(a.ros_2025));
+  return copia.sort((a, b) => v(b.padron_sujetos) - v(a.padron_sujetos) || v(b.registered_so_2025) - v(a.registered_so_2025));
+}
+
+function SectorReportRow({
+  s, peak, onPick,
+}: {
+  s: UafReportingSector;
+  peak: number;
+  onPick?: () => void;
+}) {
+  const intensidad = s.ros_per_100_so_2025;
+  /* La intensidad recorre cinco órdenes de magnitud —de 0,25 a 82.959 ROS por
+     cada 100 inscritos— y en escala lineal todo lo que no sea banca queda
+     pegado al cero. La escala logarítmica conserva el orden y deja ver la
+     diferencia entre 0,25 y 27, que es justamente la que interesa. La barra se
+     rotula como logarítmica: una escala comprimida sin decirlo engaña. */
+  const ancho =
+    intensidad == null ? 0
+      : Math.min(100, (Math.log10(1 + intensidad) / Math.log10(1 + peak)) * 100);
+  const silencio = s.silence_5y === true;
+  const sinInscritos = s.sector_canonical == null;
+  const delta = s.delta_ros_2025_vs_2024_pct;
+
+  return (
+    <button className="rep-row" onClick={onPick} disabled={!onPick} title={s.sector_official}>
+      <span className="rep-name">
+        <span>{titleCase(s.etiqueta)}</span>
+        {silencio && <span className="motive" data-m="SECTOR_SIN_ROS"><i />sin ROS 5 años</span>}
+        {sinInscritos && <span className="badge badge-absent">sin inscritos</span>}
+      </span>
+      <span className="rep-hide num" style={{ textAlign: 'right', fontSize: 12, color: s.padron_sujetos == null ? 'var(--ink-4)' : 'var(--ink-2)' }}>
+        {/* Un sector canónico sin inscritos no tiene cero inscritos: no tiene
+            padrón que contar, y un cero lo diría al revés. */}
+        {s.padron_sujetos == null ? '—' : n(s.padron_sujetos)}
+      </span>
+      <span className="num" style={{ textAlign: 'right', fontSize: 12, fontWeight: 620 }}>
+        {s.ros_2025 == null ? '—' : n(s.ros_2025)}
+        <em style={{ display: 'block', fontStyle: 'normal', fontSize: 10, color: 'var(--ink-4)', fontWeight: 400 }}>
+          {intensidad == null ? 'sin corte' : `${n1(intensidad)} / 100 SO`}
+        </em>
+      </span>
+      {/* La variación sin base engaña: un sector que pasa de 2 a 11 ROS marca
+          +450%. Por eso el porcentaje va junto al volumen del año y en tono
+          neutro cuando la base es mínima. */}
+      <span
+        className="rep-hide num"
+        style={{
+          textAlign: 'right',
+          fontSize: 12,
+          color: delta == null ? 'var(--ink-4)'
+            : (s.ros_2025 ?? 0) < 20 ? 'var(--ink-3)'
+            : delta > 0 ? 'var(--present)' : delta < 0 ? 'var(--sig-high)' : 'var(--ink-3)',
+        }}
+        title={delta != null && (s.ros_2025 ?? 0) < 20 ? 'Variación sobre una base menor a 20 reportes' : undefined}
+      >
+        {delta == null ? '—' : `${delta > 0 ? '+' : ''}${n1(delta)}%`}
+      </span>
+      <span className="rep-hide num" style={{ textAlign: 'right', fontSize: 12, color: s.icr_pct != null && s.icr_pct >= 10 ? 'var(--sig-medium)' : 'var(--ink-3)' }}>
+        {s.icr_pct == null ? '—' : `${n1(s.icr_pct)}%`}
+      </span>
+      <span className="rep-bar">
+        <span style={{ width: `${ancho}%`, background: silencio ? 'var(--unknown)' : 'var(--accent)' }} />
+      </span>
+    </button>
+  );
+}

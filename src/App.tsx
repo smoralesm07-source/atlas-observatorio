@@ -5,6 +5,7 @@ import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
 import { useRoute } from './lib/router';
 import { Pulso } from './views/Pulso';
+import { Cobertura } from './views/Cobertura';
 import { Osfl } from './views/Osfl';
 import { Fintech } from './views/Fintech';
 import { Sanciones } from './views/Sanciones';
@@ -29,7 +30,8 @@ function Routed({ session }: { session: Session }) {
 
   return (
     <Shell route={route} session={session}>
-      {route.view === 'pulso' && <Pulso onNavigate={go} />}
+      {route.view === 'pulso' && <Pulso onNavigate={go} lente={route.lente} />}
+      {route.view === 'cobertura' && <Cobertura onNavigate={go} />}
       {route.view === 'osfl' && <Osfl onNavigate={go} />}
       {route.view === 'fintech' && <Fintech onNavigate={go} />}
       {route.view === 'sanciones' && <Sanciones onNavigate={go} />}

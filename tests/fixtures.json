@@ -1965,7 +1965,76 @@
    ]
   },
   "lifecycle": {
-   "started_by_year": [],
+   "started_by_year": [
+    {
+     "ano": 2010,
+     "n": 231
+    },
+    {
+     "ano": 2011,
+     "n": 298
+    },
+    {
+     "ano": 2012,
+     "n": 277
+    },
+    {
+     "ano": 2013,
+     "n": 310
+    },
+    {
+     "ano": 2014,
+     "n": 267
+    },
+    {
+     "ano": 2015,
+     "n": 354
+    },
+    {
+     "ano": 2016,
+     "n": 290
+    },
+    {
+     "ano": 2017,
+     "n": 349
+    },
+    {
+     "ano": 2018,
+     "n": 398
+    },
+    {
+     "ano": 2019,
+     "n": 420
+    },
+    {
+     "ano": 2020,
+     "n": 256
+    },
+    {
+     "ano": 2021,
+     "n": 275
+    },
+    {
+     "ano": 2022,
+     "n": 210
+    },
+    {
+     "ano": 2023,
+     "n": 201
+    },
+    {
+     "ano": 2024,
+     "n": 204
+    },
+    {
+     "ano": 2025,
+     "n": 164
+    },
+    {
+     "ano": 2026,
+     "n": 37
+    }
+   ],
    "terminated_by_year": [
     {
      "n": 39,
@@ -3009,7 +3078,33 @@
     }
    ],
    "semantics": "Observación de screening OSINT. Un ACTECO alcanzado por la Ley 19.913 no prueba la calidad jurídica de sujeto obligado, no imputa incumplimiento y no equivale a una omisión de inscripción. Toda suma entre códigos es bruta y puede contar dos veces al RUT con más de un giro alcanzado; dos sectores que comparten un gatillante repiten el mismo universo y no deben sumarse entre sí."
-  }
+  },
+  "reading": [
+   {
+    "orden": 1,
+    "cifra": "76,6%",
+    "tono": "sig-medium",
+    "titulo": "Tres sectores explican tres de cada cuatro ROS de 2025",
+    "glosa": "16.711 de 21.828 reportes. Los tres sectores más numerosos del padrón —6.543 inscritos— aportan 46.",
+    "destino": "reportabilidad"
+   },
+   {
+    "orden": 2,
+    "cifra": "128",
+    "tono": "sig-critical",
+    "titulo": "Sancionados en 5 años que además tienen IPF alto",
+    "glosa": "De 147 con sanción reciente, 128 caen en la banda alta del índice. Es la cola más corta y la más densa del turno.",
+    "destino": "revision"
+   },
+   {
+    "orden": 3,
+    "cifra": "37 / 39",
+    "tono": "sig-high",
+    "titulo": "En 2026 el padrón deja de crecer por primera vez",
+    "glosa": "37 inicios de actividad contra 39 términos de giro. En 2019 la relación era de 420 contra 21.",
+    "destino": "ciclo"
+   }
+  ]
  },
  "uafCohort": [
   {

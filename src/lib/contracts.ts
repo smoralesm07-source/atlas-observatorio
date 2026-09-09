@@ -702,6 +702,62 @@ export interface UafScreeningMode {
   inscritos: number;
 }
 
+/**
+ * Cobertura del padron: el reverso del registro. Vive en su propia vista y el
+ * Pulso solo publica su cifra ancla, de modo que el tipo es independiente de
+ * UafPulse aunque hoy los dos contratos lo devuelvan.
+ */
+export interface UafScreening {
+  disponible: boolean;
+  corte: {
+    sii_periodo: string;
+    sii_dataset: string;
+    uaf_corte: string;
+    /** Linea base declarada por Radar_SII, no materializada RUT a RUT aqui. */
+    universo_declarado: number;
+    universo_estado: string;
+    universo_nota: string;
+    fuente: string;
+    fuente_url: string;
+  };
+  totales: {
+    gatillantes: number;
+    sectores: number;
+    universo_bruto: number | null;
+    universo_top4: number | null;
+    universo_riesgo_alto: number | null;
+    inscritos_cubiertos: number;
+    sectores_otro_modo: number;
+    sujetos_otro_modo: number;
+    padron_total: number;
+    gatillantes_b: number;
+  } | null;
+  actecos: UafScreeningActeco[];
+  sectores: UafScreeningSector[];
+  modos: UafScreeningMode[];
+  semantics: string;
+}
+
+/**
+ * Hallazgo curado del corte. Se escribe por snapshot y no se deriva de
+ * umbrales: si el corte no trae lectura, la franja no se dibuja. Nunca se
+ * inventa un hallazgo automatico para llenar el espacio.
+ */
+export interface UafPulseReading {
+  orden: number;
+  /** Cifra tal como debe imprimirse, ya formateada por quien la escribe. */
+  cifra: string;
+  /** Token de color del sistema, sin var(): 'sig-critical', 'accent', … */
+  tono: string;
+  titulo: string;
+  glosa: string;
+  /** Lente a la que lleva el hallazgo. Nulo = no navega a ninguna parte. */
+  destino: UafLens | null;
+}
+
+/** Las cuatro lentes del Pulso. El orden es el de la barra. */
+export type UafLens = 'reportabilidad' | 'revision' | 'territorio' | 'ciclo';
+
 export interface UafPulse {
   contract: 'ATLAS_OBS_UAF_PULSE_V3';
   snapshot: {
@@ -788,36 +844,13 @@ export interface UafPulse {
       ros_top3: number;
     } | null;
   };
-  screening: {
-    disponible: boolean;
-    corte: {
-      sii_periodo: string;
-      sii_dataset: string;
-      uaf_corte: string;
-      /** Linea base declarada por Radar_SII, no materializada RUT a RUT aqui. */
-      universo_declarado: number;
-      universo_estado: string;
-      universo_nota: string;
-      fuente: string;
-      fuente_url: string;
-    };
-    totales: {
-      gatillantes: number;
-      sectores: number;
-      universo_bruto: number | null;
-      universo_top4: number | null;
-      universo_riesgo_alto: number | null;
-      inscritos_cubiertos: number;
-      sectores_otro_modo: number;
-      sujetos_otro_modo: number;
-      padron_total: number;
-      gatillantes_b: number;
-    } | null;
-    actecos: UafScreeningActeco[];
-    sectores: UafScreeningSector[];
-    modos: UafScreeningMode[];
-    semantics: string;
-  };
+  screening: UafScreening;
+  /**
+   * Lectura curada del corte. Opcional a proposito: un snapshot anterior a la
+   * migracion que la introduce no la trae, y la ausencia oculta la franja en
+   * vez de romper la vista.
+   */
+  reading?: UafPulseReading[];
   by_region: {
     region: string;
     sujetos: number;
