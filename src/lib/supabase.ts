@@ -25,5 +25,8 @@ export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing'
     detectSessionInUrl: true,
     storageKey: 'atlas-observatorio-auth',
   },
-  global: { headers: { 'x-atlas-client': 'observatorio/1.0' } },
+  // Keep browser requests to Edge Functions on the standard Supabase header
+  // set. The former x-atlas-client header forced a CORS preflight that the
+  // legacy on-demand functions did not authorize, so functions.invoke failed
+  // before the request reached the function.
 });
