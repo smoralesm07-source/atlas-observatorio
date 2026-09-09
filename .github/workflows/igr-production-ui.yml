@@ -1,0 +1,49 @@
+name: IGR production UI
+
+on:
+  push:
+    branches: [feat/igr-production]
+    paths:
+      - 'scripts/promote_igr_ui.py'
+      - '.github/workflows/igr-production-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/igr-production
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Aplicar promoción UI
+        run: python scripts/promote_igr_ui.py
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Construir
+        run: npm run build
+      - name: Verificar nomenclatura pública
+        shell: bash
+        run: |
+          ! grep -E 'v1\.1|RC1|candidate|Candidate' src/views/Territorio.tsx
+      - name: Guardar cambio validado
+        shell: bash
+        run: |
+          git config user.name "atlas-bot"
+          git config user.email "atlas-bot@users.noreply.github.com"
+          git add src/views/Territorio.tsx src/lib/contracts.ts src/components/ChileMap.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "Territorio: promueve IGR como lectura principal"
+            git push origin HEAD:feat/igr-production
+          fi
