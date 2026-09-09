@@ -97,7 +97,7 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
 export function ErrorBox({ error, onRetry }: { error: string; onRetry?: () => void }) {
   return (
     <div className="errbox">
-      <strong>No se pudo leer el contrato</strong>
+      <strong>No se pudo completar la consulta</strong>
       <span style={{ color: 'var(--ink-2)', maxWidth: '52ch' }}>{error}</span>
       {onRetry && (
         <button className="btn" style={{ marginTop: 6 }} onClick={onRetry}>
