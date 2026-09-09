@@ -1,0 +1,10 @@
+.fintech-page button:focus-visible,
+.fintech-page input:focus-visible,
+.fintech-page select:focus-visible {
+  outline: 2px solid var(--fin-orange, #ff7a1a);
+  outline-offset: 2px;
+}
+
+.fintech-source-row[data-filterable='false']:focus-visible {
+  outline-color: var(--fin-blue, #2f8cff);
+}
