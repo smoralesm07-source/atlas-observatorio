@@ -27,3 +27,22 @@ textarea:focus-visible {
 .view-pulso .pulse-quick {
   display: none !important;
 }
+
+/* Entidad 360: las secciones con información disponible se identifican de
+   inmediato con un punto verde, sin añadir otra capa de texto al menú. */
+.entity360-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.entity360-tab-data-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--present);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--present) 62%, transparent);
+}
