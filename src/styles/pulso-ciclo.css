@@ -1,0 +1,191 @@
+/* Pulso · Ciclo registral
+   Superficie específica para leer la evolución publicada del padrón UAF y
+   bajar al sujeto obligado. No reutiliza los gráficos de ciclo tributario ni
+   sanciones que antes ocupaban esta lente. */
+
+.pulse-cycle { display: grid; gap: 10px; }
+
+.pulse-cycle-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, .82fr);
+  gap: 10px;
+}
+
+.pulse-cycle-panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+
+.pulse-cycle-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.pulse-cycle-head h3 { margin: 0; font-size: 11.5px; font-weight: 650; color: var(--ink); }
+.pulse-cycle-head p { margin: 3px 0 0; font-size: 9.5px; color: var(--ink-4); line-height: 1.4; }
+.pulse-cycle-meta { flex-shrink: 0; text-align: right; }
+.pulse-cycle-meta strong { display: block; font: 700 17px/1 var(--mono); color: var(--accent); }
+.pulse-cycle-meta span { display: block; margin-top: 3px; font-size: 8.8px; color: var(--ink-4); }
+
+.pulse-registry-chart { padding: 10px 12px 8px; }
+.pulse-registry-svg { width: 100%; height: 154px; display: block; overflow: visible; }
+.pulse-registry-grid { stroke: var(--line-soft); stroke-width: 1; }
+.pulse-registry-area { fill: color-mix(in srgb, var(--accent) 9%, transparent); }
+.pulse-registry-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.pulse-registry-dot { fill: var(--bg-panel); stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.pulse-registry-dot[data-current='true'] { fill: var(--accent); stroke-width: 3; }
+.pulse-registry-value { fill: var(--ink-2); font: 9px var(--mono); text-anchor: middle; }
+.pulse-registry-year { fill: var(--ink-4); font: 8.5px var(--mono); text-anchor: middle; }
+.pulse-registry-current { fill: var(--accent); font: 700 9px var(--mono); text-anchor: middle; }
+.pulse-registry-note {
+  display: flex; align-items: flex-start; gap: 7px;
+  margin: 2px 12px 11px; padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 9.3px; line-height: 1.45; color: var(--ink-4);
+}
+.pulse-registry-note i { width: 6px; height: 6px; margin-top: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+.pulse-cycle-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 10px 12px; }
+.pulse-cycle-fact {
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+}
+.pulse-cycle-fact span { display: block; font-size: 8.8px; color: var(--ink-4); }
+.pulse-cycle-fact strong { display: block; margin-top: 3px; font: 650 15px/1.1 var(--mono); color: var(--ink); }
+.pulse-cycle-fact em { display: block; margin-top: 4px; font-style: normal; font-size: 8.7px; color: var(--ink-3); line-height: 1.35; }
+.pulse-cycle-source {
+  display: block; margin: 0 12px 10px; padding: 7px 9px;
+  border: 1px solid var(--line-soft); border-radius: 7px;
+  color: var(--accent); font-size: 9.2px; background: var(--bg-panel-2);
+}
+.pulse-cycle-source:hover { border-color: var(--accent-dim); }
+
+/* Variación sectorial: cinco pequeñas series por lado. Una sola línea por fila
+   evita usar diez colores y permite comparar tendencia + magnitud. */
+.pulse-sector-trends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pulse-trend-list { padding: 6px 12px 9px; }
+.pulse-trend-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.25fr) minmax(120px, .9fr) 62px;
+  gap: 10px; align-items: center; width: 100%;
+  padding: 8px 2px; border: 0; border-bottom: 1px solid var(--line-soft);
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.pulse-trend-row:last-child { border-bottom: 0; }
+.pulse-trend-row:hover { background: var(--bg-panel-2); }
+.pulse-trend-name { min-width: 0; }
+.pulse-trend-name b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.8px; color: var(--ink-2); font-weight: 600; }
+.pulse-trend-name span { display: block; margin-top: 2px; font: 8.5px var(--mono); color: var(--ink-4); }
+.pulse-trend-spark { width: 100%; height: 31px; display: block; }
+.pulse-trend-spark path { fill: none; stroke: var(--trend-tone); stroke-width: 1.7; vector-effect: non-scaling-stroke; }
+.pulse-trend-spark circle { fill: var(--trend-tone); }
+.pulse-trend-delta { justify-self: end; font: 700 11px var(--mono); color: var(--trend-tone); }
+.pulse-trend-delta small { display: block; margin-top: 2px; font: 8px var(--font); color: var(--ink-4); text-align: right; }
+.pulse-trend-foot {
+  margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--line-soft);
+  font-size: 9px; line-height: 1.45; color: var(--ink-4);
+}
+
+/* Tabla operativa */
+.pulse-so-panel { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-panel); overflow: hidden; }
+.pulse-so-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; padding: 10px 12px 8px; border-bottom: 1px solid var(--line-soft); }
+.pulse-so-head h3 { margin: 0; font-size: 11.5px; font-weight: 650; }
+.pulse-so-head p { margin: 3px 0 0; font-size: 9.2px; color: var(--ink-4); }
+.pulse-so-total { font: 700 15px var(--mono); color: var(--accent); white-space: nowrap; }
+
+.pulse-so-tools {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.35fr) minmax(190px, 1fr) 150px 150px auto;
+  gap: 7px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); background: var(--bg-panel-2);
+}
+.pulse-so-search { position: relative; }
+.pulse-so-search input,
+.pulse-so-tools select {
+  width: 100%; height: 31px; padding: 0 9px;
+  border: 1px solid var(--line); border-radius: 7px;
+  outline: 0; background: var(--bg-input); color: var(--ink); font-size: 9.7px;
+}
+.pulse-so-search input:focus,
+.pulse-so-tools select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.pulse-so-tools select { cursor: pointer; }
+.pulse-so-clear {
+  height: 31px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px;
+  background: transparent; color: var(--ink-3); font-size: 9.5px; cursor: pointer; white-space: nowrap;
+}
+.pulse-so-clear:hover { color: var(--ink); border-color: var(--line-strong); }
+
+.pulse-so-scroll { overflow-x: auto; }
+.pulse-so-table { width: 100%; min-width: 1050px; border-collapse: collapse; }
+.pulse-so-table th {
+  padding: 7px 9px; border-bottom: 1px solid var(--line);
+  text-align: left; font-size: 8.4px; font-weight: 650; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-4); background: var(--bg-panel);
+}
+.pulse-so-table td { padding: 8px 9px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; font-size: 9.4px; color: var(--ink-2); }
+.pulse-so-table tr:last-child td { border-bottom: 0; }
+.pulse-so-table tbody tr:hover { background: var(--bg-panel-2); }
+.pulse-so-name { max-width: 315px; }
+.pulse-so-name b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.2px; color: var(--ink); font-weight: 610; }
+.pulse-so-name span { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8.5px; color: var(--ink-4); }
+.pulse-so-rut { font: 8.8px var(--mono); color: var(--ink-3); }
+.pulse-so-sector { max-width: 230px; line-height: 1.35; }
+.pulse-so-location span { display: block; }
+.pulse-so-location small { display: block; margin-top: 2px; font-size: 8.3px; color: var(--ink-4); }
+.pulse-so-state { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 8.7px; }
+.pulse-so-state::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--state-tone, var(--unknown)); }
+.pulse-so-scale span { display: block; white-space: nowrap; }
+.pulse-so-scale small { display: block; margin-top: 2px; font-size: 8.3px; color: var(--ink-4); }
+.pulse-so-signals { display: flex; flex-wrap: wrap; gap: 4px; min-width: 155px; }
+.pulse-so-signal {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px;
+  border: 1px solid var(--line); border-radius: 999px; font-size: 8.1px; color: var(--ink-3); white-space: nowrap;
+}
+.pulse-so-signal[data-kind='sanction'] { color: var(--sig-critical); border-color: color-mix(in srgb, var(--sig-critical) 28%, transparent); }
+.pulse-so-signal[data-kind='press'] { color: var(--sig-watch); border-color: color-mix(in srgb, var(--sig-watch) 28%, transparent); }
+.pulse-so-signal[data-kind='alert'] { color: var(--sig-medium); border-color: color-mix(in srgb, var(--sig-medium) 28%, transparent); }
+.pulse-so-signal[data-kind='osfl'] { color: var(--accent); border-color: var(--accent-dim); }
+.pulse-so-ipf { white-space: nowrap; }
+.pulse-so-ipf b { font: 650 10px var(--mono); color: var(--ink); }
+.pulse-so-ipf span { display: block; margin-top: 2px; font-size: 8.2px; color: var(--ink-4); }
+.pulse-so-360 {
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+  padding: 4px 7px; border: 1px solid var(--accent-dim); border-radius: 6px;
+  color: var(--accent); font-size: 8.8px; font-weight: 600; background: var(--accent-glow);
+}
+.pulse-so-360:hover { border-color: var(--accent); }
+
+.pulse-so-statebar { padding: 15px; text-align: center; font-size: 9.5px; color: var(--ink-4); }
+.pulse-so-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 12px; border-top: 1px solid var(--line-soft); background: var(--bg-panel-2);
+}
+.pulse-so-range { font: 9px var(--mono); color: var(--ink-4); }
+.pulse-so-pages { display: flex; gap: 5px; }
+.pulse-so-pages button {
+  min-width: 28px; height: 26px; padding: 0 7px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg-panel); color: var(--ink-3); font-size: 9px; cursor: pointer;
+}
+.pulse-so-pages button:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); }
+.pulse-so-pages button:disabled { opacity: .35; cursor: default; }
+
+@media (max-width: 1180px) {
+  .pulse-cycle-summary, .pulse-sector-trends { grid-template-columns: minmax(0, 1fr); }
+  .pulse-so-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pulse-so-search { grid-column: 1 / -1; }
+}
+@media (max-width: 680px) {
+  .pulse-so-tools { grid-template-columns: minmax(0, 1fr); }
+  .pulse-so-search { grid-column: auto; }
+  .pulse-cycle-facts { grid-template-columns: minmax(0, 1fr); }
+  .pulse-trend-row { grid-template-columns: minmax(0, 1fr) 100px 54px; gap: 6px; }
+  .pulse-so-head, .pulse-cycle-head { flex-direction: column; }
+  .pulse-cycle-meta { text-align: left; }
+}
