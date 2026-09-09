@@ -29,6 +29,20 @@ type Dashboard = {
   semantics: { mission: string; universe: string; market_weight: string; reserved_boundary: string };
 };
 
+type EnrichmentStatus = {
+  error?: string;
+  facts: number;
+  entity_profiles: number;
+  candidate_profiles: number;
+  identity_hints: number;
+  business_model_classified: number;
+  target_customer_classified: number;
+  revenue_model_classified: number;
+  virtual_asset_signal_subjects: number;
+  latest_run: { run_id: number; status: string; rows_requested: number; rows_processed: number; rows_failed: number; payment_rows_seen: number; started_at: string; completed_at: string | null } | null;
+  refreshed_at: string | null;
+};
+
 type SearchRow = {
   fintech_id: string; atlas_entity_id: string | null; rut: string | null; brand: string | null; legal_name: string;
   vertical: string | null; business_model: string | null; target_customer: string | null; revenue_model: string | null;
@@ -77,6 +91,7 @@ const EMPTY: Filters = { vertical: '', model: '', psav: 'TODOS', regulator: 'TOD
 
 export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const dashboard = useRpc<Dashboard>('obs_fintech_dashboard', {});
+  const enrichment = useRpc<EnrichmentStatus>('obs_fintech_enrichment_status', {});
   const [query, setQuery] = useState('');
   const q = useDebounced(query, 220);
   const [filters, setFilters] = useState<Filters>(EMPTY);
@@ -134,6 +149,7 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
 
   const d = dashboard.data;
   const n = d.national;
+  const er = enrichment.data && !enrichment.data.error ? enrichment.data : null;
   const newest = d.universe_snapshots[0];
 
   return <div className="fintech-page fade-in">
@@ -175,18 +191,24 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
     </section>
 
     <section className="fintech-section">
-      <SectionTitle index="2" title="Modelo de negocio y actividad" hint="La vertical, el cliente objetivo y la forma de monetización se almacenan como dimensiones distintas." />
+      <SectionTitle index="2" title="Modelo de negocio y actividad" hint="La vertical, el cliente objetivo y la forma de monetización se almacenan como dimensiones distintas; el motor web conserva por separado evidencia declarada e inferida." />
       <div className="fintech-model-grid">
         <Distribution title="Vertical principal" rows={d.verticals} total={n.atlas_confirmed} active={filters.vertical} onPick={(v) => setFilter('vertical', filters.vertical === v ? '' : v)} />
         <Distribution title="Modelo de negocio" rows={d.business_models} total={n.atlas_confirmed} active={filters.model} onPick={(v) => setFilter('model', filters.model === v ? '' : v)} />
         <article className="fintech-method-card">
           <span className="eyebrow">Cobertura de caracterización</span>
           <strong>{formatPct(n.business_model_classified, n.atlas_confirmed)}</strong>
-          <p>Entidades con modelo B2B/B2C/B2B2C ya clasificado. ATLAS no infiere el modelo sólo desde el giro o registro regulatorio.</p>
+          <p>Entidades confirmadas con modelo B2B/B2C/B2B2C ya clasificado. Los candidatos enriquecidos no se suman aquí hasta resolver identidad y pertenencia al mercado.</p>
           <div className="fintech-progress"><i style={{ width: `${pct(n.business_model_classified, n.atlas_confirmed)}%` }} /></div>
-          <small>Próxima capa: cliente objetivo, pricing/revenue model, productos y canales.</small>
+          <small>Promoción automática sólo con evidencia suficientemente robusta.</small>
         </article>
       </div>
+      {er && <div className="fintech-universe-strip">
+        <article><div><b>Motor de enriquecimiento</b><span>{formatDateTime(er.refreshed_at)}</span></div><strong>{formatNumber(er.facts)}</strong><p>evidencias estructuradas</p><small>Fuente, URL, clase de evidencia, confianza y fecha.</small></article>
+        <article><div><b>Candidatos perfilados</b><span>fuera del total confirmado</span></div><strong>{formatNumber(er.candidate_profiles)}</strong><p>con huella corporativa procesada</p><small>Se mantienen separados hasta resolver identidad y pertenencia Fintech.</small></article>
+        <article><div><b>Señales de activos virtuales</b><span>requieren validación</span></div><strong>{formatNumber(er.virtual_asset_signal_subjects)}</strong><p>actores con términos AV detectados</p><small>Una señal no equivale a clasificación PSAV.</small></article>
+        <article><div><b>Último lote</b><span>{er.latest_run?.status ?? 'n/d'}</span></div><strong>{formatNumber(er.latest_run?.rows_processed)}</strong><p>perfiles procesados · {formatNumber(er.latest_run?.payment_rows_seen)} actores CMF pagos observados</p><small>{er.latest_run ? `${formatNumber(er.latest_run.rows_failed)} fallidos · lote #${er.latest_run.run_id}` : 'Sin ejecución registrada'}</small></article>
+      </div>}
     </section>
 
     <section className="fintech-section">
