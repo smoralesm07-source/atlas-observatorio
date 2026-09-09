@@ -46,3 +46,10 @@ textarea:focus-visible {
   background: var(--present);
   box-shadow: 0 0 7px color-mix(in srgb, var(--present) 62%, transparent);
 }
+
+/* Entidades: se elimina el bloque introductorio inferior del buscador.
+   Las métricas generales y la previsualización de la cascada no ayudan a
+   resolver una entidad y distraen de la acción principal: buscar o filtrar. */
+.entity-search-landing {
+  display: none !important;
+}
