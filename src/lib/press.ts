@@ -59,6 +59,7 @@ interface PressBridge {
 export interface PressArticleMatch extends PressArticle {
   role: string | null;
   mention_confidence: number | null;
+  mention_requires_validation?: boolean;
 }
 
 export interface PressMatch {
@@ -92,6 +93,18 @@ interface PreparedBridge {
 
 let preparedPromise: Promise<PreparedBridge> | null = null;
 
+const GENERIC_ENTITY_TOKENS = new Set([
+  'de', 'del', 'la', 'las', 'los', 'y', 'e', 'en', 'para', 'por',
+  'spa', 'ltda', 'limitada', 'sa', 'eirl',
+  'sociedad', 'sociedades', 'empresa', 'empresas', 'compania', 'companias', 'cia',
+  'grupo', 'holding', 'inversion', 'inversiones',
+  'servicio', 'servicios', 'financiero', 'financieros', 'financiera', 'financieras',
+  'cooperativa', 'cooperativas', 'comercial', 'comerciales',
+  'administradora', 'administracion', 'gestion', 'asesoria', 'asesorias',
+  'consultora', 'consultores', 'fundacion', 'corporacion', 'asociacion',
+  'organizacion', 'instituto',
+]);
+
 export function normalizePressText(value: unknown): string {
   return String(value ?? '')
     .normalize('NFKD')
@@ -104,6 +117,23 @@ export function normalizePressText(value: unknown): string {
 
 function normalizeRut(value: unknown): string {
   return String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
+}
+
+function nameTokens(value: string): string[] {
+  return value.split(' ').map((token) => token.trim()).filter((token) => token.length >= 2);
+}
+
+function distinctiveTokens(value: string): string[] {
+  const tokens = nameTokens(value);
+  const distinctive = tokens.filter((token) => token.length >= 3 && !GENERIC_ENTITY_TOKENS.has(token));
+  if (distinctive.length) return distinctive;
+  return tokens.filter((token) => token.length >= 4);
+}
+
+function containsAllTokens(candidate: string, required: string[]): boolean {
+  if (!required.length) return false;
+  const candidateTokens = new Set(nameTokens(candidate));
+  return required.every((token) => candidateTokens.has(token));
 }
 
 function bigrams(value: string): Set<string> {
@@ -133,13 +163,23 @@ function dice(a: string, b: string): number {
 function scoreName(query: string, candidate: string): { score: number; kind: PressMatch['match_kind'] } {
   if (!query || !candidate) return { score: 0, kind: 'APROXIMADA' };
   if (query === candidate) return { score: 1, kind: 'EXACTA' };
-  if (candidate.startsWith(query) || query.startsWith(candidate)) {
-    return { score: 0.97, kind: 'CONTENIDA' };
+
+  const lexicalScore = dice(query, candidate);
+  const queryDistinctive = distinctiveTokens(query);
+  const isPrefix = candidate.startsWith(query) || query.startsWith(candidate);
+  const isContained = candidate.includes(query) || query.includes(candidate);
+
+  if (isPrefix || isContained) {
+    // Una razón social genérica contenida en otra no acredita identidad. Para
+    // aceptar una coincidencia parcial deben sobrevivir los tokens que realmente
+    // individualizan a la entidad (p. ej. "Bancame").
+    if (!containsAllTokens(candidate, queryDistinctive)) {
+      return { score: Math.min(0.70, lexicalScore * 0.72), kind: 'APROXIMADA' };
+    }
+    return { score: isPrefix ? 0.97 : 0.95, kind: 'CONTENIDA' };
   }
-  if (candidate.includes(query) || query.includes(candidate)) {
-    return { score: 0.94, kind: 'CONTENIDA' };
-  }
-  return { score: dice(query, candidate), kind: 'APROXIMADA' };
+
+  return { score: lexicalScore, kind: 'APROXIMADA' };
 }
 
 function tokenPrefixMatch(query: string, candidate: string): boolean {
@@ -164,6 +204,19 @@ function scoreArticle(queryText: string, article: PressArticle): number {
     else if (tokenPrefixMatch(queryText, field)) best = Math.max(best, 0.90);
   });
   return best;
+}
+
+function articleSupportsIdentity(queryText: string, article: PressArticle): boolean {
+  const fields = [article.title, article.summary, ...(article.search_terms ?? [])]
+    .map(normalizePressText)
+    .filter(Boolean);
+  if (!fields.length) return false;
+  if (fields.some((field) => field.includes(queryText))) return true;
+
+  const required = distinctiveTokens(queryText);
+  if (!required.length) return false;
+  const articleTokens = new Set(fields.flatMap((field) => nameTokens(field)));
+  return required.every((token) => articleTokens.has(token));
 }
 
 async function loadBridge(): Promise<PreparedBridge> {
@@ -220,19 +273,33 @@ function indexedMatch(
   entity: PressEntity,
   score: number,
   kind: PressMatch['match_kind'],
+  queryText: string,
   mentionsByEntity: Map<string, PressMention[]>,
   articleById: Map<string, PressArticle>,
   generatedAt: string | null,
 ): PressMatch {
   const mentions = mentionsByEntity.get(entity.press_entity_id) ?? [];
+  const strongEntityIdentity = kind === 'RUT' || kind === 'EXACTA';
   const articles = mentions
     .reduce<PressArticleMatch[]>((rows, mention) => {
       const article = articleById.get(mention.article_id);
       if (!article) return rows;
+
+      const textualEvidence = articleSupportsIdentity(queryText, article);
+      const mentionConfidence = Number.isFinite(mention.confidence) ? mention.confidence : null;
+      const governedMention = mentionConfidence != null && mentionConfidence >= 0.90 && !mention.requires_validation;
+
+      // Segunda barrera: una coincidencia parcial de nombre sólo puede aportar
+      // noticias que vuelvan a mostrar evidencia textual de la identidad. Para
+      // RUT/nombre exacto se permite además una mención ya gobernada por Radar
+      // Prensa, evitando perder artículos cuyo resumen no repite la razón social.
+      if (!textualEvidence && !(strongEntityIdentity && governedMention)) return rows;
+
       rows.push({
         ...article,
         role: mention.role ?? null,
-        mention_confidence: Number.isFinite(mention.confidence) ? mention.confidence : null,
+        mention_confidence: mentionConfidence,
+        mention_requires_validation: Boolean(mention.requires_validation),
       });
       return rows;
     }, [])
@@ -248,8 +315,8 @@ function indexedMatch(
     aliases: entity.aliases ?? [],
     first_seen: entity.first_seen ?? null,
     last_seen: entity.last_seen ?? null,
-    article_count: entity.article_count ?? articles.length,
-    mention_count: entity.mention_count ?? articles.length,
+    article_count: articles.length,
+    mention_count: articles.length,
     media: entity.media ?? [],
     roles: entity.roles ?? [],
     confidence: Number(entity.confidence ?? 0),
@@ -327,6 +394,7 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
       entity,
       score,
       kind,
+      queryText,
       mentionsByEntity,
       articleById,
       bridge.generated_at ?? null,
