@@ -10,6 +10,11 @@ export interface PressArticle {
   summary: string | null;
   region?: string | null;
   commune?: string | null;
+  /** Fuerza con que el texto marcó la comuna resuelta. */
+  commune_confidence?: 'alta' | 'media' | null;
+  commune_basis?: string | null;
+  /** Todas las comunas nombradas, resueltas o no. */
+  communes?: { name: string; region?: string | null; basis?: string | null }[];
   search_terms?: string[];
 }
 
@@ -343,4 +348,58 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
     bridge.generated_at ?? null,
   );
   return [fallback, ...indexed].slice(0, maxResults);
+}
+
+
+/* ── Prensa por comuna ──────────────────────────────────────────────────────
+   El puente geoetiqueta cada noticia desde el catálogo comunal: `commune` es
+   la comuna que el texto marca, y `communes` las que sólo nombra. Se separan
+   porque no dicen lo mismo, y ninguna de las dos atribuye conducta al
+   territorio: sitúan la mención. */
+
+export interface PressCommuneHit extends PressArticle {
+  basis: 'resuelta' | 'mencionada';
+}
+
+export interface PressCommuneResult {
+  articles: PressCommuneHit[];
+  resolved: number;
+  mentioned: number;
+  /** El puente publica noticias, pero ninguna trae comuna: falta el corte
+   *  geoetiquetado, no la comuna consultada. */
+  bridgeHasGeo: boolean;
+  generatedAt: string | null;
+}
+
+export async function pressForCommune(
+  commune: string,
+  limit = 10,
+): Promise<PressCommuneResult> {
+  const { bridge } = await loadBridge();
+  const target = normalizePressText(commune);
+  const resolved: PressCommuneHit[] = [];
+  const mentioned: PressCommuneHit[] = [];
+  let bridgeHasGeo = false;
+
+  (bridge.articles ?? []).forEach((article) => {
+    const own = normalizePressText(article.commune ?? '');
+    const others = (article.communes ?? []).map((c) => normalizePressText(c.name));
+    if (own || others.length) bridgeHasGeo = true;
+    if (!target) return;
+    if (own && own === target) resolved.push({ ...article, basis: 'resuelta' });
+    else if (others.includes(target)) mentioned.push({ ...article, basis: 'mencionada' });
+  });
+
+  const byDate = (a: PressArticle, b: PressArticle) =>
+    String(b.date ?? '').localeCompare(String(a.date ?? ''));
+  resolved.sort(byDate);
+  mentioned.sort(byDate);
+
+  return {
+    articles: [...resolved, ...mentioned].slice(0, limit),
+    resolved: resolved.length,
+    mentioned: mentioned.length,
+    bridgeHasGeo,
+    generatedAt: bridge.generated_at ?? null,
+  };
 }

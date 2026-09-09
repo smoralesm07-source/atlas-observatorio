@@ -364,7 +364,25 @@ export interface TerritoryMap {
     ctx_uaf_observed: number;
     ctx_sanctioned: number;
   }[];
+  /** Corte comunal completo (0014): lo que el mapa pinta. Se une por CUT con la
+   *  geometría estática, que no trae puntajes. */
+  comunas?: TerritoryCommune[];
   semantics: string;
+}
+
+export interface TerritoryCommune {
+  commune_code: string | null;
+  territory_id: string;
+  region_code: string | null;
+  region_name: string;
+  commune_name: string;
+  igr_score: number | null;
+  igr_level: string | null;
+  igr_confidence: number | null;
+  ctx_entities: number;
+  ctx_uaf_observed: number;
+  ctx_sanctioned: number;
+  ctx_alerted: number;
 }
 
 export interface TerritoryDetail {
