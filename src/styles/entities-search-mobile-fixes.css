@@ -1,0 +1,168 @@
+/* Entidades · contención responsive para Safari/iPhone y viewports angostos. */
+html,
+body,
+#root,
+.shell,
+.main {
+  max-width: 100%;
+}
+
+html,
+body,
+#root {
+  overflow-x: hidden;
+}
+
+.view-entidades,
+.entity-search-view,
+.entity-search-console,
+.entity-cascade-strip,
+.entity-results-shell,
+.entity-secondary-panel,
+.entity-search-landing,
+.entity-mode-tabs,
+.entity-cascade-track,
+.semantics {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.entity-search-view {
+  width: 100%;
+}
+
+.entity-cascade-track,
+.entity-mode-tabs {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.entity-cascade-node-wrap {
+  flex: 0 0 auto;
+}
+
+.entity-cascade-node {
+  flex: 0 0 auto;
+}
+
+.entity-source-evidence-body,
+.entity-candidate-main,
+.entity-candidate-top,
+.entity-candidate-title-row,
+.entity-results-head > div,
+.semantics > div {
+  min-width: 0;
+}
+
+.entity-candidate-title-row h3,
+.entity-source-matchline,
+.entity-source-facts dd,
+.semantics > div {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .view-entidades.main {
+    overflow-x: hidden;
+  }
+
+  .entity-search-head,
+  .entity-search-console,
+  .entity-cascade-strip,
+  .entity-results-shell,
+  .entity-secondary-panel,
+  .entity-search-landing,
+  .semantics {
+    width: 100%;
+  }
+
+  .entity-cascade-track {
+    padding-bottom: 6px;
+  }
+
+  .entity-cascade-node {
+    min-width: 88px;
+  }
+
+  .entity-mode-tabs {
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .entity-mode-tabs button {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 560px) {
+  .entity-search-console,
+  .entity-results-shell,
+  .entity-secondary-panel {
+    padding: 9px;
+  }
+
+  .entity-search-box-row {
+    gap: 8px;
+  }
+
+  .entity-search-box {
+    min-height: 50px;
+    padding-inline: 11px;
+  }
+
+  .entity-search-button {
+    min-height: 40px;
+  }
+
+  .entity-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .entity-filters select,
+  .entity-filters button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .entity-filter-clear {
+    margin-left: 0;
+    grid-column: 1 / -1;
+  }
+
+  .entity-quick-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .entity-quick-row > span,
+  .entity-quick-chip {
+    flex: 0 0 auto;
+  }
+
+  .entity-cascade-title {
+    display: grid;
+    gap: 2px;
+  }
+
+  .entity-cascade-node {
+    min-width: 82px;
+    padding: 7px;
+  }
+
+  .entity-cascade-arrow {
+    font-size: 15px;
+  }
+
+  .semantics {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+}
