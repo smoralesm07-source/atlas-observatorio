@@ -8,8 +8,7 @@ import type { CohortRequest } from '../../components/CohortDrawer';
    ────────────────
    La cola de trabajo del turno y todo lo que la ordena, junto: el motivo por el
    que cada sujeto entra, el índice que los prioriza, el cruce entre ambos y la
-   caracterización que abre listas. Antes esto vivía en tres zonas distantes de
-   la página y se usaba como una sola cosa.
+   caracterización que abre listas.
 
    El motivo ordena trabajo de fiscalización. No imputa incumplimiento,
    irregularidad ni riesgo LA/FT, y ninguna posición dentro del IPF lo hace. */
@@ -44,8 +43,6 @@ export function LenteRevision({
   const c = data.crosscuts;
   if (!u) return <Empty title="Sin padrón publicado" />;
 
-  /* El cruce motivo × IPF alto dice dónde la cola es corta y densa. El campo
-     ya viene por motivo en el contrato: aquí sólo se dibuja. */
   const cruce = data.attention.motivos
     .filter((m) => m.sujetos > 0)
     .slice()
@@ -77,9 +74,7 @@ export function LenteRevision({
                 hint: MOTIVE[m.motivo]?.hint,
               })}
             >
-              <span className="motive" data-m={m.motivo} style={{ padding: 0, border: 0, background: 'none' }}>
-                <i />
-              </span>
+              <span className="motive" data-m={m.motivo} style={{ padding: 0, border: 0, background: 'none' }}><i /></span>
               {MOTIVE[m.motivo]?.label ?? m.motivo}
               <b className="num" style={{ color: 'var(--ink)' }}>{n(m.sujetos)}</b>
             </button>
@@ -138,9 +133,7 @@ export function LenteRevision({
                   <i style={{ width: `${(m.sujetos / cruceMax) * 100}%`, background: 'var(--bg-raised)' }} />
                   <i style={{ width: `${(m.con_ipf_alto / cruceMax) * 100}%`, background: 'var(--sig-critical)' }} />
                 </span>
-                <span className="cross-ipf-num num">
-                  {n(m.con_ipf_alto)}<em>/{n(m.sujetos)}</em>
-                </span>
+                <span className="cross-ipf-num num">{n(m.con_ipf_alto)}<em>/{n(m.sujetos)}</em></span>
               </button>
             ))}
           </div>
@@ -201,20 +194,12 @@ export function LenteRevision({
             tone="var(--sig-watch)"
             onClick={() => onCohort({ cohort: 'CAMBIO_ACTIVIDAD', title: 'Sujetos que cambiaron su actividad declarada', hint: 'cambio observado en el corte tributario' })}
           />
-          {/* Estructura societaria amplia ya venía en el contrato y nunca se
-              había publicado en el Pulso. */}
           <CrossCard
             label="Estructura societaria amplia"
             value={u.estructura_amplia}
             sub="describe la forma societaria, no una irregularidad"
             tone="var(--unknown)"
             onClick={() => onCohort({ cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' })}
-          />
-          <CrossCard
-            label="Proveedores del Estado"
-            value={c?.proveedores ?? 0}
-            sub="corte de compras públicas, cobertura parcial"
-            onClick={() => onCohort({ cohort: 'PROVEEDOR_ESTADO', title: 'Sujetos que son proveedores del Estado', hint: 'ventana de 12 meses' })}
           />
           <CrossCard
             label="Figuran en prensa"
@@ -230,8 +215,7 @@ export function LenteRevision({
           />
         </div>
         <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-          La ausencia de marca no acredita ausencia del hecho. {data.coverage.supplier_cap_note}{' '}
-          {data.coverage.press_note}
+          La ausencia de marca no acredita ausencia del hecho. {data.coverage.press_note}
         </p>
       </Panel>
     </>
@@ -249,10 +233,7 @@ function AttentionRow({ r, onOpen }: { r: UafAttentionRow; onOpen: () => void })
       </td>
       <td style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.uaf_sector ?? '—'}</td>
       <td>
-        <span className="motive" data-m={r.motivo}>
-          <i />
-          {MOTIVE[r.motivo]?.label ?? r.motivo}
-        </span>
+        <span className="motive" data-m={r.motivo}><i />{MOTIVE[r.motivo]?.label ?? r.motivo}</span>
         {r.motivo === 'TERMINO_GIRO' && r.sii_termination_date && (
           <div style={{ fontSize: 10.5, color: 'var(--ink-4)', marginTop: 3 }}>{fecha(r.sii_termination_date)}</div>
         )}
@@ -264,9 +245,7 @@ function AttentionRow({ r, onOpen }: { r: UafAttentionRow; onOpen: () => void })
       </td>
       <td style={{ fontSize: 12, color: 'var(--ink-2)' }}>
         {r.region ? (r.commune ? `${r.commune}, ${r.region}` : r.region) : <em style={{ color: 'var(--ink-4)' }}>sin territorio</em>}
-        {r.igr_level && (
-          <div style={{ fontSize: 10.5, color: 'var(--ink-4)', marginTop: 2 }}>IGR comunal {r.igr_level}</div>
-        )}
+        {r.igr_level && <div style={{ fontSize: 10.5, color: 'var(--ink-4)', marginTop: 2 }}>IGR comunal {r.igr_level}</div>}
       </td>
       <td className="right num" style={{ color: r.ipf_band === 'MUY_ALTA' || r.ipf_band === 'ALTA' ? 'var(--sig-medium)' : undefined }}>
         {r.ipf_score == null ? '—' : n1(r.ipf_score)}
@@ -282,9 +261,7 @@ function CrossCard({
 }) {
   return (
     <button className="cross-card" onClick={onClick}>
-      <span className="num" style={{ fontSize: 20, fontWeight: 700, color: tone ?? 'var(--ink)' }}>
-        {n(value)}
-      </span>
+      <span className="num" style={{ fontSize: 20, fontWeight: 700, color: tone ?? 'var(--ink)' }}>{n(value)}</span>
       <span className="cross-card-label">{label}</span>
       {sub && <span className="cross-card-sub">{sub}</span>}
     </button>
