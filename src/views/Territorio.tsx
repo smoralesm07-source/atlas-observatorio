@@ -32,6 +32,7 @@ interface TerritoryIgrComparisonRow {
   commune_name: string;
   vigente_score: number;
   candidate_score: number;
+  candidate_percentile: number | null;
   score_delta: number;
   vigente_level: string | null;
   candidate_level: string | null;
@@ -61,7 +62,7 @@ interface TerritoryIgrComparisonRow {
 
 interface TerritoryIgrComparison {
   contract: 'ATLAS_OBS_TERRITORY_IGR_COMPARE_V1';
-  status: 'EXPERIMENTAL';
+  status: 'EXPERIMENTAL' | 'RC1';
   production_replaced: false;
   summary: {
     comunas: number;
@@ -282,8 +283,12 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                   <span>Combina cobertura temática, cobertura temporal, calidad de fuente y estabilidad; la confiabilidad del denominador se muestra aparte y no pondera la confianza.</span>
                 </div>
                 <div>
+                  <strong>Percentil nacional RC1</strong>
+                  <span>Posición relativa dentro de las 345 comunas: 100 = extremo superior del score RC1 y 0 = extremo inferior. No es probabilidad ni una segunda fórmula.</span>
+                </div>
+                <div>
                   <strong>Banda v1.1 provisional</strong>
-                  <span>Recalibrada sobre el score candidate.3 congelado en RC1; sigue siendo diagnóstica y no reemplaza el nivel IGR vigente.</span>
+                  <span>Contexto secundario de lectura. Cerca de una frontera deben prevalecer el score continuo y el percentil nacional.</span>
                 </div>
               </div>
               <p className="territory-method-muted">
@@ -302,8 +307,9 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                 </div>
                 <p>
                   El score RC1 es <strong>idéntico a candidate.3</strong>: reemplaza la anomalía transversal por anomalía temporal estabilizada por soporte y combina
-                  volumen con tasa por 100 mil usando contracción en comunas pequeñas. RC1 corrige además la confianza para que el tamaño poblacional
-                  no actúe como proxy de solidez. <strong>El mapa y el ranking oficial siguen usando v1.0.</strong>
+                  volumen con tasa por 100 mil usando contracción en comunas pequeñas. La validación de bandas mostró que ninguna regla categórica mejora
+                  suficientemente la estabilidad sin introducir otros costos; por eso <strong>score + percentil nacional son la lectura primaria RC1</strong> y la banda queda como apoyo secundario.
+                  <strong>El mapa y el ranking oficial siguen usando v1.0.</strong>
                 </p>
               </section>
             )}
@@ -344,7 +350,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
           <summary className="territory-candidate-summary">
             <div>
               <strong>Comparar IGR vigente vs v1.1 RC1</strong>
-              <span>Revisa cuánto cambia el ranking y por qué la nueva confianza sí discrimina entre comunas.</span>
+              <span>Compara magnitud del score, posición nacional y robustez; la banda queda como contexto secundario.</span>
             </div>
             <div className="territory-candidate-summary-actions">
               <span className="territory-candidate-badge">{cmp.candidate_version ?? 'v1.1 RC1'} · mapa vigente intacto</span>
@@ -359,14 +365,13 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
               <div><span>Cerca de frontera</span><strong>{n(cmp.provisional_borderline)}</strong><small>{n(cmp.provisional_estables)} estables respecto de cortes</small></div>
             </div>
             <div className="territory-candidate-note">
-              <strong>Qué cambió:</strong> RC1 congela el score validado de candidate.3 y corrige la confianza: la confiabilidad del denominador
-              deja de ponderarla para evitar doble penalización y efecto proxy de población. Las bandas recalibradas siguen en
-              diagnóstico y <strong>no se promueven como clasificación oficial</strong>. El score continuo sigue siendo la salida primaria.
+              <strong>Lectura recomendada:</strong> RC1 conserva el score validado y añade el <strong>percentil nacional</strong> para mostrar posición relativa sin crear otra fórmula de amenaza.
+              La banda recalibrada queda como apoyo secundario con alerta de frontera. La histéresis y las bandas puramente relativas fueron descartadas como lectura principal por su dependencia temporal o escasa mejora de estabilidad.
             </div>
             <div className="territory-candidate-table-title">Mayores movimientos de puntaje · muestra de diagnóstico</div>
             <div className="territory-candidate-table-wrap">
               <table className="table">
-                <thead><tr><th>Comuna</th><th>Región</th><th className="right">IGR v1</th><th className="right">v1.1</th><th>Banda provisional</th><th className="right">Δ score</th><th className="right">Confianza</th></tr></thead>
+                <thead><tr><th>Comuna</th><th>Región</th><th className="right">IGR v1</th><th className="right">v1.1</th><th className="right">Percentil</th><th>Banda secundaria</th><th className="right">Δ score</th><th className="right">Confianza</th></tr></thead>
                 <tbody>
                   {largestCandidateMoves.map((r) => (
                     <tr key={r.territory_id} onClick={() => setCommune(r.territory_id)} style={{ cursor: 'pointer' }}>
@@ -374,6 +379,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                       <td style={{ color: 'var(--ink-3)' }}>{r.region_name}</td>
                       <td className="right num">{n1(r.vigente_score)}</td>
                       <td className="right num">{n1(r.candidate_score)}</td>
+                      <td className="right num">{r.candidate_percentile == null ? '—' : `P${n1(r.candidate_percentile)}`}</td>
                       <td>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           <i style={{ width: 8, height: 8, borderRadius: 2, background: `var(--igr-${levelStep(r.provisional_level)})` }} />
@@ -654,16 +660,17 @@ function ComunaDetalle({
 
         <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
           {candidate && (
-            <Panel title="IGR v1.1 RC1" meta={`${candidate.provisional_level ?? 'sin banda'} · diagnóstico`}>
+            <Panel title="IGR v1.1 RC1" meta={`score + percentil · banda ${candidate.provisional_level ?? '—'}`}>
               <div className="territory-candidate-detail-scores">
                 <div><span>Vigente</span><strong>{n1(candidate.vigente_score)}</strong><small>rango {n(candidate.vigente_rank)}</small></div>
-                <div><span>Candidato</span><strong>{n1(candidate.candidate_score)}</strong><small>banda prov. {candidate.provisional_level ?? '—'}</small></div>
+                <div><span>RC1</span><strong>{n1(candidate.candidate_score)}</strong><small>percentil {candidate.candidate_percentile == null ? '—' : n1(candidate.candidate_percentile)}</small></div>
                 <div><span>Confianza</span><strong>{n1(candidate.candidate_confidence)}%</strong><small>{candidate.candidate_confidence_level ?? '—'}</small></div>
               </div>
               <dl className="kv" style={{ marginTop: 12 }}>
                 <dt>Δ puntaje</dt><dd className="num">{candidate.score_delta > 0 ? '+' : ''}{n1(candidate.score_delta)}</dd>
                 <dt>Δ ranking</dt><dd className="num">{candidate.rank_delta > 0 ? '+' : ''}{n(candidate.rank_delta)}</dd>
-                <dt>Banda provisional</dt><dd>{candidate.provisional_level ?? '—'}</dd>
+                <dt>Percentil nacional RC1</dt><dd className="num">{candidate.candidate_percentile == null ? '—' : `P${n1(candidate.candidate_percentile)}`}</dd>
+                <dt>Banda secundaria</dt><dd>{candidate.provisional_level ?? '—'}</dd>
                 <dt>Lectura de frontera</dt><dd>{candidate.provisional_boundary_status === 'borderline' ? 'Cerca de frontera' : candidate.provisional_boundary_status === 'stable_relative_to_thresholds' ? 'Estable respecto de cortes' : '—'}</dd>
                 <dt>Distancia a frontera</dt><dd className="num">{candidate.provisional_boundary_distance == null ? '—' : n1(candidate.provisional_boundary_distance)}</dd>
                 <dt>Estabilidad</dt><dd className="num">{n1(candidate.confidence_components.stability)}%</dd>
@@ -674,9 +681,10 @@ function ComunaDetalle({
                 <dt>Población Censo 2024</dt><dd className="num">{n(candidate.population)}</dd>
               </dl>
               <div className="note" style={{ marginTop: 12 }}>
-                La banda provisional “{candidate.provisional_level ?? '—'}” usa los cortes recalibrados sobre el score congelado de RC1 y sirve sólo como ayuda diagnóstica.
-                {candidate.provisional_boundary_status === 'borderline' && ' Está cerca de una frontera según su estabilidad: conviene priorizar el score continuo y revisar la evidencia antes de interpretar el cambio de banda.'}
-                {' '}No es una clasificación aprobada y no modifica el mapa vigente. El nivel legado “{candidate.candidate_level ?? '—'}” se conserva sólo para comparar con v1.0.
+                La lectura primaria RC1 combina el <strong>score continuo</strong> con el <strong>percentil nacional</strong>. El percentil expresa posición relativa entre comunas y no una probabilidad de LA/FT.
+                La banda “{candidate.provisional_level ?? '—'}” queda como contexto secundario.
+                {candidate.provisional_boundary_status === 'borderline' && ' Está cerca de una frontera según su estabilidad: no debe interpretarse un cambio de etiqueta sin revisar score, percentil y evidencia.'}
+                {' '}No modifica todavía el mapa vigente. El nivel legado “{candidate.candidate_level ?? '—'}” se conserva sólo para comparar con v1.0.
               </div>
             </Panel>
           )}
