@@ -8,13 +8,11 @@ const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
   { label: 'Pulso', route: { view: 'pulso' }, match: ['pulso'] },
   { label: 'OSFL', route: { view: 'osfl' }, match: ['osfl'] },
   { label: 'Fintech', route: { view: 'fintech' }, match: ['fintech'] },
-  { label: 'Señales', route: { view: 'senales' }, match: ['senales'] },
   { label: 'Entidades', route: { view: 'entidades' }, match: ['entidades', 'ficha'] },
   { label: 'Territorio', route: { view: 'territorio' }, match: ['territorio'] },
   { label: 'Sectores', route: { view: 'sectores' }, match: ['sectores'] },
   { label: 'Gasto público', route: { view: 'gasto' }, match: ['gasto', 'gastoActor'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
-  { label: 'Metodología', route: { view: 'metodologia' }, match: ['metodologia'] },
 ];
 
 export function Shell({
