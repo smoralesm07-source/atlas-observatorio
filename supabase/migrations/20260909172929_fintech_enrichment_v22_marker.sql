@@ -1,0 +1,1 @@
+comment on column public.aml_fintech_entity.profile_classifier_version is 'Última versión del clasificador determinístico corporativo que procesó el perfil; no equivale a validación humana.';
