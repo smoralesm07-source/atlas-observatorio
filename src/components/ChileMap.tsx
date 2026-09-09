@@ -123,7 +123,7 @@ export function ChileMap({
       >
         <title>
           {g.nombre}
-          {row?.igr_score != null ? ` · IGR ${n1(row.igr_score)} · ${row.igr_level}` : ' · sin dato'}
+          {row?.igr_score != null ? ` · IGR ${n1(row.igr_score)} · P${n1(row.igr_percentile)} · ${row.igr_level}` : ' · sin dato'}
         </title>
       </path>
     );
@@ -291,7 +291,10 @@ function MapTip({ x, y, nombre, row }: {
           <div className="map-tip-r">{row.region_name}</div>
           <div className="map-tip-v">
             <i style={{ background: `var(--igr-${levelStep(row.igr_level)})` }} />
-            <span className="num">{n1(row.igr_score)}</span> · {row.igr_level}
+            <span className="num">IGR {n1(row.igr_score)}</span> · P{n1(row.igr_percentile)}
+          </div>
+          <div className="map-tip-c">
+            {row.igr_level ?? 'sin banda'} · confianza <span className="num">{n1(row.igr_confidence)}%</span>
           </div>
           <div className="map-tip-c">
             padrón UAF <span className="num">{row.ctx_uaf_observed}</span> ·

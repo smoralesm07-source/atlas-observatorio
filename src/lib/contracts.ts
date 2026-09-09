@@ -280,6 +280,7 @@ export interface IgrComponent {
   persistence?: number;
   trend?: number;
   anomaly?: number;
+  temporal_anomaly?: number;
   years_observed?: number;
 }
 
@@ -300,8 +301,13 @@ export interface TerritoryRow {
   year: number | null;
   period: string | null;
   igr_score: number | null;
+  igr_percentile: number | null;
   igr_level: string | null;
   igr_confidence: number | null;
+  igr_methodological_coverage: number | null;
+  igr_confidence_level: string | null;
+  igr_boundary_status: string | null;
+  igr_boundary_distance: number | null;
   layer_weights: Record<string, number>;
   layers: Record<string, IgrLayer>;
   interpretation: string | null;
@@ -338,6 +344,8 @@ export interface TerritoryMap {
     con_universo: number;
     confianza_media: number | null;
     baja_confianza: number;
+    cobertura_metodologica_media?: number | null;
+    cobertura_incompleta?: number;
     anio: number | null;
   };
   regiones: {
@@ -358,8 +366,13 @@ export interface TerritoryMap {
     commune_name: string;
     commune_code: string | null;
     igr_score: number | null;
+    igr_percentile: number | null;
     igr_level: string | null;
     igr_confidence: number | null;
+    igr_methodological_coverage: number | null;
+    igr_confidence_level: string | null;
+    igr_boundary_status: string | null;
+    igr_boundary_distance: number | null;
     ctx_entities: number;
     ctx_uaf_observed: number;
     ctx_sanctioned: number;
@@ -377,8 +390,13 @@ export interface TerritoryCommune {
   region_name: string;
   commune_name: string;
   igr_score: number | null;
+  igr_percentile: number | null;
   igr_level: string | null;
   igr_confidence: number | null;
+  igr_methodological_coverage: number | null;
+  igr_confidence_level: string | null;
+  igr_boundary_status: string | null;
+  igr_boundary_distance: number | null;
   ctx_entities: number;
   ctx_uaf_observed: number;
   ctx_sanctioned: number;

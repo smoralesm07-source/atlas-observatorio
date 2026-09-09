@@ -24,78 +24,11 @@ const scoreTone = (v: number) => `var(--igr-${scoreStep(v)})`;
  *  para que no desaparezcan de la vista por una decisión cartográfica. */
 const INSULARES = ['05201', '05104'];
 
-interface TerritoryIgrComparisonRow {
-  territory_id: string;
-  region_code: string | null;
-  region_name: string;
-  commune_code: string | null;
-  commune_name: string;
-  vigente_score: number;
-  candidate_score: number;
-  candidate_percentile: number | null;
-  score_delta: number;
-  vigente_level: string | null;
-  candidate_level: string | null;
-  candidate_level_status: 'comparison_only';
-  provisional_level: string | null;
-  provisional_level_status: 'diagnostic_only' | null;
-  provisional_boundary_distance: number | null;
-  provisional_boundary_status: 'borderline' | 'stable_relative_to_thresholds' | 'unavailable' | null;
-  vigente_rank: number;
-  candidate_rank: number;
-  rank_delta: number;
-  vigente_methodological_coverage: number | null;
-  candidate_methodological_coverage: number | null;
-  candidate_confidence: number | null;
-  candidate_confidence_level: string | null;
-  confidence_components: {
-    thematic_coverage?: number;
-    temporal_coverage?: number;
-    source_quality?: number;
-    stability?: number;
-    denominator_reliability?: number;
-  };
-  stability_sd: number | null;
-  population: number | null;
-  population_coverage: number | null;
-}
-
-interface TerritoryIgrComparison {
-  contract: 'ATLAS_OBS_TERRITORY_IGR_COMPARE_V1';
-  status: 'EXPERIMENTAL' | 'RC1';
-  production_replaced: false;
-  summary: {
-    comunas: number;
-    candidate_version: string | null;
-    base_score_version: string | null;
-    cobertura_vigente_media: number | null;
-    cobertura_candidate_media: number | null;
-    confianza_candidate_media: number | null;
-    confianza_candidate_min: number | null;
-    confianza_candidate_max: number | null;
-    confianza_alta: number;
-    confianza_media: number;
-    confianza_baja: number;
-    cambios_nivel_comparativo: number;
-    cambios_nivel_provisional: number;
-    provisional_borderline: number;
-    provisional_estables: number;
-    correlacion_score: number | null;
-    correlacion_ranking: number | null;
-    sesgo_poblacion_vigente: number | null;
-    sesgo_poblacion_candidate: number | null;
-    refreshed_at: string | null;
-  };
-  rows: TerritoryIgrComparisonRow[];
-  semantics: string;
-}
-
 export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [commune, setCommune] = useState<string | null>(null);
   const [region, setRegion] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const { data, error, loading, reload } = useRpc<TerritoryMap>('obs_territory_map', {});
-  const { data: igrCompare } = useRpc<TerritoryIgrComparison>('obs_territory_igr_comparison', {});
 
   // El corte comunal completo llega desde 0014. Si el contrato aún no lo trae,
   // el mapa lo dice en vez de pintar un país en blanco.
@@ -117,22 +50,12 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
     });
     return m;
   }, [comunas]);
-  const candidateById = useMemo(
-    () => new Map((igrCompare?.rows ?? []).map((r) => [r.territory_id, r])),
-    [igrCompare],
-  );
-  const largestCandidateMoves = useMemo(
-    () => [...(igrCompare?.rows ?? [])]
-      .sort((a, b) => Math.abs(b.score_delta) - Math.abs(a.score_delta))
-      .slice(0, 10),
-    [igrCompare],
-  );
+
 
   if (commune) {
     return (
       <ComunaDetalle
         territoryId={commune}
-        candidate={candidateById.get(commune) ?? null}
         onBack={() => setCommune(null)}
         onNavigate={onNavigate}
       />
@@ -148,7 +71,6 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
     cobertura_metodologica_media?: number | null;
     cobertura_incompleta?: number;
   };
-  const cmp = igrCompare?.summary;
 
   return (
     <div className="fade-in">
@@ -161,7 +83,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
           <div className="territory-method-summary-copy">
             <strong>IGR · cobertura y confianza</strong>
             <span>
-              IGR = amenaza territorial comunal · 86% vigente = cobertura metodológica · confianza RC1 = robustez de la estimación, separada del tamaño poblacional.
+              IGR = amenaza territorial comunal · score + percentil nacional = lectura principal · confianza = robustez de la estimación.
             </span>
           </div>
           <span className="territory-method-open">Metodología</span>
@@ -191,9 +113,8 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
               <span className="territory-method-kicker">1 · Fórmula publicada</span>
               <div className="territory-method-formula mono">{m.formula}</div>
               <p>
-                El IGR vigente es <strong>{m.indicador} {m.version.replace(/^IGR-/, '')}</strong>. La fórmula y
-                los pesos se leen desde el contrato metodológico vigente, de modo que esta ayuda se mantiene
-                sincronizada con el cálculo publicado.
+                La fórmula y los pesos se leen desde el contrato metodológico vigente. El <strong>score 0–100</strong> expresa magnitud
+                de amenaza observada y el <strong>percentil nacional</strong> sitúa a cada comuna frente al resto del país sin crear una segunda fórmula.
               </p>
             </section>
 
@@ -268,51 +189,33 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
             </section>
 
             <section className="territory-method-card territory-method-card-wide">
-              <span className="territory-method-kicker">7 · Qué puede discriminar el analista hoy</span>
+              <span className="territory-method-kicker">7 · Cómo leer el IGR</span>
               <div className="territory-read-grid">
                 <div>
-                  <strong>IGR</strong>
-                  <span>Sí discrimina amenaza observada entre comunas y mantiene la lectura oficial vigente.</span>
+                  <strong>IGR · score</strong>
+                  <span>Magnitud de amenaza territorial observada en escala 0–100. Es la señal principal.</span>
                 </div>
                 <div>
-                  <strong>Cobertura metodológica · 86%</strong>
-                  <span>No discrimina comunas: documenta un límite común del catálogo actualmente materializado.</span>
+                  <strong>Percentil nacional</strong>
+                  <span>Posición relativa entre las comunas: P100 corresponde al extremo superior y P0 al inferior. No es probabilidad.</span>
                 </div>
                 <div>
-                  <strong>Confianza v1.1 RC1</strong>
-                  <span>Combina cobertura temática, cobertura temporal, calidad de fuente y estabilidad; la confiabilidad del denominador se muestra aparte y no pondera la confianza.</span>
+                  <strong>Confianza</strong>
+                  <span>Robustez de la estimación según cobertura temática, temporal, calidad de fuente y estabilidad. No modifica el score.</span>
                 </div>
                 <div>
-                  <strong>Percentil nacional RC1</strong>
-                  <span>Posición relativa dentro de las 345 comunas: 100 = extremo superior del score RC1 y 0 = extremo inferior. No es probabilidad ni una segunda fórmula.</span>
+                  <strong>Banda</strong>
+                  <span>Apoyo secundario de lectura. Cerca de una frontera deben prevalecer score, percentil y evidencia.</span>
                 </div>
                 <div>
-                  <strong>Banda v1.1 provisional</strong>
-                  <span>Contexto secundario de lectura. Cerca de una frontera deben prevalecer el score continuo y el percentil nacional.</span>
+                  <strong>Cobertura metodológica</strong>
+                  <span>Documenta cuánto del catálogo está materializado. No equivale a confianza ni a menor amenaza.</span>
                 </div>
               </div>
               <p className="territory-method-muted">
-                La confianza RC1 nunca modifica el score ni transforma menor evidencia en menor amenaza. La confiabilidad del denominador continúa visible, pero ya no entra al compuesto de confianza porque su efecto ya está incorporado al contraer el peso de la tasa.
+                El IGR describe el territorio. Ninguno de estos elementos atribuye conducta, incumplimiento o probabilidad de LA/FT a una entidad domiciliada en la comuna.
               </p>
             </section>
-
-            {cmp && cmp.comunas > 0 && (
-              <section className="territory-method-card territory-method-card-wide">
-                <span className="territory-method-kicker">8 · Validación RC1 · v1.1</span>
-                <div className="territory-candidate-method-grid">
-                  <div><span>Confianza media</span><strong>{n1(cmp.confianza_candidate_media)}%</strong><small>{n1(cmp.confianza_candidate_min)}–{n1(cmp.confianza_candidate_max)}</small></div>
-                  <div><span>Correlación ranking</span><strong>{n1((cmp.correlacion_ranking ?? 0) * 100)}%</strong><small>respecto del IGR vigente</small></div>
-                  <div><span>Asociación score-población</span><strong>{n1(cmp.sesgo_poblacion_candidate)}</strong><small>vigente {n1(cmp.sesgo_poblacion_vigente)}</small></div>
-                  <div><span>Cambios banda provisional</span><strong>{n(cmp.cambios_nivel_provisional)}</strong><small>{n(cmp.provisional_borderline)} cerca de una frontera</small></div>
-                </div>
-                <p>
-                  El score RC1 es <strong>idéntico a candidate.3</strong>: reemplaza la anomalía transversal por anomalía temporal estabilizada por soporte y combina
-                  volumen con tasa por 100 mil usando contracción en comunas pequeñas. La validación de bandas mostró que ninguna regla categórica mejora
-                  suficientemente la estabilidad sin introducir otros costos; por eso <strong>score + percentil nacional son la lectura primaria RC1</strong> y la banda queda como apoyo secundario.
-                  <strong>El mapa y el ranking oficial siguen usando v1.0.</strong>
-                </p>
-              </section>
-            )}
           </div>
         </div>
       </details>
@@ -325,78 +228,16 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
           foot={`${n(cob.comunas - cob.con_universo)} sin entidades en el corte`}
         />
         <Stat
-          label="Cobertura metodológica CEAD"
-          value={(cob.cobertura_metodologica_media ?? cob.confianza_media) == null
-            ? '—' : `${n1(cob.cobertura_metodologica_media ?? cob.confianza_media)}%`}
-          foot="catálogo materializado · no es confianza"
+          label="Confianza IGR"
+          value={cob.confianza_media == null ? '—' : `${n1(cob.confianza_media)}%`}
+          foot={`${n(cob.baja_confianza)} comunas bajo el umbral medio de robustez`}
         />
-        {cmp && cmp.comunas > 0 ? (
-          <Stat
-            label="Confianza v1.1 RC1"
-            value={cmp.confianza_candidate_media == null ? '—' : `${n1(cmp.confianza_candidate_media)}%`}
-            foot={`${n1(cmp.confianza_candidate_min)}–${n1(cmp.confianza_candidate_max)} · no altera el IGR vigente`}
-          />
-        ) : (
-          <Stat
-            label="Cobertura < 100%"
-            value={n(cob.cobertura_incompleta ?? 0)}
-            foot="límite común del catálogo actual"
-          />
-        )}
+        <Stat
+          label="Cobertura metodológica"
+          value={cob.cobertura_metodologica_media == null ? '—' : `${n1(cob.cobertura_metodologica_media)}%`}
+          foot="disponibilidad del catálogo · no es confianza"
+        />
       </div>
-
-      {igrCompare && cmp && cmp.comunas > 0 && (
-        <details className="territory-candidate">
-          <summary className="territory-candidate-summary">
-            <div>
-              <strong>Comparar IGR vigente vs v1.1 RC1</strong>
-              <span>Compara magnitud del score, posición nacional y robustez; la banda queda como contexto secundario.</span>
-            </div>
-            <div className="territory-candidate-summary-actions">
-              <span className="territory-candidate-badge">{cmp.candidate_version ?? 'v1.1 RC1'} · mapa vigente intacto</span>
-              <span className="territory-method-chevron" aria-hidden>⌄</span>
-            </div>
-          </summary>
-          <div className="territory-candidate-body">
-            <div className="territory-candidate-kpis">
-              <div><span>Correlación score</span><strong>{n1((cmp.correlacion_score ?? 0) * 100)}%</strong></div>
-              <div><span>Correlación ranking</span><strong>{n1((cmp.correlacion_ranking ?? 0) * 100)}%</strong></div>
-              <div><span>Cambios banda provisional</span><strong>{n(cmp.cambios_nivel_provisional)}</strong><small>de {n(cmp.comunas)} comunas</small></div>
-              <div><span>Cerca de frontera</span><strong>{n(cmp.provisional_borderline)}</strong><small>{n(cmp.provisional_estables)} estables respecto de cortes</small></div>
-            </div>
-            <div className="territory-candidate-note">
-              <strong>Lectura recomendada:</strong> RC1 conserva el score validado y añade el <strong>percentil nacional</strong> para mostrar posición relativa sin crear otra fórmula de amenaza.
-              La banda recalibrada queda como apoyo secundario con alerta de frontera. La histéresis y las bandas puramente relativas fueron descartadas como lectura principal por su dependencia temporal o escasa mejora de estabilidad.
-            </div>
-            <div className="territory-candidate-table-title">Mayores movimientos de puntaje · muestra de diagnóstico</div>
-            <div className="territory-candidate-table-wrap">
-              <table className="table">
-                <thead><tr><th>Comuna</th><th>Región</th><th className="right">IGR v1</th><th className="right">v1.1</th><th className="right">Percentil</th><th>Banda secundaria</th><th className="right">Δ score</th><th className="right">Confianza</th></tr></thead>
-                <tbody>
-                  {largestCandidateMoves.map((r) => (
-                    <tr key={r.territory_id} onClick={() => setCommune(r.territory_id)} style={{ cursor: 'pointer' }}>
-                      <td style={{ fontWeight: 600 }}>{r.commune_name}</td>
-                      <td style={{ color: 'var(--ink-3)' }}>{r.region_name}</td>
-                      <td className="right num">{n1(r.vigente_score)}</td>
-                      <td className="right num">{n1(r.candidate_score)}</td>
-                      <td className="right num">{r.candidate_percentile == null ? '—' : `P${n1(r.candidate_percentile)}`}</td>
-                      <td>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <i style={{ width: 8, height: 8, borderRadius: 2, background: `var(--igr-${levelStep(r.provisional_level)})` }} />
-                          {r.provisional_level ?? '—'}
-                          {r.provisional_boundary_status === 'borderline' && <span title="Cerca de una frontera provisional">· frontera</span>}
-                        </span>
-                      </td>
-                      <td className="right num" style={{ fontWeight: 650 }}>{r.score_delta > 0 ? '+' : ''}{n1(r.score_delta)}</td>
-                      <td className="right num">{n1(r.candidate_confidence)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </details>
-      )}
 
       {/* El mapa reemplazó al panel de barras regionales: la unidad del índice es
           la comuna, y un agregado regional no deja ver dónde está la amenaza. */}
@@ -450,7 +291,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
         </Panel>
 
         <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
-          <Panel title="Distribución por nivel" meta={`${n(cob.comunas)} comunas`}>
+          <Panel title="Distribución por banda" meta={`${n(cob.comunas)} comunas`}>
             <OrderedDistribution
               total={cob.comunas}
               rows={data.niveles.map((x) => ({
@@ -485,9 +326,9 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
         <table className="table">
           <thead>
             <tr>
-              <th>Comuna</th><th>Región</th><th>Nivel</th>
-              <th className="right">IGR</th><th className="right">Cobertura</th>
-              <th className="right">Entidades</th><th className="right">Padrón UAF</th>
+              <th>Comuna</th><th>Región</th><th>Banda</th>
+              <th className="right">IGR</th><th className="right">Percentil</th>
+              <th className="right">Confianza</th><th className="right">Padrón UAF</th>
             </tr>
           </thead>
           <tbody>
@@ -506,8 +347,8 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                   </span>
                 </td>
                 <td className="right num" style={{ fontWeight: 650 }}>{n1(c.igr_score)}</td>
+                <td className="right num" style={{ fontWeight: 650 }}>{c.igr_percentile == null ? '—' : `P${n1(c.igr_percentile)}`}</td>
                 <td className="right num" style={{ color: 'var(--ink-3)' }}>{n1(c.igr_confidence)}%</td>
-                <td className="right num">{n(c.ctx_entities)}</td>
                 <td className="right num">{n(c.ctx_uaf_observed)}</td>
               </tr>
             ))}
@@ -518,7 +359,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
       <div style={{ marginTop: 24 }}>
         <Semantics>
           <strong>Qué queda deliberadamente fuera del índice.</strong>{' '}
-          {m.excluido_del_indice.join(', ')}. Desde {m.version} el territorio se separó del
+          {m.excluido_del_indice.join(', ')}. El territorio se mantiene separado del
           riesgo sectorial y del riesgo individual para no contar dos veces el mismo
           fenómeno. Las cifras de entidades, padrón y sanciones que ves junto a cada comuna
           son contexto descriptivo: no entran en el cálculo. {data.semantics}
@@ -529,10 +370,9 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
 }
 
 function ComunaDetalle({
-  territoryId, candidate, onBack, onNavigate,
+  territoryId, onBack, onNavigate,
 }: {
   territoryId: string;
-  candidate: TerritoryIgrComparisonRow | null;
   onBack: () => void;
   onNavigate: (hash: string) => void;
 }) {
@@ -566,7 +406,6 @@ function ComunaDetalle({
             <span>{t.region_name}</span>
             {t.commune_code && <span className="mono">{t.commune_code}</span>}
             <span>año {t.year}</span>
-            <span className="mono">{t.score_version ? `CEAD ${t.score_version}` : ''}</span>
           </div>
           {t.interpretation && (
             <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: '70ch' }}>
@@ -576,38 +415,31 @@ function ComunaDetalle({
         </div>
 
         <div className="ficha-scores">
-          <div style={{ minWidth: 130, padding: '12px 15px', borderRadius: 'var(--radius)', background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
+          <div style={{ minWidth: 126, padding: '12px 15px', borderRadius: 'var(--radius)', background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
             <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.035em', color: `var(--igr-${levelStep(t.igr_level)})` }}>
               {n1(t.igr_score)}
             </div>
-            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>
-              IGR · {t.igr_level}
+            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>IGR</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>banda {t.igr_level ?? '—'}</div>
+          </div>
+          <div style={{ minWidth: 126, padding: '12px 15px', borderRadius: 'var(--radius)', background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
+            <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.035em' }}>
+              {t.igr_percentile == null ? '—' : `P${n1(t.igr_percentile)}`}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>
-              cobertura metodológica {n1(t.igr_confidence)}%
+            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>Percentil nacional</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>posición {n(p.posicion_nacional)} de {n(p.comunas_pais)}</div>
+          </div>
+          <div style={{ minWidth: 126, padding: '12px 15px', borderRadius: 'var(--radius)', background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
+            <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.035em' }}>
+              {t.igr_confidence == null ? '—' : `${n1(t.igr_confidence)}%`}
             </div>
+            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>Confianza</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>{t.igr_confidence_level ?? 'robustez no clasificada'}</div>
           </div>
           <div style={{ minWidth: 118, padding: '12px 15px', borderRadius: 'var(--radius)', background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
-            <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.035em' }}>
-              {n(p.posicion_nacional)}
-            </div>
-            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>
-              en el país
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>
-              de {n(p.comunas_pais)} comunas
-            </div>
-          </div>
-          <div style={{ minWidth: 118, padding: '12px 15px', borderRadius: 'var(--radius)', background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
-            <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.035em' }}>
-              {n(p.posicion_en_region)}
-            </div>
-            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>
-              en su región
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>
-              de {n(p.comunas_region)} · media {n1(p.igr_region)}
-            </div>
+            <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.035em' }}>{n(p.posicion_en_region)}</div>
+            <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 650, marginTop: 3 }}>en su región</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 3 }}>de {n(p.comunas_region)} · media {n1(p.igr_region)}</div>
           </div>
         </div>
       </header>
@@ -636,7 +468,7 @@ function ComunaDetalle({
                     <th className="right">Intensidad</th>
                     <th className="right">Persistencia</th>
                     <th className="right">Tendencia</th>
-                    <th className="right">Anomalía</th>
+                    <th className="right">Anomalía temporal</th>
                     <th className="right">Años</th>
                   </tr>
                 </thead>
@@ -648,7 +480,7 @@ function ComunaDetalle({
                       <td className="right num">{n1(c.intensity)}</td>
                       <td className="right num">{n1(c.persistence)}</td>
                       <td className="right num">{n1(c.trend)}</td>
-                      <td className="right num">{n1(c.anomaly)}</td>
+                      <td className="right num">{n1(c.temporal_anomaly ?? c.anomaly)}</td>
                       <td className="right num">{n(c.years_observed)}</td>
                     </tr>
                   ))}
@@ -659,35 +491,20 @@ function ComunaDetalle({
         </div>
 
         <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
-          {candidate && (
-            <Panel title="IGR v1.1 RC1" meta={`score + percentil · banda ${candidate.provisional_level ?? '—'}`}>
-              <div className="territory-candidate-detail-scores">
-                <div><span>Vigente</span><strong>{n1(candidate.vigente_score)}</strong><small>rango {n(candidate.vigente_rank)}</small></div>
-                <div><span>RC1</span><strong>{n1(candidate.candidate_score)}</strong><small>percentil {candidate.candidate_percentile == null ? '—' : n1(candidate.candidate_percentile)}</small></div>
-                <div><span>Confianza</span><strong>{n1(candidate.candidate_confidence)}%</strong><small>{candidate.candidate_confidence_level ?? '—'}</small></div>
-              </div>
-              <dl className="kv" style={{ marginTop: 12 }}>
-                <dt>Δ puntaje</dt><dd className="num">{candidate.score_delta > 0 ? '+' : ''}{n1(candidate.score_delta)}</dd>
-                <dt>Δ ranking</dt><dd className="num">{candidate.rank_delta > 0 ? '+' : ''}{n(candidate.rank_delta)}</dd>
-                <dt>Percentil nacional RC1</dt><dd className="num">{candidate.candidate_percentile == null ? '—' : `P${n1(candidate.candidate_percentile)}`}</dd>
-                <dt>Banda secundaria</dt><dd>{candidate.provisional_level ?? '—'}</dd>
-                <dt>Lectura de frontera</dt><dd>{candidate.provisional_boundary_status === 'borderline' ? 'Cerca de frontera' : candidate.provisional_boundary_status === 'stable_relative_to_thresholds' ? 'Estable respecto de cortes' : '—'}</dd>
-                <dt>Distancia a frontera</dt><dd className="num">{candidate.provisional_boundary_distance == null ? '—' : n1(candidate.provisional_boundary_distance)}</dd>
-                <dt>Estabilidad</dt><dd className="num">{n1(candidate.confidence_components.stability)}%</dd>
-                <dt>Cobertura temática</dt><dd className="num">{n1(candidate.confidence_components.thematic_coverage)}%</dd>
-                <dt>Cobertura temporal</dt><dd className="num">{n1(candidate.confidence_components.temporal_coverage)}%</dd>
-                <dt>Calidad de fuente</dt><dd className="num">{n1(candidate.confidence_components.source_quality)}%</dd>
-                <dt>Confiabilidad denominador</dt><dd className="num">{n1(candidate.confidence_components.denominator_reliability)}%</dd>
-                <dt>Población Censo 2024</dt><dd className="num">{n(candidate.population)}</dd>
-              </dl>
-              <div className="note" style={{ marginTop: 12 }}>
-                La lectura primaria RC1 combina el <strong>score continuo</strong> con el <strong>percentil nacional</strong>. El percentil expresa posición relativa entre comunas y no una probabilidad de LA/FT.
-                La banda “{candidate.provisional_level ?? '—'}” queda como contexto secundario.
-                {candidate.provisional_boundary_status === 'borderline' && ' Está cerca de una frontera según su estabilidad: no debe interpretarse un cambio de etiqueta sin revisar score, percentil y evidencia.'}
-                {' '}No modifica todavía el mapa vigente. El nivel legado “{candidate.candidate_level ?? '—'}” se conserva sólo para comparar con v1.0.
-              </div>
-            </Panel>
-          )}
+          <Panel title="Lectura IGR" meta={`banda ${t.igr_level ?? '—'} · contexto secundario`}>
+            <dl className="kv">
+              <dt>IGR</dt><dd className="num">{n1(t.igr_score)}</dd>
+              <dt>Percentil nacional</dt><dd className="num">{t.igr_percentile == null ? '—' : `P${n1(t.igr_percentile)}`}</dd>
+              <dt>Confianza</dt><dd className="num">{t.igr_confidence == null ? '—' : `${n1(t.igr_confidence)}%`} {t.igr_confidence_level ? `· ${t.igr_confidence_level}` : ''}</dd>
+              <dt>Banda</dt><dd>{t.igr_level ?? '—'}</dd>
+              <dt>Lectura de frontera</dt><dd>{t.igr_boundary_status === 'borderline' ? 'Cerca de frontera' : t.igr_boundary_status === 'stable_relative_to_thresholds' ? 'Estable respecto de cortes' : '—'}</dd>
+              <dt>Distancia a frontera</dt><dd className="num">{t.igr_boundary_distance == null ? '—' : n1(t.igr_boundary_distance)}</dd>
+              <dt>Cobertura metodológica</dt><dd className="num">{t.igr_methodological_coverage == null ? '—' : `${n1(t.igr_methodological_coverage)}%`}</dd>
+            </dl>
+            <div className="note" style={{ marginTop: 12 }}>
+              Score y percentil son la lectura principal. La confianza informa robustez y la banda ayuda a resumir, pero una comuna cercana a frontera debe interpretarse con el valor continuo y la evidencia disponible. El IGR describe el territorio y no atribuye riesgo a sus entidades.
+            </div>
+          </Panel>
 
           <Panel title="Universo observado aquí" meta="contexto, fuera del índice">
             <dl className="kv">
@@ -771,12 +588,12 @@ function AggMeta({ filas }: { filas: TerritoryCommune[] }) {
   const media = conScore.length
     ? conScore.reduce((a, c) => a + Number(c.igr_score), 0) / conScore.length
     : null;
-  const altas = filas.filter((c) => (c.igr_score ?? 0) >= 60).length;
+  const altas = filas.filter((c) => ['Alto', 'Muy alto'].includes(c.igr_level ?? '')).length;
   const uaf = filas.reduce((a, c) => a + c.ctx_uaf_observed, 0);
   return (
     <span>
       {n(filas.length)} comunas · IGR medio{' '}
-      <span className="num">{n1(media)}</span> · {n(altas)} en nivel Alto o superior · padrón UAF{' '}
+      <span className="num">{n1(media)}</span> · {n(altas)} en banda Alta o Muy alta · padrón UAF{' '}
       <span className="num">{n(uaf)}</span>
     </span>
   );
@@ -805,7 +622,7 @@ function MapLegend({ porNivel, comunas, onSelect }: {
         ))}
       </div>
       <div style={{ maxWidth: '32ch', lineHeight: 1.45 }}>
-        Cada franja tiene su propia escala y la cifra bajo cada paso es el número de comunas.
+        Cada franja tiene su propia escala y la cifra bajo cada paso es el número de comunas. Las bandas son una ayuda secundaria: score y percentil son la lectura principal.
         El agregado regional es una media comunal simple; la cobertura metodológica se publica aparte
         y no reduce matemáticamente el peso de una comuna.
       </div>
