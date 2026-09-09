@@ -1,0 +1,23 @@
+/* Entidad 360 · estados compactos del universo UAF en la cabecera. */
+.entity360-titleline {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.entity360-titleline > .badge {
+  flex: 0 0 auto;
+}
+
+/* “No inscrito” debe leerse como una señal apagada, no como alerta. */
+.entity360-titleline > .badge-absent {
+  opacity: .62;
+  filter: saturate(.2);
+  color: var(--ink-4);
+  border-color: color-mix(in srgb, var(--ink-4) 42%, transparent);
+  background: color-mix(in srgb, var(--ink-4) 5%, transparent);
+}
+
+/* Potencial SO usa amarillo/ámbar de atención, nunca rojo. */
+.entity360-titleline > .badge-medium {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sig-medium) 8%, transparent);
+}
