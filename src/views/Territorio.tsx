@@ -160,7 +160,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
           <div className="territory-method-summary-copy">
             <strong>IGR · cobertura y confianza</strong>
             <span>
-              IGR = amenaza territorial comunal · 86% vigente = cobertura metodológica · confianza v1.1 = evaluación experimental de solidez.
+              IGR = amenaza territorial comunal · 86% vigente = cobertura metodológica · confianza RC1 = robustez de la estimación, separada del tamaño poblacional.
             </span>
           </div>
           <span className="territory-method-open">Metodología</span>
@@ -278,32 +278,32 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
                   <span>No discrimina comunas: documenta un límite común del catálogo actualmente materializado.</span>
                 </div>
                 <div>
-                  <strong>Confianza v1.1 · experimental</strong>
-                  <span>Varía por comuna según cobertura temática/temporal, fuente, estabilidad y denominador.</span>
+                  <strong>Confianza v1.1 RC1</strong>
+                  <span>Combina cobertura temática, cobertura temporal, calidad de fuente y estabilidad; la confiabilidad del denominador se muestra aparte y no pondera la confianza.</span>
                 </div>
                 <div>
                   <strong>Banda v1.1 provisional</strong>
-                  <span>Recalibrada para candidate.3; sirve para diagnóstico y no reemplaza el nivel IGR vigente.</span>
+                  <span>Recalibrada sobre el score candidate.3 congelado en RC1; sigue siendo diagnóstica y no reemplaza el nivel IGR vigente.</span>
                 </div>
               </div>
               <p className="territory-method-muted">
-                La confianza experimental nunca modifica el score ni transforma menor evidencia en menor amenaza.
+                La confianza RC1 nunca modifica el score ni transforma menor evidencia en menor amenaza. La confiabilidad del denominador continúa visible, pero ya no entra al compuesto de confianza porque su efecto ya está incorporado al contraer el peso de la tasa.
               </p>
             </section>
 
             {cmp && cmp.comunas > 0 && (
               <section className="territory-method-card territory-method-card-wide">
-                <span className="territory-method-kicker">8 · Evaluación experimental v1.1</span>
+                <span className="territory-method-kicker">8 · Validación RC1 · v1.1</span>
                 <div className="territory-candidate-method-grid">
                   <div><span>Confianza media</span><strong>{n1(cmp.confianza_candidate_media)}%</strong><small>{n1(cmp.confianza_candidate_min)}–{n1(cmp.confianza_candidate_max)}</small></div>
                   <div><span>Correlación ranking</span><strong>{n1((cmp.correlacion_ranking ?? 0) * 100)}%</strong><small>respecto del IGR vigente</small></div>
-                  <div><span>Sesgo población</span><strong>{n1(cmp.sesgo_poblacion_candidate)}</strong><small>vigente {n1(cmp.sesgo_poblacion_vigente)}</small></div>
+                  <div><span>Asociación score-población</span><strong>{n1(cmp.sesgo_poblacion_candidate)}</strong><small>vigente {n1(cmp.sesgo_poblacion_vigente)}</small></div>
                   <div><span>Cambios banda provisional</span><strong>{n(cmp.cambios_nivel_provisional)}</strong><small>{n(cmp.provisional_borderline)} cerca de una frontera</small></div>
                 </div>
                 <p>
-                  El candidate.3 reemplaza la anomalía transversal por <strong>anomalía temporal estabilizada por soporte</strong>, combina
-                  volumen y tasa por 100 mil con contracción del peso de tasa en comunas pequeñas, y calcula una
-                  confianza comunal separada del IGR. <strong>El mapa y el ranking oficial siguen usando v1.0.</strong>
+                  El score RC1 es <strong>idéntico a candidate.3</strong>: reemplaza la anomalía transversal por anomalía temporal estabilizada por soporte y combina
+                  volumen con tasa por 100 mil usando contracción en comunas pequeñas. RC1 corrige además la confianza para que el tamaño poblacional
+                  no actúe como proxy de solidez. <strong>El mapa y el ranking oficial siguen usando v1.0.</strong>
                 </p>
               </section>
             )}
@@ -326,7 +326,7 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
         />
         {cmp && cmp.comunas > 0 ? (
           <Stat
-            label="Confianza v1.1 · experimental"
+            label="Confianza v1.1 RC1"
             value={cmp.confianza_candidate_media == null ? '—' : `${n1(cmp.confianza_candidate_media)}%`}
             foot={`${n1(cmp.confianza_candidate_min)}–${n1(cmp.confianza_candidate_max)} · no altera el IGR vigente`}
           />
@@ -343,11 +343,11 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
         <details className="territory-candidate">
           <summary className="territory-candidate-summary">
             <div>
-              <strong>Comparar IGR vigente vs candidato v1.1</strong>
+              <strong>Comparar IGR vigente vs v1.1 RC1</strong>
               <span>Revisa cuánto cambia el ranking y por qué la nueva confianza sí discrimina entre comunas.</span>
             </div>
             <div className="territory-candidate-summary-actions">
-              <span className="territory-candidate-badge">Experimental · mapa vigente intacto</span>
+              <span className="territory-candidate-badge">{cmp.candidate_version ?? 'v1.1 RC1'} · mapa vigente intacto</span>
               <span className="territory-method-chevron" aria-hidden>⌄</span>
             </div>
           </summary>
@@ -359,9 +359,9 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
               <div><span>Cerca de frontera</span><strong>{n(cmp.provisional_borderline)}</strong><small>{n(cmp.provisional_estables)} estables respecto de cortes</small></div>
             </div>
             <div className="territory-candidate-note">
-              <strong>Qué cambió:</strong> anomalía temporal estabilizada según soporte; intensidad con volumen + tasa
-              estabilizada; confianza separada en cinco dimensiones. Candidate.3 incorpora bandas recalibradas para
-              diagnóstico, pero <strong>no las promueve como clasificación oficial</strong>. El score continuo sigue siendo la salida primaria.
+              <strong>Qué cambió:</strong> RC1 congela el score validado de candidate.3 y corrige la confianza: la confiabilidad del denominador
+              deja de ponderarla para evitar doble penalización y efecto proxy de población. Las bandas recalibradas siguen en
+              diagnóstico y <strong>no se promueven como clasificación oficial</strong>. El score continuo sigue siendo la salida primaria.
             </div>
             <div className="territory-candidate-table-title">Mayores movimientos de puntaje · muestra de diagnóstico</div>
             <div className="territory-candidate-table-wrap">
@@ -654,7 +654,7 @@ function ComunaDetalle({
 
         <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
           {candidate && (
-            <Panel title="IGR v1.1 · experimental" meta={`${candidate.provisional_level ?? 'sin banda'} · diagnóstico`}>
+            <Panel title="IGR v1.1 RC1" meta={`${candidate.provisional_level ?? 'sin banda'} · diagnóstico`}>
               <div className="territory-candidate-detail-scores">
                 <div><span>Vigente</span><strong>{n1(candidate.vigente_score)}</strong><small>rango {n(candidate.vigente_rank)}</small></div>
                 <div><span>Candidato</span><strong>{n1(candidate.candidate_score)}</strong><small>banda prov. {candidate.provisional_level ?? '—'}</small></div>
@@ -674,7 +674,7 @@ function ComunaDetalle({
                 <dt>Población Censo 2024</dt><dd className="num">{n(candidate.population)}</dd>
               </dl>
               <div className="note" style={{ marginTop: 12 }}>
-                La banda provisional “{candidate.provisional_level ?? '—'}” usa los cortes recalibrados de candidate.3 y sirve sólo como ayuda diagnóstica.
+                La banda provisional “{candidate.provisional_level ?? '—'}” usa los cortes recalibrados sobre el score congelado de RC1 y sirve sólo como ayuda diagnóstica.
                 {candidate.provisional_boundary_status === 'borderline' && ' Está cerca de una frontera según su estabilidad: conviene priorizar el score continuo y revisar la evidencia antes de interpretar el cambio de banda.'}
                 {' '}No es una clasificación aprobada y no modifica el mapa vigente. El nivel legado “{candidate.candidate_level ?? '—'}” se conserva sólo para comparar con v1.0.
               </div>
