@@ -6,27 +6,236 @@
 :root { --map-nodata: #243043; }
 :root[data-theme='light'] { --map-nodata: #e2e8f0; }
 
-/* Cabecera de Territorio: ayuda analítica breve para interpretar IGR y CEAD. */
-.fade-in:has(.map-tools) > .view-head { margin-bottom: 10px; }
-.fade-in:has(.map-tools) > .view-head .view-lede { display: none; }
-.fade-in:has(.map-tools) > .view-head + .semantics {
+/* Ayuda metodológica: compacta al cerrar y suficientemente rica al abrir. */
+.territory-view-head { margin-bottom: 10px; }
+
+.territory-method {
   margin: 0 0 16px;
-  min-height: 0;
-  padding: 9px 12px;
-  gap: 0;
   border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-panel) 74%, transparent);
-  box-shadow: none;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+  overflow: hidden;
+}
+
+.territory-method-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 24px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.territory-method-summary::-webkit-details-marker { display: none; }
+.territory-method-summary::marker { display: none; content: ''; }
+.territory-method-summary:hover { background: color-mix(in srgb, var(--bg-panel-2) 72%, transparent); }
+
+.territory-method-summary-copy {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 10px;
+}
+.territory-method-summary-copy strong {
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.territory-method-summary-copy span {
   color: var(--ink-3);
   font-size: 11.5px;
+  line-height: 1.45;
+}
+.territory-method-open {
+  color: var(--ink-4);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+.territory-method-chevron {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform .16s var(--ease), color .16s var(--ease), border-color .16s var(--ease);
+}
+.territory-method[open] .territory-method-chevron {
+  transform: rotate(180deg);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.territory-method-body {
+  border-top: 1px solid var(--line-soft);
+  padding: 14px;
+}
+.territory-method-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+.territory-method-lead > div:first-child,
+.territory-method-scale {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  padding: 12px 14px;
+}
+.territory-method-lead strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 13px;
+}
+.territory-method-lead p,
+.territory-method-card p {
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 11.8px;
+  line-height: 1.55;
+}
+.territory-method-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+.territory-method-scale > span {
+  color: var(--ink-4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.territory-method-scale > strong {
+  margin: 2px 0 0;
+  font-family: var(--mono);
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+.territory-method-scale small {
+  margin-top: 6px;
+  color: var(--ink-4);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.territory-method-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.territory-method-card {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+}
+.territory-method-card-wide { grid-column: 1 / -1; }
+.territory-method-kicker {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--ink-4);
+  font-size: 9.8px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.territory-method-formula,
+.territory-method-equation {
+  color: var(--ink-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-raised);
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.territory-method-formula { font-size: 11.5px; }
+
+.territory-method-dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  margin: 10px 0 0;
+  font-size: 11.5px;
+}
+.territory-method-dl dt { color: var(--ink-3); }
+.territory-method-dl dd {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-weight: 650;
+}
+.territory-method-dl.compact { gap: 4px 12px; }
+
+.territory-method-callout {
+  margin-top: 9px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--ink-2);
+  font-size: 11.3px;
   line-height: 1.5;
 }
-.fade-in:has(.map-tools) > .view-head + .semantics > * { display: none; }
-.fade-in:has(.map-tools) > .view-head + .semantics::before {
-  content: "IGR · Índice comunal de amenaza territorial relevante para LA (0–100).  ·  Confianza CEAD · Indica la cobertura y consistencia del dato delictual utilizado; una confianza baja exige mayor cautela y no equivale a menor amenaza.";
-  display: block;
-  width: 100%;
+.territory-method-coverage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.territory-method-coverage > div {
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-raised);
+}
+.territory-method-coverage strong {
+  color: var(--ink-2);
+  font-size: 11px;
+}
+.territory-method-coverage p { margin-top: 4px; }
+.territory-method-muted {
+  color: var(--ink-4) !important;
+  font-size: 10.8px !important;
+}
+
+.territory-read-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.territory-read-grid > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-raised);
+}
+.territory-read-grid strong {
+  color: var(--ink-2);
+  font-size: 11px;
+}
+.territory-read-grid span {
+  color: var(--ink-3);
+  font-size: 10.8px;
+  line-height: 1.45;
 }
 
 .map-host { position: relative; padding: 14px 16px 4px; }
@@ -138,9 +347,25 @@
 .map-island:hover { border-color: var(--line-strong); color: var(--ink); }
 .map-island i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 
+@media (max-width: 860px) {
+  .territory-method-lead,
+  .territory-method-grid,
+  .territory-method-coverage,
+  .territory-read-grid {
+    grid-template-columns: 1fr;
+  }
+  .territory-method-card-wide { grid-column: auto; }
+  .territory-method-summary {
+    grid-template-columns: minmax(0, 1fr) 22px;
+  }
+  .territory-method-open { display: none; }
+}
+
 @media (max-width: 720px) {
   .map-search { width: 100%; margin-left: 0; }
   .map-islands { margin-left: 0; }
+  .territory-method-summary-copy span { flex-basis: 100%; }
+  .territory-method-body { padding: 10px; }
 }
 
 .fsel-region {
