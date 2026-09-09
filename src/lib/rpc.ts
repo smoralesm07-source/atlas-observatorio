@@ -14,6 +14,9 @@ function message(e: unknown): string {
   if (err.code === 'PGRST301' || err.code === '42501') {
     return 'Tu cuenta no está habilitada en la lista de acceso del Observatorio.';
   }
+  if (err.code === '57014' || /statement timeout|canceling statement due to statement timeout/i.test(err.message ?? '')) {
+    return 'La consulta excedió el tiempo máximo. Atlas detuvo ese intento para proteger el servicio; reintenta o completa más caracteres del nombre.';
+  }
   return err.message ?? 'Error desconocido.';
 }
 
@@ -33,6 +36,10 @@ export function useRpc<T>(
 
   useEffect(() => {
     if (opts.skip) {
+      // Invalida cualquier respuesta tardía de una consulta que dejó de ser
+      // pertinente (p. ej. porque el analista borró o cambió el texto).
+      ++seq.current;
+      setError(null);
       setLoading(false);
       return;
     }
