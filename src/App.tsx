@@ -5,7 +5,7 @@ import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
 import { useRoute } from './lib/router';
 import { Pulso } from './views/Pulso';
-import { Cobertura } from './views/Cobertura';
+import { UniversoSO } from './views/UniversoSO';
 import { Osfl } from './views/Osfl';
 import { Fintech } from './views/Fintech';
 import { Sanciones } from './views/Sanciones';
@@ -14,7 +14,6 @@ import { Entidades } from './views/Entidades';
 import { EntityExpediente } from './views/EntityExpediente';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
-import { Sectores } from './views/Sectores';
 import { GastoPublico } from './views/GastoPublico';
 import { Metodologia } from './views/Metodologia';
 
@@ -31,7 +30,9 @@ function Routed({ session }: { session: Session }) {
   return (
     <Shell route={route} session={session}>
       {route.view === 'pulso' && <Pulso onNavigate={go} lente={route.lente} />}
-      {route.view === 'cobertura' && <Cobertura onNavigate={go} />}
+      {route.view === 'universo' && (
+        <UniversoSO onNavigate={go} initialMode={route.mode ?? 'padron'} />
+      )}
       {route.view === 'osfl' && <Osfl onNavigate={go} />}
       {route.view === 'fintech' && <Fintech onNavigate={go} />}
       {route.view === 'sanciones' && <Sanciones onNavigate={go} />}
@@ -51,7 +52,6 @@ function Routed({ session }: { session: Session }) {
         </>
       )}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
-      {route.view === 'sectores' && <Sectores onNavigate={go} />}
       {route.view === 'gasto' && <GastoPublico familiaInicial={route.familia} onNavigate={go} />}
       {route.view === 'gastoActor' && (
         <GastoPublico
