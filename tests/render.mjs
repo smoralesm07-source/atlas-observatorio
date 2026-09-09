@@ -402,7 +402,12 @@ const checks = [
   // Territorio: el indicador vigente, su cobertura real y lo que queda fuera.
   ['territorio', '#/territorio', ['Territorio', 'IGR-2A-1.0.0', 'San Bernardo',
     'tráfico de sustancias', 'corrupción', 'ponderada por confianza',
-    'densidad de sujetos obligados', 'Muy alto']],
+    'densidad de sujetos obligados', 'Muy alto',
+    // El mapa comunal es la portada territorial: su encuadre y su leyenda
+    // tienen que estar, o volvimos a mirar el país por región.
+    'Mapa comunal del IGR', 'Todo Chile', 'Ampliación', 'Región Metropolitana',
+    'Cada franja tiene su propia escala',
+    'Insulares, fuera del encuadre']],
   ['sectores', '#/sectores', ['Sectores obligados', 'Casas de Cambio', 'Notarios',
     'Vulnerabilidad', 'IPF medio', 'no contiene entidades más culpables',
     'sus insumos aún no están materializados']],
@@ -674,7 +679,10 @@ await page.waitForTimeout(600);
   await shot(page, `${OUT}/territorio-comuna.png`);
   const faltan = ['San Bernardo', 'Delito base directo', 'Economía criminal',
                   'Persistencia', 'Anomalía', 'en el país', 'no imputan nada',
-                  'confianza']
+                  'confianza',
+                  // La prensa comunal llega geoetiquetada desde el puente y
+                  // declara que situar una mención no imputa al territorio.
+                  'Prensa', 'no atribuye conducta al territorio']
     .filter((t) => !body.includes(t));
   if (faltan.length) { failed++; console.log(`FAIL detalle comunal: falta ${JSON.stringify(faltan)}`); }
   else console.log('ok   el detalle comunal descompone capas y componentes');

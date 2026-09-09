@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import type { TerritoryCommune, TerritoryDetail, TerritoryMap } from '../lib/contracts';
 import { Bars, Meter, OrderedDistribution } from '../components/charts';
 import { Badge, Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
 import { ChileMap } from '../components/ChileMap';
+import { pressForCommune, type PressCommuneResult } from '../lib/press';
 import { hrefFor } from '../lib/router';
 import { n, n1, rutFormat, titleCase } from '../lib/format';
 
@@ -384,6 +385,8 @@ function ComunaDetalle({
             </div>
           </Panel>
 
+          <PrensaComunal comuna={t.commune_name} />
+
           {data.sectores.length > 0 && (
             <Panel title="Sectores obligados presentes">
               <Bars
@@ -501,6 +504,68 @@ function MapLegend({ porNivel, comunas, onSelect }: {
         </div>
       )}
     </div>
+  );
+}
+
+/** Prensa que sitúa su mención en esta comuna.
+ *
+ *  El puente distingue la comuna que el texto marca de las que sólo nombra, y
+ *  aquí se mantiene esa distinción: una noticia que menciona la comuna de paso
+ *  no es una noticia sobre la comuna. Ninguna de las dos imputa nada al
+ *  territorio ni a quien esté domiciliado en él. */
+function PrensaComunal({ comuna }: { comuna: string }) {
+  const [estado, setEstado] = useState<PressCommuneResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    setEstado(null);
+    setError(null);
+    pressForCommune(comuna)
+      .then((r) => { if (vivo) setEstado(r); })
+      .catch((e: Error) => { if (vivo) setError(e.message); });
+    return () => { vivo = false; };
+  }, [comuna]);
+
+  const meta = estado
+    ? `${n(estado.resolved)} sitúan aquí · ${n(estado.mentioned)} la mencionan`
+    : undefined;
+
+  return (
+    <Panel title="Prensa" meta={meta}>
+      {error && <div className="note note-warn">{error}</div>}
+      {!error && !estado && <div className="note">Leyendo el puente de prensa…</div>}
+      {estado && !estado.bridgeHasGeo && (
+        <div className="note">
+          El puente de prensa aún no publica noticias geoetiquetadas. El corte vigente viaja
+          sin comuna, así que no hay prensa comunal que mostrar todavía.
+        </div>
+      )}
+      {estado && estado.bridgeHasGeo && estado.articles.length === 0 && (
+        <div className="note">Sin noticias que sitúen su mención en esta comuna.</div>
+      )}
+      {estado && estado.articles.length > 0 && (
+        <div className="timeline" style={{ marginTop: 4 }}>
+          {estado.articles.map((a) => (
+            <div className="tl-item" key={a.id} data-clase={a.basis === 'resuelta' ? 'hito' : 'prensa'}>
+              <div className="tl-when">
+                {a.date ? String(a.date).slice(0, 10) : 'sin fecha'} · {a.media ?? 'medio no informado'}
+                {a.basis === 'mencionada' && ' · sólo mencionada'}
+              </div>
+              <div className="tl-what">
+                {a.url
+                  ? <a href={a.url} target="_blank" rel="noreferrer noopener">{a.title}</a>
+                  : a.title}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="note">
+        Una mención en prensa es contexto abierto: no acredita delito ni identidad, y situarla
+        en la comuna no atribuye conducta al territorio.
+      </div>
+    </Panel>
   );
 }
 
