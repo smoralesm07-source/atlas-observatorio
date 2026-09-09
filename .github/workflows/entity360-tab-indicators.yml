@@ -1,0 +1,67 @@
+name: Entity 360 navigation refinement
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/entity360-tab-indicators.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply Entity 360 changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/views/EntityExpediente.tsx')
+          source = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str, label: str) -> None:
+              global source
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              source = source.replace(old, new, 1)
+
+          record_block = """function record(value: unknown): Record<string, unknown> {\n  return value && typeof value === 'object' && !Array.isArray(value)\n    ? value as Record<string, unknown>\n    : {};\n}\n\n"""
+          record_with_helper = record_block + """function hasRecordData(value: Record<string, unknown>): boolean {\n  return Object.values(value).some((item) => {\n    if (item == null || item === '') return false;\n    if (Array.isArray(item)) return item.length > 0;\n    if (typeof item === 'object') return Object.keys(item as Record<string, unknown>).length > 0;\n    return true;\n  });\n}\n\n"""
+          replace_once(record_block, record_with_helper, 'record helper insertion')
+
+          replace_once("  const [copied, setCopied] = useState(false);\n", "", 'copy state removal')
+
+          copy_block = """  const copyLink = async () => {\n    try {\n      await navigator.clipboard.writeText(window.location.href);\n      setCopied(true);\n      window.setTimeout(() => setCopied(false), 1400);\n    } catch {\n      setCopied(false);\n    }\n  };\n\n"""
+          replace_once(copy_block, "", 'copy function removal')
+
+          actions_block = """        <div className=\"entity360-actions\">\n          <button className=\"entity360-action\" onClick={() => void copyLink()}><Glyph name=\"copy\" /> {copied ? 'Enlace copiado' : 'Copiar enlace'}</button>\n        </div>\n\n"""
+          replace_once(actions_block, "", 'copy action removal')
+
+          score_line = """  const scorePct = Math.max(0, Math.min(100, Number(score ?? 0)));\n\n"""
+          tab_info = score_line + """  const tabHasData: Record<Tab, boolean> = {\n    resumen: false,\n    tributario: siiCoverage?.status === 'PRESENT' || hasRecordData(tax) || activities.length > 0 || history.length > 0,\n    uaf: uafCoverage?.status === 'PRESENT' || hasRecordData(uaf),\n    sanciones: sanctionCoverage?.status === 'PRESENT' || data.sanctions.length > 0,\n    compras: purchase?.status === 'PRESENT' || Number(purchase?.record_count ?? 0) > 0,\n    registros: osflCoverage?.status === 'PRESENT' || resCoverage?.status === 'PRESENT' || hasRecordData(osfl) || hasRecordData(res),\n    historico: timeline.length > 0,\n    fuentes: data.coverage.some((row) => row.status === 'PRESENT'),\n  };\n\n"""
+          replace_once(score_line, tab_info, 'tab availability map insertion')
+
+          old_tabs = """      <nav className=\"entity360-tabs\" aria-label=\"Secciones del expediente\">\n        {TABS.map((item) => <button key={item.id} data-active={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>)}\n      </nav>\n"""
+          new_tabs = """      <nav className=\"entity360-tabs\" aria-label=\"Secciones del expediente\">\n        {TABS.map((item) => (\n          <button\n            key={item.id}\n            data-active={tab === item.id}\n            data-has-info={tabHasData[item.id]}\n            title={tabHasData[item.id] ? 'Hay información disponible en esta sección' : undefined}\n            onClick={() => setTab(item.id)}\n          >\n            <span>{item.label}</span>\n            {tabHasData[item.id] && <i className=\"entity360-tab-data-dot\" aria-hidden=\"true\" />}\n          </button>\n        ))}\n      </nav>\n"""
+          replace_once(old_tabs, new_tabs, 'tab markup replacement')
+
+          path.write_text(source, encoding='utf-8')
+          PY
+      - name: Validate types
+        run: |
+          npm ci
+          npm run typecheck
+      - name: Commit refinement
+        run: |
+          rm .github/workflows/entity360-tab-indicators.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/views/EntityExpediente.tsx .github/workflows/entity360-tab-indicators.yml
+          git commit -m "Refine Entity 360 source navigation"
+          git push origin HEAD:main
