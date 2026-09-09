@@ -11,27 +11,16 @@ import { LenteReportabilidad } from './pulso/Reportabilidad';
 import { LenteRevision } from './pulso/Revision';
 import { LenteTerritorio } from './pulso/Territorio';
 import { LenteCiclo } from './pulso/Ciclo';
+import '../styles/pulso.css';
 
-/* EL PULSO
-   ────────
-   Primera pantalla del turno de un analista de inteligencia financiera o de un
-   fiscalizador UAF. La zona fija responde siempre lo mismo —de qué está hecho
-   el padrón y en qué estado registral está— y debajo el analista elige cuál de
-   las cuatro preguntas siguientes se está haciendo:
+/* PULSO · V4
+   ──────────
+   Síntesis operativa primero, profundidad después. El bloque superior adopta
+   la densidad de OSFL y Sanciones: cifras pequeñas, comparaciones compactas y
+   cada elemento como puerta de entrada. Las cuatro lentes conservan el trabajo
+   analítico profundo sin obligar a recorrer una portada sobredimensionada.
 
-     · Reportabilidad · cuánto reporta el universo obligado y quién lo sostiene.
-     · Revisión       · qué sujetos piden mirada hoy, y por qué cada uno.
-     · Territorio     · dónde operan y en qué entorno.
-     · Ciclo          · cómo entra y sale el padrón, y qué se ha sancionado.
-
-   La cobertura del padrón —quiénes deberían estar y no están— dejó de ser un
-   recuadro comprimido aquí y vive en su propia vista: esta pantalla sólo
-   publica su cifra ancla y la puerta.
-
-   Cada cifra es una puerta: se pincha y aparecen los nombres que la componen,
-   con su antecedente. Y cada cifra carga lo que no es —el estado ante el SII no
-   mide cumplimiento, el IGR describe la comuna y no al sujeto, la reportabilidad
-   es sectorial y jamás se atribuye a una entidad. */
+   Compras públicas queda deliberadamente fuera de esta superficie. */
 
 const LENSES: LensDef[] = [
   { id: 'reportabilidad', label: 'Reportabilidad', badge: '', hint: 'series publicadas y quién sostiene el volumen reportado' },
@@ -41,10 +30,6 @@ const LENSES: LensDef[] = [
 ];
 
 const LENS_STORAGE = 'atlas-obs-pulso-lente';
-
-/* El tono de un hallazgo curado llega como nombre de token, nunca como color.
-   Un valor fuera de esta lista se dibuja neutro en vez de inyectarse tal cual
-   en el estilo. */
 const TONOS = new Set([
   'accent', 'present', 'unknown', 'absent',
   'sig-critical', 'sig-high', 'sig-medium', 'sig-watch',
@@ -62,15 +47,10 @@ export function Pulso({
   const { data, error, loading, reload } = useRpc<UafPulse>('obs_uaf_pulse', {});
   const [cohort, setCohort] = useState<CohortRequest | null>(null);
   const [signalsOpen, setSignalsOpen] = useState(false);
-
-  /* La lente viaja en la URL para que un enlace abra la misma pantalla, y se
-     recuerda entre visitas. El cambio usa replaceState y no el hash: navegar
-     dispararía el scroll al tope y perdería el sitio donde se estaba leyendo. */
   const [activa, setActiva] = useState<UafLens>(() => lente ?? leerUltima() ?? 'reportabilidad');
 
   useEffect(() => {
     if (lente && lente !== activa) setActiva(lente);
-    // Sólo reacciona a la lente que trae la ruta, no a la elegida aquí.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lente]);
 
@@ -101,163 +81,249 @@ export function Pulso({
       : n(data.sanctions.eventos),
   }));
 
-  /* La lectura del corte se escribe, no se deduce. Si el snapshot no la trae,
-     la franja no se dibuja: un hallazgo automático de relleno diría con el
-     mismo énfasis algo que nadie revisó. */
   const lectura: UafPulseReading[] = (data.reading ?? []).slice().sort((a, b) => a.orden - b.orden);
 
+  const publishedRegistry = data.reporting?.nacional?.entidades_reportantes_total;
+  const trendPoints = (publishedRegistry?.puntos ?? [])
+    .filter((p) => /^\d{4}$/.test(p.periodo) && p.valor != null && Number.isFinite(Number(p.valor)))
+    .map((p) => ({ label: p.periodo, value: Number(p.valor) }))
+    .slice(-5);
+
+  const topSectors = data.by_sector
+    .slice()
+    .sort((a, b) => b.sujetos - a.sujetos)
+    .slice(0, 5);
+  const maxSector = Math.max(1, ...topSectors.map((s) => s.sujetos));
+
+  const topRegions = data.by_region
+    .slice()
+    .sort((a, b) => b.sujetos - a.sujetos)
+    .slice(0, 5);
+  const maxRegion = Math.max(1, ...topRegions.map((r) => r.sujetos));
+
+  const status = [
+    { key: 'active', label: 'Activos', value: u.activos, tone: 'var(--present)', cohort: 'ACTIVO' as const },
+    { key: 'terminated', label: 'Término de giro', value: u.terminados, tone: 'var(--sig-high)', cohort: 'TERMINO_GIRO' as const },
+    { key: 'unknown', label: 'Sin perfil SII', value: u.sin_perfil, tone: 'var(--unknown)', cohort: 'SIN_PERFIL_SII' as const },
+  ];
+
   return (
-    <div className="fade-in">
-      {/* ── 1. Banda de mando ─────────────────────────────────────────── */}
+    <div className="pulse-v4 fade-in">
+      {/* ── 1. Encabezado compacto ────────────────────────────────────── */}
       <header className="pulse-command">
         <div style={{ minWidth: 0 }}>
           <div className="pulse-kicker">Padrón UAF · Ley 19.913 · Chile</div>
           <h1>Pulso del universo obligado</h1>
           <p className="view-lede">
-            {n(u.total)} sujetos inscritos en el registro de la UAF, leídos contra su ciclo
-            de vida ante el SII, el territorio donde operan, la reportabilidad publicada de
-            su sector y su cruce con sanción, prensa, compras públicas y OSFL. Cada cifra
-            abre la lista de quiénes la componen.
+            {n(u.total)} sujetos inscritos, leídos contra su ciclo de vida ante el SII,
+            territorio, reportabilidad sectorial y cruces con sanciones, prensa y OSFL.
+            Cada cifra abre la lista que la compone.
           </p>
         </div>
 
         <div className="pulse-meta">
-          <span className="pulse-meta-item">
-            <i />
-            <b>Padrón operativo</b> 30-06-2026
-          </span>
-          <span className="pulse-meta-item">
-            <b>Reportabilidad</b> {data.reporting?.corte.periodo ?? '—'} · Informe Estadístico UAF
-          </span>
+          <span className="pulse-meta-item"><i /><b>Padrón operativo</b> 30-06-2026</span>
+          <span className="pulse-meta-item"><b>Reportabilidad</b> {data.reporting?.corte.periodo ?? '—'}</span>
           {u.trabajadores != null && (
-            <span className="pulse-meta-item">
-              <b>Escala declarada</b> {n(u.trabajadores)} trabajadores
-            </span>
+            <span className="pulse-meta-item"><b>Escala declarada</b> {n(u.trabajadores)} trabajadores</span>
           )}
           {data.snapshot && (
-            <span className="pulse-meta-item">
-              <b>Corte</b> {fecha(data.snapshot.published_at ?? data.snapshot.generated_at)}
-            </span>
+            <span className="pulse-meta-item"><b>Corte</b> {fecha(data.snapshot.published_at ?? data.snapshot.generated_at)}</span>
           )}
-        </div>
-
-        {/* Atajos de cohorte: el filtro no cambia el tablero, abre la lista.
-            Cambiar el tablero entero por un filtro haría perder el encuadre. */}
-        <div className="pulse-quick">
-          <span style={{ fontSize: 11, color: 'var(--ink-4)', alignSelf: 'center', marginRight: 4 }}>
-            Ir directo a
-          </span>
-          <QuickChip label="Todo el padrón" value={u.total} onClick={() => open({ cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' })} />
-          <QuickChip label="Con antecedente sancionatorio" value={c?.sancionados_con_antecedente ?? 0}
-            onClick={() => open({ cohort: 'SANCIONADO', title: 'Sujetos con antecedente sancionatorio', hint: 'con resumen y enlace a la resolución' })} />
-          <QuickChip label="Término de giro" value={u.terminados}
-            onClick={() => open({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro', hint: 'siguen inscritos en el registro UAF' })} />
-          <QuickChip label="IPF alta" value={u.ipf_alto}
-            onClick={() => open({ cohort: 'IPF_ALTO', title: 'Sujetos con IPF alta o muy alta' })} />
-          <QuickChip label="Sector sin ROS" value={t?.sujetos_en_silencio ?? 0}
-            onClick={() => open({ cohort: 'SECTOR_SIN_ROS', title: 'Sujetos en sectores sin ROS 2021-2025', hint: 'silencio agregado del sector, nunca del sujeto' })} />
-          <QuickChip label="Proveedores del Estado" value={c?.proveedores ?? 0}
-            onClick={() => open({ cohort: 'PROVEEDOR_ESTADO', title: 'Sujetos que son proveedores del Estado', hint: 'ventana de 12 meses' })} />
         </div>
       </header>
 
-      {/* ── 2. Composición del padrón ─────────────────────────────────── */}
+      {/* ── 2. Estado registral ───────────────────────────────────────── */}
       <div className="kpi-row">
         <Kpi
           label="Padrón inscrito" value={n(u.total)} tone="var(--accent)" glyph={<GlyphPadron />}
-          share={`${n(u.sectores_uaf)} sectores de la Ley 19.913`}
+          share={`${n(u.sectores_uaf)} sectores Ley 19.913`}
           foot={`${n(u.juridicas)} jurídicas · ${n(u.naturales)} naturales · ${n(u.organismos)} organismos`}
           onClick={() => open({ cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' })}
         />
         <Kpi
           label="Activos ante el SII" value={n(u.activos)} tone="var(--present)" glyph={<GlyphActivo />}
-          share={`${n1((u.activos / Math.max(1, u.total)) * 100)}% del padrón`}
-          foot={`${n1(u.antiguedad_media ?? 0)} años de actividad en promedio`}
+          share={`${n1(share(u.activos, u.total))}% del padrón`}
+          foot={`${n1(u.antiguedad_media ?? 0)} años de actividad promedio`}
           onClick={() => open({ cohort: 'ACTIVO', title: 'Sujetos activos ante el SII' })}
         />
         <Kpi
           label="Con término de giro" value={n(u.terminados)} tone="var(--sig-high)" glyph={<GlyphTermino />}
-          share={`${n1((u.terminados / Math.max(1, u.total)) * 100)}% del padrón`}
+          share={`${n1(share(u.terminados, u.total))}% del padrón`}
           foot="cerraron giro y siguen inscritos"
           onClick={() => open({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro', hint: 'siguen inscritos en el registro UAF' })}
         />
         <Kpi
           label="Sin perfil SII" value={n(u.sin_perfil)} tone="var(--unknown)" glyph={<GlyphSinPerfil />}
-          share={`${n1((u.sin_perfil / Math.max(1, u.total)) * 100)}% del padrón`}
+          share={`${n1(share(u.sin_perfil, u.total))}% del padrón`}
           foot="personas naturales · no es brecha registral"
           onClick={() => open({ cohort: 'SIN_PERFIL_SII', title: 'Sujetos sin perfil SII de persona jurídica', hint: 'personas naturales inscritas' })}
         />
         <Kpi
           label="Piden revisión" value={n(u.en_atencion)} tone="var(--sig-critical)" glyph={<GlyphAtencion />}
-          share={`${n1((u.en_atencion / Math.max(1, u.total)) * 100)}% con motivo declarado`}
+          share={`${n1(share(u.en_atencion, u.total))}% con motivo declarado`}
           foot={`${n(data.attention.motivos.length)} motivos, uno por sujeto`}
           onClick={() => open({ cohort: 'ATENCION', title: 'Sujetos que piden revisión', hint: 'ordenados por motivo de mayor precedencia' })}
         />
       </div>
 
-      {/* ── 3. La lectura del corte, escrita a mano ───────────────────── */}
-      {lectura.length > 0 && (
-        <>
-          <div className="pulse-reads-head">
+      {/* ── 3. Lectura del corte ──────────────────────────────────────── */}
+      {(lectura.length > 0 || (scr?.disponible && scr.corte)) && (
+        <section className="pulse-summary-shell">
+          <div className="pulse-summary-head">
             <h2>La lectura del corte</h2>
-            <span>
-              texto curado
-              {data.snapshot && <> · {fecha(data.snapshot.published_at ?? data.snapshot.generated_at)}</>}
-            </span>
+            <span>{data.snapshot ? fecha(data.snapshot.published_at ?? data.snapshot.generated_at) : 'corte vigente'}</span>
           </div>
-          <div className="pulse-reads">
+          <div className="pulse-summary-grid">
             {lectura.map((r) => (
               <button
                 key={r.orden}
-                className="pulse-read"
-                style={{ ['--read-tone' as string]: tono(r.tono) }}
+                className="pulse-summary-item"
+                style={{ ['--summary-tone' as string]: tono(r.tono) }}
                 onClick={r.destino ? () => elegir(r.destino as UafLens) : undefined}
                 disabled={!r.destino}
               >
-                <span className="pulse-read-big num">{r.cifra}</span>
-                <span className="pulse-read-title">{r.titulo}</span>
-                <span className="pulse-read-glosa">{r.glosa}</span>
-                {r.destino && (
-                  <span className="pulse-read-go">
-                    Ir a {LENSES.find((l) => l.id === r.destino)?.label ?? r.destino} →
-                  </span>
-                )}
+                <span className="pulse-summary-figure">{r.cifra}</span>
+                <span className="pulse-summary-title">{r.titulo}</span>
+                <span className="pulse-summary-copy">{r.glosa}</span>
+                {r.destino && <span className="pulse-summary-go">Profundizar →</span>}
+              </button>
+            ))}
+
+            {scr?.disponible && scr.corte && (
+              <button
+                className="pulse-summary-item"
+                style={{ ['--summary-tone' as string]: 'var(--sig-high)' }}
+                onClick={() => onNavigate(hrefFor({ view: 'cobertura' }))}
+              >
+                <span className="pulse-summary-figure">{n(scr.corte.universo_declarado)}</span>
+                <span className="pulse-summary-title">Universo observable fuera del padrón</span>
+                <span className="pulse-summary-copy">
+                  Equivale a {n1(scr.corte.universo_declarado / Math.max(1, u.total))} veces el padrón; un giro alcanzado no prueba obligación de inscripción.
+                </span>
+                <span className="pulse-summary-go">Abrir Cobertura →</span>
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── 4. Panorama analítico compacto ───────────────────────────── */}
+      <div className="pulse-overview-grid">
+        <MiniPanel title="Evolución publicada del padrón" action="Serie →" onAction={() => elegir('reportabilidad')}>
+          {trendPoints.length > 1 ? (
+            <>
+              <MiniLine points={trendPoints} />
+              <p className="pulse-mini-note">
+                Serie del Informe Estadístico UAF; no reconstruye altas y bajas del registro operativo.
+              </p>
+            </>
+          ) : <div className="pulse-mini-empty">Sin serie histórica publicada en este corte.</div>}
+        </MiniPanel>
+
+        <MiniPanel title="Top 5 sectores" meta="por nº de sujetos" action="Ver análisis →" onAction={() => elegir('ciclo')}>
+          <div className="pulse-rank-list">
+            {topSectors.map((s) => (
+              <button
+                key={s.sector}
+                className="pulse-rank-row"
+                onClick={() => open({ cohort: 'SECTOR', value: s.sector, title: s.sector })}
+                title={titleCase(s.sector)}
+              >
+                <span className="pulse-rank-name">{titleCase(s.sector)}</span>
+                <span className="pulse-rank-track"><i style={{ width: `${(s.sujetos / maxSector) * 100}%` }} /></span>
+                <span className="pulse-rank-value num">{n(s.sujetos)}</span>
               </button>
             ))}
           </div>
-        </>
-      )}
+          <p className="pulse-mini-note">Selecciona un sector para abrir sus sujetos.</p>
+        </MiniPanel>
 
-      {/* ── 4. Puerta a la cobertura del padrón ───────────────────────── */}
-      {scr?.disponible && scr.corte && (
-        <button className="cov-gate" onClick={() => onNavigate(hrefFor({ view: 'cobertura' }))}>
-          <span className="cov-gate-fig">
-            <b className="num">{n(scr.corte.universo_declarado)}</b>
-            <em>fuera del padrón</em>
-          </span>
-          <span className="cov-gate-body">
-            <span className="cov-gate-title">
-              El universo observable supera al padrón por{' '}
-              {n1(scr.corte.universo_declarado / Math.max(1, u.total))} veces
-            </span>
-            <span className="cov-gate-lede">
-              RUT que el SII observa con un giro alcanzado por la Ley 19.913 y que no figuran
-              en el registro de la UAF. Declarar un giro alcanzado no prueba que la entidad
-              reúna los elementos que activan la obligación de inscribirse.
-            </span>
-            {scr.totales && (
-              <span className="cov-gate-mini">
-                <span><b className="num">{n(scr.totales.universo_riesgo_alto ?? 0)}</b> de códigos con riesgo alto de falso positivo</span>
-                <span><b className="num">{n(scr.totales.sectores)}</b> sectores con brecha medida</span>
-                <span><b className="num">{n(scr.totales.sujetos_otro_modo)}</b> inscritos que no admiten screening por giro</span>
+        <MiniPanel title="Distribución por estado" action="Ciclo →" onAction={() => elegir('ciclo')}>
+          <div className="pulse-status-total">{n(u.total)}</div>
+          <div className="pulse-status-track" aria-label="Distribución del padrón por estado ante el SII">
+            {status.map((s) => (
+              <span
+                key={s.key}
+                className="pulse-status-segment"
+                data-state={s.key}
+                style={{ width: `${share(s.value, u.total)}%` }}
+                title={`${s.label}: ${n(s.value)}`}
+              >
+                {share(s.value, u.total) >= 8 ? `${n1(share(s.value, u.total))}%` : ''}
               </span>
-            )}
-          </span>
-          <span className="cov-gate-cta">Abrir Cobertura →</span>
-        </button>
-      )}
+            ))}
+          </div>
+          <div className="pulse-status-legend">
+            {status.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => open({ cohort: s.cohort, title: s.label === 'Activos' ? 'Sujetos activos ante el SII' : s.label === 'Término de giro' ? 'Sujetos con término de giro' : 'Sujetos sin perfil SII de persona jurídica' })}
+              >
+                <i style={{ background: s.tone }} />
+                <span>{s.label}</span>
+                <b>{n(s.value)}</b>
+              </button>
+            ))}
+          </div>
+        </MiniPanel>
 
-      {/* ── 5. Las cuatro lentes ──────────────────────────────────────── */}
+        <MiniPanel title="Distribución territorial" action="Territorio →" onAction={() => elegir('territorio')}>
+          <div className="pulse-rank-list">
+            {topRegions.map((r) => (
+              <button
+                key={r.region}
+                className="pulse-rank-row"
+                onClick={() => open({ cohort: 'REGION', value: r.region, title: `Sujetos obligados en ${r.region}` })}
+                title={r.region}
+              >
+                <span className="pulse-rank-name">{r.region}</span>
+                <span className="pulse-rank-track"><i style={{ width: `${(r.sujetos / maxRegion) * 100}%` }} /></span>
+                <span className="pulse-rank-value num">{n(r.sujetos)}</span>
+              </button>
+            ))}
+          </div>
+          <p className="pulse-mini-note">{n(u.con_territorio)} sujetos con territorio observado.</p>
+        </MiniPanel>
+      </div>
+
+      {/* ── 5. Cruces relevantes, sin compras públicas ───────────────── */}
+      <div className="pulse-crosscuts">
+        <CrossTile
+          label="Antecedentes sancionatorios"
+          detail={`${n(c?.antecedentes_sancion ?? 0)} resoluciones observadas`}
+          value={c?.sancionados_con_antecedente ?? 0}
+          icon="S" tone="var(--sig-critical)"
+          onClick={() => open({ cohort: 'SANCIONADO', title: 'Sujetos con antecedente sancionatorio', hint: 'con resumen y enlace a la resolución' })}
+        />
+        <CrossTile
+          label="Figuran en prensa"
+          detail={`${n(c?.antecedentes_prensa ?? 0)} menciones asociadas`}
+          value={c?.prensa ?? 0}
+          icon="P" tone="var(--sig-watch)"
+          onClick={() => open({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })}
+        />
+        <CrossTile
+          label="Cruce con OSFL"
+          detail={`${n1(share(c?.osfl ?? 0, u.total))}% del padrón`}
+          value={c?.osfl ?? 0}
+          icon="O" tone="var(--accent)"
+          onClick={() => open({ cohort: 'OSFL', title: 'Sujetos obligados que son OSFL' })}
+        />
+        <CrossTile
+          label="Señales de patrón"
+          detail={`${n(c?.senales_totales ?? 0)} señales activas sobre el padrón`}
+          value={c?.con_senal ?? 0}
+          icon="!" tone="var(--sig-medium)"
+          onClick={() => open({ cohort: 'CON_SENAL', title: 'Sujetos con señales de patrón' })}
+        />
+      </div>
+
+      {/* ── 6. Profundización ─────────────────────────────────────────── */}
+      <div className="pulse-depth-head">
+        <h2>Profundizar análisis</h2>
+        <p>La síntesis no reemplaza el detalle: selecciona una lente para abrir la evidencia y sus cohortes.</p>
+      </div>
       <LensBar lenses={lenses} active={activa} onPick={elegir} />
 
       <LensPanel id="reportabilidad" active={activa}>
@@ -273,27 +339,17 @@ export function Pulso({
         <LenteCiclo data={data} onCohort={open} />
       </LensPanel>
 
-      {/* ── 6. Señales de patrón, replegadas ──────────────────────────── */}
-      <div style={{ margin: '16px 0' }}>
-        <button
-          className="btn"
-          style={{ width: '100%', justifyContent: 'space-between' }}
-          onClick={() => setSignalsOpen((v) => !v)}
-        >
-          <span>
-            Señales de patrón sobre el padrón · <b className="num">{n(c?.con_senal ?? 0)}</b> sujetos
-            con al menos una
-          </span>
-          <span style={{ color: 'var(--ink-4)' }}>{signalsOpen ? 'Replegar ▲' : 'Desplegar ▼'}</span>
-        </button>
-      </div>
-      {signalsOpen && <SignalsPanel onNavigate={onNavigate} />}
+      <button className="pulse-signal-toggle" onClick={() => setSignalsOpen((v) => !v)}>
+        <span>Señales de patrón · <b className="num">{n(c?.con_senal ?? 0)}</b> sujetos con al menos una</span>
+        <em>{signalsOpen ? 'Replegar ▲' : 'Desplegar ▼'}</em>
+      </button>
+      {signalsOpen && <div style={{ marginTop: 8 }}><SignalsPanel onNavigate={onNavigate} /></div>}
 
       <Semantics>
-        <strong>Qué significa este tablero.</strong> {data.semantics}{' '}
+        <strong>Cómo leer este Pulso.</strong>{' '}
         {data.coverage.uaf_registration_note}{' '}
         {data.coverage.denominator_note}{' '}
-        {data.coverage.supplier_cap_note}{' '}
+        {data.coverage.sanction_note}{' '}
         {data.coverage.press_note}
       </Semantics>
 
@@ -320,18 +376,13 @@ function leerUltima(): UafLens | null {
   }
 }
 
-/* ─────────────────────────────────────────────────────────── piezas */
-
-function QuickChip({ label, value, onClick }: { label: string; value: number; onClick: () => void }) {
-  return (
-    <button className="chip" onClick={onClick}>
-      {label} <b>{n(value)}</b>
-    </button>
-  );
+function share(value: number, total: number) {
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, (value / total) * 100));
 }
 
 function Kpi({
-  label, value, share, foot, tone, glyph, onClick,
+  label, value, share: proportion, foot, tone, glyph, onClick,
 }: {
   label: string; value: string; share?: string; foot?: string;
   tone: string; glyph: ReactNode; onClick: () => void;
@@ -343,14 +394,78 @@ function Kpi({
         <span className="kpi-glyph">{glyph}</span>
       </div>
       <div className="kpi-value num" style={{ color: tone }}>{value}</div>
-      {share && <div className="kpi-share">{share}</div>}
+      {proportion && <div className="kpi-share">{proportion}</div>}
       {foot && <div className="kpi-foot">{foot}</div>}
     </button>
   );
 }
 
-/** Las señales sólo se consultan cuando el analista las pide: hasta entonces
- *  no se gasta una llamada ni espacio de pantalla en ellas. */
+function MiniPanel({
+  title, meta, action, onAction, children,
+}: {
+  title: string; meta?: string; action?: string; onAction?: () => void; children: ReactNode;
+}) {
+  return (
+    <section className="pulse-mini-panel">
+      <div className="pulse-mini-head">
+        <h3>{title}</h3>
+        {onAction && action ? (
+          <button className="pulse-mini-action" onClick={onAction}>{action}</button>
+        ) : meta ? <span className="pulse-mini-meta">{meta}</span> : null}
+      </div>
+      {meta && onAction && <div style={{ padding: '5px 10px 0', fontSize: 8.8, color: 'var(--ink-4)' }}>{meta}</div>}
+      <div className="pulse-mini-body">{children}</div>
+    </section>
+  );
+}
+
+function MiniLine({ points }: { points: { label: string; value: number }[] }) {
+  const W = 420;
+  const H = 128;
+  const PX = 26;
+  const TOP = 22;
+  const BOTTOM = 22;
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(1, max - min);
+  const x = (i: number) => PX + i * ((W - PX * 2) / Math.max(1, points.length - 1));
+  const y = (value: number) => TOP + (H - TOP - BOTTOM) * (1 - (value - min) / span);
+  const path = points.map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ');
+  const area = `${path} L ${x(points.length - 1).toFixed(1)} ${(H - BOTTOM).toFixed(1)} L ${x(0).toFixed(1)} ${(H - BOTTOM).toFixed(1)} Z`;
+
+  return (
+    <svg className="pulse-trend-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Evolución publicada del padrón UAF">
+      <line className="pulse-trend-grid" x1={PX} x2={W - PX} y1={H - BOTTOM} y2={H - BOTTOM} />
+      <line className="pulse-trend-grid" x1={PX} x2={W - PX} y1={TOP + (H - TOP - BOTTOM) / 2} y2={TOP + (H - TOP - BOTTOM) / 2} />
+      <path className="pulse-trend-area" d={area} />
+      <path className="pulse-trend-path" d={path} />
+      {points.map((p, i) => (
+        <g key={`${p.label}-${i}`}>
+          <circle className="pulse-trend-dot" cx={x(i)} cy={y(p.value)} r="3.5" />
+          <text className="pulse-trend-value" x={x(i)} y={Math.max(10, y(p.value) - 9)}>{n(p.value)}</text>
+          <text className="pulse-trend-label" x={x(i)} y={H - 5}>{p.label}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function CrossTile({
+  label, detail, value, icon, tone, onClick,
+}: {
+  label: string; detail: string; value: number; icon: string; tone: string; onClick: () => void;
+}) {
+  return (
+    <button className="pulse-cross-tile" style={{ ['--cross-tone' as string]: tone }} onClick={onClick}>
+      <span className="pulse-cross-icon">{icon}</span>
+      <span className="pulse-cross-copy"><b>{label}</b><small>{detail}</small></span>
+      <span className="pulse-cross-value">{n(value)}</span>
+    </button>
+  );
+}
+
+/** Las señales sólo se consultan cuando el analista las pide. */
 function SignalsPanel({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const { data, error, loading, reload } = useRpc<Pulse>('obs_pulse', {});
 
@@ -387,8 +502,7 @@ function SignalsPanel({ onNavigate }: { onNavigate: (hash: string) => void }) {
   );
 }
 
-/* Glifos de 16px. Existen para que el ojo distinga las cinco tarjetas sin
-   leerlas; ninguno codifica información que el texto no diga. */
+/* Glifos pequeños para identificar estado sin aumentar la superficie. */
 const G = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 const GlyphPadron = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden {...G}>
