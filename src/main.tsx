@@ -4,6 +4,7 @@ import App from './App';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
+import './styles/territorio-map.css';
 import './styles/entity-expediente.css';
 import './styles/ui-fixes.css';
 
