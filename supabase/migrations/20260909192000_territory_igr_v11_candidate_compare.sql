@@ -77,8 +77,7 @@ begin
     return -1;
   end if;
 
-  -- Reemplazo atómico lógico: sólo se borra el corte anterior después de
-  -- validar que el artefacto candidato tiene forma y cobertura plausibles.
+  -- Sólo se reemplaza el corte anterior después de validar forma y cobertura.
   delete from public.obs_territory_igr_candidate;
 
   insert into public.obs_territory_igr_candidate (
@@ -177,10 +176,10 @@ as $$
       count(*) filter (where vigente_level is distinct from candidate_level)::int as cambios_nivel_comparativo,
       round(corr(vigente_score::double precision, candidate_score::double precision)::numeric, 4) as correlacion_score,
       round(corr(vigente_rank::double precision, candidate_rank::double precision)::numeric, 4) as correlacion_ranking,
-      round(corr(vigente_score::double precision, ln(population::double precision))
-        filter (where population > 0)::numeric, 4) as sesgo_poblacion_vigente,
-      round(corr(candidate_score::double precision, ln(population::double precision))
-        filter (where population > 0)::numeric, 4) as sesgo_poblacion_candidate,
+      round((corr(vigente_score::double precision, ln(population::double precision))
+        filter (where population > 0))::numeric, 4) as sesgo_poblacion_vigente,
+      round((corr(candidate_score::double precision, ln(population::double precision))
+        filter (where population > 0))::numeric, 4) as sesgo_poblacion_candidate,
       max(candidate_refreshed_at) as refreshed_at
     from ranked
   )
@@ -296,10 +295,15 @@ as $$
       'agregacion_regional', 'media comunal simple; cobertura metodológica se publica aparte',
       'quality_note', 'El 86% del IGR v1.0 es cobertura metodológica del catálogo materializado, no confianza estadística comunal.',
       'cobertura_delitos_base', jsonb_build_object(
-        'estado', 'DRUG_DOMINANT',
+        'estado', 'DRUG_FAMILY_FALLBACK',
         'materializadas', jsonb_build_array(
-          'tráfico de sustancias', 'microtráfico', 'elaboración o producción'),
+          'familia agregada Delitos asociados a drogas (fallback)',
+          'receptación', 'robo de vehículo motorizado', 'robo violento de vehículo motorizado',
+          'homicidios/femicidios', 'robos con violencia o intimidación',
+          'lesiones graves o gravísimas', 'amenazas', 'desórdenes públicos'),
         'no_materializadas', jsonb_build_array(
+          'desagregación tráfico / microtráfico / elaboración-producción',
+          'comercio ilegal', 'abigeato', 'porte/posesión de armas o explosivos',
           'fraude y estafa', 'corrupción', 'delitos económicos y financieros',
           'contrabando', 'crimen organizado')),
       'excluido_del_indice', jsonb_build_array(
