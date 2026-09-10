@@ -36,7 +36,7 @@ export function LenteReportabilidad({
   onCohort: (req: CohortRequest) => void;
 }) {
   const [serie, setSerie] = useState(SERIES[0].key);
-  const [orden, setOrden] = useState<'padron' | 'intensidad' | 'volumen'>('padron');
+  const [orden, setOrden] = useState<'padron' | 'intensidad' | 'volumen'>('volumen');
 
   const rep = data.reporting;
   const sectores = useMemo(() => ordenarSectores(rep?.sectores ?? [], orden), [rep, orden]);
@@ -149,17 +149,17 @@ export function LenteReportabilidad({
         pad={false}
         actions={
           <div className="seg">
-            <button data-on={orden === 'padron'} onClick={() => setOrden('padron')}>Tamaño del padrón</button>
-            <button data-on={orden === 'intensidad'} onClick={() => setOrden('intensidad')}>Intensidad</button>
             <button data-on={orden === 'volumen'} onClick={() => setOrden('volumen')}>Volumen ROS</button>
+            <button data-on={orden === 'intensidad'} onClick={() => setOrden('intensidad')}>Intensidad</button>
+            <button data-on={orden === 'padron'} onClick={() => setOrden('padron')}>Tamaño del padrón</button>
           </div>
         }
       >
         <div style={{ padding: '4px 0 0' }}>
           <div className="rep-row rep-head">
             <span>Sector obligado</span>
-            <span className="rep-hide">Padrón</span>
             <span>ROS 2025</span>
+            <span className="rep-hide">Padrón</span>
             <span className="rep-hide">Δ 25/24</span>
             <span className="rep-hide">ICR</span>
           </div>
@@ -232,14 +232,14 @@ function SectorReportRow({
         {silencio && <span className="motive" data-m="SECTOR_SIN_ROS"><i />sin ROS 5 años</span>}
         {sinInscritos && <span className="badge badge-absent">sin inscritos</span>}
       </span>
-      <span className="rep-hide num" style={{ textAlign: 'right', fontSize: 12, color: s.padron_sujetos == null ? 'var(--ink-4)' : 'var(--ink-2)' }}>
-        {s.padron_sujetos == null ? '—' : n(s.padron_sujetos)}
-      </span>
       <span className="num" style={{ textAlign: 'right', fontSize: 12, fontWeight: 620 }}>
         {s.ros_2025 == null ? '—' : n(s.ros_2025)}
         <em style={{ display: 'block', fontStyle: 'normal', fontSize: 10, color: 'var(--ink-4)', fontWeight: 400 }}>
           {intensidad == null ? 'sin corte' : `${n1(intensidad)} / 100 SO`}
         </em>
+      </span>
+      <span className="rep-hide num" style={{ textAlign: 'right', fontSize: 12, color: s.padron_sujetos == null ? 'var(--ink-4)' : 'var(--ink-2)' }}>
+        {s.padron_sujetos == null ? '—' : n(s.padron_sujetos)}
       </span>
       <span
         className="rep-hide num"
