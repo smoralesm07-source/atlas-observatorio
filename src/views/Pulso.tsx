@@ -167,125 +167,134 @@ export function Pulso({
         />
       </div>
 
-      {/* ── 3. Lectura del corte ──────────────────────────────────────── */}
-      {(lectura.length > 0 || (scr?.disponible && scr.corte)) && (
-        <section className="pulse-summary-shell">
-          <div className="pulse-summary-head">
+      {/* ── 3. Lectura del corte + panorama reorganizado ─────────────── */}
+      <section className="pulse-briefing">
+        <div className="pulse-briefing-head">
+          <div>
             <h2>La lectura del corte</h2>
-            <span>{data.snapshot ? fecha(data.snapshot.published_at ?? data.snapshot.generated_at) : 'corte vigente'}</span>
+            <p>Una síntesis del corte junto a las dos distribuciones que mejor lo contextualizan.</p>
           </div>
-          <div className="pulse-summary-grid">
-            {lectura.map((r) => (
-              <button
-                key={r.orden}
-                className="pulse-summary-item"
-                style={{ ['--summary-tone' as string]: tono(r.tono) }}
-                onClick={r.destino ? () => elegir(r.destino as UafLens) : undefined}
-                disabled={!r.destino}
-              >
-                <span className="pulse-summary-figure">{r.cifra}</span>
-                <span className="pulse-summary-title">{r.titulo}</span>
-                <span className="pulse-summary-copy">{r.glosa}</span>
-                {r.destino && <span className="pulse-summary-go">Profundizar →</span>}
-              </button>
-            ))}
+          <span>{data.snapshot ? fecha(data.snapshot.published_at ?? data.snapshot.generated_at) : 'corte vigente'}</span>
+        </div>
 
-            {scr?.disponible && scr.corte && (
-              <button
-                className="pulse-summary-item"
-                style={{ ['--summary-tone' as string]: 'var(--sig-high)' }}
-                onClick={() => onNavigate(hrefFor({ view: 'cobertura' }))}
-              >
-                <span className="pulse-summary-figure">{n(scr.corte.universo_declarado)}</span>
-                <span className="pulse-summary-title">Universo observable fuera del padrón</span>
-                <span className="pulse-summary-copy">
-                  Equivale a {n1(scr.corte.universo_declarado / Math.max(1, u.total))} veces el padrón; un giro alcanzado no prueba obligación de inscripción.
+        <div className="pulse-briefing-top">
+          <div className="pulse-briefing-insight" aria-label="Lectura principal del corte">
+            <div className="pulse-summary-grid">
+              {scr?.disponible && scr.corte && (
+                <button
+                  className="pulse-summary-item pulse-summary-primary"
+                  style={{ ['--summary-tone' as string]: 'var(--sig-high)' }}
+                  onClick={() => onNavigate(hrefFor({ view: 'cobertura' }))}
+                >
+                  <span className="pulse-summary-figure">{n(scr.corte.universo_declarado)}</span>
+                  <span className="pulse-summary-title">Universo observable fuera del padrón</span>
+                  <span className="pulse-summary-copy">
+                    Equivale a {n1(scr.corte.universo_declarado / Math.max(1, u.total))} veces el padrón; un giro alcanzado no prueba obligación de inscripción.
+                  </span>
+                  <span className="pulse-summary-go">Abrir Cobertura →</span>
+                </button>
+              )}
+
+              {lectura.map((r) => (
+                <button
+                  key={r.orden}
+                  className="pulse-summary-item"
+                  style={{ ['--summary-tone' as string]: tono(r.tono) }}
+                  onClick={r.destino ? () => elegir(r.destino as UafLens) : undefined}
+                  disabled={!r.destino}
+                >
+                  <span className="pulse-summary-figure">{r.cifra}</span>
+                  <span className="pulse-summary-title">{r.titulo}</span>
+                  <span className="pulse-summary-copy">{r.glosa}</span>
+                  {r.destino && <span className="pulse-summary-go">Profundizar →</span>}
+                </button>
+              ))}
+
+              {!lectura.length && !(scr?.disponible && scr.corte) && (
+                <div className="pulse-mini-empty">Sin lectura curada publicada para este corte.</div>
+              )}
+            </div>
+          </div>
+
+          <MiniPanel title="Distribución por estado" action="Ciclo →" onAction={() => elegir('ciclo')}>
+            <div className="pulse-status-total">{n(u.total)}</div>
+            <div className="pulse-status-track" aria-label="Distribución del padrón por estado ante el SII">
+              {status.map((s) => (
+                <span
+                  key={s.key}
+                  className="pulse-status-segment"
+                  data-state={s.key}
+                  style={{ width: `${share(s.value, u.total)}%` }}
+                  title={`${s.label}: ${n(s.value)}`}
+                >
+                  {share(s.value, u.total) >= 8 ? `${n1(share(s.value, u.total))}%` : ''}
                 </span>
-                <span className="pulse-summary-go">Abrir Cobertura →</span>
-              </button>
-            )}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+            <div className="pulse-status-legend">
+              {status.map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => open({ cohort: s.cohort, title: s.label === 'Activos' ? 'Sujetos activos ante el SII' : s.label === 'Término de giro' ? 'Sujetos con término de giro' : 'Sujetos sin perfil SII de persona jurídica' })}
+                >
+                  <i style={{ background: s.tone }} />
+                  <span>{s.label}</span>
+                  <b>{n(s.value)}</b>
+                </button>
+              ))}
+            </div>
+          </MiniPanel>
 
-      {/* ── 4. Panorama analítico compacto ───────────────────────────── */}
-      <div className="pulse-overview-grid">
-        <MiniPanel title="Evolución publicada del padrón" action="Serie →" onAction={() => elegir('reportabilidad')}>
-          {trendPoints.length > 1 ? (
-            <>
-              <MiniLine points={trendPoints} />
-              <p className="pulse-mini-note">
-                Serie del Informe Estadístico UAF; no reconstruye altas y bajas del registro operativo.
-              </p>
-            </>
-          ) : <div className="pulse-mini-empty">Sin serie histórica publicada en este corte.</div>}
-        </MiniPanel>
+          <MiniPanel title="Distribución territorial" action="Territorio →" onAction={() => elegir('territorio')}>
+            <div className="pulse-rank-list">
+              {topRegions.map((r) => (
+                <button
+                  key={r.region}
+                  className="pulse-rank-row"
+                  onClick={() => open({ cohort: 'REGION', value: r.region, title: `Sujetos obligados en ${r.region}` })}
+                  title={r.region}
+                >
+                  <span className="pulse-rank-name">{r.region}</span>
+                  <span className="pulse-rank-track"><i style={{ width: `${(r.sujetos / maxRegion) * 100}%` }} /></span>
+                  <span className="pulse-rank-value num">{n(r.sujetos)}</span>
+                </button>
+              ))}
+            </div>
+            <p className="pulse-mini-note">{n(u.con_territorio)} sujetos con territorio observado.</p>
+          </MiniPanel>
+        </div>
 
-        <MiniPanel title="Top 5 sectores" meta="por nº de sujetos" action="Ver análisis →" onAction={() => elegir('ciclo')}>
-          <div className="pulse-rank-list">
-            {topSectors.map((s) => (
-              <button
-                key={s.sector}
-                className="pulse-rank-row"
-                onClick={() => open({ cohort: 'SECTOR', value: s.sector, title: s.sector })}
-                title={titleCase(s.sector)}
-              >
-                <span className="pulse-rank-name">{titleCase(s.sector)}</span>
-                <span className="pulse-rank-track"><i style={{ width: `${(s.sujetos / maxSector) * 100}%` }} /></span>
-                <span className="pulse-rank-value num">{n(s.sujetos)}</span>
-              </button>
-            ))}
-          </div>
-          <p className="pulse-mini-note">Selecciona un sector para abrir sus sujetos.</p>
-        </MiniPanel>
+        <div className="pulse-briefing-bottom">
+          <MiniPanel title="Evolución publicada del padrón" action="Serie →" onAction={() => elegir('reportabilidad')}>
+            {trendPoints.length > 1 ? (
+              <>
+                <MiniLine points={trendPoints} />
+                <p className="pulse-mini-note">
+                  Serie del Informe Estadístico UAF; no reconstruye altas y bajas del registro operativo.
+                </p>
+              </>
+            ) : <div className="pulse-mini-empty">Sin serie histórica publicada en este corte.</div>}
+          </MiniPanel>
 
-        <MiniPanel title="Distribución por estado" action="Ciclo →" onAction={() => elegir('ciclo')}>
-          <div className="pulse-status-total">{n(u.total)}</div>
-          <div className="pulse-status-track" aria-label="Distribución del padrón por estado ante el SII">
-            {status.map((s) => (
-              <span
-                key={s.key}
-                className="pulse-status-segment"
-                data-state={s.key}
-                style={{ width: `${share(s.value, u.total)}%` }}
-                title={`${s.label}: ${n(s.value)}`}
-              >
-                {share(s.value, u.total) >= 8 ? `${n1(share(s.value, u.total))}%` : ''}
-              </span>
-            ))}
-          </div>
-          <div className="pulse-status-legend">
-            {status.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => open({ cohort: s.cohort, title: s.label === 'Activos' ? 'Sujetos activos ante el SII' : s.label === 'Término de giro' ? 'Sujetos con término de giro' : 'Sujetos sin perfil SII de persona jurídica' })}
-              >
-                <i style={{ background: s.tone }} />
-                <span>{s.label}</span>
-                <b>{n(s.value)}</b>
-              </button>
-            ))}
-          </div>
-        </MiniPanel>
-
-        <MiniPanel title="Distribución territorial" action="Territorio →" onAction={() => elegir('territorio')}>
-          <div className="pulse-rank-list">
-            {topRegions.map((r) => (
-              <button
-                key={r.region}
-                className="pulse-rank-row"
-                onClick={() => open({ cohort: 'REGION', value: r.region, title: `Sujetos obligados en ${r.region}` })}
-                title={r.region}
-              >
-                <span className="pulse-rank-name">{r.region}</span>
-                <span className="pulse-rank-track"><i style={{ width: `${(r.sujetos / maxRegion) * 100}%` }} /></span>
-                <span className="pulse-rank-value num">{n(r.sujetos)}</span>
-              </button>
-            ))}
-          </div>
-          <p className="pulse-mini-note">{n(u.con_territorio)} sujetos con territorio observado.</p>
-        </MiniPanel>
-      </div>
+          <MiniPanel title="Top 5 sectores" meta="por nº de sujetos" action="Ver análisis →" onAction={() => elegir('ciclo')}>
+            <div className="pulse-rank-list">
+              {topSectors.map((s) => (
+                <button
+                  key={s.sector}
+                  className="pulse-rank-row"
+                  onClick={() => open({ cohort: 'SECTOR', value: s.sector, title: s.sector })}
+                  title={titleCase(s.sector)}
+                >
+                  <span className="pulse-rank-name">{titleCase(s.sector)}</span>
+                  <span className="pulse-rank-track"><i style={{ width: `${(s.sujetos / maxSector) * 100}%` }} /></span>
+                  <span className="pulse-rank-value num">{n(s.sujetos)}</span>
+                </button>
+              ))}
+            </div>
+            <p className="pulse-mini-note">Selecciona un sector para abrir sus sujetos.</p>
+          </MiniPanel>
+        </div>
+      </section>
 
       {/* ── 5. Cruces relevantes, sin compras públicas ───────────────── */}
       <div className="pulse-crosscuts">
