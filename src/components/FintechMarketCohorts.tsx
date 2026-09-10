@@ -57,7 +57,7 @@ const COHORT_ORDER = [
 ];
 
 const METRIC_ORDER = [
-  'USERS','CLIENTS','BUSINESS_CLIENTS','MERCHANTS','INSURED_PERSONS',
+  'USERS','CLIENTS','BUSINESS_CLIENTS','MERCHANTS','INSURED_PERSONS','APP_DOWNLOADS_COUNT',
   'TRANSACTIONS_MONTHLY_COUNT','TRANSACTIONS_QUARTERLY_COUNT','TRANSACTIONS_ANNUAL_COUNT',
   'VERIFICATIONS_24H_COUNT','FINANCINGS_COUNT','PROJECTS_FINANCED_COUNT',
   'PROCESSED_VOLUME_MONTHLY_USD','ANNUAL_TRANSACTION_VOLUME_USD','ANNUALIZED_TRANSACTION_VOLUME_USD_EST',
@@ -143,12 +143,12 @@ function formatNumber(value:number|null|undefined) { return value==null ? 'n/d' 
 function compact(value:number) { return new Intl.NumberFormat('es-CL',{notation:'compact',maximumFractionDigits:1}).format(value); }
 function formatMetricValue(row:LeaderRow) {
   if (row.currency==='USD' || row.unit==='USD') return `USD ${compact(row.value_numeric)}`;
-  const suffix:Record<string,string>={ users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',transactions:' tx',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',countries:' países',payment_methods:' medios',connections:' conexiones',agreements:' acuerdos',providers:' prestadores',policies:' pólizas',workers:' trabajadores' };
+  const suffix:Record<string,string>={ users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',countries:' países',payment_methods:' medios',connections:' conexiones',agreements:' acuerdos',providers:' prestadores',policies:' pólizas',workers:' trabajadores' };
   return `${compact(row.value_numeric)}${suffix[row.unit ?? ''] ?? (row.unit ? ` ${row.unit}` : '')}`;
 }
 function shortMetric(code:string,label:string) {
   const map:Record<string,string>={
-    USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',
+    USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',APP_DOWNLOADS_COUNT:'Descargas app',
     TRANSACTIONS_MONTHLY_COUNT:'Transacciones / mes',TRANSACTIONS_QUARTERLY_COUNT:'Transacciones / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Transacciones / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',
     PROCESSED_VOLUME_MONTHLY_USD:'Volumen procesado / mes',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',
     COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',API_CONNECTIONS:'Conexiones API',AGREEMENTS_COUNT:'Acuerdos de red',HEALTH_PROVIDERS_NETWORK:'Red de prestadores',
