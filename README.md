@@ -12,6 +12,12 @@ lee los mismos datos gobernados a través de contratos propios.
 - Una lectura de **territorio** (IGR v2A, amenaza territorial CEAD-LA) y de
   **sectores obligados** (padrón UAF, vulnerabilidad estructural, IPF), cada una
   con su metodología a la vista y sus exclusiones declaradas.
+- **Universo SO**, con dos ejes: la *situación actual del padrón inscrito*
+  —composición, marcas de caracterización, sectores y regiones, cada cifra
+  abriendo las entidades que la sostienen— y una *mesa de casos* sobre los dos
+  bordes del registro: potenciales sujetos obligados y término de giro. La mesa
+  arma consultas a fuentes abiertas para ubicar a la entidad, deja anotar el
+  contacto encontrado y exporta el lote en CSV.
 - Una lectura de **gasto público y compras**: patrones de concentración,
   trayectoria, precios y convergencia sobre la relación comprador–proveedor en
   ChileCompra, junto a —y nunca sumada con— la ejecución presupuestaria.
@@ -23,8 +29,14 @@ lee los mismos datos gobernados a través de contratos propios.
 
 ## Qué no es
 
-- No es un expediente ni un sistema de gestión de casos.
-- No asigna tareas a fiscalizadores.
+- No es un expediente ni un sistema institucional de gestión de casos. La mesa
+  de Universo SO prepara trabajo en el navegador de quien la usa: no se comparte,
+  no se sincroniza y su salida es un CSV que continúa el trámite fuera de Atlas.
+- No asigna tareas a fiscalizadores ni envía requerimientos.
+- No modifica el padrón: inscribir o desinscribir a un sujeto obligado es una
+  decisión institucional que ocurre fuera de esta aplicación.
+- Los datos de contacto que proponen las fuentes abiertas no están acreditados:
+  hay que verificarlos antes de usarlos en una gestión formal.
 - No es un ROS, una denuncia ni una decisión institucional.
 
 ## Arquitectura

@@ -2,21 +2,37 @@ import { useCallback, useEffect, useState } from 'react';
 import type { UafLens } from './contracts';
 
 const LENTES: UafLens[] = ['reportabilidad', 'revision', 'territorio', 'ciclo'];
-export type UniversoMode = 'padron' | 'brechas' | 'gestion';
-const UNIVERSO_MODES: UniversoMode[] = ['padron', 'brechas', 'gestion'];
+
+/* Universo SO tiene dos ejes: la situación del padrón inscrito y la mesa de
+   casos de los dos bordes del registro. Los nombres antiguos de la URL
+   —brechas y gestión— siguen resolviendo, porque hay enlaces vivos apuntando a
+   ellos desde el Pulso y desde fuera. */
+export type UniversoMode = 'padron' | 'casos';
+export type UniversoQueue = 'potenciales' | 'termino' | 'cartera';
+
+const UNIVERSO_MODES: UniversoMode[] = ['padron', 'casos'];
+const UNIVERSO_QUEUES: UniversoQueue[] = ['potenciales', 'termino', 'cartera'];
 
 function asLens(v: string | null): UafLens | undefined {
   return LENTES.includes(v as UafLens) ? (v as UafLens) : undefined;
 }
 
-function asUniversoMode(v: string | null): UniversoMode | undefined {
-  return UNIVERSO_MODES.includes(v as UniversoMode) ? (v as UniversoMode) : undefined;
+function asUniversoQueue(v: string | null): UniversoQueue | undefined {
+  return UNIVERSO_QUEUES.includes(v as UniversoQueue) ? (v as UniversoQueue) : undefined;
+}
+
+/** Devuelve el eje y, cuando el alias antiguo lo implicaba, la cola con la que
+ *  abre. «brechas» era la conciliación y «gestión» era la mesa de trabajo. */
+function asUniverso(v: string | null): { mode?: UniversoMode; cola?: UniversoQueue } {
+  if (v === 'brechas') return { mode: 'casos', cola: 'potenciales' };
+  if (v === 'gestion') return { mode: 'casos', cola: 'cartera' };
+  return { mode: UNIVERSO_MODES.includes(v as UniversoMode) ? (v as UniversoMode) : undefined };
 }
 
 export type Route =
   /** La lente activa viaja en la URL: un enlace al Pulso abre la misma lente. */
   | { view: 'pulso'; lente?: UafLens }
-  | { view: 'universo'; mode?: UniversoMode }
+  | { view: 'universo'; mode?: UniversoMode; cola?: UniversoQueue }
   /** Alias de compatibilidad: los enlaces antiguos siguen resolviendo. */
   | { view: 'cobertura' }
   | { view: 'sectores' }
@@ -44,10 +60,16 @@ export function parseHash(hash: string): Route {
     case 'pulso':
       return { view: 'pulso', lente: asLens(params.get('lente')) };
     case 'universo-so':
-    case 'universo':
-      return { view: 'universo', mode: asUniversoMode(params.get('vista')) };
+    case 'universo': {
+      const universo = asUniverso(params.get('vista'));
+      return {
+        view: 'universo',
+        mode: universo.mode,
+        cola: asUniversoQueue(params.get('cola')) ?? universo.cola,
+      };
+    }
     case 'cobertura':
-      return { view: 'universo', mode: 'brechas' };
+      return { view: 'universo', mode: 'casos', cola: 'potenciales' };
     case 'sectores':
       return { view: 'universo', mode: 'padron' };
     case 'osfl':
@@ -89,12 +111,12 @@ export function parseHash(hash: string): Route {
 
 export function hrefFor(r: Route): string {
   switch (r.view) {
-    case 'universo':
-      return r.mode && r.mode !== 'padron'
-        ? `#/universo-so?vista=${r.mode}`
-        : '#/universo-so';
+    case 'universo': {
+      if (!r.mode || r.mode === 'padron') return '#/universo-so';
+      return r.cola ? `#/universo-so?vista=casos&cola=${r.cola}` : '#/universo-so?vista=casos';
+    }
     case 'cobertura':
-      return '#/universo-so?vista=brechas';
+      return '#/universo-so?vista=casos&cola=potenciales';
     case 'sectores':
       return '#/universo-so';
     case 'osfl':

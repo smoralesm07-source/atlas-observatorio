@@ -149,6 +149,140 @@ export function useRpc<T>(
   return { data, error, loading, reload };
 }
 
+export interface PagedState<T> {
+  rows: T[];
+  /** Total del corte según la propia fila, cuando el contrato lo publica. */
+  total: number | null;
+  loading: boolean;
+  /** Verdadero mientras se traen las páginas siguientes a la primera. */
+  loadingMore: boolean;
+  error: string | null;
+  /** No queda nada por traer: se agotó el corte. */
+  complete: boolean;
+  /** Se alcanzó el techo de páginas y el corte sigue teniendo filas. */
+  capped: boolean;
+  loadMore: () => void;
+  reload: () => void;
+}
+
+/**
+ * Lee un contrato paginado y acumula sus páginas.
+ *
+ * Una cola de trabajo se filtra y se ordena entera o no se filtra: si la
+ * pantalla filtrara sobre las 200 primeras filas que devolvió el servidor,
+ * diría «3 casos en Valparaíso» cuando el corte tiene diecisiete. Por eso este
+ * hook trae las páginas siguientes por su cuenta hasta agotar el corte, con un
+ * techo declarado para no encadenar decenas de consultas si la cohorte crece.
+ * Al llegar al techo deja de pedir y lo dice, en vez de mentir por omisión.
+ */
+export function useRpcPaged<T>(
+  fn: string,
+  args: Record<string, unknown>,
+  opts: {
+    pageSize?: number;
+    /** Páginas que se traen sin intervención. El resto se pide a mano. */
+    maxPages?: number;
+    totalOf?: (row: T) => number | null | undefined;
+    skip?: boolean;
+  } = {},
+): PagedState<T> {
+  const { pageSize = 200, maxPages = 8, totalOf, skip } = opts;
+  const [rows, setRows] = useState<T[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(!skip);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [complete, setComplete] = useState(false);
+  const [pageCap, setPageCap] = useState(maxPages);
+  const [nonce, setNonce] = useState(0);
+  const seq = useRef(0);
+  const argKey = JSON.stringify(args);
+  // El extractor del total suele escribirse en línea en la llamada, de modo que
+  // cambia de identidad en cada render. En el arreglo de dependencias eso
+  // reiniciaría la paginación sin fin, así que viaja por referencia.
+  const totalRef = useRef(totalOf);
+  totalRef.current = totalOf;
+
+  useEffect(() => {
+    setPageCap(maxPages);
+  }, [maxPages, fn, argKey, nonce]);
+
+  useEffect(() => {
+    if (skip) {
+      ++seq.current;
+      setRows([]);
+      setTotal(null);
+      setError(null);
+      setLoading(false);
+      setLoadingMore(false);
+      setComplete(false);
+      return;
+    }
+
+    const my = ++seq.current;
+    const parsedArgs = JSON.parse(argKey) as Record<string, unknown>;
+    setRows([]);
+    setTotal(null);
+    setError(null);
+    setComplete(false);
+    setLoading(true);
+    setLoadingMore(false);
+
+    const run = async () => {
+      const acc: T[] = [];
+      let declared: number | null = null;
+
+      for (let page = 0; page < pageCap; page += 1) {
+        const { data, error: e } = await supabase.rpc(fn, {
+          ...parsedArgs,
+          p_limit: pageSize,
+          p_offset: page * pageSize,
+        });
+        if (my !== seq.current) return;
+
+        if (e) {
+          setError(message(e, fn));
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+
+        const batch = (data ?? []) as T[];
+        acc.push(...batch);
+        const extract = totalRef.current;
+        if (declared == null && batch.length > 0 && extract) {
+          declared = extract(batch[0]) ?? null;
+          setTotal(declared);
+        }
+        setRows(acc.slice());
+        setLoading(false);
+
+        const exhausted = batch.length < pageSize
+          || (declared != null && acc.length >= declared);
+        if (exhausted) {
+          setComplete(true);
+          setLoadingMore(false);
+          return;
+        }
+        setLoadingMore(true);
+      }
+      setLoadingMore(false);
+    };
+
+    void run();
+
+    return () => {
+      if (seq.current === my) ++seq.current;
+    };
+  }, [fn, argKey, skip, pageSize, pageCap, nonce]);
+
+  const loadMore = useCallback(() => setPageCap((v) => v + maxPages), [maxPages]);
+  const reload = useCallback(() => setNonce((v) => v + 1), []);
+
+  const capped = !complete && !loading && !loadingMore && !error && rows.length > 0;
+  return { rows, total, loading, loadingMore, error, complete, capped, loadMore, reload };
+}
+
 export function useDebounced<T>(value: T, ms = 220): T {
   const [v, setV] = useState(value);
   useEffect(() => {
