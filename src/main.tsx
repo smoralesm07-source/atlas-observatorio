@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './lib/caseDrawerEnhancer';
 import './lib/territoryDirectoryEnhancer';
+import './lib/typographyFloorEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
@@ -30,6 +31,7 @@ import './styles/light-uaf-palette.css';
 import './styles/light-monitor-contrast.css';
 import './styles/fintech-light-contrast-v2.css';
 import './styles/entity360-light-contrast-v2.css';
+import './styles/typography-floor.css';
 
 const initialTheme = (() => {
   try {
