@@ -789,6 +789,10 @@ export interface UafPulse {
     activos: number;
     terminados: number;
     sin_perfil: number;
+    /** Sin perfil porque la fuente SII usada es de personas jurídicas, no una falla de conciliación. */
+    sin_perfil_persona_natural?: number;
+    /** Casos sin perfil SII que sí requieren revisar cobertura/conciliación. */
+    sin_perfil_no_natural?: number;
     con_inicio: number;
     juridicas: number;
     naturales: number;
@@ -909,6 +913,7 @@ export interface UafPulse {
     reporting_note: string;
     silence_note: string;
     denominator_note: string;
+    sii_profile_scope_note?: string;
   };
   semantics: string;
 }
@@ -1170,11 +1175,15 @@ export interface UafPotentialCandidate {
   review_rationale: string | null;
   reviewed_at: string | null;
   reviewed_by_email: string | null;
+  /** Posición reproducible dentro de la muestra operativa de Gestión SO. */
+  selection_rank?: number | null;
+  selection_basis?: string | null;
+  selection_reason?: string | null;
   semantics: string | null;
 }
 
 export interface UafPotential {
-  contract: 'ATLAS_OBS_UAF_POTENTIAL_V1';
+  contract: 'ATLAS_OBS_UAF_POTENTIAL_V1' | 'ATLAS_OBS_UAF_POTENTIAL_V2';
   disponible: boolean;
   corte: {
     sii_periodo: string | null;
@@ -1186,8 +1195,15 @@ export interface UafPotential {
   };
   totales: {
     observadas: number;
+    /** Universo amplio de screening por RUT único. */
+    detectados?: number;
+    evidencia_2_mas?: number;
+    evidencia_3_mas?: number;
+    territorializados?: number;
     con_res: number;
+    /** Tamaño de la muestra operativa, conservado como alias de compatibilidad. */
     accionables: number;
+    muestra_gestion?: number;
     revisados: number;
     sin_revisar: number;
     sectores: number;
@@ -1195,6 +1211,15 @@ export interface UafPotential {
     ivo_max: number | null;
     materialidad_media: number | null;
   } | null;
+  metodologia?: {
+    tipo: string;
+    objetivo: string;
+    universo: string;
+    regla: string;
+    orden: string;
+    no_es: string;
+    version: string;
+  };
   /** De qué universo se parte y con cuántas entidades termina el analista. */
   embudo: { orden: number; etiqueta: string; n: number; glosa: string }[];
   mix: {

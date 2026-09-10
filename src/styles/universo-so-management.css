@@ -652,3 +652,34 @@ body.uso-case-drawer-open {
     display: none;
   }
 }
+
+
+/* gestion-so-methodology-v1 */
+.uso-method-help {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+.uso-method-help summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--ink-1);
+  font-weight: 700;
+  font-size: 12px;
+}
+.uso-method-help > div {
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 6px;
+}
+.uso-method-help p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.uso-method-help em {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}

@@ -178,6 +178,7 @@ export function UniversoSOV2({
         territorio, reportabilidad y evolución. Término de giro y potencial SO son condiciones de conciliación registral.
         Sanciones, prensa, IPF y demás marcas sirven para ordenar revisión: no concluyen por sí solas incumplimiento ni riesgo LA/FT.
         Gestión SO mantiene responsable, avance y trazabilidad del trabajo sobre potenciales y términos de giro.
+        {pulse.data.coverage?.sii_profile_scope_note && <> {pulse.data.coverage.sii_profile_scope_note}</>}
       </Semantics>
     </div>
   );

@@ -55,7 +55,8 @@ export function PadronAxisV2({
   const regions = pulse.by_region.slice().sort((a, b) => b.sujetos - a.sujetos);
   const maxSector = Math.max(1, ...topSectors.map((row) => row.sujetos));
   const maxRegion = Math.max(1, ...regions.map((row) => row.sujetos));
-  const potentialTotal = potential?.totales?.accionables ?? 0;
+  const potentialDetected = potential?.totales?.detectados ?? potential?.totales?.observadas ?? 0;
+  const potentialSample = potential?.totales?.muestra_gestion ?? potential?.totales?.accionables ?? 0;
 
   const termRows = useMemo<EdgeRow[]>(() => {
     if (termMode === 'region') {
@@ -142,7 +143,7 @@ export function PadronAxisV2({
         <Kpi label="Padrón inscrito" value={u.total} hint={`${n(u.sectores_uaf)} sectores · ${n(u.regiones)} regiones`} tone="var(--accent)" onClick={() => selectRegistered(ALL)} />
         <Kpi label="Activos ante el SII" value={u.activos} hint={`${n1(percent(u.activos, u.total))}% del padrón`} tone="var(--present)" onClick={() => selectRegistered({ cohort: 'ACTIVO', title: 'Sujetos activos ante el SII' })} />
         <Kpi label="Término de giro" value={u.terminados} hint="siguen inscritos y requieren conciliación registral" tone="var(--sig-high)" onClick={() => selectRegistered({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro' })} />
-        <Kpi label="Potenciales SO" value={potentialTotal} hint="hipótesis accionables SII ↔ UAF" tone="var(--unknown)" onClick={() => focusDirectory({ kind: 'potential', title: 'Potenciales sujetos obligados', hint: 'hipótesis de registro por actividad económica' })} />
+        <Kpi label="Potenciales detectados" value={potentialDetected} hint={`Gestión SO prioriza ${n(potentialSample)} casos`} tone="var(--unknown)" onClick={() => focusDirectory({ kind: 'potential', title: 'Muestra priorizada de potenciales SO', hint: `${n(potentialSample)} casos seleccionados desde ${n(potentialDetected)} RUT detectados` })} />
         <Kpi label="Piden revisión" value={u.en_atencion} hint={`${n(dataMotiveCount(pulse))} motivos de precedencia`} tone="var(--sig-critical)" onClick={() => selectRegistered({ cohort: 'ATENCION', title: 'Sujetos que piden revisión' })} />
       </section>
 
@@ -198,8 +199,8 @@ export function PadronAxisV2({
           {potentialMode === 'industry' && potentialIndustry.loading && !potentialIndustry.data
             ? <div className="uso2-edge-note">Leyendo industrias tributarias…</div>
             : <EdgeList rows={potentialRows} tone="var(--unknown)" onPick={potentialPick} />}
-          <p className="uso2-edge-note">{n(potentialTotal)} candidatos accionables sobre {n(potential?.totales?.observadas)} observados por giro. Son hipótesis de registro, no incumplimientos acreditados.</p>
-          <div className="uso2-questions"><button onClick={() => onWork({ kind: 'POTENCIAL' })}>Gestionar potenciales SO →</button></div>
+          <p className="uso2-edge-note">{n(potentialDetected)} RUT detectados por screening. Gestión SO trabaja una muestra operativa de {n(potentialSample)} casos; la selección no acredita obligación ni incumplimiento.</p>
+          <div className="uso2-questions"><button onClick={() => onWork({ kind: 'POTENCIAL' })}>Gestionar muestra priorizada →</button></div>
         </Block>
       </section>
 

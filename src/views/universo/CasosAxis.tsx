@@ -38,7 +38,7 @@ type OpenContactCoverage = {
 const contactRutKey = (rut: string) => rut.replace(/[^0-9kK]/g, '').toUpperCase();
 
 const SORTS: { value: SortField; label: string }[] = [
-  { value: 'score', label: 'Índice, mayor primero' },
+  { value: 'score', label: 'Prioridad de cola' },
   { value: 'materialidad', label: 'Materialidad' },
   { value: 'marcas', label: 'Marcas observadas' },
   { value: 'fecha', label: 'Fecha' },
@@ -202,7 +202,11 @@ export function CasosAxis({
           const wb = contactFilled(b.record.contact) * 100 + Number(cb?.verified_count ?? 0) * 10 + Number(cb?.channel_count ?? 0) * 2 + Number(cb?.finding_count ?? 0);
           return dir * (wa - wb);
         }
-        default: return dir * ((a.score ?? -1) - (b.score ?? -1));
+        default:
+          if (a.kind === 'POTENCIAL' || b.kind === 'POTENCIAL') {
+            return (a.candidate?.selection_rank ?? 999999) - (b.candidate?.selection_rank ?? 999999);
+          }
+          return dir * ((a.score ?? -1) - (b.score ?? -1));
       }
     });
   }, [queueRows, query, sector, region, gestion, prioridad, banda, year, onlyMarks, onlyRes, onlyContact, sort, contactByRut]);
@@ -286,7 +290,7 @@ export function CasosAxis({
         <button data-on={queue === 'potenciales'} onClick={() => changeQueue('potenciales')}>
           <span>Potenciales SO</span>
           <b className="num">{potentialLoading && !potential ? '…' : n(potentialCount)}</b>
-          <em>Pendientes sin asignar · conciliación SII ↔ UAF</em>
+          <em>Muestra operativa priorizada · {n(potential?.totales?.detectados ?? potential?.totales?.observadas ?? 0)} detectados</em>
         </button>
         <button data-on={queue === 'termino'} onClick={() => changeQueue('termino')}>
           <span>Término de giro</span>
@@ -302,7 +306,7 @@ export function CasosAxis({
 
       {queue === 'potenciales' && potential?.disponible && (
         <ContextPanel
-          title="Conciliación SII ↔ UAF"
+          title="Del universo detectado a la muestra de gestión"
           hint={`Corte SII ${potential.corte.sii_periodo ?? '—'} · padrón ${potential.corte.uaf_corte ?? '—'} · índice ${potential.corte.index_version ?? '—'}`}
         >
           <div className="uso-funnel">
@@ -323,13 +327,26 @@ export function CasosAxis({
             })}
           </div>
           <div className="uso-funnel-facts">
-            <span>Sin revisar <b className="num">{n(potential.totales?.sin_revisar)}</b></span>
-            <span>Con revisión registrada <b className="num">{n(potential.totales?.revisados)}</b></span>
-            <span>IVO medio <b className="num">{n1(potential.totales?.ivo_medio)}</b></span>
-            <span>Materialidad media <b className="num">{n1(potential.totales?.materialidad_media)}</b></span>
-            <span>Sectores con brecha <b className="num">{n(potential.totales?.sectores)}</b></span>
-            <em>Escala logarítmica: el embudo cae tres órdenes de magnitud y en escala lineal el último paso desaparecería.</em>
+            <span>Detectados <b className="num">{n(potential.totales?.detectados ?? potential.totales?.observadas)}</b></span>
+            <span>2+ actividades coincidentes <b className="num">{n(potential.totales?.evidencia_2_mas)}</b></span>
+            <span>3+ actividades coincidentes <b className="num">{n(potential.totales?.evidencia_3_mas)}</b></span>
+            <span>Muestra Gestión SO <b className="num">{n(potential.totales?.muestra_gestion ?? potential.totales?.accionables)}</b></span>
+            <span>Sectores cubiertos <b className="num">{n(potential.totales?.sectores)}</b></span>
+            <em>La muestra es operativa y estratificada; no es una muestra estadística ni una estimación de incumplimiento.</em>
           </div>
+          {potential.metodologia && (
+            <details className="uso-method-help">
+              <summary>¿Por qué Gestión SO trabaja una muestra y cómo se selecciona?</summary>
+              <div>
+                <p><strong>Objetivo.</strong> {potential.metodologia.objetivo}</p>
+                <p><strong>Universo de partida.</strong> {potential.metodologia.universo}</p>
+                <p><strong>Regla de selección.</strong> {potential.metodologia.regla}</p>
+                <p><strong>Orden de prioridad.</strong> {potential.metodologia.orden}</p>
+                <p><strong>Límite metodológico.</strong> {potential.metodologia.no_es}</p>
+                <em>Versión {potential.metodologia.version}</em>
+              </div>
+            </details>
+          )}
         </ContextPanel>
       )}
 

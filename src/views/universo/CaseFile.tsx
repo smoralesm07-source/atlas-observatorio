@@ -22,6 +22,9 @@ const TIER_LABEL: Record<string, string> = {
   A_ALTA: 'Coincidencia de giro alta',
   B_MEDIA: 'Coincidencia de giro media',
   C_BAJA: 'Coincidencia de giro baja',
+  EVIDENCIA_3_MAS: '3 o más actividades coincidentes',
+  EVIDENCIA_2: '2 actividades coincidentes',
+  EVIDENCIA_1: '1 actividad coincidente',
 };
 
 export function CaseFile({
@@ -58,6 +61,7 @@ export function CaseFile({
   const noteDirty = noteDraft !== record.note;
   const score = row.candidate?.ivo_score ?? row.termination?.ipf_score ?? null;
   const scoreLabel = row.candidate ? 'IVO' : 'IPF';
+  const selectionRank = row.candidate?.selection_rank ?? null;
 
   const jump = (ref: RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -124,7 +128,9 @@ export function CaseFile({
               <b>Resumen del caso</b>
               <em>{row.subject.motive}</em>
             </span>
-            {score != null && <strong>{scoreLabel} {n1(score)}</strong>}
+            {score != null
+              ? <strong>{scoreLabel} {n1(score)}</strong>
+              : selectionRank != null ? <strong>Muestra #{n(selectionRank)}</strong> : null}
           </summary>
           <div className="uso-case-body uso-case-snapshot">
             {row.candidate ? <PotentialSnapshot row={row} /> : <TerminationSnapshot row={row} />}
@@ -301,20 +307,32 @@ function PotentialSnapshot({ row }: { row: CaseRow }) {
     <>
       <div className="uso-score uso-case-snapshot-score">
         <div className="uso-score-main">
-          <span className="uso-kicker">IVO · índice de verosimilitud de obligación</span>
-          <b className="num">{n1(c.ivo_score)}</b>
-          <em>
-            banda {titleCase(c.ivo_band ?? '—')}
-            {c.ivo_credibility_pct != null && ` · credibilidad ${n1(c.ivo_credibility_pct)}%`}
-          </em>
-          <span className="uso-score-track" aria-hidden><i style={{ width: `${Math.min(100, c.ivo_score ?? 0)}%` }} /></span>
-          <p>Ordena revisión. No acredita obligación ni riesgo LA/FT.</p>
+          {c.ivo_score != null ? (
+            <>
+              <span className="uso-kicker">IVO · índice de verosimilitud de obligación</span>
+              <b className="num">{n1(c.ivo_score)}</b>
+              <em>
+                banda {titleCase(c.ivo_band ?? '—')}
+                {c.ivo_credibility_pct != null && ` · credibilidad ${n1(c.ivo_credibility_pct)}%`}
+              </em>
+              <span className="uso-score-track" aria-hidden><i style={{ width: `${Math.min(100, c.ivo_score)}%` }} /></span>
+              <p>Ordena revisión cuando existe evidencia suficiente para calcularlo. No acredita obligación ni riesgo LA/FT.</p>
+            </>
+          ) : (
+            <>
+              <span className="uso-kicker">Prioridad metodológica · muestra Gestión SO</span>
+              <b className="num">#{n(c.selection_rank)}</b>
+              <em>{c.selection_basis ? titleCase(c.selection_basis.replace(/_/g, ' ')) : 'selección estratificada'}</em>
+              <p>{c.selection_reason ?? 'Seleccionado por la regla reproducible de la muestra operativa.'}</p>
+              <p className="uso-note">No se muestra IVO porque esta entidad no cuenta con evidencia suficiente para calcularlo de forma independiente.</p>
+            </>
+          )}
         </div>
       </div>
 
       <div className="uso-fields uso-case-snapshot-fields">
         <Field label="Actividad coincidente" wide>{c.matched_activity ? titleCase(c.matched_activity) : '—'}</Field>
-        <Field label="Nivel de detección">{TIER_LABEL[c.detection_tier ?? ''] ?? (c.detection_tier ? titleCase(c.detection_tier.replace(/_/g, ' ')) : '—')}</Field>
+        <Field label="Nivel de evidencia">{TIER_LABEL[c.detection_tier ?? ''] ?? (c.detection_tier ? titleCase(c.detection_tier.replace(/_/g, ' ')) : '—')}</Field>
         <Field label="Materialidad">{n1(c.materiality_score)}</Field>
         <Field label="Estado SII">{c.sii_status === 'ACTIVE_AS_PUBLISHED' ? 'Activo' : titleCase((c.sii_status ?? '—').replace(/_/g, ' '))}</Field>
         <Field label="Tamaño">{c.sales_band_uf ?? '—'}{c.workers != null && <em className="uso-field-sub">{n(c.workers)} trabajadores</em>}</Field>
