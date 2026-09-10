@@ -19,9 +19,25 @@ type RequestState =
 
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
 const EMAIL_FALLBACK_DOMAIN = 'uaf.gob.cl';
+const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
 function isTransportError(message: string) {
   return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(message);
+}
+
+function isRateLimitError(error: { code?: string; message?: string } | null | undefined) {
+  const code = String(error?.code ?? '').toLowerCase();
+  const message = String(error?.message ?? '').toLowerCase();
+  return code === 'over_email_send_rate_limit'
+    || code === 'over_request_rate_limit'
+    || /rate limit|too many requests/.test(message);
+}
+
+function emailAuthErrorMessage(error: { code?: string; message?: string } | null | undefined) {
+  if (isRateLimitError(error)) {
+    return 'Se alcanzó temporalmente el límite de envío de códigos. Espera antes de solicitar otro. Si el aviso continúa después de unos minutos, la cuota horaria de correo del proyecto todavía no se ha liberado.';
+  }
+  return error?.message || 'No fue posible completar la autenticación por correo.';
 }
 
 function delay(ms: number) {
@@ -344,7 +360,16 @@ function SignIn() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setResendCooldown((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   async function signInMicrosoft() {
     setMicrosoftBusy(true);
@@ -362,10 +387,10 @@ function SignIn() {
       setError(`Por ahora el acceso alternativo está habilitado únicamente para correos @${EMAIL_FALLBACK_DOMAIN}.`);
       return;
     }
+    if (resendCooldown > 0) return;
 
     setEmailBusy(true);
     setError(null);
-    setCode('');
 
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: value,
@@ -375,12 +400,17 @@ function SignIn() {
     });
 
     if (otpError) {
-      setError(otpError.message);
+      if (isRateLimitError(otpError)) {
+        setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+      }
+      setError(emailAuthErrorMessage(otpError));
       setEmailBusy(false);
       return;
     }
 
+    setCode('');
     setCodeSent(true);
+    setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
     setEmailBusy(false);
   }
 
@@ -407,7 +437,7 @@ function SignIn() {
     });
 
     if (verifyError) {
-      setError(verifyError.message);
+      setError(emailAuthErrorMessage(verifyError));
       setVerifyBusy(false);
       return;
     }
@@ -423,7 +453,7 @@ function SignIn() {
         Autentica tu identidad. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
       </p>
 
-      {error && <div className="note note-warn">{error}</div>}
+      {error && <div className="note note-warn" role="alert">{error}</div>}
 
       <button className="btn btn-primary" style={{ width: '100%' }} onClick={signInMicrosoft} disabled={locked}>
         <MicrosoftLogo />
@@ -447,7 +477,7 @@ function SignIn() {
             setError(null);
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !locked && !codeSent) void sendCode();
+            if (event.key === 'Enter' && !locked && !codeSent && resendCooldown === 0) void sendCode();
           }}
           placeholder={`nombre@${EMAIL_FALLBACK_DOMAIN}`}
           autoComplete="email"
@@ -455,8 +485,12 @@ function SignIn() {
         />
 
         {!codeSent ? (
-          <button className="btn" style={{ width: '100%' }} onClick={() => void sendCode()} disabled={locked}>
-            {emailBusy ? 'Enviando…' : 'Enviar código de 6 dígitos'}
+          <button className="btn" style={{ width: '100%' }} onClick={() => void sendCode()} disabled={locked || resendCooldown > 0}>
+            {emailBusy
+              ? 'Enviando…'
+              : resendCooldown > 0
+                ? `Intentar nuevamente en ${resendCooldown}s`
+                : 'Enviar código de 6 dígitos'}
           </button>
         ) : (
           <>
@@ -500,8 +534,12 @@ function SignIn() {
               >
                 Cambiar correo
               </button>
-              <button className="btn" style={{ flex: 1 }} onClick={() => void sendCode()} disabled={locked}>
-                {emailBusy ? 'Reenviando…' : 'Reenviar código'}
+              <button className="btn" style={{ flex: 1 }} onClick={() => void sendCode()} disabled={locked || resendCooldown > 0}>
+                {emailBusy
+                  ? 'Reenviando…'
+                  : resendCooldown > 0
+                    ? `Reenviar en ${resendCooldown}s`
+                    : 'Reenviar código'}
               </button>
             </div>
             <div className="note">
