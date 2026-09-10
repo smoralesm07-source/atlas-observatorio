@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { hrefFor, type Route } from '../lib/router';
+import type { AtlasRole } from './Auth';
 import { Mark } from './Mark';
 import '../styles/monitores-nav.css';
 
@@ -51,10 +52,12 @@ function MonitorGlyph({ view }: { view: 'osfl' | 'fintech' | 'sanciones' }) {
 export function Shell({
   route,
   session,
+  role,
   children,
 }: {
   route: Route;
   session: Session;
+  role: AtlasRole;
   children: ReactNode;
 }) {
   const [theme, setTheme] = useState<'dark' | 'light'>(
@@ -172,6 +175,12 @@ export function Shell({
               {item.label}
             </a>
           ))}
+
+          {role === 'admin' && (
+            <a href={hrefFor({ view: 'administracion' })} data-active={route.view === 'administracion'}>
+              Administración
+            </a>
+          )}
         </nav>
 
         <div className="topbar-right">
@@ -199,7 +208,7 @@ export function Shell({
               </svg>
             )}
           </button>
-          <button className="icon-btn" title="Cerrar sesión" onClick={() => supabase.auth.signOut()}>
+          <button className="icon-btn" title="Cerrar sesión" onClick={() => supabase.auth.signOut({ scope: 'local' })}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M14 8V5.6A1.6 1.6 0 0 0 12.4 4H5.6A1.6 1.6 0 0 0 4 5.6v12.8A1.6 1.6 0 0 0 5.6 20h6.8a1.6 1.6 0 0 0 1.6-1.6V16M17 15l3-3-3-3M20 12H9"
                 stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
