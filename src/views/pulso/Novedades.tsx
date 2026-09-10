@@ -34,12 +34,7 @@ const LABEL: Record<UpdateKind, string> = {
   ESTADO: 'ESTADO SO',
 };
 
-/**
- * Feed operativo del Pulso. No intenta inferir riesgo: muestra hechos nuevos o
- * nuevas sincronizaciones que cambian lo que el analista puede observar.
- * Conserva la última respuesta mientras refresca para evitar parpadeos.
- */
-export function NovedadesObservatorio() {
+export function NovedadesObservatorio({ compact = false }: { compact?: boolean }) {
   const [feed, setFeed] = useState<UpdatesFeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,87 +64,84 @@ export function NovedadesObservatorio() {
     return () => window.clearInterval(timer);
   }, [load]);
 
-  const items = feed?.items ?? [];
+  const items = (feed?.items ?? []).slice(0, compact ? 4 : 8);
 
   return (
-    <Panel
-      title="Novedades del observatorio"
-      pad={false}
-      actions={
-        <div className="pulse-updates-actions">
-          <span className="pulse-updates-live" title="El cuadro se vuelve a consultar automáticamente cada 5 minutos">
-            <i /> dinámico
-          </span>
-          <button
-            type="button"
-            className="pulse-updates-refresh"
-            onClick={() => void load(true)}
-            disabled={refreshing}
-            aria-label="Actualizar novedades"
-            title="Actualizar ahora"
-          >
-            {refreshing ? '…' : '↻'}
-          </button>
-        </div>
-      }
-    >
-      <div className="pulse-updates-shell">
-        {loading && !feed ? (
-          <div className="pulse-updates-state">Leyendo novedades de Atlas…</div>
-        ) : error && !feed ? (
-          <div className="pulse-updates-state pulse-updates-error">
-            <b>No fue posible cargar las novedades.</b>
-            <button type="button" onClick={() => void load(false)}>Reintentar</button>
+    <div className={compact ? 'pulse-updates-compact' : undefined}>
+      <Panel
+        title="Novedades del observatorio"
+        pad={false}
+        actions={
+          <div className="pulse-updates-actions">
+            <span className="pulse-updates-live" title="El cuadro se vuelve a consultar automáticamente cada 5 minutos">
+              <i /> dinámico
+            </span>
+            <button
+              type="button"
+              className="pulse-updates-refresh"
+              onClick={() => void load(true)}
+              disabled={refreshing}
+              aria-label="Actualizar novedades"
+              title="Actualizar ahora"
+            >
+              {refreshing ? '…' : '↻'}
+            </button>
           </div>
-        ) : items.length === 0 ? (
-          <div className="pulse-updates-state">Sin novedades observadas en las fuentes activas.</div>
-        ) : (
-          <div className="pulse-updates-list" aria-live="polite">
-            {items.map((item) => (
-              <article className="pulse-update" data-kind={item.kind} key={item.id}>
-                <div className="pulse-update-rail"><i /></div>
-                <div className="pulse-update-body">
-                  <div className="pulse-update-topline">
-                    <span className="pulse-update-kind">{LABEL[item.kind]}</span>
-                    <time dateTime={item.event_at}>{formatEvent(item.event_at)}</time>
+        }
+      >
+        <div className="pulse-updates-shell">
+          {loading && !feed ? (
+            <div className="pulse-updates-state">Leyendo novedades de Atlas…</div>
+          ) : error && !feed ? (
+            <div className="pulse-updates-state pulse-updates-error">
+              <b>No fue posible cargar las novedades.</b>
+              <button type="button" onClick={() => void load(false)}>Reintentar</button>
+            </div>
+          ) : items.length === 0 ? (
+            <div className="pulse-updates-state">Sin novedades observadas en las fuentes activas.</div>
+          ) : (
+            <div className="pulse-updates-list" aria-live="polite">
+              {items.map((item) => (
+                <article className="pulse-update" data-kind={item.kind} key={item.id}>
+                  <div className="pulse-update-rail"><i /></div>
+                  <div className="pulse-update-body">
+                    <div className="pulse-update-topline">
+                      <span className="pulse-update-kind">{LABEL[item.kind]}</span>
+                      <time dateTime={item.event_at}>{formatEvent(item.event_at)}</time>
+                    </div>
+                    <h4>{item.title}</h4>
+                    {!compact && item.detail && <p>{item.detail}</p>}
+                    <div className="pulse-update-foot">
+                      <span>{item.source_label ?? item.meta ?? 'Atlas'}</span>
+                      <span className="pulse-update-links">
+                        {item.entity_id && (
+                          <a href={hrefFor({ view: 'ficha', entityId: item.entity_id })}>Ficha →</a>
+                        )}
+                        {item.source_url && (
+                          <a href={item.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>
+                        )}
+                      </span>
+                    </div>
                   </div>
-                  <h4>{item.title}</h4>
-                  {item.detail && <p>{item.detail}</p>}
-                  <div className="pulse-update-foot">
-                    <span>{item.source_label ?? item.meta ?? 'Atlas'}</span>
-                    <span className="pulse-update-links">
-                      {item.entity_id && (
-                        <a href={hrefFor({ view: 'ficha', entityId: item.entity_id })}>
-                          Ficha →
-                        </a>
-                      )}
-                      {item.source_url && (
-                        <a href={item.source_url} target="_blank" rel="noreferrer">
-                          Fuente ↗
-                        </a>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+                </article>
+              ))}
+            </div>
+          )}
 
-        <div className="pulse-updates-caption">
-          <span>
-            {feed?.generated_at ? `Actualizado ${formatGenerated(feed.generated_at)}` : 'Actualización automática cada 5 min'}
-          </span>
-          {error && feed && <em title={error}>última sincronización no disponible</em>}
+          <div className="pulse-updates-caption">
+            <span>
+              {feed?.generated_at ? `Actualizado ${formatGenerated(feed.generated_at)}` : 'Actualización automática cada 5 min'}
+            </span>
+            {error && feed && <em title={error}>última sincronización no disponible</em>}
+          </div>
         </div>
-      </div>
-    </Panel>
+      </Panel>
+    </div>
   );
 }
 
 function formatEvent(value: string) {
   if (!value) return '—';
-
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (dateOnly) {
     const [, year, month, day] = dateOnly;
@@ -158,7 +150,6 @@ function formatEvent(value: string) {
       day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
     }).format(d);
   }
-
   const d = new Date(value.includes(' ') ? value.replace(' ', 'T') : value);
   if (Number.isNaN(d.getTime())) return value.slice(0, 16);
   return new Intl.DateTimeFormat('es-CL', {
@@ -169,7 +160,5 @@ function formatEvent(value: string) {
 function formatGenerated(value: string) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return 'recientemente';
-  return new Intl.DateTimeFormat('es-CL', {
-    hour: '2-digit', minute: '2-digit',
-  }).format(d);
+  return new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit' }).format(d);
 }
