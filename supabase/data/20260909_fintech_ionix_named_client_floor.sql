@@ -1,0 +1,5 @@
+-- Piso observable de clientes/casos vigentes de Ionix Trust, 2026-09-09.
+insert into public.aml_fintech_market_metric_observation(observation_key,subject_type,subject_key,metric_code,value_numeric,value_text,unit,qualifier,geography,evidence_type,confidence,source_code,source_url,observed_at,basis,metadata,first_seen_at,last_seen_at)
+values('COMPANY_OFFICIAL|IONIX|BUSINESS_CLIENTS_NAMED_FLOOR|2026-09-09','ENTITY','ENT-RUT-76041924-9','BUSINESS_CLIENTS',5,'Al menos 5 clientes/casos empresariales identificables en la web vigente','companies','AT_LEAST','LATAM','OBSERVADO_OFICIAL',0.999,'COMPANY_OFFICIAL','https://ionixlatam.com/',now(),'Piso observable basado en clientes/casos identificados nominalmente en la web vigente. No representa el total de clientes de Ionix.',jsonb_build_object('lower_bound',true,'named_clients_floor',true,'not_total_clients',true),now(),now())
+on conflict(observation_key) do update set value_numeric=excluded.value_numeric,value_text=excluded.value_text,observed_at=excluded.observed_at,basis=excluded.basis,metadata=excluded.metadata,last_seen_at=now();
+select atlas_private.aml_fintech_refresh_market_weight();
