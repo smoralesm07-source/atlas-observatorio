@@ -444,8 +444,58 @@ function ComunaDetalle({
         </div>
       </header>
 
-      <div className="grid grid-main" style={{ marginTop: 16 }}>
-        <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
+      <section className="territory-detail-segment" aria-labelledby="territory-cead-title">
+        <div className="territory-detail-section-head">
+          <div>
+            <span className="territory-detail-kicker">Evidencia territorial CEAD</span>
+            <h2 id="territory-cead-title">Lectura del IGR y sus componentes</h2>
+            <p>
+              Primero se concentra toda la evidencia que construye la lectura territorial.
+              Las entidades domiciliadas, sanciones y otras fuentes se muestran después como contexto independiente.
+            </p>
+          </div>
+          <div className="territory-detail-section-meta">
+            {n(layers.length)} capas · año {t.year ?? '—'}
+          </div>
+        </div>
+
+        <div className="territory-cead-overview">
+          <Panel title="Lectura IGR" meta={`banda ${t.igr_level ?? '—'} · lectura territorial`}>
+            <dl className="kv">
+              <dt>IGR</dt><dd className="num">{n1(t.igr_score)}</dd>
+              <dt>Percentil nacional</dt><dd className="num">{t.igr_percentile == null ? '—' : `P${n1(t.igr_percentile)}`}</dd>
+              <dt>Confianza</dt><dd className="num">{t.igr_confidence == null ? '—' : `${n1(t.igr_confidence)}%`} {t.igr_confidence_level ? `· ${t.igr_confidence_level}` : ''}</dd>
+              <dt>Banda</dt><dd>{t.igr_level ?? '—'}</dd>
+              <dt>Lectura de frontera</dt><dd>{t.igr_boundary_status === 'borderline' ? 'Cerca de frontera' : t.igr_boundary_status === 'stable_relative_to_thresholds' ? 'Estable respecto de cortes' : '—'}</dd>
+              <dt>Distancia a frontera</dt><dd className="num">{t.igr_boundary_distance == null ? '—' : n1(t.igr_boundary_distance)}</dd>
+              <dt>Cobertura metodológica</dt><dd className="num">{t.igr_methodological_coverage == null ? '—' : `${n1(t.igr_methodological_coverage)}%`}</dd>
+            </dl>
+            <div className="note" style={{ marginTop: 12 }}>
+              Score y percentil son la lectura principal. Confianza y cobertura informan robustez y disponibilidad; no alteran el score ni trasladan riesgo a las entidades domiciliadas.
+            </div>
+          </Panel>
+
+          <Panel title="Comparación de capas CEAD" meta="puntaje · peso · cobertura">
+            <div className="territory-layer-summary">
+              {layers.map(([key, layer]) => {
+                const score = Number(layer.score ?? 0);
+                const width = Math.max(0, Math.min(100, score));
+                return (
+                  <div className="territory-layer-summary-row" key={`layer-summary-${key}`}>
+                    <strong>{layer.label}</strong>
+                    <span className="num">{n1(score)}</span>
+                    <small>peso {n1(layer.configured_weight * 100)}% · cobertura {n1(layer.coverage * 100)}%</small>
+                    <span className="territory-layer-track" aria-hidden>
+                      <i style={{ width: `${width}%`, background: scoreTone(score) }} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+        </div>
+
+        <div className="territory-cead-layers">
           {layers.map(([key, layer]) => (
             <Panel
               key={key}
@@ -453,7 +503,7 @@ function ComunaDetalle({
               meta={`peso ${n1(layer.configured_weight * 100)}% · cobertura ${n1(layer.coverage * 100)}%`}
               pad={false}
             >
-              <div style={{ padding: '14px 20px' }}>
+              <div style={{ padding: '11px 20px 10px' }}>
                 <Meter
                   value={Number(layer.score ?? 0)}
                   label="Puntaje de la capa"
@@ -489,48 +539,52 @@ function ComunaDetalle({
             </Panel>
           ))}
         </div>
+      </section>
 
-        <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
-          <Panel title="Lectura IGR" meta={`banda ${t.igr_level ?? '—'} · contexto secundario`}>
-            <dl className="kv">
-              <dt>IGR</dt><dd className="num">{n1(t.igr_score)}</dd>
-              <dt>Percentil nacional</dt><dd className="num">{t.igr_percentile == null ? '—' : `P${n1(t.igr_percentile)}`}</dd>
-              <dt>Confianza</dt><dd className="num">{t.igr_confidence == null ? '—' : `${n1(t.igr_confidence)}%`} {t.igr_confidence_level ? `· ${t.igr_confidence_level}` : ''}</dd>
-              <dt>Banda</dt><dd>{t.igr_level ?? '—'}</dd>
-              <dt>Lectura de frontera</dt><dd>{t.igr_boundary_status === 'borderline' ? 'Cerca de frontera' : t.igr_boundary_status === 'stable_relative_to_thresholds' ? 'Estable respecto de cortes' : '—'}</dd>
-              <dt>Distancia a frontera</dt><dd className="num">{t.igr_boundary_distance == null ? '—' : n1(t.igr_boundary_distance)}</dd>
-              <dt>Cobertura metodológica</dt><dd className="num">{t.igr_methodological_coverage == null ? '—' : `${n1(t.igr_methodological_coverage)}%`}</dd>
-            </dl>
-            <div className="note" style={{ marginTop: 12 }}>
-              Score y percentil son la lectura principal. La confianza informa robustez y la banda ayuda a resumir, pero una comuna cercana a frontera debe interpretarse con el valor continuo y la evidencia disponible. El IGR describe el territorio y no atribuye riesgo a sus entidades.
-            </div>
-          </Panel>
+      <section className="territory-detail-segment" aria-labelledby="territory-context-title">
+        <div className="territory-detail-section-head">
+          <div>
+            <span className="territory-detail-kicker">Contexto de la comuna</span>
+            <h2 id="territory-context-title">Entidades y señales complementarias</h2>
+            <p>Universo institucional, prensa y composición sectorial. Estas señales describen el entorno y no forman parte del cálculo del IGR.</p>
+          </div>
+          <div className="territory-detail-section-meta">
+            {n(t.ctx_entities)} entidades observadas
+          </div>
+        </div>
 
-          <Panel title="Universo observado aquí" meta="contexto, fuera del índice">
-            <dl className="kv">
-              <dt>Entidades</dt><dd className="num">{n(t.ctx_entities)}</dd>
-              <dt>Padrón UAF</dt><dd className="num">{n(t.ctx_uaf_observed)}</dd>
-              <dt>Con sanción</dt><dd className="num">{n(t.ctx_sanctioned)}</dd>
-              <dt>Con señal</dt><dd className="num">{n(t.ctx_alerted)}</dd>
-              <dt>Hallazgos</dt><dd className="num">{n(t.ctx_findings)}</dd>
-            </dl>
-            <div className="note" style={{ marginTop: 12 }}>
-              Estar domiciliado en una comuna de amenaza alta no es un indicio sobre la
-              entidad. Estas cifras describen el territorio, no imputan nada.
-            </div>
-          </Panel>
+        <div className="territory-context-grid">
+          <div>
+            <Panel title="Universo observado aquí" meta="contexto · fuera del índice">
+              <dl className="kv">
+                <dt>Entidades</dt><dd className="num">{n(t.ctx_entities)}</dd>
+                <dt>Sujetos obligados UAF</dt><dd className="num">{n(t.ctx_uaf_observed)}</dd>
+                <dt>Con sanción</dt><dd className="num">{n(t.ctx_sanctioned)}</dd>
+                <dt>Con señal</dt><dd className="num">{n(t.ctx_alerted)}</dd>
+                <dt>Hallazgos</dt><dd className="num">{n(t.ctx_findings)}</dd>
+              </dl>
+              <div className="note" style={{ marginTop: 12 }}>
+                El domicilio territorial no atribuye conducta ni riesgo individual. Las marcas pertenecen a cada entidad y se revisan por separado.
+              </div>
+            </Panel>
+          </div>
 
-          <PrensaComunal comuna={t.commune_name} />
+          <div>
+            <PrensaComunal comuna={t.commune_name} />
+          </div>
 
           {data.sectores.length > 0 && (
-            <Panel title="Sectores obligados presentes">
-              <Bars
-                data={data.sectores.map((s) => ({ label: titleCase(s.uaf_sector), value: s.n }))}
-              />
-            </Panel>
+            <div>
+              <Panel title="Sectores UAF presentes" meta={`${n(data.sectores.length)} sectores con inscritos`}>
+                <Bars
+                  data={data.sectores.map((s) => ({ label: titleCase(s.uaf_sector), value: s.n }))}
+                  height={132}
+                />
+              </Panel>
+            </div>
           )}
         </div>
-      </div>
+      </section>
 
       {data.entidades.length > 0 && (
         <div style={{ marginTop: 16 }}>
