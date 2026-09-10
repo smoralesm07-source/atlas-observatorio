@@ -4,7 +4,6 @@ import { Columns } from '../../components/charts';
 import { Empty, Panel } from '../../components/primitives';
 import { n, n1, titleCase } from '../../lib/format';
 import type { CohortRequest } from '../../components/CohortDrawer';
-import { NovedadesObservatorio } from './Novedades';
 
 /* LENTE · REPORTABILIDAD
    ──────────────────────
@@ -60,45 +59,41 @@ export function LenteReportabilidad({
 
   return (
     <>
-      <div className="pulse-grid-wide" style={{ marginBottom: 16 }}>
-        <Panel
-          title="Lo que el universo obligado reporta"
-          actions={
-            <div className="seg" role="tablist" aria-label="Serie publicada">
-              {SERIES.map((s) => (
-                <button key={s.key} role="tab" aria-selected={s.key === serie}
-                  data-on={s.key === serie} onClick={() => setSerie(s.key)}>
-                  {s.label}
-                </button>
-              ))}
+      <Panel
+        title="Lo que el universo obligado reporta"
+        actions={
+          <div className="seg" role="tablist" aria-label="Serie publicada">
+            {SERIES.map((s) => (
+              <button key={s.key} role="tab" aria-selected={s.key === serie}
+                data-on={s.key === serie} onClick={() => setSerie(s.key)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <p style={{ margin: '0 0 4px', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: '72ch' }}>
+          {serieActiva.lede}
+        </p>
+        {chartData.length ? (
+          <>
+            <Columns accent={serieActiva.accent} data={chartData} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+              <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
+                {serieActiva.unit} · corte {serieDatos?.corte ?? '—'}
+              </span>
+              {sourceHref && (
+                <a className="ev-link" style={{ marginTop: 0, fontSize: 11.5 }}
+                  href={sourceHref} target="_blank" rel="noreferrer">
+                  {sourceLabel} →
+                </a>
+              )}
             </div>
-          }
-        >
-          <p style={{ margin: '0 0 4px', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: '72ch' }}>
-            {serieActiva.lede}
-          </p>
-          {chartData.length ? (
-            <>
-              <Columns accent={serieActiva.accent} data={chartData} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
-                <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
-                  {serieActiva.unit} · corte {serieDatos?.corte ?? '—'}
-                </span>
-                {sourceHref && (
-                  <a className="ev-link" style={{ marginTop: 0, fontSize: 11.5 }}
-                    href={sourceHref} target="_blank" rel="noreferrer">
-                    {sourceLabel} →
-                  </a>
-                )}
-              </div>
-            </>
-          ) : (
-            <Empty title="Serie no publicada en este corte" />
-          )}
-        </Panel>
-
-        <NovedadesObservatorio />
-      </div>
+          </>
+        ) : (
+          <Empty title="Serie no publicada en este corte" />
+        )}
+      </Panel>
 
       <Panel
         title="Quién sostiene la reportabilidad"
@@ -169,11 +164,6 @@ function SectorReportRow({
   onPick?: () => void;
 }) {
   const intensidad = s.ros_per_100_so_2025;
-  /* La intensidad recorre cinco órdenes de magnitud —de 0,25 a 82.959 ROS por
-     cada 100 inscritos— y en escala lineal todo lo que no sea banca queda
-     pegado al cero. La escala logarítmica conserva el orden y deja ver la
-     diferencia entre 0,25 y 27, que es justamente la que interesa. La barra se
-     rotula como logarítmica: una escala comprimida sin decirlo engaña. */
   const ancho =
     intensidad == null ? 0
       : Math.min(100, (Math.log10(1 + intensidad) / Math.log10(1 + peak)) * 100);
