@@ -1,0 +1,134 @@
+/* Territorio · prioridad cartográfica
+   En la vista nacional el mapa pasa a ocupar todo el ancho disponible.
+   Los paneles laterales "Distribución por banda" y "Cómo se compone el índice"
+   se retiran de la composición visual porque su información ya está disponible
+   en la metodología y en la propia leyenda del mapa. */
+
+/* La grilla que sigue a los KPI corresponde al bloque cartográfico principal. */
+.territory-method + .grid.grid-4 + .grid.grid-main {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin-bottom: 14px !important;
+}
+
+/* Elimina de la vista los dos paneles redundantes de la columna derecha. */
+.territory-method + .grid.grid-4 + .grid.grid-main > .grid {
+  display: none !important;
+}
+
+/* El mapa ocupa toda la superficie útil y gana presencia sin cambiar datos. */
+.territory-method + .grid.grid-4 + .grid.grid-main > .panel {
+  width: 100%;
+  overflow: hidden;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main > .panel > .panel-head {
+  min-height: 42px;
+  padding: 9px 16px;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main > .panel > .panel-head h3 {
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main > .panel > .panel-head .meta {
+  max-width: 68%;
+  font-size: 10.5px;
+  line-height: 1.25;
+  text-align: right;
+}
+
+/* Barra de herramientas más limpia y horizontal. */
+.territory-method + .grid.grid-4 + .grid.grid-main .map-tools {
+  padding: 9px 16px;
+  gap: 8px;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main .map-search {
+  min-width: 220px;
+  max-width: 360px;
+}
+
+/* Al ganar ancho, ChileMap recalcula automáticamente la altura de las franjas.
+   Se deja más superficie respirando alrededor de la cartografía. */
+.territory-method + .grid.grid-4 + .grid.grid-main .map-host {
+  padding: 18px 24px 8px;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main .map-strips {
+  gap: 24px;
+  justify-content: space-evenly;
+  align-items: flex-start;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main .map-strip-head {
+  margin-bottom: 2px;
+  font-size: 10.8px;
+}
+
+/* La leyenda pasa a funcionar como pie analítico del mapa, no como bloque aparte. */
+.territory-method + .grid.grid-4 + .grid.grid-main .map-legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+  gap: 14px 22px;
+  align-items: center;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main .map-legend-steps {
+  justify-content: flex-start;
+  gap: 14px;
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main .map-legend > div:nth-child(2) {
+  max-width: none !important;
+  font-size: 10.2px;
+  line-height: 1.35 !important;
+  color: var(--ink-3);
+}
+
+.territory-method + .grid.grid-4 + .grid.grid-main .map-islands {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+/* La tabla de comunas queda inmediatamente después del mapa y se lee como
+   segunda capa de navegación: mapa -> ranking -> detalle comunal. */
+.territory-method + .grid.grid-4 + .grid.grid-main + .panel {
+  margin-top: 0;
+}
+
+@media (max-width: 980px) {
+  .territory-method + .grid.grid-4 + .grid.grid-main > .panel > .panel-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .territory-method + .grid.grid-4 + .grid.grid-main > .panel > .panel-head .meta {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .territory-method + .grid.grid-4 + .grid.grid-main .map-host {
+    padding-inline: 14px;
+  }
+
+  .territory-method + .grid.grid-4 + .grid.grid-main .map-legend {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .territory-method + .grid.grid-4 + .grid.grid-main .map-search {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .territory-method + .grid.grid-4 + .grid.grid-main .map-strips {
+    gap: 14px;
+  }
+}
