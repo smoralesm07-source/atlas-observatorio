@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
 import { hrefFor, type UniversoMode, type UniversoQueue } from '../lib/router';
 import type { UafPotential, UafPulse } from '../lib/contracts';
 import { ErrorBox, Loading, Semantics } from '../components/primitives';
-import { fecha, n } from '../lib/format';
 import {
   applyPatch, hydrate, isTracked,
   type CaseContact, type CaseKind, type CaseMap, type CaseRecord, type CaseSubject,
@@ -16,11 +15,7 @@ import type { CaseRow } from './universo/model';
 import '../styles/universo-so.css';
 import '../styles/universo-casework-compact.css';
 import '../styles/universo-so-v2.css';
-
-const AXES: { key: UniversoMode; label: string; hint: string }[] = [
-  { key: 'padron', label: 'Padrón y analítica', hint: 'Caracterización, reportabilidad, evolución y directorio' },
-  { key: 'casos', label: 'Mesa de casos', hint: 'Potenciales, términos y gestión compartida' },
-];
+import '../styles/universo-so-management.css';
 
 const queueForKind = (kind: CaseKind): Queue => (kind === 'TERMINO' ? 'termino' : 'potenciales');
 
@@ -106,42 +101,23 @@ export function UniversoSOV2({
     [onNavigate],
   );
 
-  const trackedRows = useMemo(() => Object.values(cases).filter(isTracked), [cases]);
-  const tracked = trackedRows.length;
-  const mine = trackedRows.filter((record) => record.isMine).length;
-
   if (pulse.loading && !pulse.data) return <Loading label="Leyendo el universo de sujetos obligados…" />;
   if (pulse.error) return <ErrorBox error={pulse.error} onRetry={pulse.reload} />;
   if (!pulse.data?.universe) return <ErrorBox error="El corte vigente no devolvió el padrón UAF." onRetry={pulse.reload} />;
 
-  const u = pulse.data.universe;
-  const rawPotential = potential.data?.totales?.accionables ?? 0;
-  const rawTerm = u.terminados;
-  const managedPotential = trackedRows.filter((record) => record.kind === 'POTENCIAL').length;
-  const managedTerm = trackedRows.filter((record) => record.kind === 'TERMINO').length;
-  const pendientes = Math.max(0, rawPotential - managedPotential) + Math.max(0, rawTerm - managedTerm) + tracked;
-  const snapshot = pulse.data.snapshot;
+  const isPadron = axis === 'padron';
 
   return (
-    <div className="uso fade-in">
-      <header className="uso-head">
+    <div className={`uso fade-in uso-mode-${axis}`}>
+      <header className="uso-head uso-head-compact">
         <div className="uso-head-copy">
-          <span className="uso-kicker">Padrón UAF · Ley 19.913 · conciliación registral y analítica sectorial</span>
-          <h1>Universo SO</h1>
-          <p>
-            Superficie de caracterización del padrón inscrito y sus bordes. Reúne composición, territorio,
-            reportabilidad, señales de revisión, evolución sectorial, términos de giro y potenciales SO; cada lectura
-            desemboca en un directorio filtrado para pasar del agregado a las entidades.
-          </p>
+          <span className="uso-kicker">
+            {isPadron
+              ? 'Universo SO · caracterización del padrón inscrito'
+              : 'Universo SO · gestión registral de potenciales y términos de giro'}
+          </span>
+          <h1>{isPadron ? 'Padrón SO' : 'Gestión SO'}</h1>
         </div>
-        <dl className="uso-head-meta">
-          <div><dt>Corte vigente</dt><dd>{snapshot ? fecha(snapshot.published_at ?? snapshot.generated_at) : 'sin fecha publicada'}</dd></div>
-          <div><dt>Padrón</dt><dd className="num">{n(u.total)} sujetos</dd></div>
-          <div><dt>Término de giro</dt><dd className="num">{n(u.terminados)}</dd></div>
-          <div><dt>Potenciales</dt><dd className="num">{potential.loading && !potential.data ? '…' : n(rawPotential)}</dd></div>
-          <div><dt>En gestión</dt><dd className="num">{management.loading && !management.data ? '…' : n(tracked)}</dd></div>
-          {mine > 0 && <div><dt>Asignados a ti</dt><dd className="num">{n(mine)}</dd></div>}
-        </dl>
       </header>
 
       {(caseError || management.error) && (
@@ -151,17 +127,7 @@ export function UniversoSOV2({
         </div>
       )}
 
-      <nav className="uso-axes" aria-label="Ejes de Universo SO">
-        {AXES.map((item) => (
-          <button key={item.key} data-on={axis === item.key} onClick={() => goto(item.key)} aria-current={axis === item.key}>
-            <span>{item.label}</span>
-            <b className="num">{item.key === 'padron' ? n(u.total) : (potential.loading && !potential.data ? '…' : n(pendientes))}</b>
-            <em>{item.hint}</em>
-          </button>
-        ))}
-      </nav>
-
-      {axis === 'padron' ? (
+      {isPadron ? (
         <PadronAxisV2
           pulse={pulse.data}
           potential={potential.data}
@@ -169,7 +135,7 @@ export function UniversoSOV2({
           onWork={onWork}
         />
       ) : management.loading && !management.data ? (
-        <Loading label="Sincronizando la mesa compartida de gestión…" />
+        <Loading label="Sincronizando Gestión SO…" />
       ) : management.error && !management.data ? (
         <ErrorBox error={management.error} onRetry={management.reload} />
       ) : (
@@ -192,9 +158,10 @@ export function UniversoSOV2({
       )}
 
       <Semantics>
-        <strong>Cómo leer Universo SO.</strong> El padrón describe quién está inscrito en el corte; reportabilidad es sectorial y agregada.
-        Término de giro y potencial SO son condiciones de conciliación registral. Sanciones, prensa, IPF y demás marcas sirven para ordenar revisión:
-        no concluyen por sí solas incumplimiento ni riesgo LA/FT. La mesa de casos mantiene responsable, avance y trazabilidad del trabajo.
+        <strong>Cómo leer Universo SO.</strong> Padrón SO describe quién está inscrito en el corte y permite caracterizar composición,
+        territorio, reportabilidad y evolución. Término de giro y potencial SO son condiciones de conciliación registral.
+        Sanciones, prensa, IPF y demás marcas sirven para ordenar revisión: no concluyen por sí solas incumplimiento ni riesgo LA/FT.
+        Gestión SO mantiene responsable, avance y trazabilidad del trabajo sobre potenciales y términos de giro.
       </Semantics>
     </div>
   );
