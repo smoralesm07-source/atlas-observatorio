@@ -195,31 +195,43 @@ function RegisteredTable({ rows }: { rows: UafSubjectRow[] }) {
     <div className="subject-directory-scroll">
       <table className="subject-directory-table">
         <thead><tr>
-          <th>Entidad</th><th>Sector UAF</th><th>Situación / territorio</th><th>Marcas</th><th>IPF</th><th />
+          <th>Entidad</th><th>Sector UAF</th><th>Situación SII</th><th>Región</th><th>Marcas</th><th>IPF</th><th>Acciones</th>
         </tr></thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.rut}>
-              <td className="subject-directory-entity">
-                <b>{titleCase(row.name)}</b>
-                <span>{rutFormat(row.rut)} · {row.main_activity ? titleCase(row.main_activity) : 'sin actividad principal observada'}</span>
-              </td>
-              <td>
-                <div className="subject-directory-main">{row.uaf_sector ? titleCase(row.uaf_sector) : '—'}</div>
-                {row.economic_sector && <span className="subject-directory-secondary">{titleCase(row.economic_sector)}</span>}
-              </td>
-              <td>
-                <span className="subject-directory-state" style={{ ['--state-tone' as string]: stateTone(row.sii_status) }}><i />{stateLabel(row.sii_status)}</span>
-                <span className="subject-directory-secondary">{row.commune ? `${titleCase(row.commune)} · ${titleCase(row.region)}` : row.region ? titleCase(row.region) : 'sin territorio observado'}</span>
-              </td>
-              <td><RegisteredSignals row={row} /></td>
-              <td className="subject-directory-score">
-                <b>{row.ipf_score == null ? '—' : n1(row.ipf_score)}</b>
-                <small>{row.ipf_band ? titleCase(row.ipf_band.replace(/_/g, ' ')) : 'sin banda'}</small>
-              </td>
-              <td>{row.entity_id && <a className="subject-directory-open" href={hrefFor({ view: 'ficha', entityId: row.entity_id })}>360 →</a>}</td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const manageable = needsRegisteredManagement(row);
+            return (
+              <tr key={row.rut}>
+                <td className="subject-directory-entity">
+                  <b>{titleCase(row.name)}</b>
+                  <span>{rutFormat(row.rut)} · {row.main_activity ? titleCase(row.main_activity) : 'sin actividad principal observada'}</span>
+                </td>
+                <td>
+                  <div className="subject-directory-main">{row.uaf_sector ? titleCase(row.uaf_sector) : '—'}</div>
+                  {row.economic_sector && <span className="subject-directory-secondary">{titleCase(row.economic_sector)}</span>}
+                </td>
+                <td>
+                  <span className="subject-directory-state" style={{ ['--state-tone' as string]: stateTone(row.sii_status) }}><i />{stateLabel(row.sii_status)}</span>
+                  {row.sii_termination_date && <span className="subject-directory-secondary">Término {row.sii_termination_date.slice(0, 10)}</span>}
+                </td>
+                <td className="subject-directory-region">
+                  <div className="subject-directory-main">{row.region ? titleCase(row.region) : 'Sin región observada'}</div>
+                  {row.commune && <span className="subject-directory-secondary">{titleCase(row.commune)}</span>}
+                </td>
+                <td><RegisteredSignals row={row} /></td>
+                <td className="subject-directory-score">
+                  <b>{row.ipf_score == null ? '—' : n1(row.ipf_score)}</b>
+                  <small>{row.ipf_band ? titleCase(row.ipf_band.replace(/_/g, ' ')) : 'sin banda'}</small>
+                </td>
+                <td>
+                  <DirectoryActions
+                    manageHref={manageable ? caseHref('termino', row.rut) : null}
+                    entityHref={row.entity_id ? hrefFor({ view: 'ficha', entityId: row.entity_id }) : null}
+                  />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -231,7 +243,7 @@ function PotentialTable({ rows }: { rows: PotentialDirectoryRow[] }) {
     <div className="subject-directory-scroll">
       <table className="subject-directory-table">
         <thead><tr>
-          <th>Entidad</th><th>Sector sugerido</th><th>Industria / evidencia</th><th>Caracterización</th><th>IVO</th><th />
+          <th>Entidad</th><th>Sector sugerido</th><th>Industria / evidencia</th><th>Región</th><th>Caracterización</th><th>IVO</th><th>Acciones</th>
         </tr></thead>
         <tbody>
           {rows.map((row) => (
@@ -242,22 +254,47 @@ function PotentialTable({ rows }: { rows: PotentialDirectoryRow[] }) {
               </td>
               <td>
                 <div className="subject-directory-main">{row.implied_sector ? titleCase(row.implied_sector) : 'sin sector sugerido'}</div>
-                <span className="subject-directory-secondary">{row.commune ? `${titleCase(row.commune)} · ${titleCase(row.region)}` : row.region ? titleCase(row.region) : 'sin territorio observado'}</span>
+                <span className="subject-directory-secondary">{row.detection_tier ?? row.evidence_class ?? 'conciliación por giro'}</span>
               </td>
               <td>
                 <div className="subject-directory-main">{row.economic_sector ? titleCase(row.economic_sector) : 'sin industria SII observada'}</div>
                 <span className="subject-directory-secondary">{row.matched_activity ? titleCase(row.matched_activity) : 'sin actividad gatillante'}</span>
+              </td>
+              <td className="subject-directory-region">
+                <div className="subject-directory-main">{row.region ? titleCase(row.region) : 'Sin región observada'}</div>
+                {row.commune && <span className="subject-directory-secondary">{titleCase(row.commune)}</span>}
               </td>
               <td><PotentialSignals row={row} /></td>
               <td className="subject-directory-score">
                 <b>{row.ivo_score == null ? '—' : n1(row.ivo_score)}</b>
                 <small>{row.ivo_band ? titleCase(row.ivo_band.replace(/_/g, ' ')) : 'sin banda'}</small>
               </td>
-              <td>{row.entity_id && <a className="subject-directory-open" href={hrefFor({ view: 'ficha', entityId: row.entity_id })}>360 →</a>}</td>
+              <td>
+                <DirectoryActions
+                  manageHref={caseHref('potenciales', row.rut)}
+                  entityHref={row.entity_id ? hrefFor({ view: 'ficha', entityId: row.entity_id }) : null}
+                />
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function DirectoryActions({
+  manageHref,
+  entityHref,
+}: {
+  manageHref: string | null;
+  entityHref: string | null;
+}) {
+  if (!manageHref && !entityHref) return <span className="subject-directory-action-unavailable">—</span>;
+  return (
+    <div className="subject-directory-actions">
+      {manageHref && <a className="subject-directory-manage" href={manageHref}>Gestionar</a>}
+      {entityHref && <a className="subject-directory-open" href={entityHref}>Entidad 360 →</a>}
     </div>
   );
 }
@@ -285,6 +322,14 @@ function PotentialSignals({ row }: { row: PotentialDirectoryRow }) {
       {flags.slice(0, 2).map((flag) => <span className="subject-directory-signal" key={flag}>{titleCase(flag.replace(/_/g, ' '))}</span>)}
     </div>
   );
+}
+
+function needsRegisteredManagement(row: UafSubjectRow) {
+  return row.sii_status === 'TERMINATED_AS_PUBLISHED' || Boolean(row.sii_termination_date);
+}
+
+function caseHref(queue: 'potenciales' | 'termino', rut: string) {
+  return `#/universo-so?vista=casos&cola=${queue}&q=${encodeURIComponent(rut)}`;
 }
 
 function stateLabel(status: string | null) {
