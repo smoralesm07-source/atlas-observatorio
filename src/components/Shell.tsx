@@ -7,8 +7,6 @@ import { Mark } from './Mark';
 import '../styles/monitores-nav.css';
 
 const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
-  { label: 'Entidades', route: { view: 'entidades' }, match: ['entidades', 'ficha'] },
-  { label: 'Universo SO', route: { view: 'universo' }, match: ['universo'] },
   { label: 'Territorio', route: { view: 'territorio' }, match: ['territorio'] },
   { label: 'Gasto público', route: { view: 'gasto' }, match: ['gasto', 'gastoActor'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
@@ -49,6 +47,25 @@ function MonitorGlyph({ view }: { view: 'osfl' | 'fintech' | 'sanciones' }) {
   );
 }
 
+function UniversoGlyph({ mode }: { mode: 'padron' | 'casos' }) {
+  if (mode === 'padron') {
+    return (
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <ellipse cx="12" cy="5.5" rx="7" ry="2.7" stroke="currentColor" strokeWidth="1.65" />
+        <path d="M5 5.5v6c0 1.5 3.1 2.7 7 2.7s7-1.2 7-2.7v-6M5 11.5v6c0 1.5 3.1 2.7 7 2.7s7-1.2 7-2.7v-6"
+          stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M7 4.5h10a2 2 0 0 1 2 2v13H5v-13a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.65" />
+      <path d="M9 3v3M15 3v3M8.5 10.5l1.5 1.5 3-3M8.5 15.5l1.5 1.5 3-3M14.5 11h2M14.5 16h2"
+        stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Shell({
   route,
   session,
@@ -63,9 +80,13 @@ export function Shell({
   const [theme, setTheme] = useState<'dark' | 'light'>(
     () => (localStorage.getItem('atlas-obs-theme') as 'dark' | 'light') ?? 'dark',
   );
-  const [monitorsOpen, setMonitorsOpen] = useState(false);
-  const monitorsRef = useRef<HTMLDivElement>(null);
+  const [openMenu, setOpenMenu] = useState<'monitors' | 'universo' | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
+  const monitorsOpen = openMenu === 'monitors';
+  const universoOpen = openMenu === 'universo';
   const monitorsActive = MONITORS.some((item) => item.view === route.view);
+  const universoActive = route.view === 'universo';
+  const universoMode = route.view === 'universo' ? (route.mode ?? 'padron') : null;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -73,16 +94,16 @@ export function Shell({
   }, [theme]);
 
   useEffect(() => {
-    setMonitorsOpen(false);
+    setOpenMenu(null);
   }, [route.view]);
 
   useEffect(() => {
-    if (!monitorsOpen) return;
+    if (!openMenu) return;
     const closeOutside = (event: PointerEvent) => {
-      if (!monitorsRef.current?.contains(event.target as Node)) setMonitorsOpen(false);
+      if (!navRef.current?.contains(event.target as Node)) setOpenMenu(null);
     };
     const closeEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMonitorsOpen(false);
+      if (event.key === 'Escape') setOpenMenu(null);
     };
     document.addEventListener('pointerdown', closeOutside);
     window.addEventListener('keydown', closeEscape);
@@ -90,7 +111,7 @@ export function Shell({
       document.removeEventListener('pointerdown', closeOutside);
       window.removeEventListener('keydown', closeEscape);
     };
-  }, [monitorsOpen]);
+  }, [openMenu]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -119,12 +140,12 @@ export function Shell({
           </span>
         </a>
 
-        <nav className="nav" aria-label="Navegación principal">
+        <nav className="nav" aria-label="Navegación principal" ref={navRef}>
           <a href={hrefFor({ view: 'pulso' })} data-active={route.view === 'pulso'}>
             Pulso
           </a>
 
-          <div className="monitor-nav" ref={monitorsRef}>
+          <div className="monitor-nav">
             <button
               type="button"
               className="monitor-nav-trigger"
@@ -132,7 +153,7 @@ export function Shell({
               data-open={monitorsOpen}
               aria-haspopup="menu"
               aria-expanded={monitorsOpen}
-              onClick={() => setMonitorsOpen((current) => !current)}
+              onClick={() => setOpenMenu(monitorsOpen ? null : 'monitors')}
             >
               <span>Monitores</span>
               <svg className="monitor-nav-chevron" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -151,7 +172,7 @@ export function Shell({
                       className="monitor-menu-item"
                       data-active={active}
                       role="menuitem"
-                      onClick={() => setMonitorsOpen(false)}
+                      onClick={() => setOpenMenu(null)}
                     >
                       <span className="monitor-menu-icon"><MonitorGlyph view={item.view} /></span>
                       <span className="monitor-menu-copy">
@@ -162,6 +183,60 @@ export function Shell({
                     </a>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          <a href={hrefFor({ view: 'entidades' })} data-active={['entidades', 'ficha'].includes(route.view)}>
+            Entidades
+          </a>
+
+          <div className="monitor-nav">
+            <button
+              type="button"
+              className="monitor-nav-trigger"
+              data-active={universoActive}
+              data-open={universoOpen}
+              aria-haspopup="menu"
+              aria-expanded={universoOpen}
+              onClick={() => setOpenMenu(universoOpen ? null : 'universo')}
+            >
+              <span>Universo SO</span>
+              <svg className="monitor-nav-chevron" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+                <path d="m5.5 7.5 4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {universoOpen && (
+              <div className="monitor-menu" role="menu" aria-label="Universo SO">
+                <a
+                  href={hrefFor({ view: 'universo', mode: 'padron' })}
+                  className="monitor-menu-item"
+                  data-active={universoMode === 'padron'}
+                  role="menuitem"
+                  onClick={() => setOpenMenu(null)}
+                >
+                  <span className="monitor-menu-icon"><UniversoGlyph mode="padron" /></span>
+                  <span className="monitor-menu-copy">
+                    <strong>Padrón SO</strong>
+                    <small>Caracterización, territorio, reportabilidad y evolución</small>
+                  </span>
+                  <span className="monitor-menu-arrow" aria-hidden>›</span>
+                </a>
+                <a
+                  href={hrefFor({ view: 'universo', mode: 'casos', cola: 'potenciales' })}
+                  className="monitor-menu-item"
+                  data-active={universoMode === 'casos'}
+                  role="menuitem"
+                  onClick={() => setOpenMenu(null)}
+                >
+                  <span className="monitor-menu-icon"><UniversoGlyph mode="casos" /></span>
+                  <span className="monitor-menu-copy">
+                    <strong>Gestión SO</strong>
+                    <small>Potenciales SO, términos de giro y cartera compartida</small>
+                  </span>
+                  <span className="monitor-menu-arrow" aria-hidden>›</span>
+                </a>
               </div>
             )}
           </div>
