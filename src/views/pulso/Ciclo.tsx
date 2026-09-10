@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { UafPulse } from '../../lib/contracts';
 import { useDebounced, useRpc } from '../../lib/rpc';
 import { hrefFor } from '../../lib/router';
-import { Empty, ErrorBox, Loading } from '../../components/primitives';
+import { Empty, ErrorBox } from '../../components/primitives';
 import { n, n1, rutFormat, titleCase } from '../../lib/format';
 import type { CohortRequest } from '../../components/CohortDrawer';
 import '../../styles/pulso-ciclo.css';
@@ -142,30 +142,6 @@ export function LenteCiclo({
 
   return (
     <div className="pulse-cycle">
-      <div className="pulse-cycle-summary" style={{ gridTemplateColumns: '1fr' }}>
-        <section className="pulse-cycle-panel">
-          <div className="pulse-cycle-head">
-            <div>
-              <h3>Evolución publicada del padrón UAF</h3>
-              <p>Stock de sujetos obligados inscritos · 2020–2026</p>
-            </div>
-            <div className="pulse-cycle-meta">
-              <strong>{n(evolution.data?.total.at(-1)?.total ?? u.total)}</strong>
-              <span>inscritos al 30-06-2026</span>
-            </div>
-          </div>
-          {evolution.loading && !evolution.data ? (
-            <Loading label="Leyendo la serie publicada del padrón…" />
-          ) : evolution.error ? (
-            <ErrorBox error={evolution.error} onRetry={evolution.reload} />
-          ) : evolution.data?.total.length ? (
-            <RegistryChart points={evolution.data.total} />
-          ) : (
-            <Empty title="Sin serie de padrón disponible" />
-          )}
-        </section>
-      </div>
-
       <div className="pulse-sector-trends">
         <TrendPanel
           title="Sectores que más aumentaron"
@@ -243,46 +219,6 @@ export function LenteCiclo({
         </div>
       </section>
     </div>
-  );
-}
-
-function RegistryChart({ points }: { points: RegistryTotal[] }) {
-  const W = 760, H = 154, L = 38, R = 38, T = 28, B = 28;
-  const values = points.map((point) => point.total);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const pad = Math.max(200, (max - min) * 0.12);
-  const low = Math.max(0, min - pad);
-  const high = max + pad * 0.35;
-  const span = Math.max(1, high - low);
-  const x = (index: number) => L + index * ((W - L - R) / Math.max(1, points.length - 1));
-  const y = (value: number) => T + (H - T - B) * (1 - (value - low) / span);
-  const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(index).toFixed(1)} ${y(point.total).toFixed(1)}`).join(' ');
-  const baseline = H - B;
-  const area = `${line} L ${x(points.length - 1).toFixed(1)} ${baseline} L ${x(0).toFixed(1)} ${baseline} Z`;
-  const last = points[points.length - 1];
-
-  return (
-    <>
-      <div className="pulse-registry-chart">
-        <svg className="pulse-registry-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Evolución del padrón UAF entre 2020 y 2026">
-          {[0.2, 0.5, 0.8].map((p) => <line key={p} className="pulse-registry-grid" x1={L} x2={W - R} y1={T + (H - T - B) * p} y2={T + (H - T - B) * p} />)}
-          <path className="pulse-registry-area" d={area} />
-          <path className="pulse-registry-line" d={line} />
-          {points.map((point, index) => (
-            <g key={point.year}>
-              <circle className="pulse-registry-dot" data-current={point.year === last.year} cx={x(index)} cy={y(point.total)} r={point.year === last.year ? 4.3 : 3.2} />
-              <text className={point.year === last.year ? 'pulse-registry-current' : 'pulse-registry-value'} x={x(index)} y={y(point.total) - 9}>{n(point.total)}</text>
-              <text className="pulse-registry-year" x={x(index)} y={H - 7}>{point.year}</text>
-            </g>
-          ))}
-        </svg>
-      </div>
-      <div className="pulse-registry-note">
-        <i />
-        <span>2020–2025 son cierres anuales publicados en los Informes Estadísticos UAF. El punto 2026 corresponde al padrón semestral al 30-06-2026: <b>{n(last.total)} inscritos</b>, no una proyección.</span>
-      </div>
-    </>
   );
 }
 
