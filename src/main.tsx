@@ -26,6 +26,7 @@ import './styles/entities-search-compact-toolbar.css';
 import './styles/cohort-dense.css';
 import './styles/cohort-overlay-v2.css';
 import './styles/pulso-updates-priority.css';
+import './styles/light-uaf-palette.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Falta el nodo #root.');
