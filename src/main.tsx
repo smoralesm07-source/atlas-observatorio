@@ -32,6 +32,7 @@ import './styles/light-monitor-contrast.css';
 import './styles/fintech-light-contrast-v2.css';
 import './styles/entity360-light-contrast-v2.css';
 import './styles/typography-floor.css';
+import './styles/gestion-so-table-head.css';
 
 const initialTheme = (() => {
   try {
