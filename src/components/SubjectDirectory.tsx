@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CohortRequest } from './CohortDrawer';
 import type { UafPotential, UafPotentialCandidate, UafSubjectRow } from '../lib/contracts';
-import { useRpc } from '../lib/rpc';
+import { useDebounced, useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
 import { n, n1, rutFormat, titleCase } from '../lib/format';
 import '../styles/subject-directory.css';
@@ -25,6 +25,7 @@ export type DirectorySelection =
 
 type SortMode = 'relevance' | 'name' | 'score' | 'signals';
 
+const PAGE = 80;
 const DEFAULT_REQUEST: CohortRequest = {
   cohort: 'TODOS',
   title: 'Padrón completo de sujetos obligados',
@@ -42,32 +43,31 @@ export function SubjectDirectory({
   onReset?: () => void;
 }) {
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounced(query, 220);
   const [sort, setSort] = useState<SortMode>('relevance');
+  const [page, setPage] = useState(0);
   const request = selection.kind === 'registered' ? selection.request : DEFAULT_REQUEST;
-  const cohort = useRpc<UafSubjectRow[]>('obs_uaf_cohort', {
+  const registeredSelectionKey = selection.kind === 'registered'
+    ? `${selection.request.cohort}|${selection.request.value ?? ''}|${selection.clientSector ?? ''}|${selection.clientRegion ?? ''}|${selection.clientIndustry ?? ''}`
+    : 'potential';
+
+  useEffect(() => setPage(0), [registeredSelectionKey]);
+
+  const cohort = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v2', {
     p_cohort: request.cohort,
     p_value: request.value ?? null,
-    p_limit: 500,
-    p_offset: 0,
+    p_q: debouncedQuery.trim() || null,
+    p_sector: selection.kind === 'registered' ? selection.clientSector ?? null : null,
+    p_region: selection.kind === 'registered' ? selection.clientRegion ?? null : null,
+    p_industry: selection.kind === 'registered' ? selection.clientIndustry ?? null : null,
+    p_order: sort === 'name' ? 'nombre' : sort === 'score' ? 'ipf' : sort === 'signals' ? 'senales' : 'relevancia',
+    p_limit: PAGE,
+    p_offset: page * PAGE,
   }, { skip: selection.kind !== 'registered' });
-
-  const registeredRows = useMemo(() => {
-    if (selection.kind !== 'registered') return [];
-    const q = query.trim().toLowerCase();
-    const rows = (cohort.data ?? []).filter((row) => {
-      if (selection.clientSector && row.uaf_sector !== selection.clientSector) return false;
-      if (selection.clientRegion && row.region !== selection.clientRegion) return false;
-      if (selection.clientIndustry && row.economic_sector !== selection.clientIndustry) return false;
-      if (!q) return true;
-      return [row.name, row.rut, row.uaf_sector, row.region, row.commune, row.main_activity, row.economic_sector]
-        .some((value) => (value ?? '').toLowerCase().includes(q));
-    });
-    return sortRegistered(rows, sort);
-  }, [selection, cohort.data, query, sort]);
 
   const potentialRows = useMemo(() => {
     if (selection.kind !== 'potential') return [];
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     const rows = (potential?.candidatos ?? []).filter((row) => {
       if (selection.sector && row.implied_sector !== selection.sector) return false;
       if (selection.region && row.region !== selection.region) return false;
@@ -77,17 +77,34 @@ export function SubjectDirectory({
         .some((value) => (value ?? '').toLowerCase().includes(q));
     });
     return sortPotential(rows, sort);
-  }, [selection, potential, query, sort]);
+  }, [selection, potential, debouncedQuery, sort]);
 
-  const baseTotal = selection.kind === 'registered'
-    ? cohort.data?.[0]?.total_count ?? 0
-    : potentialRows.length;
-  const visibleTotal = selection.kind === 'registered' ? registeredRows.length : potentialRows.length;
+  const registeredRows = selection.kind === 'registered' ? cohort.data ?? [] : [];
+  const registeredTotal = registeredRows[0]?.total_count ?? 0;
+  const visibleTotal = selection.kind === 'registered' ? registeredTotal : potentialRows.length;
+  const totalPages = selection.kind === 'registered' ? Math.max(1, Math.ceil(registeredTotal / PAGE)) : 1;
+  const start = selection.kind === 'registered' && registeredTotal > 0 ? page * PAGE + 1 : potentialRows.length ? 1 : 0;
+  const end = selection.kind === 'registered' ? Math.min(registeredTotal, (page + 1) * PAGE) : potentialRows.length;
   const title = selection.kind === 'registered' ? selection.request.title : selection.title;
   const hint = selection.kind === 'registered' ? selection.request.hint : selection.hint;
   const clientFilter = selection.kind === 'registered'
     ? [selection.clientSector, selection.clientRegion, selection.clientIndustry].filter(Boolean).join(' · ')
     : [selection.sector, selection.region, selection.activity].filter(Boolean).join(' · ');
+
+  const changeQuery = (value: string) => {
+    setQuery(value);
+    setPage(0);
+  };
+  const changeSort = (value: SortMode) => {
+    setSort(value);
+    setPage(0);
+  };
+  const resetAll = () => {
+    setQuery('');
+    setSort('relevance');
+    setPage(0);
+    onReset?.();
+  };
 
   return (
     <section className="subject-directory" id={id} aria-label="Directorio analítico">
@@ -100,7 +117,7 @@ export function SubjectDirectory({
         </div>
         <div className="subject-directory-count">
           {selection.kind === 'registered' && cohort.loading && !cohort.data ? '…' : n(visibleTotal)}
-          <small>{selection.kind === 'registered' ? `en pantalla · corte ${n(baseTotal)}` : 'candidatos coincidentes'}</small>
+          <small>{selection.kind === 'registered' ? 'sujetos en la cohorte exacta' : 'candidatos coincidentes'}</small>
         </div>
       </header>
 
@@ -108,7 +125,7 @@ export function SubjectDirectory({
         <span>{selection.kind === 'registered' ? 'Padrón inscrito' : 'Potenciales SO'}</span>
         <span>{title}</span>
         {clientFilter && <span>{clientFilter}</span>}
-        {onReset && <button className="subject-directory-reset" onClick={onReset}>Restablecer directorio</button>}
+        {onReset && <button className="subject-directory-reset" onClick={resetAll}>Restablecer directorio</button>}
       </div>
 
       <div className="subject-directory-tools">
@@ -116,17 +133,17 @@ export function SubjectDirectory({
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filtrar lo cargado por nombre, RUT, sector, actividad o territorio…"
+            onChange={(event) => changeQuery(event.target.value)}
+            placeholder="Buscar por nombre, RUT, sector, actividad o territorio…"
             aria-label="Filtrar directorio"
           />
-          {query && <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda">×</button>}
+          {query && <button onClick={() => changeQuery('')} aria-label="Limpiar búsqueda">×</button>}
         </label>
         <div className="subject-directory-sort" aria-label="Orden del directorio">
-          <button data-on={sort === 'relevance'} onClick={() => setSort('relevance')}>Relevancia</button>
-          <button data-on={sort === 'score'} onClick={() => setSort('score')}>{selection.kind === 'registered' ? 'IPF' : 'IVO'}</button>
-          <button data-on={sort === 'signals'} onClick={() => setSort('signals')}>Señales</button>
-          <button data-on={sort === 'name'} onClick={() => setSort('name')}>Nombre</button>
+          <button data-on={sort === 'relevance'} onClick={() => changeSort('relevance')}>Relevancia</button>
+          <button data-on={sort === 'score'} onClick={() => changeSort('score')}>{selection.kind === 'registered' ? 'IPF' : 'IVO'}</button>
+          <button data-on={sort === 'signals'} onClick={() => changeSort('signals')}>Señales</button>
+          <button data-on={sort === 'name'} onClick={() => changeSort('name')}>Nombre</button>
         </div>
       </div>
 
@@ -136,7 +153,7 @@ export function SubjectDirectory({
             <div>El directorio no pudo cargar esta cohorte. <button className="btn btn-sm" onClick={cohort.reload}>Reintentar</button></div>
           </div>
         ) : cohort.loading && !cohort.data ? (
-          <div className="subject-directory-statebar">Leyendo sujetos del padrón…</div>
+          <div className="subject-directory-statebar">Leyendo la cohorte exacta del padrón…</div>
         ) : !registeredRows.length ? (
           <div className="subject-directory-statebar">No hay sujetos que coincidan con esta selección.</div>
         ) : (
@@ -151,10 +168,16 @@ export function SubjectDirectory({
       <footer className="subject-directory-foot">
         <span>
           {selection.kind === 'registered'
-            ? <><b>{n(visibleTotal)}</b> filas visibles. El RPC entrega hasta 500 para esta vista; afina con los gráficos para cohortes más precisas.</>
-            : <><b>{n(visibleTotal)}</b> candidatos del corte de conciliación SII ↔ UAF.</>}
+            ? <><b>{n(start)}–{n(end)}</b> de <b>{n(registeredTotal)}</b> sujetos del corte seleccionado.</>
+            : <><b>{n(potentialRows.length)}</b> candidatos del corte de conciliación SII ↔ UAF.</>}
         </span>
-        <span>{selection.kind === 'registered' ? 'IPF ordena revisión; no mide riesgo LA/FT.' : 'IVO ordena revisión registral; no acredita obligación ni incumplimiento.'}</span>
+        {selection.kind === 'registered' ? (
+          <div className="subject-directory-pages">
+            <button disabled={page === 0 || cohort.loading} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Anterior</button>
+            <span>{page + 1} / {totalPages}</span>
+            <button disabled={page + 1 >= totalPages || cohort.loading} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Siguiente →</button>
+          </div>
+        ) : <span>IVO ordena revisión registral; no acredita obligación ni incumplimiento.</span>}
       </footer>
     </section>
   );
@@ -257,24 +280,12 @@ function PotentialSignals({ row }: { row: UafPotentialCandidate }) {
   );
 }
 
-function sortRegistered(rows: UafSubjectRow[], sort: SortMode) {
-  const copy = rows.slice();
-  if (sort === 'name') return copy.sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  if (sort === 'score') return copy.sort((a, b) => (b.ipf_score ?? -1) - (a.ipf_score ?? -1));
-  if (sort === 'signals') return copy.sort((a, b) => registeredSignalCount(b) - registeredSignalCount(a));
-  return copy;
-}
-
 function sortPotential(rows: UafPotentialCandidate[], sort: SortMode) {
   const copy = rows.slice();
   if (sort === 'name') return copy.sort((a, b) => a.name.localeCompare(b.name, 'es'));
   if (sort === 'score') return copy.sort((a, b) => (b.ivo_score ?? -1) - (a.ivo_score ?? -1));
   if (sort === 'signals') return copy.sort((a, b) => potentialSignalCount(b) - potentialSignalCount(a));
   return copy;
-}
-
-function registeredSignalCount(row: UafSubjectRow) {
-  return row.sanction_evidence_count + row.press_evidence_count + row.alert_count + (row.is_osfl ? 1 : 0) + (row.attention_motive ? 1 : 0);
 }
 
 function potentialSignalCount(row: UafPotentialCandidate) {
