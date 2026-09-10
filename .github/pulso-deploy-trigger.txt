@@ -1,0 +1,1 @@
+Trigger GitHub Pages deployment after verified Pulso layout update.
