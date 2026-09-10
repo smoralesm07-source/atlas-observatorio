@@ -126,7 +126,7 @@ export function FintechEntityMarketPosition({ rut, label }: { rut: string | null
       </div>)}
     </div>
     {regulation.length > 0 && <p><b>Huella regulatoria:</b> {regulation.map(formatRegulation).join(' · ')}</p>}
-    <p>Comparación dentro de la misma cohorte y métrica. Regulación y tamaño se informan por separado; no es cuota de mercado ni un score compuesto.</p>
+    <p>Comparación dentro de la misma cohorte, métrica y alcance geográfico comparable. La evidencia histórica queda visible, pero no determina el percentil vigente. Regulación y tamaño se informan por separado.</p>
   </div>;
 }
 
@@ -136,11 +136,11 @@ function compact(value:number) { return new Intl.NumberFormat('es-CL',{notation:
 function formatValue(row:Metric) {
   if (row.value_numeric == null) return row.value_text ?? 'n/d';
   if (row.currency==='USD' || row.unit==='USD') return `USD ${compact(row.value_numeric)}`;
-  const suffix:Record<string,string>={rank:' tramo',workers:' trab.',users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',institutions:' instituciones',sources:' fuentes',countries:' países',payment_methods:' medios',connections:' API',agreements:' acuerdos',providers:' prestadores',policies:' pólizas'};
+  const suffix:Record<string,string>={rank:' tramo',workers:' trab.',users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',orders:' órdenes',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',institutions:' instituciones',sources:' fuentes',countries:' países',payment_methods:' medios',connections:' API',agreements:' acuerdos',providers:' prestadores',policies:' pólizas'};
   return `${compact(row.value_numeric)}${suffix[row.unit ?? ''] ?? (row.unit ? ` ${row.unit}` : '')}`;
 }
 function shortLabel(code:string,label:string) {
-  const map:Record<string,string>={SII_SALES_BAND_RANK:'Ventas SII',WORKERS:'Trabajadores',USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',APP_DOWNLOADS_COUNT:'Descargas app',TRANSACTIONS_MONTHLY_COUNT:'Tx / mes',TRANSACTIONS_QUARTERLY_COUNT:'Tx / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Tx / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',PROCESSED_VOLUME_MONTHLY_USD:'Volumen / mes',PROCESSED_VOLUME_PERIOD_USD:'Volumen del período',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',FINANCIAL_INSTITUTIONS_CONNECTED_COUNT:'Instituciones conectadas',DATA_SOURCES_CONNECTED_COUNT:'Fuentes conectadas',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',API_CONNECTIONS:'Conexiones API',AGREEMENTS_COUNT:'Acuerdos',HEALTH_PROVIDERS_NETWORK:'Prestadores'};
+  const map:Record<string,string>={SII_SALES_BAND_RANK:'Ventas SII',WORKERS:'Trabajadores',USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',APP_DOWNLOADS_COUNT:'Descargas app',TRANSACTIONS_MONTHLY_COUNT:'Tx / mes',ORDERS_MONTHLY_COUNT:'Órdenes / mes',TRANSACTIONS_QUARTERLY_COUNT:'Tx / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Tx / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',PROCESSED_VOLUME_MONTHLY_USD:'Volumen / mes',PROCESSED_VOLUME_PERIOD_USD:'Volumen del período',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',FINANCIAL_INSTITUTIONS_CONNECTED_COUNT:'Instituciones conectadas',DATA_SOURCES_CONNECTED_COUNT:'Fuentes conectadas',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',API_CONNECTIONS:'Conexiones API',AGREEMENTS_COUNT:'Acuerdos',HEALTH_PROVIDERS_NETWORK:'Prestadores'};
   return map[code] ?? label;
 }
 function geoLabel(value:string|null) {
