@@ -4,8 +4,8 @@ import { AuthGate, type AtlasRole } from './components/OpenAuthGate';
 import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
 import { useRoute } from './lib/router';
-import { Pulso } from './views/Pulso';
-import { UniversoSO } from './views/UniversoSO';
+import { PulsoV6 } from './views/PulsoV6';
+import { UniversoSOV2 } from './views/UniversoSOV2';
 import { Osfl } from './views/Osfl';
 import { FintechEnhanced } from './views/FintechEnhanced';
 import { Sanciones } from './views/Sanciones';
@@ -30,9 +30,9 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
 
   return (
     <Shell route={route} session={session} role={role}>
-      {route.view === 'pulso' && <Pulso onNavigate={go} lente={route.lente} />}
+      {route.view === 'pulso' && <PulsoV6 onNavigate={go} />}
       {route.view === 'universo' && (
-        <UniversoSO onNavigate={go} initialMode={route.mode ?? 'padron'} initialQueue={route.cola} />
+        <UniversoSOV2 onNavigate={go} initialMode={route.mode ?? 'padron'} initialQueue={route.cola} />
       )}
       {route.view === 'osfl' && <Osfl onNavigate={go} />}
       {route.view === 'fintech' && <FintechEnhanced onNavigate={go} />}
