@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Idempotente: permite volver a validar la homologación sin reescribir la vista.
 path = Path('src/views/Territorio.tsx')
 text = path.read_text(encoding='utf-8')
 
