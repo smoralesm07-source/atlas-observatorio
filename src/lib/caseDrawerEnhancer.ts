@@ -8,6 +8,7 @@ const WORK_SELECTOR = '.uso-mode-casos .uso-work';
 const ROW_SELECTOR = '.uso-row-main[data-caserow]';
 const CLOSE_SELECTOR = '.uso-back';
 const OPEN_ATTR = 'data-case-drawer-open';
+const LOCK_CLASS = 'uso-case-drawer-open';
 
 function flushFocusedField(detail: HTMLElement | null) {
   const active = document.activeElement;
@@ -18,7 +19,8 @@ function syncDrawerTop(work?: HTMLElement | null) {
   const topbar = document.querySelector<HTMLElement>('.topbar');
   const fallback = window.innerWidth <= 720 ? 56 : 60;
   const measured = topbar ? Math.max(0, Math.round(topbar.getBoundingClientRect().bottom)) : fallback;
-  const value = `${measured}px`;
+  const safeTop = Math.min(Math.max(0, measured), Math.max(0, window.innerHeight - 160));
+  const value = `${safeTop}px`;
 
   if (work) {
     work.style.setProperty('--uso-case-drawer-top', value);
@@ -29,13 +31,23 @@ function syncDrawerTop(work?: HTMLElement | null) {
     .forEach((item) => item.style.setProperty('--uso-case-drawer-top', value));
 }
 
+function lockBackground() {
+  document.documentElement.classList.add(LOCK_CLASS);
+  document.body.classList.add(LOCK_CLASS);
+}
+
+function unlockBackground() {
+  document.documentElement.classList.remove(LOCK_CLASS);
+  document.body.classList.remove(LOCK_CLASS);
+}
+
 function openDrawer(work: HTMLElement, trigger?: HTMLElement | null) {
   const detail = work.querySelector<HTMLElement>('.uso-detail');
   if (!detail) return;
 
   syncDrawerTop(work);
   work.setAttribute(OPEN_ATTR, 'true');
-  document.body.classList.add('uso-case-drawer-open');
+  lockBackground();
   detail.setAttribute('role', 'dialog');
   detail.setAttribute('aria-modal', 'true');
   detail.setAttribute('aria-label', 'Ficha de Gestión SO');
@@ -54,7 +66,7 @@ function closeDrawer(work: HTMLElement, restoreFocus = true) {
   flushFocusedField(detail);
 
   work.removeAttribute(OPEN_ATTR);
-  document.body.classList.remove('uso-case-drawer-open');
+  unlockBackground();
   detail?.removeAttribute('role');
   detail?.removeAttribute('aria-modal');
   detail?.removeAttribute('aria-label');
@@ -72,6 +84,7 @@ function closeDrawer(work: HTMLElement, restoreFocus = true) {
 function closeAll(restoreFocus = false) {
   document.querySelectorAll<HTMLElement>(`${WORK_SELECTOR}[${OPEN_ATTR}="true"]`)
     .forEach((work) => closeDrawer(work, restoreFocus));
+  unlockBackground();
 }
 
 /* Captura temprana: el botón heredado “Volver a la lista” se convierte en el
