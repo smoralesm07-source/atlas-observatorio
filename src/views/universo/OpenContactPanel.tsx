@@ -33,6 +33,8 @@ type EnrichmentResult = {
   findings?: unknown[];
 };
 
+type ContactPreview = { title: string | null; excerpt: string; source_url: string | null; fetched: boolean };
+
 type ContactField = keyof Pick<CaseContact, 'telefono' | 'correo' | 'sitio' | 'direccion'>;
 
 const FIELD_BY_TYPE: Record<string, ContactField | undefined> = {
@@ -88,9 +90,11 @@ function directHref(contact: OpenContact): string | null {
 export function OpenContactPanel({
   row,
   onPatch,
+  readOnly = false,
 }: {
   row: CaseRow;
   onPatch: (patch: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> }) => void;
+  readOnly?: boolean;
 }) {
   const contacts = useRpc<OpenContact[]>('obs_uaf_contact_osint', {
     p_rut: row.subject.rut,
@@ -100,6 +104,7 @@ export function OpenContactPanel({
   const [actionId, setActionId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<Record<string, ContactPreview | 'loading'>>({});
 
   const items = useMemo(
     () => (contacts.data ?? []).slice().sort((a, b) => {
@@ -161,6 +166,35 @@ export function OpenContactPanel({
     setMessage(`${TYPE_LABEL[contact.contact_type] ?? 'Dato'} incorporado a Gestión.`);
   }
 
+  async function loadPreview(contact: OpenContact) {
+    const current = previews[contact.contact_id];
+    if (current && current !== 'loading') {
+      setPreviews((all) => {
+        const next = { ...all };
+        delete next[contact.contact_id];
+        return next;
+      });
+      return;
+    }
+    setPreviews((all) => ({ ...all, [contact.contact_id]: 'loading' }));
+    const { data, error } = await supabase.functions.invoke<ContactPreview>('atlas-contact-preview', {
+      body: { contact_id: contact.contact_id },
+    });
+    if (error || !data) {
+      setPreviews((all) => ({
+        ...all,
+        [contact.contact_id]: {
+          title: contact.source_label,
+          excerpt: contact.evidence_note || 'No fue posible leer una muestra de la fuente en este momento.',
+          source_url: contact.source_url,
+          fetched: false,
+        },
+      }));
+      return;
+    }
+    setPreviews((all) => ({ ...all, [contact.contact_id]: data }));
+  }
+
   async function setStatus(contact: OpenContact, status: 'VERIFICADO' | 'DESCARTADO') {
     setActionId(contact.contact_id);
     setLocalError(null);
@@ -184,7 +218,7 @@ export function OpenContactPanel({
         <div>
           <span className="uso-kicker">Contacto abierto</span>
           <h4>Cómo alcanzar a esta entidad</h4>
-          <p>Atlas conserva hallazgos de fuentes públicas con origen, fecha y confianza. Revísalos antes de incorporarlos a una gestión.</p>
+          <p>Atlas conserva hallazgos de fuentes públicas con origen, fecha y confianza. Abre «Ver muestra» para evaluarlos dentro de la app antes de incorporarlos.</p>
         </div>
         <button className="btn btn-sm btn-primary" onClick={() => void enrich()} disabled={busy}>
           {busy ? 'Buscando…' : items.length ? 'Actualizar red abierta' : 'Buscar en red abierta'}
@@ -215,6 +249,7 @@ export function OpenContactPanel({
             const field = FIELD_BY_TYPE[contact.contact_type];
             const href = directHref(contact);
             const domain = host(contact.source_url);
+            const preview = previews[contact.contact_id];
             return (
               <article className="uso-open-item" key={contact.contact_id} data-status={contact.verification_status ?? 'NO_VERIFICADO'}>
                 <span className="uso-open-kind" aria-hidden>{TYPE_GLYPH[contact.contact_type] ?? '·'}</span>
@@ -227,6 +262,18 @@ export function OpenContactPanel({
                     {' · '}{dateLabel(contact.last_observed_at ?? contact.updated_at)}
                   </small>
                   {contact.evidence_note && <em>{contact.evidence_note}</em>}
+                  <div className="uso-open-preview">
+                    <button onClick={() => void loadPreview(contact)}>
+                      {preview ? (preview === 'loading' ? 'Leyendo muestra…' : 'Ocultar muestra') : 'Ver muestra del hallazgo'}
+                    </button>
+                    {preview && preview !== 'loading' && (
+                      <div className="uso-open-preview-body">
+                        {preview.title && <b>{preview.title}</b>}
+                        <p>{preview.excerpt}</p>
+                        <small>{preview.fetched ? 'Texto leído desde la fuente' : 'Muestra disponible en Atlas / fuente no legible automáticamente'}</small>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="uso-open-quality">
                   <b>{confidence ? `${n1(confidence)}%` : '—'}</b>
@@ -235,7 +282,7 @@ export function OpenContactPanel({
                 </div>
                 <div className="uso-open-actions">
                   <CopyButton text={contact.contact_value} label="Copiar" done="Copiado" small />
-                  {field && <button className="uso-open-use" onClick={() => adopt(contact)}>Usar</button>}
+                  {field && !readOnly && <button className="uso-open-use" onClick={() => adopt(contact)}>Usar</button>}
                   {href && <a href={href} target={contact.contact_type === 'WEB' ? '_blank' : undefined} rel="noreferrer">Abrir</a>}
                   {contact.source_url && <a href={contact.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>}
                   {contact.verification_status !== 'VERIFICADO' && (

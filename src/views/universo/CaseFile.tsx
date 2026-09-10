@@ -3,7 +3,7 @@ import type { UafIvoComponent } from '../../lib/contracts';
 import {
   CONTACT_FIELDS, KIND_META, PRIORITIES, STATE_FLOW, STATE_META,
   type CaseContact, type CasePriority, type CaseRecord, type CaseState,
-  caseSummaryText, contactFilled,
+  caseSummaryText, contactFilled, isTracked,
 } from '../../lib/casework';
 import { rutForms } from '../../lib/osint';
 import { desde, fecha, n, n1, titleCase } from '../../lib/format';
@@ -51,6 +51,10 @@ export function CaseFile({
   const state = STATE_META[record.state];
   const { dotted } = rutForms(row.subject.rut);
   const filled = contactFilled(record.contact);
+  const tracked = isTracked(record);
+  const locked = tracked && record.isMine === false;
+  const canEdit = tracked && !locked;
+  const owner = record.assignedName || record.assignedEmail || null;
 
   return (
     <section className="uso-case" aria-label={`Ficha de gestión de ${row.subject.name || dotted}`}>
@@ -86,6 +90,29 @@ export function CaseFile({
         </div>
       </header>
 
+      <div className="uso-case-assignment" data-mode={!tracked ? 'open' : locked ? 'other' : 'mine'}>
+        {!tracked ? (
+          <>
+            <div>
+              <span className="uso-kicker">Disponible para gestión</span>
+              <b>Nadie está atendiendo este caso</b>
+              <em>Al tomarlo saldrá de la cola pendiente y el equipo verá que quedó asignado a ti.</em>
+            </div>
+            <button className="btn btn-sm btn-primary" onClick={() => onPatch({ state: 'EN_UBICACION' })}>Tomar caso</button>
+          </>
+        ) : (
+          <>
+            <div className="uso-owner-avatar" aria-hidden>{(owner ?? '?').slice(0, 1).toUpperCase()}</div>
+            <div>
+              <span className="uso-kicker">{record.isMine ? 'Asignado a ti' : 'Caso en atención'}</span>
+              <b>{record.isMine ? 'Tú' : owner}</b>
+              <em>{STATE_META[record.state].label}{record.assignedAt ? ` · tomado ${desde(record.assignedAt)}` : ''}</em>
+            </div>
+            {locked && <span className="uso-readonly">Sólo lectura</span>}
+          </>
+        )}
+      </div>
+
       <nav className="uso-case-tabs" aria-label="Secciones de la ficha">
         <button data-on={tab === 'motivo'} onClick={() => setTab('motivo')}>Por qué es caso</button>
         <button data-on={tab === 'ubicar'} onClick={() => setTab('ubicar')}>Contacto abierto</button>
@@ -103,7 +130,7 @@ export function CaseFile({
       )}
 
       {tab === 'ubicar' && (
-        <OpenContactPanel row={row} onPatch={onPatch} />
+        <OpenContactPanel row={row} onPatch={onPatch} readOnly={!canEdit} />
       )}
 
       {tab === 'gestion' && (
@@ -120,6 +147,7 @@ export function CaseFile({
                   type={field.type}
                   value={record.contact[field.key]}
                   placeholder={field.placeholder}
+                  disabled={!canEdit}
                   onChange={(e) => onPatch({ contact: { [field.key]: e.target.value } })}
                 />
               </label>
@@ -133,6 +161,7 @@ export function CaseFile({
             {filled > 0 && (
               <button
                 className="uso-linkish"
+                disabled={!canEdit}
                 onClick={() => onPatch({ contact: { telefono: '', correo: '', sitio: '', direccion: '', persona: '', fuente: '' } })}
               >
                 Limpiar contacto
@@ -149,6 +178,7 @@ export function CaseFile({
                 <button
                   key={key} data-on={record.state === key} data-done={done ? 'true' : undefined}
                   style={{ ['--flow-tone' as string]: meta.tone }}
+                  disabled={!canEdit || key === 'SIN_TRABAJAR'}
                   onClick={() => onPatch({ state: key })}
                 >
                   <i>{index + 1}</i>
@@ -162,7 +192,8 @@ export function CaseFile({
               <button
                 key={key} data-on={record.state === key}
                 style={{ ['--flow-tone' as string]: STATE_META[key].tone }}
-                onClick={() => onPatch({ state: record.state === key ? 'SIN_TRABAJAR' : key })}
+                disabled={!canEdit}
+                onClick={() => onPatch({ state: key })}
               >
                 {STATE_META[key].label}
               </button>
@@ -175,6 +206,7 @@ export function CaseFile({
               {PRIORITIES.map((p) => (
                 <button
                   key={p.key} data-on={record.priority === p.key}
+                  disabled={!canEdit}
                   onClick={() => onPatch({ priority: p.key as CasePriority })}
                 >
                   {p.label}
@@ -186,7 +218,7 @@ export function CaseFile({
           <label className="uso-note-field">
             <span>Nota de gestión</span>
             <textarea
-              value={record.note} maxLength={600}
+              value={record.note} maxLength={600} disabled={!canEdit}
               placeholder="Qué se intentó, con quién se habló, qué falta."
               onChange={(e) => onPatch({ note: e.target.value })}
             />
@@ -194,8 +226,8 @@ export function CaseFile({
           </label>
 
           <p className="uso-note">
-            La mesa vive en este navegador: no es un registro institucional ni se comparte con otras personas.
-            El CSV del lote es la salida que continúa el trámite fuera de Atlas.
+            La gestión se guarda en la mesa compartida de Atlas con responsable, estado y trazabilidad.
+            Los demás fiscalizadores pueden ver el avance, pero sólo el responsable del caso puede modificarlo.
           </p>
         </div>
       )}

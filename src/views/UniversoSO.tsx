@@ -1,35 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRpc } from '../lib/rpc';
+import { supabase } from '../lib/supabase';
 import { hrefFor, type UniversoMode, type UniversoQueue } from '../lib/router';
 import type { SectorOverview, UafPotential, UafPulse } from '../lib/contracts';
 import { CohortDrawer, type CohortRequest } from '../components/CohortDrawer';
 import { ErrorBox, Loading, Semantics } from '../components/primitives';
 import { fecha, n } from '../lib/format';
 import {
-  applyPatch, hydrate, isTracked, loadCases, saveCases,
+  applyPatch, hydrate, isTracked,
   type CaseContact, type CaseKind, type CaseMap, type CaseRecord, type CaseSubject,
 } from '../lib/casework';
+import { sharedRowsToCases, type SharedCaseRow } from '../lib/sharedCasework';
 import { PadronAxis, type Focus } from './universo/PadronAxis';
 import { CasosAxis, type Queue } from './universo/CasosAxis';
 import type { CaseRow } from './universo/model';
 import '../styles/universo-so.css';
 
-/* UNIVERSO SO · dos ejes y una sola herramienta
-   ────────────────────────────────────────────
-   1. SITUACIÓN ACTUAL DEL PADRÓN INSCRITO: de qué está hecho, qué marcas de
-      caracterización lleva, cómo se reparte por sector y por región. Es la
-      pregunta del analista de inteligencia.
-   2. LOS DOS BORDES DEL REGISTRO: quién debería estar y no está, y quién está
-      con el giro terminado. Es la pregunta del fiscalizador, y se trabaja caso
-      a caso: ubicar la entidad en fuentes abiertas, anotar el contacto que se
-      encontró y sacar el lote en CSV.
-
-   Los dos ejes comparten el mismo corte y la misma regla: toda cifra abre las
-   entidades que la sostienen, y todo índice se imprime con lo que no es. */
+/* UNIVERSO SO · padrón + mesa operativa compartida
+   ───────────────────────────────────────────────
+   El padrón sigue siendo el contexto nacional. Los bordes del registro son
+   colas pendientes hasta que un fiscalizador toma un caso. Desde ese momento
+   la entidad sale de la cola de origen y vive en Gestión, con responsable,
+   estado y trazabilidad visibles para todo usuario habilitado. */
 
 const AXES: { key: UniversoMode; label: string; hint: string }[] = [
   { key: 'padron', label: 'Padrón inscrito', hint: 'Situación actual de los SO' },
-  { key: 'casos', label: 'Mesa de casos', hint: 'Potenciales y término de giro' },
+  { key: 'casos', label: 'Mesa de casos', hint: 'Pendientes + gestión compartida' },
 ];
 
 const queueForKind = (kind: CaseKind): Queue => (kind === 'TERMINO' ? 'termino' : 'potenciales');
@@ -44,24 +40,30 @@ export function UniversoSO({
   const pulse = useRpc<UafPulse>('obs_uaf_pulse', {});
   const potential = useRpc<UafPotential>('obs_uaf_potential', {});
   const sectorOverview = useRpc<SectorOverview>('obs_sector_overview', {});
+  const management = useRpc<SharedCaseRow[]>('obs_uaf_case_management', {});
 
   const [axis, setAxis] = useState<UniversoMode>(initialMode);
   const [queue, setQueue] = useState<Queue>(initialQueue ?? 'potenciales');
   const [sectorFocus, setSectorFocus] = useState<string | null>(null);
   const [cohort, setCohort] = useState<CohortRequest | null>(null);
-  const [cases, setCases] = useState<CaseMap>(loadCases);
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [cases, setCases] = useState<CaseMap>({});
+  const [caseError, setCaseError] = useState<string | null>(null);
 
   useEffect(() => setAxis(initialMode), [initialMode]);
   useEffect(() => { if (initialQueue) setQueue(initialQueue); }, [initialQueue]);
-
-  /* La mesa se escribe mientras se teclea una nota, así que el guardado se
-     agrupa: una escritura por pausa, no una por pulsación. */
   useEffect(() => {
-    if (persistTimer.current) clearTimeout(persistTimer.current);
-    persistTimer.current = setTimeout(() => saveCases(cases), 350);
-    return () => { if (persistTimer.current) clearTimeout(persistTimer.current); };
-  }, [cases]);
+    if (management.data) setCases(sharedRowsToCases(management.data));
+  }, [management.data]);
+
+  // La mesa es compartida. Un refresco corto evita que dos fiscalizadores
+  // trabajen con una fotografía vieja; el RPC de escritura además bloquea la
+  // doble asignación de forma transaccional.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (!document.hidden) management.reload();
+    }, 12000);
+    return () => window.clearInterval(timer);
+  }, [management.reload]);
 
   const goto = useCallback((mode: UniversoMode, cola?: Queue) => {
     setAxis(mode);
@@ -88,15 +90,29 @@ export function UniversoSO({
     row: CaseRow,
     change: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> },
   ) => {
+    const claiming = !isTracked(row.record);
+    setCaseError(null);
+    // Respuesta inmediata en pantalla; el contrato servidor manda al recargar.
     setCases((current) => applyPatch(current, row.kind, row.subject, change));
-  }, []);
+
+    void supabase.rpc('aml_uaf_case_patch', {
+      p_kind: row.kind,
+      p_rut: row.subject.rut,
+      p_subject: row.subject,
+      p_state: change.state === 'SIN_TRABAJAR' ? null : (change.state ?? null),
+      p_priority: change.priority ?? null,
+      p_note: change.note ?? null,
+      p_contact: change.contact ?? null,
+      p_claim: claiming,
+    }).then(({ error }) => {
+      if (error) setCaseError(error.message);
+      management.reload();
+    });
+  }, [management.reload]);
 
   const bulk = useCallback((rows: CaseRow[], change: Partial<Pick<CaseRecord, 'state' | 'priority'>>) => {
-    setCases((current) => rows.reduce(
-      (acc, row) => applyPatch(acc, row.kind, row.subject, change),
-      current,
-    ));
-  }, []);
+    for (const row of rows) patch(row, change);
+  }, [patch]);
 
   const onHydrate = useCallback((kind: CaseKind, subjects: CaseSubject[]) => {
     setCases((current) => hydrate(current, kind, subjects));
@@ -107,14 +123,20 @@ export function UniversoSO({
     [onNavigate],
   );
 
-  const tracked = useMemo(() => Object.values(cases).filter(isTracked).length, [cases]);
+  const trackedRows = useMemo(() => Object.values(cases).filter(isTracked), [cases]);
+  const tracked = trackedRows.length;
+  const mine = trackedRows.filter((record) => record.isMine).length;
 
   if (pulse.loading && !pulse.data) return <Loading label="Leyendo el universo de sujetos obligados…" />;
   if (pulse.error) return <ErrorBox error={pulse.error} onRetry={pulse.reload} />;
   if (!pulse.data) return <ErrorBox error="El corte vigente no devolvió el pulso del padrón." onRetry={pulse.reload} />;
 
   const u = pulse.data.universe;
-  const pendientes = (u?.terminados ?? 0) + (potential.data?.totales?.accionables ?? 0);
+  const rawPotential = potential.data?.totales?.accionables ?? 0;
+  const rawTerm = u?.terminados ?? 0;
+  const managedPotential = trackedRows.filter((record) => record.kind === 'POTENCIAL').length;
+  const managedTerm = trackedRows.filter((record) => record.kind === 'TERMINO').length;
+  const pendientes = Math.max(0, rawPotential - managedPotential) + Math.max(0, rawTerm - managedTerm) + tracked;
   const snapshot = pulse.data.snapshot;
 
   return (
@@ -124,8 +146,8 @@ export function UniversoSO({
           <span className="uso-kicker">Padrón UAF · Ley 19.913 · conciliación con el SII</span>
           <h1>Universo SO</h1>
           <p>
-            Dos preguntas en una herramienta: cómo está compuesto el padrón de sujetos obligados y qué hacer con los
-            dos bordes del registro —quién debería inscribirse y quién ya terminó su giro—.
+            El padrón entrega el contexto. Los casos pendientes se transforman en gestión cuando un fiscalizador los toma;
+            desde ahí el equipo ve responsable, avance y resultado sin duplicar trabajo.
           </p>
         </div>
         <dl className="uso-head-meta">
@@ -141,14 +163,25 @@ export function UniversoSO({
             <dt>Conciliación SII</dt>
             <dd>{potential.data?.corte.sii_periodo ?? 'corte vigente'}</dd>
           </div>
-          {tracked > 0 && (
+          <div>
+            <dt>En gestión</dt>
+            <dd className="num">{management.loading && !management.data ? '…' : `${n(tracked)} casos`}</dd>
+          </div>
+          {mine > 0 && (
             <div>
-              <dt>Tu cartera</dt>
-              <dd className="num">{n(tracked)} casos</dd>
+              <dt>Asignados a ti</dt>
+              <dd className="num">{n(mine)} casos</dd>
             </div>
           )}
         </dl>
       </header>
+
+      {(caseError || management.error) && (
+        <div className="uso-shared-error" role="alert">
+          <span>{caseError ?? management.error}</span>
+          <button onClick={() => { setCaseError(null); management.reload(); }}>Sincronizar nuevamente</button>
+        </div>
+      )}
 
       <nav className="uso-axes" aria-label="Ejes de Universo SO">
         {AXES.map((item) => (
@@ -176,6 +209,10 @@ export function UniversoSO({
           onNavigate={onNavigate}
           onWork={onWork}
         />
+      ) : management.loading && !management.data ? (
+        <Loading label="Sincronizando la mesa compartida de gestión…" />
+      ) : management.error && !management.data ? (
+        <ErrorBox error={management.error} onRetry={management.reload} />
       ) : (
         <CasosAxis
           pulse={pulse.data}
@@ -197,11 +234,9 @@ export function UniversoSO({
 
       <Semantics>
         <strong>Cómo leer Universo SO.</strong> El padrón describe quién está inscrito hoy; las marcas de
-        caracterización —sanción, prensa, OSFL, proveedor del Estado, IPF, giro atípico— ordenan revisión y no
-        concluyen incumplimiento ni riesgo LA/FT. Un potencial sujeto obligado es una hipótesis de inscripción
-        construida sobre actividad económica pública, no una imputación; un término de giro es un hecho tributario
-        que motiva revisar la desinscripción. Los datos de contacto provienen de fuentes abiertas y deben verificarse
-        antes de usarse en una gestión formal.
+        caracterización ordenan revisión y no concluyen incumplimiento ni riesgo LA/FT. Potencial y término de giro son
+        colas pendientes. Al tomar un caso, éste sale de su contador de origen y pasa a Gestión con un responsable
+        identificado. Los contactos de red abierta son evidencia para revisar: deben validarse antes de una gestión formal.
       </Semantics>
 
       {cohort && (

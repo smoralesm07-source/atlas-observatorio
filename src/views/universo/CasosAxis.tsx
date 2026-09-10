@@ -110,8 +110,8 @@ export function CasosAxis({
   }, [potential, onHydrate]);
 
   const queueRows = useMemo<CaseRow[]>(() => {
-    if (queue === 'potenciales') return (potential?.candidatos ?? []).map((row) => rowFromCandidate(row, cases));
-    if (queue === 'termino') return term.rows.map((row) => rowFromTermination(row, cases));
+    if (queue === 'potenciales') return (potential?.candidatos ?? []).map((row) => rowFromCandidate(row, cases)).filter((row) => !isTracked(row.record));
+    if (queue === 'termino') return term.rows.map((row) => rowFromTermination(row, cases)).filter((row) => !isTracked(row.record));
     const loaded = new Map<string, CaseRow>();
     for (const row of (potential?.candidatos ?? []).map((item) => rowFromCandidate(item, cases))) loaded.set(row.key, row);
     for (const row of term.rows.map((item) => rowFromTermination(item, cases))) loaded.set(row.key, row);
@@ -169,8 +169,8 @@ export function CasosAxis({
       if (q && !row.haystack.includes(q)) return false;
       if (sector && row.subject.sector !== sector) return false;
       if (region && (row.subject.region ?? 'Sin territorio observado') !== region) return false;
-      if (gestion === 'CARTERA' && !isTracked(row.record)) return false;
-      if (gestion && gestion !== 'CARTERA' && row.record.state !== gestion) return false;
+      if (gestion === 'MINE' && !row.record.isMine) return false;
+      if (gestion && gestion !== 'MINE' && row.record.state !== gestion) return false;
       if (prioridad && row.record.priority !== prioridad) return false;
       if (banda && row.band !== banda) return false;
       if (year && String(row.year ?? '') !== year) return false;
@@ -224,6 +224,7 @@ export function CasosAxis({
     setYear('');
     setOnlyRes(false);
     setOnlyMarks(false);
+    setOnlyContact(false);
     onQueueChange(next);
   };
 
@@ -269,8 +270,10 @@ export function CasosAxis({
     downloadCsv(casesToCsv(records), `${name}_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
-  const potentialCount = potential?.totales?.accionables ?? 0;
-  const termTotal = term.total ?? pulse.universe?.terminados ?? 0;
+  const managedPotential = (potential?.candidatos ?? []).map((item) => rowFromCandidate(item, cases)).filter((row) => isTracked(row.record)).length;
+  const managedTerm = term.rows.map((item) => rowFromTermination(item, cases)).filter((row) => isTracked(row.record)).length;
+  const potentialCount = Math.max(0, (potential?.totales?.accionables ?? 0) - managedPotential);
+  const termTotal = Math.max(0, (term.total ?? pulse.universe?.terminados ?? 0) - managedTerm);
   const loading = queue === 'potenciales' ? potentialLoading && !potential : queue === 'termino' ? term.loading : false;
   const error = queue === 'potenciales' ? potentialError : queue === 'termino' ? term.error : null;
 
@@ -280,17 +283,17 @@ export function CasosAxis({
         <button data-on={queue === 'potenciales'} onClick={() => changeQueue('potenciales')}>
           <span>Potenciales SO</span>
           <b className="num">{potentialLoading && !potential ? '…' : n(potentialCount)}</b>
-          <em>Revisar inscripción · conciliación SII ↔ UAF</em>
+          <em>Pendientes sin asignar · conciliación SII ↔ UAF</em>
         </button>
         <button data-on={queue === 'termino'} onClick={() => changeQueue('termino')}>
           <span>Término de giro</span>
           <b className="num">{n(termTotal)}</b>
-          <em>Revisar desinscripción · inscritos con giro terminado</em>
+          <em>Pendientes sin asignar · revisar desinscripción</em>
         </button>
         <button data-on={queue === 'cartera'} onClick={() => changeQueue('cartera')}>
-          <span>Mi cartera</span>
+          <span>Gestión</span>
           <b className="num">{n(tracked.length)}</b>
-          <em>Casos que ya tocaste en este navegador</em>
+          <em>Casos asignados · visibles para todo el equipo</em>
         </button>
       </section>
 
@@ -351,17 +354,17 @@ export function CasosAxis({
       {queue === 'cartera' && (
         <section className="uso-panel uso-cartera-context">
           <SectionHead
-            kicker="Tu trabajo guardado"
-            title="Cartera de gestión"
-            hint="Vive en este navegador. No es un registro institucional y no se comparte: el CSV es la salida que viaja."
+            kicker="Trabajo compartido"
+            title="Gestión de casos"
+            hint="Cada caso tiene responsable y estado común para el equipo. Usa «Sólo mis casos» para ver tu carga."
             actions={(
-              <button className="btn btn-sm btn-primary" onClick={() => exportRows(tracked, 'atlas_universo_so_cartera')} disabled={!tracked.length}>
+              <button className="btn btn-sm btn-primary" onClick={() => exportRows(tracked, 'atlas_universo_so_gestion')} disabled={!tracked.length}>
                 Exportar cartera ({n(tracked.length)})
               </button>
             )}
           />
           <div className="uso-state-counts">
-            {STATES.map((meta) => {
+            {STATES.filter((meta) => meta.key !== 'SIN_TRABAJAR').map((meta) => {
               const count = tracked.filter((record) => record.state === meta.key).length;
               return (
                 <button
@@ -394,7 +397,7 @@ export function CasosAxis({
         <Select
           label="Gestión" value={gestion} onChange={setGestion} allLabel="Cualquier estado"
           options={[
-            { value: 'CARTERA', label: 'Sólo mi cartera', count: queueRows.filter((row) => isTracked(row.record)).length },
+            { value: 'MINE', label: 'Sólo mis casos', count: queueRows.filter((row) => row.record.isMine).length },
             ...STATES.map((meta) => ({
               value: meta.key,
               label: meta.label,
@@ -498,7 +501,11 @@ export function CasosAxis({
           {active ? (
             <CaseFile
               row={active}
-              onPatch={(patch) => onPatch(active, patch)}
+              onPatch={(patch) => {
+                const claim = !isTracked(active.record) && patch.state != null && patch.state !== 'SIN_TRABAJAR';
+                onPatch(active, patch);
+                if (claim) window.requestAnimationFrame(() => changeQueue('cartera'));
+              }}
               onEntity={active.subject.entityId ? () => onEntity(active.subject.entityId as string) : undefined}
               onSector={(value) => { setSector(value); setActiveKey(active.key); }}
             />
@@ -635,6 +642,11 @@ function CaseListRow({
           <em style={{ color: state.tone }}>{state.short}</em>
           {filled > 0 && <i className="uso-row-contact" title={`${filled} datos de contacto incorporados a la gestión`}>✆{filled}</i>}
           {openFilled > 0 && <i className="uso-row-contact uso-row-contact-open" title={`${openFilled} hallazgos de contacto observados en red abierta`}>◎{openFilled}</i>}
+          {row.record.assignedEmail && (
+            <small className="uso-row-owner" title={`Responsable: ${row.record.assignedName || row.record.assignedEmail}`}>
+              {row.record.isMine ? 'Tú' : (row.record.assignedName || row.record.assignedEmail.split('@')[0])}
+            </small>
+          )}
         </span>
       </button>
     </div>

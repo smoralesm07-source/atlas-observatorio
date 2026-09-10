@@ -208,3 +208,68 @@
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
+
+
+/* ───────────────────────────────────────────── evidencia dentro de Atlas */
+.uso-open-preview { margin-top: 5px; }
+.uso-open-preview > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.uso-open-preview-body {
+  margin-top: 6px;
+  padding: 8px 9px;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-panel));
+}
+.uso-open-preview-body b {
+  display: block;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uso-open-preview-body p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: normal;
+}
+.uso-open-preview-body small { display: block; margin-top: 5px; color: var(--ink-4); font-size: 8.5px; }
+
+/* ───────────────────────────────────────────── asignación compartida */
+.uso-case-assignment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 10px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-2);
+}
+.uso-case-assignment[data-mode='open'] { grid-template-columns: minmax(0, 1fr) auto; border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.uso-case-assignment[data-mode='mine'] { border-color: color-mix(in srgb, var(--present) 34%, var(--line)); }
+.uso-case-assignment > div:not(.uso-owner-avatar) { min-width: 0; }
+.uso-case-assignment b { display: block; margin-top: 2px; color: var(--ink); font-size: 11.5px; }
+.uso-case-assignment em { display: block; margin-top: 2px; color: var(--ink-3); font-size: 9.5px; font-style: normal; line-height: 1.4; }
+.uso-owner-avatar { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--accent); font-size: 10px; font-weight: 750; }
+.uso-readonly { padding: 4px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-4); font-size: 9px; white-space: nowrap; }
+.uso-row-owner { max-width: 86px; overflow: hidden; padding: 2px 5px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-3); font-size: 8.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.uso-shared-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border: 1px solid color-mix(in srgb, var(--sig-high) 35%, var(--line)); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--sig-high) 6%, var(--bg-panel)); color: var(--ink-2); font-size: 11px; }
+.uso-shared-error button { border: 0; background: transparent; color: var(--accent); cursor: pointer; font: inherit; }
+
+@media (max-width: 720px) {
+  .uso-case-assignment, .uso-case-assignment[data-mode='open'] { grid-template-columns: auto minmax(0, 1fr); }
+  .uso-case-assignment > .btn, .uso-case-assignment > .uso-readonly { grid-column: 2; justify-self: start; }
+  .uso-open-preview-body { margin-right: 0; }
+}

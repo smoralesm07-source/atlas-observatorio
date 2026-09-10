@@ -23,7 +23,7 @@ export type CaseState =
   | 'SIN_TRABAJAR'
   | 'EN_UBICACION'
   | 'CONTACTO_OBTENIDO'
-  | 'LISTO_REQUERIMIENTO'
+  | 'CONTACTADO'
   | 'SIN_UBICAR'
   | 'DESCARTADO';
 
@@ -59,6 +59,14 @@ export interface CaseRecord {
   note: string;
   contact: CaseContact;
   updatedAt: string;
+  caseId?: string | null;
+  assignedTo?: string | null;
+  assignedEmail?: string | null;
+  assignedName?: string | null;
+  assignedAt?: string | null;
+  updatedByEmail?: string | null;
+  contactedAt?: string | null;
+  isMine?: boolean;
 }
 
 export type CaseMap = Record<string, CaseRecord>;
@@ -77,7 +85,7 @@ export const STATES: { key: CaseState; label: string; short: string; tone: strin
   { key: 'SIN_TRABAJAR', label: 'Sin trabajar', short: 'Sin trabajar', tone: 'var(--ink-4)', step: 0 },
   { key: 'EN_UBICACION', label: 'En ubicación', short: 'Ubicando', tone: 'var(--sig-watch)', step: 1 },
   { key: 'CONTACTO_OBTENIDO', label: 'Contacto obtenido', short: 'Con contacto', tone: 'var(--unknown)', step: 2 },
-  { key: 'LISTO_REQUERIMIENTO', label: 'Listo para requerimiento', short: 'Listo', tone: 'var(--present)', step: 3 },
+  { key: 'CONTACTADO', label: 'Contactado', short: 'Contactado', tone: 'var(--present)', step: 3 },
   { key: 'SIN_UBICAR', label: 'No se pudo ubicar', short: 'No ubicable', tone: 'var(--sig-high)', step: 3 },
   { key: 'DESCARTADO', label: 'Descartado en revisión', short: 'Descartado', tone: 'var(--sig-none)', step: 3 },
 ];
@@ -88,7 +96,7 @@ export const STATE_META: Record<CaseState, { label: string; short: string; tone:
 /** Los tres pasos que sí son una secuencia. Los dos cierres alternativos
  *  —no ubicable y descartado— no son un paso más adelante y no entran al
  *  recorrido: se eligen aparte. */
-export const STATE_FLOW: CaseState[] = ['SIN_TRABAJAR', 'EN_UBICACION', 'CONTACTO_OBTENIDO', 'LISTO_REQUERIMIENTO'];
+export const STATE_FLOW: CaseState[] = ['SIN_TRABAJAR', 'EN_UBICACION', 'CONTACTO_OBTENIDO', 'CONTACTADO'];
 
 export const PRIORITIES: { key: CasePriority; label: string; tone: string }[] = [
   { key: 'ALTA', label: 'Alta', tone: 'var(--sig-critical)' },
@@ -135,9 +143,9 @@ const asContact = (raw: unknown): CaseContact => {
 const LEGACY_STATE: Record<string, CaseState> = {
   PENDIENTE: 'SIN_TRABAJAR',
   CONTACTO_REVISADO: 'EN_UBICACION',
-  LISTO_SOLICITUD: 'LISTO_REQUERIMIENTO',
+  LISTO_SOLICITUD: 'CONTACTADO',
   REVISADO: 'EN_UBICACION',
-  LISTO: 'LISTO_REQUERIMIENTO',
+  LISTO: 'CONTACTADO',
 };
 
 const LEGACY_KIND: Record<string, CaseKind> = {
@@ -310,7 +318,7 @@ export function casesToCsv(records: CaseRecord[]): string {
   const head = [
     'cola', 'accion_sugerida', 'rut', 'razon_social', 'sector', 'region', 'comuna',
     'motivo', 'estado_gestion', 'prioridad', 'telefono', 'correo', 'sitio_web',
-    'domicilio', 'persona_contacto', 'fuente_contacto', 'nota', 'actualizado',
+    'domicilio', 'persona_contacto', 'fuente_contacto', 'responsable', 'correo_responsable', 'asignado_el', 'contactado_el', 'nota', 'actualizado',
   ];
   const rows = records.map((r) => [
     KIND_META[r.kind].short,
