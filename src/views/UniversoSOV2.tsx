@@ -5,7 +5,7 @@ import { hrefFor, type UniversoMode, type UniversoQueue } from '../lib/router';
 import type { UafPotential, UafPulse } from '../lib/contracts';
 import { ErrorBox, Loading, Semantics } from '../components/primitives';
 import {
-  applyPatch, hydrate, isTracked,
+  applyPatch, caseKey, hydrate, isTracked,
   type CaseContact, type CaseKind, type CaseMap, type CaseRecord, type CaseSubject,
 } from '../lib/casework';
 import { sharedRowsToCases, type SharedCaseRow } from '../lib/sharedCasework';
@@ -70,9 +70,20 @@ export function UniversoSOV2({
     change: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> },
   ) => {
     const claiming = !isTracked(row.record);
-    const lifecycleChange = claiming || change.state !== undefined;
     setCaseError(null);
-    setCases((current) => applyPatch(current, row.kind, row.subject, change));
+    setCases((current) => {
+      const next = applyPatch(current, row.kind, row.subject, change);
+      if (!claiming) return next;
+      const key = caseKey(row.kind, row.subject.rut);
+      return {
+        ...next,
+        [key]: {
+          ...next[key],
+          isMine: true,
+          assignedAt: new Date().toISOString(),
+        },
+      };
+    });
 
     void supabase.rpc('aml_uaf_case_patch', {
       p_kind: row.kind,
@@ -84,15 +95,12 @@ export function UniversoSOV2({
       p_contact: change.contact ?? null,
       p_claim: claiming,
     }).then(({ error }) => {
-      if (error) {
-        setCaseError(error.message);
-        management.reload();
-        return;
-      }
-      // Estado/asignación sí necesita reconciliar dueño y marcas del servidor.
-      // Ediciones de texto, prioridad y contacto quedan optimistas para no
-      // reconstruir la ficha ni mover el scroll mientras el analista escribe.
-      if (lifecycleChange) management.reload();
+      if (!error) return;
+      setCaseError(error.message);
+      // Sólo una falla obliga a reconciliar. En el flujo normal la edición se
+      // mantiene optimista para que ningún guardado reconstruya la ficha ni
+      // cambie la posición de lectura del analista.
+      management.reload();
     });
   }, [management.reload]);
 
