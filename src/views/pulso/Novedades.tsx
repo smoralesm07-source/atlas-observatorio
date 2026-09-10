@@ -52,21 +52,11 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
       setError(null);
       return;
     } catch (firstError) {
-      try {
-        const { data: authData } = await supabase.auth.getSession();
-        if (authData.session) {
-          await supabase.auth.refreshSession();
-          const rpcFeed = await loadRpcFeed();
-          setFeed(rpcFeed);
-          setError(null);
-          return;
-        }
-      } catch {
-        // Si el RPC sigue sin estar disponible, se usa la ruta directa a las
-        // fuentes ya expuestas por ATLAS. Esto evita que un problema puntual de
-        // schema cache deje vacío el cuadro del Pulso.
-      }
-
+      // Un fallo de este RPC no es evidencia de una sesión vencida. Supabase
+      // renueva el token de forma automática; forzar refreshSession() aquí
+      // dispara TOKEN_REFRESHED y puede hacer que la capa de autorización
+      // desmonte y vuelva a montar toda la aplicación. Caemos directamente al
+      // read model alternativo sin tocar la sesión del usuario.
       try {
         const directFeed = await loadDirectFeed();
         setFeed(directFeed);
