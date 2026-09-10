@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { UafPotential, UafPulse, UafSubjectRow } from '../../lib/contracts';
-import { useRpcPaged } from '../../lib/rpc';
+import { useRpc, useRpcPaged } from '../../lib/rpc';
 import { Empty, ErrorBox, Loading } from '../../components/primitives';
 import { fecha, n, n1, rutFormat, titleCase } from '../../lib/format';
 import {
@@ -26,6 +26,17 @@ export type Queue = 'potenciales' | 'termino' | 'cartera';
 
 type SortField = 'score' | 'nombre' | 'sector' | 'region' | 'fecha' | 'marcas' | 'gestion' | 'contacto' | 'materialidad';
 
+type OpenContactCoverage = {
+  rut_key: string;
+  finding_count: number;
+  channel_count: number;
+  verified_count: number;
+  probable_count: number;
+  last_observed_at: string | null;
+};
+
+const contactRutKey = (rut: string) => rut.replace(/[^0-9kK]/g, '').toUpperCase();
+
 const SORTS: { value: SortField; label: string }[] = [
   { value: 'score', label: 'Índice, mayor primero' },
   { value: 'materialidad', label: 'Materialidad' },
@@ -35,7 +46,7 @@ const SORTS: { value: SortField; label: string }[] = [
   { value: 'sector', label: 'Sector' },
   { value: 'region', label: 'Región' },
   { value: 'gestion', label: 'Estado de gestión' },
-  { value: 'contacto', label: 'Contacto capturado' },
+  { value: 'contacto', label: 'Contacto disponible' },
 ];
 
 const TERM_PAGE = 200;
@@ -71,6 +82,7 @@ export function CasosAxis({
   const [year, setYear] = useState('');
   const [onlyMarks, setOnlyMarks] = useState(false);
   const [onlyRes, setOnlyRes] = useState(false);
+  const [onlyContact, setOnlyContact] = useState(false);
   const [sort, setSort] = useState<SortField>('score');
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [lote, setLote] = useState<Set<string>>(() => new Set());
@@ -110,6 +122,13 @@ export function CasosAxis({
         return live ? { ...live, record } : rowFromRecord(record);
       });
   }, [queue, potential, term.rows, cases]);
+
+  const contactCoverage = useRpc<OpenContactCoverage[]>('obs_uaf_contact_osint_coverage', {
+    p_ruts: queueRows.map((row) => row.subject.rut),
+  });
+  const contactByRut = useMemo(() => new Map(
+    (contactCoverage.data ?? []).map((item) => [item.rut_key, item] as const),
+  ), [contactCoverage.data]);
 
   const options = useMemo(() => {
     const sectors = new Map<string, number>();
@@ -157,6 +176,10 @@ export function CasosAxis({
       if (year && String(row.year ?? '') !== year) return false;
       if (onlyMarks && markCount(row.marks) === 0) return false;
       if (onlyRes && !row.res) return false;
+      if (onlyContact) {
+        const observed = contactByRut.get(contactRutKey(row.subject.rut));
+        if (contactFilled(row.record.contact) === 0 && Number(observed?.finding_count ?? 0) === 0) return false;
+      }
       return true;
     });
     const dir = sort === 'nombre' || sort === 'sector' || sort === 'region' ? 1 : -1;
@@ -169,11 +192,17 @@ export function CasosAxis({
         case 'marcas': return dir * (markCount(a.marks) - markCount(b.marks));
         case 'materialidad': return dir * ((a.materiality ?? -1) - (b.materiality ?? -1));
         case 'gestion': return dir * (STATE_META[a.record.state].step - STATE_META[b.record.state].step);
-        case 'contacto': return dir * (contactFilled(a.record.contact) - contactFilled(b.record.contact));
+        case 'contacto': {
+          const ca = contactByRut.get(contactRutKey(a.subject.rut));
+          const cb = contactByRut.get(contactRutKey(b.subject.rut));
+          const wa = contactFilled(a.record.contact) * 100 + Number(ca?.verified_count ?? 0) * 10 + Number(ca?.channel_count ?? 0) * 2 + Number(ca?.finding_count ?? 0);
+          const wb = contactFilled(b.record.contact) * 100 + Number(cb?.verified_count ?? 0) * 10 + Number(cb?.channel_count ?? 0) * 2 + Number(cb?.finding_count ?? 0);
+          return dir * (wa - wb);
+        }
         default: return dir * ((a.score ?? -1) - (b.score ?? -1));
       }
     });
-  }, [queueRows, query, sector, region, gestion, prioridad, banda, year, onlyMarks, onlyRes, sort]);
+  }, [queueRows, query, sector, region, gestion, prioridad, banda, year, onlyMarks, onlyRes, onlyContact, sort, contactByRut]);
 
   // El caso abierto sigue a la lista: si el filtro lo deja fuera, se abre el
   // primero de lo que quedó en pantalla en vez de mostrar una ficha huérfana.
@@ -389,15 +418,18 @@ export function CasosAxis({
         />
         <div className="uso-toolbar-chips">
           <button className="chip" data-on={onlyMarks} onClick={() => setOnlyMarks(!onlyMarks)}>Con marcas</button>
+          <button className="chip" data-on={onlyContact} onClick={() => setOnlyContact(!onlyContact)}>
+            Contacto abierto {contactCoverage.loading && !contactCoverage.data ? '…' : n(contactCoverage.data?.length ?? 0)}
+          </button>
           {queue === 'potenciales' && (
             <button className="chip" data-on={onlyRes} onClick={() => setOnlyRes(!onlyRes)}>Con RES</button>
           )}
-          {(query || sector || region || gestion || prioridad || banda || year || onlyMarks || onlyRes) && (
+          {(query || sector || region || gestion || prioridad || banda || year || onlyMarks || onlyRes || onlyContact) && (
             <button
               className="chip uso-chip-reset"
               onClick={() => {
                 setQuery(''); setSector(''); setRegion(''); setGestion('');
-                setPrioridad(''); setBanda(''); setYear(''); setOnlyMarks(false); setOnlyRes(false);
+                setPrioridad(''); setBanda(''); setYear(''); setOnlyMarks(false); setOnlyRes(false); setOnlyContact(false);
               }}
             >
               Limpiar filtros
@@ -454,6 +486,7 @@ export function CasosAxis({
                   key={row.key} row={row} active={active?.key === row.key}
                   inLote={lote.has(row.key)} onOpen={() => openCase(row.key)}
                   onLote={() => toggleLote(row.key)}
+                  openContact={contactByRut.get(contactRutKey(row.subject.rut)) ?? null}
                 />
               ))}
             </div>
@@ -552,16 +585,18 @@ function ContextPanel({
 }
 
 function CaseListRow({
-  row, active, inLote, onOpen, onLote,
+  row, active, inLote, onOpen, onLote, openContact,
 }: {
   row: CaseRow;
   active: boolean;
   inLote: boolean;
   onOpen: () => void;
   onLote: () => void;
+  openContact?: OpenContactCoverage | null;
 }) {
   const state = STATE_META[row.record.state];
   const filled = contactFilled(row.record.contact);
+  const openFilled = Number(openContact?.finding_count ?? 0);
   const kind = KIND_META[row.kind];
   return (
     <div className="uso-row" data-on={active} data-lote={inLote ? 'true' : undefined}>
@@ -598,7 +633,8 @@ function CaseListRow({
         </span>
         <span className="uso-row-work">
           <em style={{ color: state.tone }}>{state.short}</em>
-          {filled > 0 && <i className="uso-row-contact" title={`${filled} datos de contacto capturados`}>✆{filled}</i>}
+          {filled > 0 && <i className="uso-row-contact" title={`${filled} datos de contacto incorporados a la gestión`}>✆{filled}</i>}
+          {openFilled > 0 && <i className="uso-row-contact uso-row-contact-open" title={`${openFilled} hallazgos de contacto observados en red abierta`}>◎{openFilled}</i>}
         </span>
       </button>
     </div>

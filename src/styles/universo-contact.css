@@ -200,3 +200,11 @@
   .uso-open-actions { grid-column: 2; }
   .uso-open-manual-groups { grid-template-columns: 1fr; }
 }
+
+
+/* Disponibilidad de contacto antes de abrir la ficha. */
+.uso-row-contact-open {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
