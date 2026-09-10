@@ -42,5 +42,6 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "feat: convierte Universo SO en mesa compartida de gestión"
+            git pull --rebase origin main
             git push origin HEAD:main
           fi
