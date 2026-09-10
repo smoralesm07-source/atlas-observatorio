@@ -31,9 +31,14 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
         run: |
           if [ -z "${VITE_SUPABASE_URL:-}" ]; then
             echo "::error::Falta la variable de repositorio VITE_SUPABASE_URL"
+            exit 1
+          fi
+          if [ "${VITE_AUTH_REDIRECT_TO}" != "https://atlasobservatorio.app/" ]; then
+            echo "::error::El callback de autenticación no apunta al dominio canónico de ATLAS"
             exit 1
           fi
           npm run build
