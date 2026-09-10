@@ -1,0 +1,281 @@
+/* Entidad 360 · normalización tipográfica
+   Referencia visual: Directorio de sujetos obligados.
+   Objetivo: lectura estable en tarjetas, tablas, gráficos y estados vacíos
+   sin modificar retículas, alturas, paddings ni proporciones. */
+
+.entity360 {
+  --e360-type-title: 12.5px;
+  --e360-type-body: 11px;
+  --e360-type-secondary: 10px;
+  --e360-type-label: 9.6px;
+  --e360-type-micro: 9.2px;
+  --e360-type-kpi: 19px;
+  font-family: var(--font);
+  font-size: var(--e360-type-body);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.entity360 button,
+.entity360 input,
+.entity360 select,
+.entity360 textarea {
+  font-family: var(--font);
+}
+
+/* Navegación y encabezado */
+.entity360-crumbs,
+.entity360-back {
+  font-size: var(--e360-type-body);
+  line-height: 1.3;
+}
+.entity360-eyebrow {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-meta,
+.entity360-location {
+  font-size: var(--e360-type-body);
+  line-height: 1.35;
+}
+.entity360-tabs button {
+  font-size: 11.4px;
+  line-height: 1.2;
+  font-weight: 620;
+}
+.entity360 .badge {
+  font-size: var(--e360-type-label);
+  line-height: 1.15;
+}
+
+/* IPA3 y hallazgo */
+.entity360-score-label,
+.entity360-finding-label {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-score-foot {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.3;
+}
+.entity360-finding strong {
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.entity360-finding p {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.45;
+}
+
+/* KPIs */
+.entity360-kpi-copy > span {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.25;
+}
+.entity360-kpi-copy > strong {
+  font-size: var(--e360-type-kpi);
+  line-height: 1.2;
+}
+.entity360-kpi-copy > strong[data-compact='true'] {
+  font-size: 14.5px;
+  line-height: 1.2;
+}
+.entity360-kpi-copy > small {
+  font-size: var(--e360-type-label);
+  line-height: 1.25;
+}
+
+/* Tarjetas y contenido general */
+.entity360-card > header h2 {
+  font-size: var(--e360-type-title);
+  line-height: 1.2;
+  font-weight: 690;
+}
+.entity360-card > header > span {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-kv {
+  font-size: var(--e360-type-body);
+  line-height: 1.32;
+}
+.entity360-kv-wide {
+  font-size: 11.4px;
+}
+
+/* Evolución tributaria */
+.entity360-bar-value {
+  font-size: var(--e360-type-label);
+  line-height: 1.15;
+}
+.entity360-bar-year {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.15;
+}
+.entity360-chart-note {
+  font-size: var(--e360-type-label);
+  line-height: 1.45;
+}
+.entity360-bigfact span {
+  font-size: var(--e360-type-label);
+}
+.entity360-bigfact small {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.4;
+}
+
+/* Actividades y giros */
+.entity360-activity-rank {
+  font-size: var(--e360-type-label);
+  line-height: 1.15;
+}
+.entity360-activity-text strong {
+  font-size: var(--e360-type-body);
+  line-height: 1.3;
+}
+.entity360-activity-text span {
+  font-size: var(--e360-type-label);
+  line-height: 1.25;
+}
+.entity360-linkbtn {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.2;
+}
+
+/* Presencia en registros */
+.entity360-registry span {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-registry strong {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.3;
+}
+.entity360-registry small {
+  font-size: var(--e360-type-micro);
+  line-height: 1.3;
+}
+
+/* Línea de tiempo */
+.entity360-timeline-stop time {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-timeline-stop strong {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.3;
+}
+.entity360-timeline-stop span {
+  font-size: var(--e360-type-micro);
+  line-height: 1.3;
+}
+
+/* Tablas */
+.entity360-mini-table th,
+.entity360-full-table th {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-mini-table td,
+.entity360-full-table td {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.35;
+}
+
+/* Prensa, sanciones y compras públicas */
+.entity360-press-list summary time {
+  font-size: var(--e360-type-label);
+}
+.entity360-press-list summary strong {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.3;
+}
+.entity360-press-list summary span,
+.entity360-press-detail,
+.entity360-card-message {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.4;
+}
+.entity360-card-footnote {
+  font-size: var(--e360-type-label);
+  line-height: 1.4;
+}
+.entity360-purchase-facts span,
+.entity360-purchase-metric span {
+  font-size: var(--e360-type-label);
+  line-height: 1.2;
+}
+.entity360-purchase-facts strong {
+  font-size: var(--e360-type-body);
+  line-height: 1.25;
+}
+.entity360-primary-action {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.15;
+}
+.entity360-feature-list span {
+  font-size: var(--e360-type-body);
+  line-height: 1.35;
+}
+
+/* Histórico, fuentes y semántica */
+.entity360-history-date {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.25;
+}
+.entity360-history-body strong {
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+.entity360-history-body p,
+.entity360-history-body a {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.45;
+}
+.entity360-source strong {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.3;
+}
+.entity360-source span {
+  font-size: var(--e360-type-label);
+  line-height: 1.25;
+}
+.entity360-semantics {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.45;
+}
+
+/* Estados vacíos reutilizados dentro del expediente */
+.entity360 .empty strong,
+.entity360 .loading span,
+.entity360 .errbox strong {
+  font-size: 11px;
+  line-height: 1.3;
+}
+.entity360 .empty > span,
+.entity360 .errbox > span {
+  font-size: var(--e360-type-secondary);
+  line-height: 1.45;
+}
+
+/* Inter para lectura; JetBrains Mono queda reservado a datos e identificadores. */
+.entity360 .mono,
+.entity360-score-value,
+.entity360-kpi-copy > strong,
+.entity360-bar-value,
+.entity360-activity-rank,
+.entity360-timeline-stop time,
+.entity360-history-date,
+.entity360-purchase-facts strong,
+.entity360-purchase-metric strong {
+  font-family: var(--mono);
+}
+
+@media (max-width: 760px) {
+  .entity360 {
+    --e360-type-body: 11.2px;
+    --e360-type-secondary: 10.2px;
+    --e360-type-label: 9.8px;
+    --e360-type-micro: 9.4px;
+  }
+}
