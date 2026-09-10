@@ -7,7 +7,6 @@ import { Mark } from './Mark';
 import '../styles/monitores-nav.css';
 
 const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
-  { label: 'Gasto público', route: { view: 'gasto' }, match: ['gasto', 'gastoActor'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
 ];
 
@@ -243,6 +242,12 @@ export function Shell({
               </div>
             )}
           </div>
+
+          {role === 'admin' && (
+            <a href={hrefFor({ view: 'gasto' })} data-active={['gasto', 'gastoActor'].includes(route.view)}>
+              Gasto público
+            </a>
+          )}
 
           {NAV.map((item) => (
             <a

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AuthGate, type AtlasRole } from './components/OpenAuthGate';
 import { Shell } from './components/Shell';
@@ -27,6 +27,22 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
   const go = useCallback((hash: string) => {
     window.location.hash = hash.startsWith('#') ? hash : `#${hash}`;
   }, []);
+
+  const publicSpendRestricted = role !== 'admin'
+    && (route.view === 'gasto' || route.view === 'gastoActor');
+
+  useEffect(() => {
+    if (!publicSpendRestricted) return;
+    if (window.location.hash !== '#/pulso') window.location.hash = '#/pulso';
+  }, [publicSpendRestricted]);
+
+  if (publicSpendRestricted) {
+    return (
+      <Shell route={{ view: 'pulso' }} session={session} role={role}>
+        <PulsoV6 onNavigate={go} />
+      </Shell>
+    );
+  }
 
   return (
     <Shell route={route} session={session} role={role}>
