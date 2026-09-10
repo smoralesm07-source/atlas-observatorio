@@ -1,11 +1,17 @@
-/* Gestión SO · ficha progresiva en una sola vista
-   La ficha mantiene primero la decisión de toma y, sólo después de asignarse,
-   despliega hacia abajo el flujo operativo completo. */
+/* Gestión SO · navegación continua y sin scroll anidado */
 
+/* La página completa es el único contenedor vertical. Esto evita el doble
+   scroll entre detalle, ficha y navegador, que hacía imposible llegar al cierre. */
+.uso .uso-detail {
+  position: static;
+  align-self: start;
+}
+
+.uso .uso-case,
 .uso .uso-case-progressive {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  max-height: none;
+  overflow: visible;
+  overscroll-behavior: auto;
 }
 
 .uso .uso-case-progressive .uso-case-body {
@@ -13,64 +19,55 @@
   flex: 0 0 auto;
 }
 
-.uso .uso-case-snapshot {
-  padding-bottom: 8px;
+.uso .uso-case-snapshot { padding-bottom: 8px; }
+.uso .uso-case-snapshot .uso-case-motive { margin-bottom: 10px; }
+.uso .uso-case-snapshot-score { margin-bottom: 8px; padding-bottom: 8px; gap: 9px; }
+.uso .uso-case-snapshot-score .uso-score-main b { font-size: 27px; }
+.uso .uso-case-snapshot-score .uso-score-track { margin: 7px 0 5px; }
+.uso .uso-case-snapshot-score .uso-score-parts { gap: 5px; }
+.uso .uso-case-snapshot-score .uso-score-parts > div { min-height: 25px; align-items: center; }
+.uso .uso-case-snapshot-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; margin-top: 2px; }
+.uso .uso-case-snapshot-fields .uso-field > span { font-size: 8px; }
+.uso .uso-case-snapshot-fields .uso-field > b { margin-top: 1px; font-size: 10.5px; }
+.uso .uso-case-snapshot-chips { margin-top: 8px; }
+.uso .uso-case-snapshot-note { margin-top: 8px; }
+
+/* Una vez tomado el caso, la caracterización completa deja de ocupar la parte
+   más valiosa del recorrido. Sigue disponible a un clic para contraste. */
+.uso .uso-case-summary {
+  margin: 8px 9px 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+  overflow: hidden;
 }
 
-.uso .uso-case-snapshot .uso-case-motive {
-  margin-bottom: 10px;
-}
-
-.uso .uso-case-snapshot-score {
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  gap: 9px;
-}
-
-.uso .uso-case-snapshot-score .uso-score-main b {
-  font-size: 27px;
-}
-
-.uso .uso-case-snapshot-score .uso-score-track {
-  margin: 7px 0 5px;
-}
-
-.uso .uso-case-snapshot-score .uso-score-parts {
-  gap: 5px;
-}
-
-.uso .uso-case-snapshot-score .uso-score-parts > div {
-  min-height: 25px;
+.uso .uso-case-summary > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
+  min-height: 45px;
+  padding: 7px 10px;
+  list-style: none;
+  cursor: pointer;
 }
 
-.uso .uso-case-snapshot-fields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px 12px;
-  margin-top: 2px;
+.uso .uso-case-summary > summary::-webkit-details-marker { display: none; }
+.uso .uso-case-summary > summary > span { display: grid; gap: 2px; min-width: 0; }
+.uso .uso-case-summary > summary b { font-size: 10.5px; color: var(--ink); }
+.uso .uso-case-summary > summary em {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 8.5px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.uso .uso-case-summary > summary strong { color: var(--accent); font-size: 11px; font-family: var(--mono); }
+.uso .uso-case-summary[open] > summary { border-bottom: 1px solid var(--line); }
 
-.uso .uso-case-snapshot-fields .uso-field > span {
-  font-size: 8px;
-}
-
-.uso .uso-case-snapshot-fields .uso-field > b {
-  margin-top: 1px;
-  font-size: 10.5px;
-}
-
-.uso .uso-case-snapshot-chips {
-  margin-top: 8px;
-}
-
-.uso .uso-case-snapshot-note {
-  margin-top: 8px;
-}
-
-.uso .uso-case-progressive .uso-case-assignment {
-  flex: 0 0 auto;
-  margin-bottom: 9px;
-}
+.uso .uso-case-progressive .uso-case-assignment { flex: 0 0 auto; margin-bottom: 8px; }
 
 .uso .uso-case-management {
   flex: 0 0 auto;
@@ -78,72 +75,85 @@
   background: color-mix(in srgb, var(--accent) 1.5%, transparent);
 }
 
-.uso .uso-case-management > .uso-case-body,
-.uso .uso-case-management > .uso-open-contact {
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.uso .uso-case-management > :last-child {
-  border-bottom: 0;
-}
-
-.uso .uso-management-state {
-  padding-top: 11px;
-  padding-bottom: 10px;
-}
-
-.uso .uso-management-state .uso-section-head {
-  margin-bottom: 7px;
-}
-
-.uso .uso-management-state .uso-flow {
-  margin-bottom: 5px;
-}
-
-.uso .uso-management-capture {
-  padding-top: 11px;
-}
-
-.uso .uso-management-capture .uso-contact-foot {
-  margin: 8px 0 11px;
-}
-
-.uso .uso-management-meta {
+/* Navegación local: siempre permite saltar a la tarea deseada sin arrastrar un
+   panel interno. Sticky funciona respecto de la página, no de un scroll propio. */
+.uso .uso-case-jumpbar {
+  position: sticky;
+  top: 58px;
+  z-index: 8;
   display: grid;
-  gap: 9px;
-  margin-top: 3px;
+  grid-template-columns: repeat(3, auto) minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
+  backdrop-filter: blur(10px);
 }
 
-.uso .uso-management-meta .uso-priority {
-  margin: 0;
+.uso .uso-case-jumpbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 27px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-panel-2);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 8.5px;
+  cursor: pointer;
 }
-
-.uso .uso-management-meta .uso-note-field textarea {
-  min-height: 70px;
+.uso .uso-case-jumpbar button:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--ink); }
+.uso .uso-case-jumpbar button i {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-raised));
+  color: var(--accent);
+  font-size: 8px;
+  font-style: normal;
 }
+.uso .uso-case-jumpbar strong { justify-self: end; color: var(--ink-3); font-size: 8.5px; font-weight: 650; }
 
-.uso .uso-management-footnote {
-  margin-top: 0;
-  margin-bottom: 0;
+.uso .uso-case-anchor { scroll-margin-top: 104px; }
+.uso .uso-case-management > .uso-case-body,
+.uso .uso-case-management > .uso-case-anchor > .uso-open-contact { border-bottom: 1px solid var(--line-soft); }
+
+.uso .uso-management-state { padding-top: 8px; padding-bottom: 8px; }
+.uso .uso-flow-compact { gap: 4px; }
+.uso .uso-flow-compact button { min-height: 33px; }
+
+.uso .uso-management-capture { padding-top: 11px; }
+.uso .uso-management-capture .uso-contact-foot { margin: 8px 0 11px; }
+.uso .uso-management-meta { display: grid; gap: 9px; margin-top: 3px; }
+.uso .uso-management-meta .uso-priority { margin: 0; }
+.uso .uso-management-meta .uso-note-field textarea { min-height: 92px; resize: vertical; }
+
+.uso .uso-note-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
 }
+.uso .uso-note-foot em { color: var(--ink-4); font-size: 8px; font-style: normal; }
+.uso .uso-note-foot .btn { min-height: 25px; padding: 3px 7px; }
 
-/* La transición visual refuerza que Tomar caso no abre otra pantalla: amplía
-   la misma ficha y deja al usuario exactamente donde debe comenzar a trabajar. */
-.uso .uso-case-management.fade-in {
-  animation: uso-case-expand .18s var(--ease) both;
-}
+.uso .uso-management-close { padding-top: 11px; padding-bottom: 14px; }
+.uso .uso-management-close .uso-case-resolution { margin-top: 0; }
 
-@keyframes uso-case-expand {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+@media (max-width: 1080px) {
+  .uso .uso-detail { position: static; }
+  .uso .uso-case { max-height: none; }
 }
 
 @media (max-width: 900px) {
-  .uso .uso-case-progressive {
-    overflow: visible;
-  }
-
-  .uso .uso-case-snapshot-fields {
-    grid-template-columns: 1fr;
-  }
+  .uso .uso-case-snapshot-fields { grid-template-columns: 1fr; }
+  .uso .uso-case-jumpbar { top: 54px; grid-template-columns: repeat(3, 1fr); }
+  .uso .uso-case-jumpbar strong { grid-column: 1 / -1; justify-self: start; padding-left: 2px; }
+  .uso .uso-case-jumpbar button { justify-content: center; }
 }
