@@ -1,0 +1,58 @@
+.uso-head-compact {
+  align-items: center;
+  min-height: 0;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+}
+
+.uso-head-compact .uso-head-copy {
+  max-width: none;
+}
+
+.uso-head-compact .uso-head-copy h1 {
+  margin-bottom: 0;
+}
+
+/* Gestión SO es una superficie operativa: la explicación analítica de origen
+   de las colas queda en Padrón SO y aquí se privilegia lista + ficha. */
+.uso-mode-casos .uso-context {
+  display: none;
+}
+
+.uso-mode-casos .uso-queues {
+  position: sticky;
+  top: 56px;
+  z-index: 28;
+  margin: 0 0 8px;
+  padding: 6px 0;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.uso-mode-casos .uso-queues button {
+  min-height: 58px;
+  padding: 9px 12px;
+}
+
+.uso-mode-casos .uso-queues button em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uso-mode-casos .uso-toolbar {
+  margin-top: 0;
+}
+
+.uso-mode-casos .uso-work {
+  margin-top: 8px;
+}
+
+@media (max-width: 1080px) {
+  .uso-mode-casos .uso-queues {
+    position: static;
+    padding-top: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+}
