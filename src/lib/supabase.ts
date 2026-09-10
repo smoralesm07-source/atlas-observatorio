@@ -9,12 +9,14 @@ export const configError =
     : null;
 
 /** Where Microsoft Entra sends the browser back after sign-in. It must match a
- *  redirect URL registered in Supabase Auth. Defaults to this deployment's own
- *  origin and base path, so the same build works on Pages, on a subpath and in
- *  local development without a separate setting. */
+ * redirect URL registered in Supabase Auth. Resolve Vite's base against the
+ * current page instead of concatenating strings, so a relative base works both
+ * on the legacy GitHub project path and on atlasobservatorio.app. */
+const inferredRedirectTo = new URL(import.meta.env.BASE_URL, window.location.href).href;
+
 export const redirectTo =
   import.meta.env.VITE_AUTH_REDIRECT_TO ||
-  `${window.location.origin}${import.meta.env.BASE_URL}`;
+  inferredRedirectTo;
 
 export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing', {
   auth: {
