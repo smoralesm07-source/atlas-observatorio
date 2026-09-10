@@ -17,6 +17,7 @@ import './styles/territory-map-priority.css';
 import './styles/territory-commune-compact.css';
 import './styles/entity-expediente.css';
 import './styles/entity-expediente-typography.css';
+import './styles/entity-sanctions-table-fit.css';
 import './styles/entities-search.css';
 import './styles/entities-search-mobile-fixes.css';
 import './styles/ui-fixes.css';
