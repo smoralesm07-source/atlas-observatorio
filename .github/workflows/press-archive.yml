@@ -30,12 +30,31 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          response=$(curl --fail-with-body -sS \
+
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::error::Falta el secret SUPABASE_URL"
+            exit 1
+          fi
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::Falta el secret SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
+
+          raw=$(curl -sS -w '\n%{http_code}' \
             -X POST "$SUPABASE_URL/functions/v1/atlas-press-ingest" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H 'Content-Type: application/json' \
             -d '{}')
+
+          code=$(tail -n1 <<<"$raw")
+          response=$(sed '$d' <<<"$raw")
+
+          if [ "$code" != "200" ]; then
+            echo "::error::atlas-press-ingest respondió HTTP $code"
+            echo "$response" | jq . 2>/dev/null || printf '%s\n' "$response"
+            exit 1
+          fi
 
           echo "$response" | jq .
           echo '### Archivo histórico de prensa' >> "$GITHUB_STEP_SUMMARY"
