@@ -6,7 +6,6 @@ import { useRpc } from '../../lib/rpc';
 import { hrefFor } from '../../lib/router';
 import { n, n1, titleCase } from '../../lib/format';
 import { QuienSostieneReportabilidad } from '../pulso/Reportabilidad';
-import { LenteRevision } from '../pulso/Revision';
 import '../../styles/universo-so-v2.css';
 
 export type WorkFocus = { kind: 'POTENCIAL' | 'TERMINO'; sector?: string | null };
@@ -191,7 +190,7 @@ export function PadronAxisV2({
           action={<ModeButtons<TermMode> value={termMode} onChange={setTermMode} options={[['sector', 'Sector'], ['region', 'Región'], ['industry', 'Industria']]} />}>
           <EdgeList rows={termRows} tone="var(--sig-high)" onPick={termPick} />
           <p className="uso2-edge-note">Hay {n(u.terminados)} inscritos con término de giro. El término tributario no equivale por sí solo a baja del padrón UAF.</p>
-          <div className="uso2-questions"><button onClick={() => onWork({ kind: 'TERMINO' })}>Abrir mesa de términos →</button></div>
+          <div className="uso2-questions"><button onClick={() => onWork({ kind: 'TERMINO' })}>Gestionar términos de giro →</button></div>
         </Block>
 
         <Block title="Potenciales SO: composición de la brecha" hint="Explora candidatos por sector sugerido, región, industria tributaria o actividad gatillante publicada en el SII."
@@ -200,7 +199,7 @@ export function PadronAxisV2({
             ? <div className="uso2-edge-note">Leyendo industrias tributarias…</div>
             : <EdgeList rows={potentialRows} tone="var(--unknown)" onPick={potentialPick} />}
           <p className="uso2-edge-note">{n(potentialTotal)} candidatos accionables sobre {n(potential?.totales?.observadas)} observados por giro. Son hipótesis de registro, no incumplimientos acreditados.</p>
-          <div className="uso2-questions"><button onClick={() => onWork({ kind: 'POTENCIAL' })}>Abrir mesa de potenciales →</button></div>
+          <div className="uso2-questions"><button onClick={() => onWork({ kind: 'POTENCIAL' })}>Gestionar potenciales SO →</button></div>
         </Block>
       </section>
 
@@ -230,13 +229,6 @@ export function PadronAxisV2({
       <section className="uso2-trend-grid">
         <TrendBlock title="Sectores que más aumentaron" hint="Variación neta en los últimos cinco cortes anuales publicados, 2022–2026" rows={evolution.data?.increases ?? []} loading={evolution.loading} tone="var(--present)" onPick={(row) => selectRegistered({ cohort: 'SECTOR', value: row.sector, title: titleCase(row.sector) })} />
         <TrendBlock title="Sectores con mayor contracción" hint="Menor stock inscrito entre los últimos cinco cortes comparables, 2022–2026" rows={evolution.data?.decreases ?? []} loading={evolution.loading} tone="var(--sig-high)" note={evolution.data?.note} onPick={(row) => selectRegistered({ cohort: 'SECTOR', value: row.sector, title: titleCase(row.sector) })} />
-      </section>
-
-      <section className="uso2-review">
-        <header className="uso2-section-head" style={{ border: '1px solid var(--line)', borderRadius: 10, background: 'var(--bg-panel)' }}>
-          <div><h2>Profundizar revisión por señales</h2><p>Sanciones, prensa, IPF, giro atípico y otras condiciones que ordenan atención. Cada interacción actualiza el directorio inferior.</p></div>
-        </header>
-        <LenteRevision data={pulse} onCohort={(request) => selectRegistered(request)} />
       </section>
 
       <div className="uso2-directory-anchor">
