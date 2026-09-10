@@ -15,6 +15,7 @@ import './styles/fintech-ui-cleanup.css';
 import './styles/territorio-map.css';
 import './styles/territory-map-priority.css';
 import './styles/territory-commune-compact.css';
+import './styles/territory-commune-typography.css';
 import './styles/entity-expediente.css';
 import './styles/entity-expediente-typography.css';
 import './styles/entity-sanctions-table-fit.css';
