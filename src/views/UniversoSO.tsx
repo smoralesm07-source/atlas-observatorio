@@ -55,15 +55,10 @@ export function UniversoSO({
     if (management.data) setCases(sharedRowsToCases(management.data));
   }, [management.data]);
 
-  // La mesa es compartida. Un refresco corto evita que dos fiscalizadores
-  // trabajen con una fotografía vieja; el RPC de escritura además bloquea la
-  // doble asignación de forma transaccional.
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!document.hidden) management.reload();
-    }, 12000);
-    return () => window.clearInterval(timer);
-  }, [management.reload]);
+  // No existe refresco periódico de pantalla. La mesa se sincroniza al cargar
+  // Universo SO y después de cada escritura propia. Esto evita repintados que
+  // interrumpan al analista; la asignación concurrente sigue protegida por el
+  // RPC transaccional de escritura.
 
   const goto = useCallback((mode: UniversoMode, cola?: Queue) => {
     setAxis(mode);
