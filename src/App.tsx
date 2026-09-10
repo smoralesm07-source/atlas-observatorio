@@ -14,7 +14,6 @@ import { Entidades } from './views/Entidades';
 import { EntityExpediente } from './views/EntityExpediente';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
-import { GastoPublico } from './views/GastoPublico';
 import { Metodologia } from './views/Metodologia';
 import { Administracion } from './views/Administracion';
 import './styles/territory-commune-typography.css';
@@ -29,18 +28,19 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
     window.location.hash = hash.startsWith('#') ? hash : `#${hash}`;
   }, []);
 
-  const publicSpendRestricted = role !== 'admin'
-    && (route.view === 'gasto' || route.view === 'gastoActor');
+  const caseManagementRestricted = role === 'viewer'
+    && route.view === 'universo'
+    && route.mode === 'casos';
 
   useEffect(() => {
-    if (!publicSpendRestricted) return;
-    if (window.location.hash !== '#/pulso') window.location.hash = '#/pulso';
-  }, [publicSpendRestricted]);
+    if (!caseManagementRestricted) return;
+    if (window.location.hash !== '#/universo-so') window.location.hash = '#/universo-so';
+  }, [caseManagementRestricted]);
 
-  if (publicSpendRestricted) {
+  if (caseManagementRestricted) {
     return (
-      <Shell route={{ view: 'pulso' }} session={session} role={role}>
-        <PulsoV6 onNavigate={go} />
+      <Shell route={{ view: 'universo', mode: 'padron' }} session={session} role={role}>
+        <UniversoSOV2 onNavigate={go} initialMode="padron" />
       </Shell>
     );
   }
@@ -66,18 +66,10 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
       {route.view === 'ficha' && (
         <>
           <EntityExpediente entityId={route.entityId} onNavigate={go} />
-          <Entity360StatusMarks entityId={route.entityId} />
+          <Entity360StatusMarks entityId={route.entityId} role={role} />
         </>
       )}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
-      {route.view === 'gasto' && <GastoPublico familiaInicial={route.familia} onNavigate={go} />}
-      {route.view === 'gastoActor' && (
-        <GastoPublico
-          key={`${route.role}|${route.actorId}`}
-          actor={{ id: route.actorId, role: route.role }}
-          onNavigate={go}
-        />
-      )}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
       {route.view === 'administracion' && (

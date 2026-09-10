@@ -43,8 +43,6 @@ export type Route =
   | { view: 'entidades'; q?: string; region?: string }
   | { view: 'ficha'; entityId: string }
   | { view: 'territorio' }
-  | { view: 'gasto'; familia?: string }
-  | { view: 'gastoActor'; actorId: string; role: 'BUYER' | 'SUPPLIER' }
   | { view: 'fuentes' }
   | { view: 'metodologia' }
   | { view: 'administracion' };
@@ -93,14 +91,6 @@ export function parseHash(hash: string): Route {
         : { view: 'entidades' };
     case 'territorio':
       return { view: 'territorio' };
-    case 'gasto':
-      if (seg[1] === 'comprador' && seg[2]) {
-        return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'BUYER' };
-      }
-      if (seg[1] === 'proveedor' && seg[2]) {
-        return { view: 'gastoActor', actorId: decodeURIComponent(seg[2]), role: 'SUPPLIER' };
-      }
-      return { view: 'gasto', familia: params.get('familia') ?? undefined };
     case 'fuentes':
       return { view: 'fuentes' };
     case 'metodologia':
@@ -141,10 +131,6 @@ export function hrefFor(r: Route): string {
       return `#/entidad/${encodeURIComponent(r.entityId)}`;
     case 'territorio':
       return '#/territorio';
-    case 'gasto':
-      return r.familia ? `#/gasto?familia=${encodeURIComponent(r.familia)}` : '#/gasto';
-    case 'gastoActor':
-      return `#/gasto/${r.role === 'BUYER' ? 'comprador' : 'proveedor'}/${encodeURIComponent(r.actorId)}`;
     case 'fuentes':
       return '#/fuentes';
     case 'metodologia':

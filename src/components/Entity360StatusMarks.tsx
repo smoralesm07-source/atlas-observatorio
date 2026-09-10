@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRpc } from '../lib/rpc';
 import { Badge } from './primitives';
+import type { AtlasRole } from './Auth';
 import '../styles/entity360-status-marks.css';
 
 type EntityUafStatus = {
@@ -22,7 +23,7 @@ type EntityUafStatus = {
  * este indicador desacoplado de la ficha analítica y consultar un RPC liviano
  * por entity_id/RUT.
  */
-export function Entity360StatusMarks({ entityId }: { entityId: string }) {
+export function Entity360StatusMarks({ entityId, role }: { entityId: string; role: AtlasRole }) {
   const { data, loading, error } = useRpc<EntityUafStatus>(
     'obs_entity_uaf_status',
     { p_entity_id: entityId },
@@ -58,7 +59,9 @@ export function Entity360StatusMarks({ entityId }: { entityId: string }) {
     ? `Screening de potencial SO · ${data.uaf_sector}. ${basis ?? ''}`.trim()
     : basis;
   const terminated = /término de giro/i.test(target.textContent ?? '');
-  const manageableQueue = potential ? 'potenciales' : registered && terminated ? 'termino' : null;
+  const manageableQueue = role !== 'viewer'
+    ? (potential ? 'potenciales' : registered && terminated ? 'termino' : null)
+    : null;
 
   return createPortal(
     <>

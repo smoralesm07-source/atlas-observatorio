@@ -191,20 +191,22 @@ export function Shell({
                   </span>
                   <span className="monitor-menu-arrow" aria-hidden>›</span>
                 </a>
-                <a
-                  href={hrefFor({ view: 'universo', mode: 'casos', cola: 'potenciales' })}
-                  className="monitor-menu-item"
-                  data-active={universoMode === 'casos'}
-                  role="menuitem"
-                  onClick={() => setOpenMenu(null)}
-                >
-                  <span className="monitor-menu-icon"><UniversoGlyph mode="casos" /></span>
-                  <span className="monitor-menu-copy">
-                    <strong>Gestión SO</strong>
-                    <small>Potenciales SO, términos de giro y cartera compartida</small>
-                  </span>
-                  <span className="monitor-menu-arrow" aria-hidden>›</span>
-                </a>
+                {role !== 'viewer' && (
+                  <a
+                    href={hrefFor({ view: 'universo', mode: 'casos', cola: 'potenciales' })}
+                    className="monitor-menu-item"
+                    data-active={universoMode === 'casos'}
+                    role="menuitem"
+                    onClick={() => setOpenMenu(null)}
+                  >
+                    <span className="monitor-menu-icon"><UniversoGlyph mode="casos" /></span>
+                    <span className="monitor-menu-copy">
+                      <strong>Gestión SO</strong>
+                      <small>Potenciales SO, términos de giro y cartera compartida</small>
+                    </span>
+                    <span className="monitor-menu-arrow" aria-hidden>›</span>
+                  </a>
+                )}
               </div>
             )}
           </div>
@@ -254,12 +256,6 @@ export function Shell({
               </div>
             )}
           </div>
-
-          {role === 'admin' && (
-            <a href={hrefFor({ view: 'gasto' })} data-active={['gasto', 'gastoActor'].includes(route.view)}>
-              Gasto público
-            </a>
-          )}
 
           {NAV.map((item) => (
             <a

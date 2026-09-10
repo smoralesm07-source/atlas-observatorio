@@ -6,9 +6,9 @@ import { Badge, Empty, ErrorBox, Loading } from '../components/primitives';
 import { bandLabel, fecha, n, n1, rutFormat, titleCase } from '../lib/format';
 import { searchPress, type PressMatch } from '../lib/press';
 
-type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'compras' | 'registros' | 'historico' | 'fuentes';
+type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'registros' | 'historico' | 'fuentes';
 type GlyphName = 'sales' | 'people' | 'activity' | 'public' | 'sanction' | 'uaf' | 'osfl' | 'res' | 'press' | 'sii' | 'alert' | 'copy' | 'external';
-type TimelineKind = 'tax' | 'sanction' | 'press' | 'purchase' | 'event';
+type TimelineKind = 'tax' | 'sanction' | 'press' | 'event';
 
 type PressState = {
   status: 'idle' | 'loading' | 'done' | 'error';
@@ -37,7 +37,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'tributario', label: 'Tributario' },
   { id: 'uaf', label: 'UAF' },
   { id: 'sanciones', label: 'Sanciones' },
-  { id: 'compras', label: 'Compras públicas' },
   { id: 'registros', label: 'OSFL / RES' },
   { id: 'historico', label: 'Histórico' },
   { id: 'fuentes', label: 'Fuentes' },
@@ -179,17 +178,6 @@ function timelineFor(data: EntityDetail, press: PressMatch[]): TimelineRow[] {
       url: sanction.document_url,
     });
   });
-  const purchases = coverageByCode(data, 'MERCADO_PUBLICO');
-  if (purchases?.status === 'PRESENT') {
-    rows.push({
-      key: 'purchase-source',
-      date: purchases.last_event_at,
-      title: purchases.record_count ? `${n(purchases.record_count)} registros en compras públicas` : 'Registro en compras públicas',
-      detail: purchases.detail?.monto_12m_clp != null ? `Monto observado 12 meses: ${formatClp(purchases.detail.monto_12m_clp)}` : null,
-      source: 'ChileCompra',
-      kind: 'purchase',
-    });
-  }
   pressArticles(press).slice(0, 8).forEach((article) => {
     rows.push({
       key: `press-${article.id}`,
@@ -202,7 +190,9 @@ function timelineFor(data: EntityDetail, press: PressMatch[]): TimelineRow[] {
     });
   });
   data.events.forEach((event) => {
-    if (event.productor === 'RADAR_SANCIONES' || event.productor === 'RADAR_PRENSA') return;
+    const producer = String(event.productor ?? '').toUpperCase();
+    if (producer === 'RADAR_SANCIONES' || producer === 'RADAR_PRENSA'
+      || /GASTO|COMPRA|MERCADO_PUBLICO|PRESUPUESTO/.test(producer)) return;
     rows.push({
       key: `event-${event.event_id ?? `${event.tipo}-${event.fecha}`}`,
       date: event.fecha,
@@ -308,7 +298,6 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     tributario: siiCoverage?.status === 'PRESENT' || hasRecordData(tax) || activities.length > 0 || history.length > 0,
     uaf: uafCoverage?.status === 'PRESENT' || hasRecordData(uaf),
     sanciones: sanctionCoverage?.status === 'PRESENT' || data.sanctions.length > 0,
-    compras: purchase?.status === 'PRESENT' || Number(purchase?.record_count ?? 0) > 0,
     registros: osflCoverage?.status === 'PRESENT' || resCoverage?.status === 'PRESENT' || hasRecordData(osfl) || hasRecordData(res),
     historico: timeline.length > 0,
     fuentes: data.coverage.some((row) => row.status === 'PRESENT'),
@@ -371,11 +360,10 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
         ))}
       </nav>
 
-      {tab === 'resumen' && <ResumenTab data={data} press={press} articles={articles} timeline={timeline} activities={activities} history={history} purchase={purchase} registry={{ uaf: uafCoverage, sii: siiCoverage, osfl: osflCoverage, res: resCoverage, press: pressCoverage, sanctions: sanctionCoverage }} onNavigate={onNavigate} />}
+      {tab === 'resumen' && <ResumenTab data={data} press={press} articles={articles} timeline={timeline} activities={activities} history={history} purchase={purchase} registry={{ uaf: uafCoverage, sii: siiCoverage, osfl: osflCoverage, res: resCoverage, press: pressCoverage, sanctions: sanctionCoverage }} />}
       {tab === 'tributario' && <TributarioTab data={data} activities={activities} history={history} />}
       {tab === 'uaf' && <UafTab data={data} uaf={uaf} coverage={uafCoverage} />}
       {tab === 'sanciones' && <SancionesTab data={data} />}
-      {tab === 'compras' && <ComprasTab data={data} coverage={purchase} onNavigate={onNavigate} />}
       {tab === 'registros' && <RegistrosTab data={data} osfl={osfl} res={res} osflCoverage={osflCoverage} resCoverage={resCoverage} />}
       {tab === 'historico' && <HistoricoTab rows={timeline} />}
       {tab === 'fuentes' && <FuentesTab coverage={data.coverage} />}
@@ -385,7 +373,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   );
 }
 
-function ResumenTab({ data, press, articles, timeline, activities, history, purchase, registry, onNavigate }: {
+function ResumenTab({ data, press, articles, timeline, activities, history, purchase, registry }: {
   data: EntityDetail;
   press: PressState;
   articles: ReturnType<typeof pressArticles>;
@@ -394,14 +382,11 @@ function ResumenTab({ data, press, articles, timeline, activities, history, purc
   history: ReturnType<typeof salesHistory>;
   purchase: CoverageRow | undefined;
   registry: { uaf: CoverageRow | undefined; sii: CoverageRow | undefined; osfl: CoverageRow | undefined; res: CoverageRow | undefined; press: CoverageRow | undefined; sanctions: CoverageRow | undefined };
-  onNavigate: (hash: string) => void;
 }) {
   const tax = record(data.tax);
   const salesBand = text(tax.sales_band_uf) ?? data.entity.tax_sales_band_uf ?? 'Sin tramo';
   const workers = numberValue(tax.workers_numeric) ?? data.entity.tax_workers;
   const purchasePresent = purchase?.status === 'PRESENT';
-  const purchaseCount = purchase?.record_count ?? 0;
-  const purchaseAmount = purchase?.detail?.monto_12m_clp ?? purchase?.detail?.monto_clp ?? null;
   const indexedPressCount = press.matches.reduce((best, match) => Math.max(best, match.article_count ?? 0), 0);
   const pressCount = Math.max(articles.length, indexedPressCount, registry.press?.record_count ?? 0);
   return (
@@ -410,12 +395,12 @@ function ResumenTab({ data, press, articles, timeline, activities, history, purc
         <Kpi icon="sales" label="Tramo ventas (UF)" value={salesBand} sub={text(tax.commercial_year) ? `Año comercial ${text(tax.commercial_year)}` : 'SII'} compact />
         <Kpi icon="people" label="Trabajadores" value={workers == null ? '—' : n(workers)} sub={workers == null ? 'Sin dato publicado' : 'Dotación publicada por SII'} />
         <Kpi icon="activity" label="Actividades SII" value={n(activities.length || numberValue(tax.activity_count) || 0)} sub={activities[0]?.name ?? 'Sin actividades materializadas'} />
-        <Kpi icon="public" label="Proveedor del Estado" value={purchasePresent ? `${n(purchaseCount)} registros` : coverageLabel(purchase)} sub={purchasePresent && purchaseAmount != null ? formatClp(purchaseAmount) : 'ChileCompra'} tone={purchasePresent ? 'present' : 'neutral'} />
+        <Kpi icon="public" label="Proveedor del Estado" value={purchasePresent ? 'Sí' : coverageLabel(purchase)} sub="ChileCompra · señal de presencia" tone={purchasePresent ? 'present' : 'neutral'} />
         <Kpi icon="sanction" label="Sanciones" value={n(data.sanctions.length)} sub={data.sanctions.length ? `${data.sanctions[0]?.regulator ?? 'Supervisor'} · última ${fecha(data.sanctions[0]?.event_date)}` : 'Sin eventos materializados'} tone={data.sanctions.length ? 'critical' : 'neutral'} />
       </div>
       <div className="entity360-row entity360-row-top"><BaseCard data={data} /><SalesBandCard history={history} currentBand={salesBand} /><ActivitiesCard rows={activities} /></div>
       <div className="entity360-row entity360-row-middle"><RegistryCard data={data} pressStatus={press.status} pressCount={Number(pressCount)} registry={registry} purchase={purchase} /><TimelineCard rows={timeline} /></div>
-      <div className="entity360-row entity360-row-bottom"><SanctionsCard data={data} /><PressCard press={press} articles={articles} /><PurchasesCard data={data} coverage={purchase} onNavigate={onNavigate} /></div>
+      <div className="entity360-row entity360-row-bottom"><SanctionsCard data={data} /><PressCard press={press} articles={articles} /></div>
     </div>
   );
 }
@@ -463,7 +448,7 @@ function RegistryCard({ data, pressStatus, pressCount, registry, purchase }: {
     <RegistryTile icon="uaf" label="UAF" status={coverageStatus(registry.uaf)} value={coverageLabel(registry.uaf)} detail={data.entity.uaf_sector ? titleCase(data.entity.uaf_sector) : 'Padrón de SO'} />
     <RegistryTile icon="osfl" label="OSFL" status={coverageStatus(registry.osfl)} value={coverageLabel(registry.osfl)} detail="Registro Civil / SII" />
     <RegistryTile icon="res" label="RES / Empresa en un Día" status={coverageStatus(registry.res)} value={coverageLabel(registry.res)} detail="Registro de Empresas y Sociedades" />
-    <RegistryTile icon="public" label="Compras públicas" status={coverageStatus(purchase)} value={coverageLabel(purchase)} detail={purchase?.record_count ? `${n(purchase.record_count)} registros` : 'ChileCompra'} />
+    <RegistryTile icon="public" label="Proveedor del Estado" status={coverageStatus(purchase)} value={purchase?.status === 'PRESENT' ? 'Sí' : coverageLabel(purchase)} detail="ChileCompra · presencia como proveedor" />
     <RegistryTile icon="sanction" label="Sanciones" status={coverageStatus(registry.sanctions)} value={data.sanctions.length ? `${n(data.sanctions.length)} registro${data.sanctions.length === 1 ? '' : 's'}` : coverageLabel(registry.sanctions)} detail="UAF · CMF · SCJ · CGR" />
     <RegistryTile icon="press" label="Prensa" status={pressTone} value={pressStatus === 'loading' ? 'Consultando…' : pressCount > 0 ? `${n(pressCount)} noticia${pressCount === 1 ? '' : 's'}` : coverageLabel(registry.press)} detail="Radar Prensa" />
   </div></Card>;
@@ -483,13 +468,6 @@ function PressCard({ press, articles }: { press: PressState; articles: ReturnTyp
     {press.status === 'error' ? <div className="entity360-card-message">Radar Prensa no respondió en esta consulta. {press.error}</div> : articles.length ? <div className="entity360-press-list">{articles.slice(0, 3).map((article, index) => <details key={article.id} open={index === 0}><summary><div><time>{fecha(article.date)}</time><strong>{article.title}</strong><span>{article.media ?? 'Prensa abierta'}</span></div><span className="entity360-detail-chevron">›</span></summary><div className="entity360-press-detail"><p>{article.summary ?? 'La fuente no entrega un resumen en el corte vigente.'}</p>{article.url && <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir nota <Glyph name="external" /></a>}</div></details>)}</div> : press.status === 'loading' ? <div className="entity360-card-message">Buscando por RUT y razón social…</div> : <Empty title="Sin prensa coincidente" hint="No se encontraron coincidencias suficientemente precisas por RUT o nombre." />}
     <div className="entity360-card-footnote">La coincidencia periodística aporta contexto de fuente abierta; no acredita identidad, participación ni responsabilidad por sí sola.</div>
   </Card>;
-}
-
-function PurchasesCard({ data, coverage, onNavigate }: { data: EntityDetail; coverage: CoverageRow | undefined; onNavigate: (hash: string) => void }) {
-  const present = coverage?.status === 'PRESENT';
-  const amount = coverage?.detail?.monto_12m_clp ?? coverage?.detail?.monto_clp ?? null;
-  const count = coverage?.record_count ?? 0;
-  return <Card title="Compras públicas" meta="ChileCompra">{present ? <div className="entity360-purchase"><div className="entity360-purchase-facts"><div><span>Registros</span><strong>{n(count)}</strong></div><div><span>Monto observado</span><strong>{formatClp(amount)}</strong></div><div><span>Último evento</span><strong>{fecha(coverage?.last_event_at)}</strong></div></div>{data.entity.rut && <button className="entity360-primary-action" onClick={() => onNavigate(`#/gasto/proveedor/${encodeURIComponent(data.entity.rut as string)}`)}>Abrir perfil de proveedor →</button>}</div> : <Empty title={coverageLabel(coverage)} hint="La ficha no inventa contrapartes ni montos cuando el productor de compras públicas no materializa a la entidad." />}</Card>;
 }
 
 function TributarioTab({ data, activities, history }: { data: EntityDetail; activities: ActivityRow[]; history: ReturnType<typeof salesHistory> }) {
@@ -525,12 +503,6 @@ function UafTab({ data, uaf, coverage }: { data: EntityDetail; uaf: Record<strin
 
 function SancionesTab({ data }: { data: EntityDetail }) {
   return <Card title={`Sanciones y fiscalizaciones · ${n(data.sanctions.length)}`} meta="UAF · CMF · SCJ · CGR">{data.sanctions.length ? <div className="entity360-full-table-wrap"><table className="entity360-full-table"><thead><tr><th>Fecha</th><th>Supervisor</th><th>Materia / extracto</th><th>Monto UF</th><th>Identidad</th><th>Resolución</th></tr></thead><tbody>{data.sanctions.map((sanction) => <tr key={sanction.sanction_id}><td className="mono">{fecha(sanction.event_date)}</td><td>{sanction.regulator ?? '—'}</td><td>{sanction.subject ?? '—'}</td><td className="mono">{sanction.amount_uf == null ? '—' : n1(sanction.amount_uf)}</td><td>{sanction.identity_status ? <Badge tone={sanction.identity_status.includes('RESOLVED') || sanction.identity_status.includes('EXACT') ? 'present' : 'unknown'}>{titleCase(sanction.identity_status.replace(/_/g, ' '))}</Badge> : '—'}</td><td>{sanction.document_url ? <a className="entity360-inline-link" href={sanction.document_url} target="_blank" rel="noreferrer">{sanction.resolution_ref ? `N° ${sanction.resolution_ref}` : 'Abrir documento'} ↗</a> : '—'}</td></tr>)}</tbody></table></div> : <Empty title="Sin sanciones materializadas" />}</Card>;
-}
-
-function ComprasTab({ data, coverage, onNavigate }: { data: EntityDetail; coverage: CoverageRow | undefined; onNavigate: (hash: string) => void }) {
-  const present = coverage?.status === 'PRESENT';
-  const amount = coverage?.detail?.monto_12m_clp ?? coverage?.detail?.monto_clp ?? null;
-  return <div className="entity360-tabgrid entity360-tabgrid-2"><Card title="Presencia en Mercado Público" meta="ChileCompra">{present ? <div className="entity360-purchase-large"><div className="entity360-purchase-metric"><span>Registros observados</span><strong>{n(coverage?.record_count)}</strong></div><div className="entity360-purchase-metric"><span>Monto observado</span><strong>{formatClp(amount)}</strong></div><div className="entity360-purchase-metric"><span>Último evento</span><strong>{fecha(coverage?.last_event_at)}</strong></div>{data.entity.rut && <button className="entity360-primary-action" onClick={() => onNavigate(`#/gasto/proveedor/${encodeURIComponent(data.entity.rut as string)}`)}>Profundizar en Gasto público →</button>}</div> : <Empty title={coverageLabel(coverage)} hint="No se muestran rankings o compradores si el actor no está materializado en el productor de compras." />}</Card><Card title="Qué puede analizar Atlas" meta="cuando el actor está materializado"><div className="entity360-feature-list"><span>Concentración comprador–proveedor</span><span>Aceleración de montos y órdenes</span><span>Participación dentro del gasto observado</span><span>Convergencia de hallazgos de compras</span></div></Card></div>;
 }
 
 function RegistrosTab({ data, osfl, res, osflCoverage, resCoverage }: { data: EntityDetail; osfl: Record<string, unknown>; res: Record<string, unknown>; osflCoverage: CoverageRow | undefined; resCoverage: CoverageRow | undefined }) {
