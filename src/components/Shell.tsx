@@ -7,7 +7,6 @@ import { Mark } from './Mark';
 import '../styles/monitores-nav.css';
 
 const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
-  { label: 'Territorio', route: { view: 'territorio' }, match: ['territorio'] },
   { label: 'Gasto público', route: { view: 'gasto' }, match: ['gasto', 'gastoActor'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
 ];
@@ -145,48 +144,6 @@ export function Shell({
             Pulso
           </a>
 
-          <div className="monitor-nav">
-            <button
-              type="button"
-              className="monitor-nav-trigger"
-              data-active={monitorsActive}
-              data-open={monitorsOpen}
-              aria-haspopup="menu"
-              aria-expanded={monitorsOpen}
-              onClick={() => setOpenMenu(monitorsOpen ? null : 'monitors')}
-            >
-              <span>Monitores</span>
-              <svg className="monitor-nav-chevron" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
-                <path d="m5.5 7.5 4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-
-            {monitorsOpen && (
-              <div className="monitor-menu" role="menu" aria-label="Monitores">
-                {MONITORS.map((item) => {
-                  const active = route.view === item.view;
-                  return (
-                    <a
-                      key={item.view}
-                      href={hrefFor(item.route)}
-                      className="monitor-menu-item"
-                      data-active={active}
-                      role="menuitem"
-                      onClick={() => setOpenMenu(null)}
-                    >
-                      <span className="monitor-menu-icon"><MonitorGlyph view={item.view} /></span>
-                      <span className="monitor-menu-copy">
-                        <strong>{item.label}</strong>
-                        <small>{item.view === 'osfl' ? 'Organizaciones sin fines de lucro' : item.view === 'fintech' ? 'Ecosistema Fintech y PSAV' : 'Radar sancionatorio'}</small>
-                      </span>
-                      <span className="monitor-menu-arrow" aria-hidden>›</span>
-                    </a>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
           <a href={hrefFor({ view: 'entidades' })} data-active={['entidades', 'ficha'].includes(route.view)}>
             Entidades
           </a>
@@ -237,6 +194,52 @@ export function Shell({
                   </span>
                   <span className="monitor-menu-arrow" aria-hidden>›</span>
                 </a>
+              </div>
+            )}
+          </div>
+
+          <a href={hrefFor({ view: 'territorio' })} data-active={route.view === 'territorio'}>
+            Territorio
+          </a>
+
+          <div className="monitor-nav">
+            <button
+              type="button"
+              className="monitor-nav-trigger"
+              data-active={monitorsActive}
+              data-open={monitorsOpen}
+              aria-haspopup="menu"
+              aria-expanded={monitorsOpen}
+              onClick={() => setOpenMenu(monitorsOpen ? null : 'monitors')}
+            >
+              <span>Monitores</span>
+              <svg className="monitor-nav-chevron" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+                <path d="m5.5 7.5 4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {monitorsOpen && (
+              <div className="monitor-menu" role="menu" aria-label="Monitores">
+                {MONITORS.map((item) => {
+                  const active = route.view === item.view;
+                  return (
+                    <a
+                      key={item.view}
+                      href={hrefFor(item.route)}
+                      className="monitor-menu-item"
+                      data-active={active}
+                      role="menuitem"
+                      onClick={() => setOpenMenu(null)}
+                    >
+                      <span className="monitor-menu-icon"><MonitorGlyph view={item.view} /></span>
+                      <span className="monitor-menu-copy">
+                        <strong>{item.label}</strong>
+                        <small>{item.view === 'osfl' ? 'Organizaciones sin fines de lucro' : item.view === 'fintech' ? 'Ecosistema Fintech y PSAV' : 'Radar sancionatorio'}</small>
+                      </span>
+                      <span className="monitor-menu-arrow" aria-hidden>›</span>
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>
