@@ -7,10 +7,11 @@ import { fecha, n, n1, titleCase } from '../lib/format';
 import { AlertCard } from '../components/AlertCard';
 import { CohortDrawer, type CohortRequest } from '../components/CohortDrawer';
 import { LensBar, LensPanel, type LensDef } from '../components/LensBar';
-import { LenteReportabilidad } from './pulso/Reportabilidad';
+import { LenteReportabilidad, QuienSostieneReportabilidad } from './pulso/Reportabilidad';
 import { LenteRevision } from './pulso/Revision';
 import { LenteTerritorio } from './pulso/Territorio';
 import { LenteCiclo } from './pulso/Ciclo';
+import { NovedadesObservatorio } from './pulso/Novedades';
 import '../styles/pulso.css';
 
 /* PULSO · V4
@@ -109,7 +110,6 @@ export function Pulso({
 
   return (
     <div className="pulse-v4 fade-in">
-      {/* ── 1. Encabezado compacto ────────────────────────────────────── */}
       <header className="pulse-command">
         <div style={{ minWidth: 0 }}>
           <div className="pulse-kicker">Padrón UAF · Ley 19.913 · Chile</div>
@@ -130,7 +130,6 @@ export function Pulso({
         </div>
       </header>
 
-      {/* ── 2. Estado registral ───────────────────────────────────────── */}
       <div className="kpi-row">
         <Kpi
           label="Padrón inscrito" value={n(u.total)} tone="var(--accent)" glyph={<GlyphPadron />}
@@ -164,7 +163,6 @@ export function Pulso({
         />
       </div>
 
-      {/* ── 3. Lectura del corte + panorama reorganizado ─────────────── */}
       <section className="pulse-briefing">
         <div className="pulse-briefing-top">
           <div className="pulse-briefing-insight" aria-label="Lectura principal del corte">
@@ -253,7 +251,7 @@ export function Pulso({
           </MiniPanel>
         </div>
 
-        <div className="pulse-briefing-bottom">
+        <div className="pulse-briefing-bottom pulse-briefing-bottom-three">
           <MiniPanel title="Evolución publicada del padrón" action="Serie →" onAction={() => elegir('reportabilidad')}>
             {trendPoints.length > 1 ? (
               <>
@@ -282,10 +280,11 @@ export function Pulso({
             </div>
             <p className="pulse-mini-note">Selecciona un sector para abrir sus sujetos.</p>
           </MiniPanel>
+
+          <NovedadesObservatorio compact />
         </div>
       </section>
 
-      {/* ── 5. Cruces relevantes, sin compras públicas ───────────────── */}
       <div className="pulse-crosscuts">
         <CrossTile
           label="Antecedentes sancionatorios"
@@ -317,25 +316,32 @@ export function Pulso({
         />
       </div>
 
-      {/* ── 6. Profundización ─────────────────────────────────────────── */}
-      <div className="pulse-depth-head">
-        <h2>Profundizar análisis</h2>
-        <p>La síntesis no reemplaza el detalle: selecciona una lente para abrir la evidencia y sus cohortes.</p>
-      </div>
-      <LensBar lenses={lenses} active={activa} onPick={elegir} />
+      <div className="pulse-analysis-split">
+        <div className="pulse-analysis-reporting">
+          <QuienSostieneReportabilidad data={data} onCohort={open} compact />
+        </div>
 
-      <LensPanel id="reportabilidad" active={activa}>
-        <LenteReportabilidad data={data} onCohort={open} />
-      </LensPanel>
-      <LensPanel id="revision" active={activa}>
-        <LenteRevision data={data} onCohort={open} />
-      </LensPanel>
-      <LensPanel id="territorio" active={activa}>
-        <LenteTerritorio data={data} onCohort={open} />
-      </LensPanel>
-      <LensPanel id="ciclo" active={activa}>
-        <LenteCiclo data={data} onCohort={open} />
-      </LensPanel>
+        <section className="pulse-analysis-depth">
+          <div className="pulse-depth-head">
+            <h2>Profundizar análisis</h2>
+            <p>Selecciona una lente para abrir la evidencia y sus cohortes.</p>
+          </div>
+          <LensBar lenses={lenses} active={activa} onPick={elegir} />
+
+          <LensPanel id="reportabilidad" active={activa}>
+            <LenteReportabilidad data={data} onCohort={open} />
+          </LensPanel>
+          <LensPanel id="revision" active={activa}>
+            <LenteRevision data={data} onCohort={open} />
+          </LensPanel>
+          <LensPanel id="territorio" active={activa}>
+            <LenteTerritorio data={data} onCohort={open} />
+          </LensPanel>
+          <LensPanel id="ciclo" active={activa}>
+            <LenteCiclo data={data} onCohort={open} />
+          </LensPanel>
+        </section>
+      </div>
 
       <button className="pulse-signal-toggle" onClick={() => setSignalsOpen((v) => !v)}>
         <span>Señales de patrón · <b className="num">{n(c?.con_senal ?? 0)}</b> sujetos con al menos una</span>
@@ -463,7 +469,6 @@ function CrossTile({
   );
 }
 
-/** Las señales sólo se consultan cuando el analista las pide. */
 function SignalsPanel({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const { data, error, loading, reload } = useRpc<Pulse>('obs_pulse', {});
 
@@ -500,7 +505,6 @@ function SignalsPanel({ onNavigate }: { onNavigate: (hash: string) => void }) {
   );
 }
 
-/* Glifos pequeños para identificar estado sin aumentar la superficie. */
 const G = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 const GlyphPadron = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden {...G}>
