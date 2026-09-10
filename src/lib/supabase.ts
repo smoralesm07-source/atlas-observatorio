@@ -8,22 +8,26 @@ export const configError =
     ? 'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_PUBLISHABLE_KEY en el entorno de build.'
     : null;
 
-/** Where Microsoft Entra sends the browser back after sign-in. It must match a
- * redirect URL registered in Supabase Auth. Resolve Vite's base against the
- * current page instead of concatenating strings, so a relative base works both
- * on the legacy GitHub project path and on atlasobservatorio.app. */
+/**
+ * Canonical authentication destination for the production application.
+ *
+ * ATLAS previously shared Supabase Auth configuration with the legacy
+ * AML-Workbench-Portal. If Supabase ever falls back to a project-level redirect,
+ * keeping the production destination explicit prevents a login initiated from
+ * atlasobservatorio.app from returning to the legacy GitHub Pages portal.
+ */
+const CANONICAL_AUTH_REDIRECT = 'https://atlasobservatorio.app/';
 const inferredRedirectTo = new URL(import.meta.env.BASE_URL, window.location.href).href;
 
 export const redirectTo =
   import.meta.env.VITE_AUTH_REDIRECT_TO ||
-  inferredRedirectTo;
+  (import.meta.env.PROD ? CANONICAL_AUTH_REDIRECT : inferredRedirectTo);
 
 export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing', {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    // The Entra redirect carries the session back in the URL; without this the
-    // user returns from Microsoft still signed out.
+    // OAuth and email callbacks can carry the session back in the URL.
     detectSessionInUrl: true,
     storageKey: 'atlas-observatorio-auth',
   },
