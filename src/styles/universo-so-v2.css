@@ -237,3 +237,503 @@
   .uso2-trend-row { grid-template-columns: minmax(0, 1fr) 90px 48px; }
   .uso2-spark { width: 90px; }
 }
+
+/* --------------------------------------------------------------------------
+   Padrón SO · densidad operativa v3
+   Reducimos altura desde espaciamiento y retícula, no desde legibilidad.
+   Escala tipográfica común: título 11.5 / dato principal 9.2 / contexto 8.1 px.
+   -------------------------------------------------------------------------- */
+
+.uso2 {
+  gap: 7px;
+}
+
+.uso2-kpis {
+  gap: 6px;
+}
+.uso2-kpi {
+  min-height: 58px;
+  padding: 7px 10px 6px 12px;
+  border-radius: 8px;
+}
+.uso2-kpi span {
+  font-size: 9.2px;
+  line-height: 1.15;
+  font-weight: 560;
+}
+.uso2-kpi b {
+  margin-top: 2px;
+  font-size: 18px;
+  line-height: .98;
+}
+.uso2-kpi em {
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8.1px;
+  line-height: 1.15;
+}
+
+.uso2-section {
+  border-radius: 8px;
+}
+.uso2-section-head {
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 6px 10px 5px;
+}
+.uso2-section-head > div:first-child {
+  min-width: 0;
+}
+.uso2-section-head h2,
+.uso2-section-head h3 {
+  font-size: 11.5px;
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+.uso2-section-head p {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 76ch;
+  font-size: 8.1px;
+  line-height: 1.2;
+}
+.uso2-section-head .seg {
+  flex-shrink: 0;
+}
+.uso2-section-head .seg button,
+.uso2 .seg.seg-sm button {
+  min-height: 23px;
+  padding: 2px 6px;
+  font-size: 8.8px;
+  line-height: 1;
+}
+.uso2-body {
+  padding: 7px 10px 8px;
+}
+
+.uso2-overview,
+.uso2-edge-grid,
+.uso2-report-grid,
+.uso2-trend-grid {
+  gap: 7px;
+}
+
+/* Rankings en una sola línea: conserva nombre, barra, total y contexto sin
+   convertir cada categoría en una fila de dos alturas. */
+.uso2-ranks {
+  gap: 1px;
+}
+.uso2-rank {
+  grid-template-columns: minmax(125px, 1.05fr) minmax(58px, .62fr) 42px minmax(105px, .9fr);
+  gap: 6px;
+  min-height: 22px;
+  padding: 1px 0;
+}
+.uso2-rank-name {
+  font-size: 9.2px;
+  line-height: 1.15;
+  font-weight: 540;
+}
+.uso2-rank-track {
+  height: 6px;
+}
+.uso2-rank-value {
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 610;
+}
+.uso2-rank small {
+  display: block;
+  grid-column: auto;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 7.9px;
+  line-height: 1.15;
+  color: var(--ink-4);
+}
+.uso2-region-list {
+  max-height: 226px;
+}
+
+.uso2-mark-grid {
+  gap: 5px;
+}
+.uso2-mark {
+  min-height: 51px;
+  padding: 6px 8px;
+  border-radius: 7px;
+}
+.uso2-mark b {
+  font-size: 15px;
+  line-height: 1;
+}
+.uso2-mark span {
+  margin-top: 2px;
+  font-size: 9.2px;
+  line-height: 1.12;
+  font-weight: 610;
+}
+.uso2-mark em {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+  line-height: 1.1;
+}
+
+.uso2-questions {
+  gap: 4px;
+  margin-top: 6px;
+}
+.uso2-questions button {
+  min-height: 22px;
+  padding: 2px 7px;
+  font-size: 8.4px;
+  line-height: 1.05;
+}
+
+.uso2-edge-grid .uso2-section,
+.uso2-trend-grid .uso2-section {
+  min-height: 0;
+}
+.uso2-edge-list {
+  gap: 1px;
+}
+.uso2-edge-row {
+  grid-template-columns: minmax(0, 1fr) minmax(72px, .52fr) 44px;
+  gap: 7px;
+  min-height: 23px;
+  padding: 1px 0;
+}
+.uso2-edge-row b {
+  font-size: 9.2px;
+  line-height: 1.15;
+  font-weight: 570;
+}
+.uso2-edge-track {
+  height: 6px;
+}
+.uso2-edge-row > span:last-child {
+  font-size: 9px;
+  line-height: 1;
+}
+.uso2-edge-note {
+  margin-top: 6px;
+  font-size: 8.1px;
+  line-height: 1.25;
+}
+
+/* El panel reutilizado de reportabilidad hereda una densidad equivalente al
+   resto de Padrón SO. Se conserva el contenido de sus ocho filas. */
+.uso2-report-grid > .panel {
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.uso2-report-grid > .panel > .panel-head {
+  min-height: 38px;
+  padding: 6px 10px 5px;
+  gap: 8px;
+}
+.uso2-report-grid > .panel > .panel-head h3 {
+  font-size: 11.5px;
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+.uso2-report-grid > .panel > .panel-head .seg {
+  padding: 1px;
+  gap: 1px;
+}
+.uso2-report-grid > .panel > .panel-head .seg button {
+  min-height: 23px;
+  padding: 2px 6px;
+  font-size: 8.8px;
+  line-height: 1;
+}
+.uso2-report-grid .rep-row {
+  grid-template-columns: minmax(0, 1fr) 78px;
+  gap: 2px 7px;
+  min-height: 0;
+  padding: 4px 10px;
+}
+.uso2-report-grid .rep-row.rep-head {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.uso2-report-grid .rep-row.rep-head > span {
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: .06em;
+}
+.uso2-report-grid .rep-name {
+  gap: 4px;
+  font-size: 9.2px;
+  line-height: 1.15;
+  font-weight: 550;
+}
+.uso2-report-grid .rep-row .num {
+  font-size: 9.4px !important;
+  line-height: 1.05 !important;
+}
+.uso2-report-grid .rep-row .num em {
+  margin-top: 1px !important;
+  font-size: 7.8px !important;
+  line-height: 1.05 !important;
+}
+.uso2-report-grid .motive,
+.uso2-report-grid .badge {
+  padding: 1px 4px;
+  font-size: 7.6px;
+  line-height: 1.05;
+}
+
+.uso2-structural-summary {
+  gap: 5px;
+  margin-bottom: 7px;
+}
+.uso2-structural-summary div {
+  min-height: 48px;
+  padding: 6px 7px;
+  border-radius: 6px;
+}
+.uso2-structural-summary b {
+  font-size: 15px;
+  line-height: 1;
+}
+.uso2-structural-summary span {
+  margin-top: 2px;
+  font-size: 8.1px;
+  line-height: 1.15;
+}
+.uso2-gap-list {
+  gap: 1px;
+}
+.uso2-gap-row {
+  min-height: 21px;
+  padding: 1px 0;
+}
+.uso2-gap-row span {
+  font-size: 9px;
+  line-height: 1.12;
+}
+.uso2-gap-row b {
+  font-size: 8.5px;
+  line-height: 1;
+}
+
+.uso2-trend-row {
+  grid-template-columns: minmax(0, 1fr) 124px 54px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 0;
+}
+.uso2-trend-name b {
+  font-size: 9.2px;
+  line-height: 1.1;
+  font-weight: 580;
+}
+.uso2-trend-name span {
+  margin-top: 1px;
+  font-size: 8px;
+  line-height: 1.05;
+}
+.uso2-spark {
+  width: 124px;
+  height: 22px;
+}
+.uso2-trend-delta {
+  font-size: 10px;
+  line-height: 1;
+}
+.uso2-trend-delta small {
+  margin-top: 2px;
+  font-size: 7.4px;
+  line-height: 1;
+}
+
+/* El directorio es parte del flujo de Padrón SO: mantiene los tamaños de botón
+   definidos para Gestionar / Entidad 360, pero reduce cabeceras, controles,
+   padding de tabla y alto del viewport para que la navegación sea más rápida. */
+.uso2 .subject-directory {
+  border-radius: 8px;
+}
+.uso2 .subject-directory-head {
+  gap: 12px;
+  padding: 9px 12px 7px;
+}
+.uso2 .subject-directory-head h3 {
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 660;
+}
+.uso2 .subject-directory-head p {
+  margin-top: 2px;
+  font-size: 9.4px;
+  line-height: 1.25;
+}
+.uso2 .subject-directory-count {
+  font-size: 17px;
+  line-height: 1;
+}
+.uso2 .subject-directory-count small {
+  margin-top: 2px;
+  font-size: 8.2px;
+}
+.uso2 .subject-directory-context {
+  gap: 5px;
+  padding: 5px 9px;
+}
+.uso2 .subject-directory-context > span {
+  min-height: 21px;
+  padding: 2px 7px;
+  font-size: 9px;
+}
+.uso2 .subject-directory-reset {
+  padding: 2px 6px;
+  font-size: 9px;
+}
+.uso2 .subject-directory-tools {
+  gap: 6px;
+  padding: 6px 9px;
+}
+.uso2 .subject-directory-search input {
+  min-height: 29px;
+  padding: 4px 29px 4px 9px;
+  font-size: 10.2px;
+}
+.uso2 .subject-directory-search button {
+  top: 3px;
+  width: 23px;
+  height: 23px;
+}
+.uso2 .subject-directory-sort {
+  gap: 3px;
+}
+.uso2 .subject-directory-sort button {
+  min-height: 27px;
+  padding: 3px 8px;
+  font-size: 9px;
+}
+.uso2 .subject-directory-scroll {
+  max-height: 430px;
+}
+.uso2 .subject-directory-table th,
+.uso2 .subject-directory-table td {
+  padding: 6px 8px;
+}
+.uso2 .subject-directory-table th {
+  font-size: 8.4px;
+  line-height: 1;
+  letter-spacing: .045em;
+}
+.uso2 .subject-directory-entity b {
+  font-size: 10.6px;
+  line-height: 1.2;
+}
+.uso2 .subject-directory-entity span,
+.uso2 .subject-directory-secondary {
+  margin-top: 1px;
+  font-size: 9px;
+  line-height: 1.2;
+}
+.uso2 .subject-directory-main {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.uso2 .subject-directory-state {
+  gap: 4px;
+  font-size: 9.2px;
+  line-height: 1.15;
+}
+.uso2 .subject-directory-signals {
+  gap: 3px;
+}
+.uso2 .subject-directory-signal {
+  min-height: 19px;
+  padding: 2px 5px;
+  font-size: 8.4px;
+  line-height: 1;
+}
+.uso2 .subject-directory-score b {
+  font-size: 11.5px;
+  line-height: 1;
+}
+.uso2 .subject-directory-score small {
+  margin-top: 2px;
+  font-size: 8px;
+  line-height: 1;
+}
+.uso2 .subject-directory-foot {
+  gap: 8px;
+  padding: 5px 9px;
+  font-size: 8.6px;
+}
+.uso2 .subject-directory-pages {
+  gap: 4px;
+}
+.uso2 .subject-directory-pages button {
+  min-height: 24px;
+  padding: 2px 7px;
+  font-size: 8.6px;
+}
+
+@media (max-width: 1450px) {
+  .uso2-rank {
+    grid-template-columns: minmax(105px, 1fr) minmax(52px, .48fr) 38px;
+  }
+  .uso2-rank small {
+    grid-column: 1 / -1;
+    margin-top: -1px;
+    text-align: left;
+  }
+  .uso2-region-list {
+    max-height: 244px;
+  }
+}
+
+@media (max-width: 760px) {
+  .uso2 {
+    gap: 6px;
+  }
+  .uso2-kpi {
+    min-height: 54px;
+  }
+  .uso2-section-head {
+    align-items: flex-start;
+  }
+  .uso2-section-head p {
+    white-space: normal;
+  }
+  .uso2-rank {
+    grid-template-columns: minmax(0, 1fr) 64px 40px;
+  }
+  .uso2-rank small {
+    grid-column: 1 / -1;
+  }
+  .uso2-region-list {
+    max-height: 250px;
+  }
+  .uso2-mark-grid,
+  .uso2-structural-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .uso2-trend-row {
+    grid-template-columns: minmax(0, 1fr) 82px 48px;
+  }
+  .uso2-spark {
+    width: 82px;
+  }
+}
