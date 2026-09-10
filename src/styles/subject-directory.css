@@ -17,7 +17,7 @@
 
 .subject-directory-head h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 680;
   color: var(--ink);
 }
@@ -25,7 +25,7 @@
 .subject-directory-head p {
   margin: 3px 0 0;
   max-width: 82ch;
-  font-size: 9.5px;
+  font-size: 11.5px;
   line-height: 1.45;
   color: var(--ink-3);
 }
@@ -33,7 +33,7 @@
 .subject-directory-count {
   flex-shrink: 0;
   font-family: var(--mono);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 680;
   color: var(--accent);
 }
@@ -42,7 +42,7 @@
   display: block;
   margin-top: 1px;
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--ink-4);
   text-align: right;
@@ -65,7 +65,7 @@
   padding: 3px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font-size: 8.4px;
+  font-size: 10.4px;
   color: var(--ink-2);
 }
 
@@ -82,7 +82,7 @@
   border: 0;
   background: transparent;
   color: var(--ink-4);
-  font-size: 8.4px;
+  font-size: 10.4px;
   cursor: pointer;
 }
 .subject-directory-reset:hover { color: var(--accent); }
@@ -103,20 +103,20 @@
 
 .subject-directory-search input {
   width: 100%;
-  min-height: 31px;
+  min-height: 33px;
   padding: 6px 30px 6px 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
   outline: 0;
   background: var(--bg-input);
   color: var(--ink);
-  font-size: 9.4px;
+  font-size: 11.4px;
 }
 .subject-directory-search input:focus { border-color: var(--accent-dim); }
 .subject-directory-search button {
   position: absolute;
   right: 5px;
-  top: 4px;
+  top: 5px;
   width: 23px;
   height: 23px;
   border: 0;
@@ -130,13 +130,13 @@
   gap: 4px;
 }
 .subject-directory-sort button {
-  min-height: 28px;
-  padding: 4px 8px;
+  min-height: 30px;
+  padding: 4px 9px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--bg-panel-2);
   color: var(--ink-3);
-  font-size: 8.2px;
+  font-size: 10.2px;
   cursor: pointer;
 }
 .subject-directory-sort button[data-on='true'] {
@@ -158,7 +158,7 @@
 }
 .subject-directory-table th,
 .subject-directory-table td {
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--line-soft);
   vertical-align: middle;
   text-align: left;
@@ -169,7 +169,7 @@
   z-index: 2;
   background: var(--bg-panel);
   color: var(--ink-4);
-  font-size: 7.6px;
+  font-size: 9.6px;
   font-weight: 650;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -177,19 +177,22 @@
 .subject-directory-table tr:hover td {
   background: color-mix(in srgb, var(--accent) 2.4%, transparent);
 }
-.subject-directory-table th:nth-child(1) { width: 28%; }
-.subject-directory-table th:nth-child(2) { width: 18%; }
-.subject-directory-table th:nth-child(3) { width: 19%; }
-.subject-directory-table th:nth-child(4) { width: 20%; }
-.subject-directory-table th:nth-child(5) { width: 8%; text-align: right; }
+.subject-directory-table th:nth-child(1) { width: 27%; }
+.subject-directory-table th:nth-child(2) { width: 17%; }
+.subject-directory-table th:nth-child(3) { width: 11%; }
+.subject-directory-table th:nth-child(4) { width: 12%; }
+.subject-directory-table th:nth-child(5) { width: 14%; }
 .subject-directory-table th:nth-child(6) { width: 7%; text-align: right; }
+.subject-directory-table th:nth-child(7) { width: 12%; text-align: right; }
+.subject-directory-table td:nth-child(7) { text-align: right; }
 
 .subject-directory-entity b {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 9.6px;
+  font-size: 11.6px;
+  line-height: 1.3;
   font-weight: 620;
   color: var(--ink);
 }
@@ -200,26 +203,34 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 8.1px;
+  font-size: 10.1px;
+  line-height: 1.3;
   color: var(--ink-4);
 }
 .subject-directory-main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 9px;
+  font-size: 11px;
+  line-height: 1.3;
   color: var(--ink-2);
+}
+.subject-directory-region .subject-directory-main {
+  color: var(--ink-2);
+  font-weight: 560;
 }
 .subject-directory-state {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 8.3px;
+  font-size: 10.3px;
+  line-height: 1.3;
   color: var(--ink-2);
 }
 .subject-directory-state i {
   width: 6px;
   height: 6px;
+  flex: 0 0 6px;
   border-radius: 50%;
   background: var(--state-tone, var(--unknown));
 }
@@ -232,11 +243,12 @@
 .subject-directory-signal {
   display: inline-flex;
   align-items: center;
-  min-height: 18px;
-  padding: 1px 5px;
+  min-height: 20px;
+  padding: 2px 6px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font-size: 7.3px;
+  font-size: 9.3px;
+  line-height: 1.15;
   color: var(--ink-3);
 }
 .subject-directory-signal[data-kind='sanction'] { color: var(--sig-high); border-color: color-mix(in srgb, var(--sig-high) 28%, var(--line)); }
@@ -251,25 +263,70 @@
 }
 .subject-directory-score b {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 680;
   color: var(--ink);
 }
 .subject-directory-score small {
   display: block;
-  font-size: 7.2px;
+  font-size: 9.2px;
   color: var(--ink-4);
 }
-.subject-directory-open {
-  display: inline-flex;
+
+.subject-directory-actions {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 6px;
   width: 100%;
-  color: var(--accent);
-  font-size: 8px;
-  font-weight: 620;
   white-space: nowrap;
 }
-.subject-directory-open:hover { text-decoration: underline; }
+.subject-directory-manage,
+.subject-directory-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-panel-2);
+  font-size: 10px;
+  font-weight: 680;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .14s var(--ease), border-color .14s var(--ease), color .14s var(--ease);
+}
+.subject-directory-manage {
+  min-width: 70px;
+  border-color: color-mix(in srgb, var(--present) 62%, var(--line));
+  background: color-mix(in srgb, var(--present) 9%, var(--bg-panel));
+  color: var(--present);
+}
+.subject-directory-manage:hover {
+  border-color: color-mix(in srgb, var(--present) 82%, var(--line));
+  background: color-mix(in srgb, var(--present) 16%, var(--bg-panel));
+}
+.subject-directory-open {
+  min-width: 106px;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-panel));
+  color: var(--accent);
+}
+.subject-directory-open:hover {
+  border-color: color-mix(in srgb, var(--accent) 78%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-panel));
+  text-decoration: none;
+}
+.subject-directory-action-unavailable {
+  display: block;
+  font-size: 10.1px;
+  color: var(--ink-4);
+  text-align: right;
+}
 
 .subject-directory-statebar {
   display: grid;
@@ -277,24 +334,44 @@
   min-height: 190px;
   padding: 20px;
   color: var(--ink-4);
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
 }
 
 .subject-directory-foot {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 7px 12px;
   border-top: 1px solid var(--line-soft);
   color: var(--ink-4);
-  font-size: 7.8px;
+  font-size: 9.8px;
 }
 .subject-directory-foot b { color: var(--ink-2); font-weight: 600; }
+.subject-directory-pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.subject-directory-pages button {
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-panel-2);
+  color: var(--ink-3);
+  font-size: 9.8px;
+  cursor: pointer;
+}
+.subject-directory-pages button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
 
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
   .subject-directory-tools { grid-template-columns: 1fr; }
   .subject-directory-sort { overflow-x: auto; }
   .subject-directory-scroll { max-height: 620px; }
-  .subject-directory-table { min-width: 900px; }
+  .subject-directory-table { min-width: 1180px; }
 }
