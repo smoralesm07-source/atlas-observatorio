@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// base is overridable so the same build can be served from a project page
-// (/atlas-observatorio/) or from a domain root.
+// Relative base keeps the same static bundle portable: it can be served from
+// the legacy GitHub project path (/atlas-observatorio/) and from the canonical
+// root domain (https://atlasobservatorio.app/) during the migration.
 export default defineConfig({
-  base: process.env.VITE_BASE ?? '/',
+  base: process.env.VITE_BASE ?? './',
   plugins: [react()],
   build: {
     target: 'es2022',
