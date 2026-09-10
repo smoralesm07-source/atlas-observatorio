@@ -19,7 +19,7 @@ new_block = """      {data.entidades.length > 0 && (\n        <div style={{ marg
 
 if '<TerritoryEntityDirectory' not in text:
     start_marker = "      {data.entidades.length > 0 && (\n"
-    next_marker = "      <div style={{ marginTop:"
+    next_marker = "      <div style={{ marginTop: 24 }}>\n        <Semantics>"
     start = text.find(start_marker)
     if start < 0:
         raise SystemExit('No se encontró el bloque actual de entidades domiciliadas')
