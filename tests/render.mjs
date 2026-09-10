@@ -380,32 +380,50 @@ const checks = [
     'sin monto publicado en la fuente',
     'Sector UAF que obliga', 'Usuarios de Zonas Francas',
     'Industria según el SII', 'Actividades Financieras y de Seguros']],
-  // Cobertura: la pantalla dejo de decir CUANTOS faltan y dice QUIENES son.
-  // El embudo da el encuadre y cada entidad de la cola trae su ficha, con el
-  // desglose del indice que la ordena y el limite que la acompana.
-  ['cobertura', '#/cobertura', ['Quiénes podrían ser sujetos obligados',
+  // Universo SO · eje 1: la situacion actual del padron inscrito. Composicion,
+  // marcas de caracterizacion, sectores y regiones. Cada cifra abre las
+  // entidades que la sostienen, y los limites del corte se declaran en la
+  // propia pantalla.
+  ['universo-padron', '#/universo-so', ['Universo SO', 'Padrón inscrito', 'Mesa de casos',
+    '10.294', 'Activos ante el SII', '7.739', 'Con término de giro', '445',
+    'Sin perfil ante el SII', '2.110', 'Piden revisión', '2.728',
+    // Las marcas de caracterizacion, cada una con su denominador.
+    'Caracterización del padrón', 'Con antecedente sancionatorio', '372',
+    'Con prensa coincidente', 'También OSFL', 'Proveedor del Estado',
+    'IPF alta o muy alta', 'Giro atípico en su sector', 'Sin territorio observado',
+    // El explorador sectorial, ordenable, con su ficha de sector.
+    'Sectores obligados, uno por uno', 'Usuarios de Zonas Francas', '2.840',
+    'Sector seleccionado', 'Vulnerabilidad', 'Reportabilidad del sector',
+    // Territorio, perfil y ciclo registral.
+    'Dónde están los sujetos obligados', 'Tarapacá',
+    'Prioridad fiscalizadora (IPF)', 'Muy alta',
+    'Entorno territorial donde operan', 'Industria declarada al SII',
+    'Altas de actividad contra términos de giro',
+    // El puente al segundo eje.
+    'Lo que este padrón deja abierto', 'Potenciales sujetos obligados', '115',
+    'Límites declarados de este corte',
+    // Lo que ninguna marca concluye.
+    'no concluyen incumplimiento ni riesgo LA/FT']],
+  // Universo SO · eje 2: los dos bordes del registro, trabajados como casos.
+  // El embudo encuadra la cola, la ficha dice por que la entidad esta ahi y la
+  // pestana de ubicacion arma las consultas a fuentes abiertas.
+  ['universo-casos', '#/universo-so?vista=casos&cola=potenciales', [
+    'Potenciales SO', 'Término de giro', 'Mi cartera',
     // El embudo, con su caida declarada paso a paso.
-    'Observadas por giro', '74.087', 'Con constitución verificable', '44.799',
-    'Con hipótesis accionable', '115', 'Con revisión registrada',
-    'Escala logarítmica',
-    // Las cifras de mando de la cola.
-    'Cola accionable', 'Sin revisar', '110', 'IVO medio', 'Materialidad media',
-    // De donde salen y como se reparte la cola.
-    'De dónde salen los candidatos', 'Perfil de la cola',
-    'Administradoras de Fondos de Inversión', 'Tipo coherente', 'Mediana',
-    // El triage. El marcador de posicion del buscador no entra: no es texto
-    // del documento y una comprobacion sobre el no probaria que se ve.
-    'Sólo sin revisar', 'Antigüedad',
-    // La ficha: identidad, indice, giro, atributos y estado de revision.
-    'Candelaria Goyenechea', '76.736.702-3',
-    'Giro principal', 'lo declara el', 'Territorio', 'Vitacura',
-    'Tamaño', '50.000,01 a 100.000 UF', 'Personal', '39 trabajadores',
-    'Estructura', 'Materialidad', 'credibilidad',
-    'Constitución verificable', 'Seleccionado como candidato',
+    'Conciliación SII ↔ UAF', 'Observadas por giro', '74.087',
+    'Con constitución verificable', '44.799', 'Con hipótesis accionable', '115',
+    'Sin revisar', '110', 'IVO medio', 'Materialidad media', 'Escala logarítmica',
+    // La cola y su ficha: identidad, indice y desglose.
+    'Candelaria Goyenechea', '76.736.702-3', 'Por qué es caso', 'Ubicar', 'Gestión',
+    'índice de verosimilitud de obligación', 'Coincidencia de giro',
+    'Concentración del giro', 'Materialidad', 'Constitución verificable',
+    'Seleccionado como candidato',
+    'Tamaño', '50.000,01 a 100.000 UF', 'Personal', '4 trabajadores',
     // El limite se declara en la propia pantalla, no en la documentacion.
-    'no prueba que la entidad reúna los elementos',
-    'no acredita que reúna los elementos',
-    'no es probabilidad de obligación']],
+    'no acredita que la entidad reúna los elementos',
+    'probabilidad de obligación']],
+  // El alias antiguo de la cobertura sigue resolviendo a la cola de potenciales.
+  ['cobertura', '#/cobertura', ['Conciliación SII ↔ UAF', 'Con hipótesis accionable']],
   ['senales', '#/senales', ['Señales', 'MUY ALTA', 'Recurrencia sancionatoria']],
   // El listado ya no dice sólo quién es la entidad: dice desde cuándo existe,
   // a qué se dedica y de qué tamaño es.

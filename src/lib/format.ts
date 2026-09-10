@@ -60,7 +60,7 @@ const ACRONYMS = new Set([
   'RES', 'ICIJ', 'OSINT', 'LAFT', 'SA', 'SPA', 'LTDA', 'EIRL', 'SAC', 'RNPJSFL',
   'IGR', 'CEAD', 'PJSFL', 'SADP', 'FAU',
 ]);
-const PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'en', 'el', 'a', 'al', 'con', 'por']);
+const PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'o', 'u', 'un', 'una', 'unos', 'unas', 'en', 'el', 'a', 'al', 'con', 'por']);
 
 /* Las regiones del SII llegan como "XIII REGION METROPOLITANA". Capitalizar sin
    mirar convierte el numeral romano en "Xiii", que se lee como una errata. */
