@@ -13,6 +13,9 @@ type CohortRow = {
   psav_confirmed: number;
   va_exposure: number;
   comparable_entities: number;
+  cmf_registered: number;
+  uaf_registered: number;
+  dual_registered: number;
 };
 
 type LeaderRow = {
@@ -113,6 +116,7 @@ export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (enti
         </div>
         <div className="fintech-market-signal-row">
           <span><b>{formatNumber(selected.function_profiled)}</b> función financiera observada</span>
+          {(selected.cmf_registered>0 || selected.uaf_registered>0) && <span><b>{formatNumber(selected.cmf_registered)}</b> CMF · <b>{formatNumber(selected.uaf_registered)}</b> UAF{selected.dual_registered>0 ? ` · ${formatNumber(selected.dual_registered)} ambos` : ''}</span>}
           {(selected.psav_confirmed>0 || selected.va_exposure>0) && <span><b>{formatNumber(selected.psav_confirmed)}</b> PSAV · <b>{formatNumber(selected.va_exposure)}</b> exposición AV</span>}
         </div>
       </div>
