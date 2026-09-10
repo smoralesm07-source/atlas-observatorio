@@ -70,6 +70,20 @@ async function db(path: string, init: RequestInit = {}) {
   try { return JSON.parse(raw); } catch { return raw; }
 }
 
+async function hasCronCredential(req: Request): Promise<boolean> {
+  const token = (req.headers.get("x-atlas-cron-token") ?? "").trim();
+  if (token.length < 40) return false;
+  try {
+    const result = await db("rpc/atlas_press_validate_cron_token", {
+      method: "POST",
+      body: JSON.stringify({ p_token: token }),
+    });
+    return result === true;
+  } catch {
+    return false;
+  }
+}
+
 async function upsert(table: string, conflict: string, rows: Record<string, unknown>[]) {
   const chunkSize = 400;
   for (let i = 0; i < rows.length; i += chunkSize) {
@@ -86,10 +100,12 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return response(405, { error: "POST required" });
   if (!SUPABASE_URL || !SERVICE_ROLE) return response(500, { error: "Supabase environment unavailable" });
 
-  // El gateway queda independiente del formato JWT/opaque de la service key.
-  // La mutación sólo se admite si la credencial recibida coincide exactamente
-  // con el secreto de servicio disponible dentro de la función.
-  if (!hasServiceCredential(req)) return response(403, { error: "service_role required" });
+  // Dos vías internas y equivalentes: service role para operación manual o un
+  // token de cron rotado y validado dentro de la base. Ninguna queda expuesta
+  // al navegador ni depende del repositorio del Monitor.
+  if (!hasServiceCredential(req) && !(await hasCronCredential(req))) {
+    return response(403, { error: "internal credential required" });
+  }
 
   const runId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
@@ -196,7 +212,8 @@ Deno.serve(async (req: Request) => {
       })
       .filter((x: unknown): x is Record<string, unknown> => Boolean(x));
 
-    // El archivo es acumulativo: lo que sale de la ventana fresca no se borra de ATLAS.
+    // ATLAS acumula; que una noticia salga de la ventana fresca del Monitor no
+    // la elimina de estas tablas históricas.
     await upsert("atlas_press_article_history", "article_id", articles);
     await upsert("atlas_press_entity_history", "press_entity_id", entities);
     await upsert("atlas_press_mention_history", "mention_id", mentions);
