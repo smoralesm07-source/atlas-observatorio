@@ -6,6 +6,11 @@ name: Archivar prensa en ATLAS
 # aparecer en la ventana vigente del Monitor.
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/atlas-press-ingest/**'
+      - '.github/workflows/press-archive.yml'
   schedule:
     - cron: '17 */2 * * *'
   workflow_dispatch:
