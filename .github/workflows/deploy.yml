@@ -31,7 +31,6 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_BASE: ${{ vars.VITE_BASE }}
         run: |
           if [ -z "${VITE_SUPABASE_URL:-}" ]; then
             echo "::error::Falta la variable de repositorio VITE_SUPABASE_URL"
