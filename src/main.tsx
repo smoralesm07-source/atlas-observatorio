@@ -27,6 +27,7 @@ import './styles/cohort-dense.css';
 import './styles/cohort-overlay-v2.css';
 import './styles/pulso-updates-priority.css';
 import './styles/light-uaf-palette.css';
+import './styles/light-monitor-contrast.css';
 
 const initialTheme = (() => {
   try {
