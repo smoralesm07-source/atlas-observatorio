@@ -8,6 +8,14 @@ new_primitives = "import { Empty, ErrorBox, Loading, Panel, Semantics } from '..
 if old_primitives in text:
     text = text.replace(old_primitives, new_primitives, 1)
 
+# El directorio encapsula navegación a Entidad 360 y formato de RUT.
+text = text.replace("import { hrefFor } from '../lib/router';\n", '', 1)
+text = text.replace(
+    "import { n, n1, rutFormat, titleCase } from '../lib/format';",
+    "import { n, n1, titleCase } from '../lib/format';",
+    1,
+)
+
 anchor = "import { ChileMap } from '../components/ChileMap';"
 component_import = "import { TerritoryEntityDirectory } from '../components/TerritoryEntityDirectory';"
 if component_import not in text:
