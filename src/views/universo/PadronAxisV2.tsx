@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { CohortRequest } from '../../components/CohortDrawer';
 import { SubjectDirectory, type DirectorySelection } from '../../components/SubjectDirectory';
 import type { UafPotential, UafPotentialCandidate, UafPulse } from '../../lib/contracts';
@@ -24,8 +24,9 @@ type RegistryEvolution = {
   decreases: RegistryTrend[];
   note: string;
 };
+type PotentialIndustryRow = { industry: string; n: number; ivo_medio: number | null };
 type TermMode = 'sector' | 'region' | 'industry';
-type PotentialMode = 'sector' | 'region' | 'activity';
+type PotentialMode = 'sector' | 'region' | 'industry' | 'activity';
 type EdgeRow = { key: string; label: string; value: number; sub?: string };
 
 const ALL: CohortRequest = { cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' };
@@ -45,6 +46,7 @@ export function PadronAxisV2({
   const [termMode, setTermMode] = useState<TermMode>('sector');
   const [potentialMode, setPotentialMode] = useState<PotentialMode>('sector');
   const evolution = useRpc<RegistryEvolution>('obs_uaf_registry_evolution', {});
+  const potentialIndustry = useRpc<PotentialIndustryRow[]>('obs_uaf_potential_industry_mix', {});
 
   const u = pulse.universe;
   const cross = pulse.crosscuts;
@@ -87,13 +89,20 @@ export function PadronAxisV2({
         .map((row) => ({ key: row.region, label: titleCase(row.region), value: row.n, sub: row.ivo_medio == null ? undefined : `IVO medio ${n1(row.ivo_medio)}` }))
         .slice(0, 8);
     }
+    if (potentialMode === 'industry') {
+      return (potentialIndustry.data ?? [])
+        .slice()
+        .sort((a, b) => b.n - a.n)
+        .map((row) => ({ key: row.industry, label: titleCase(row.industry), value: row.n, sub: row.ivo_medio == null ? undefined : `IVO medio ${n1(row.ivo_medio)}` }))
+        .slice(0, 8);
+    }
     if (potentialMode === 'activity') return activityMix.slice(0, 8);
     return (potential?.sectores ?? [])
       .slice()
       .sort((a, b) => b.accionables - a.accionables)
       .map((row) => ({ key: row.sector, label: titleCase(row.sector), value: row.accionables, sub: row.ivo_medio == null ? undefined : `IVO medio ${n1(row.ivo_medio)}` }))
       .slice(0, 8);
-  }, [activityMix, potential, potentialMode]);
+  }, [activityMix, potential, potentialIndustry.data, potentialMode]);
 
   const reportingRows = pulse.reporting?.sectores ?? [];
   const withoutRepresentatives = reportingRows.filter((row) => row.sector_canonical == null);
@@ -104,15 +113,15 @@ export function PadronAxisV2({
     .sort((a, b) => (a.ros_per_100_so_2025 ?? Infinity) - (b.ros_per_100_so_2025 ?? Infinity))
     .slice(0, 7);
 
-  const selectRegistered = (
-    request: CohortRequest,
-    client?: Pick<Extract<DirectorySelection, { kind: 'registered' }>, 'clientSector' | 'clientRegion' | 'clientIndustry'>,
-  ) => focusDirectory({ kind: 'registered', request, ...client });
-
   const focusDirectory = (selection: DirectorySelection) => {
     setDirectory(selection);
     window.setTimeout(() => document.getElementById('universo-directorio')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 20);
   };
+
+  const selectRegistered = (
+    request: CohortRequest,
+    client?: Pick<Extract<DirectorySelection, { kind: 'registered' }>, 'clientSector' | 'clientRegion' | 'clientIndustry'>,
+  ) => focusDirectory({ kind: 'registered', request, ...client });
 
   const termPick = (row: EdgeRow) => {
     const request: CohortRequest = { cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro', hint: row.label };
@@ -124,6 +133,7 @@ export function PadronAxisV2({
   const potentialPick = (row: EdgeRow) => {
     if (potentialMode === 'sector') focusDirectory({ kind: 'potential', title: `Potenciales SO · ${row.label}`, sector: row.key });
     else if (potentialMode === 'region') focusDirectory({ kind: 'potential', title: `Potenciales SO · ${row.label}`, region: row.key });
+    else if (potentialMode === 'industry') focusDirectory({ kind: 'potential', title: `Potenciales SO · ${row.label}`, industry: row.key });
     else focusDirectory({ kind: 'potential', title: `Potenciales SO · ${row.label}`, activity: row.key });
   };
 
@@ -184,9 +194,11 @@ export function PadronAxisV2({
           <div className="uso2-questions"><button onClick={() => onWork({ kind: 'TERMINO' })}>Abrir mesa de términos →</button></div>
         </Block>
 
-        <Block title="Potenciales SO: composición de la brecha" hint="Explora candidatos por sector sugerido, región o actividad gatillante publicada en el SII."
-          action={<ModeButtons<PotentialMode> value={potentialMode} onChange={setPotentialMode} options={[['sector', 'Sector'], ['region', 'Región'], ['activity', 'Actividad']]} />}>
-          <EdgeList rows={potentialRows} tone="var(--unknown)" onPick={potentialPick} />
+        <Block title="Potenciales SO: composición de la brecha" hint="Explora candidatos por sector sugerido, región, industria tributaria o actividad gatillante publicada en el SII."
+          action={<ModeButtons<PotentialMode> value={potentialMode} onChange={setPotentialMode} options={[['sector', 'Sector'], ['region', 'Región'], ['industry', 'Industria'], ['activity', 'Actividad']]} />}>
+          {potentialMode === 'industry' && potentialIndustry.loading && !potentialIndustry.data
+            ? <div className="uso2-edge-note">Leyendo industrias tributarias…</div>
+            : <EdgeList rows={potentialRows} tone="var(--unknown)" onPick={potentialPick} />}
           <p className="uso2-edge-note">{n(potentialTotal)} candidatos accionables sobre {n(potential?.totales?.observadas)} observados por giro. Son hipótesis de registro, no incumplimientos acreditados.</p>
           <div className="uso2-questions"><button onClick={() => onWork({ kind: 'POTENCIAL' })}>Abrir mesa de potenciales →</button></div>
         </Block>
@@ -231,7 +243,6 @@ export function PadronAxisV2({
         <SubjectDirectory
           id="universo-directorio"
           selection={directory}
-          potential={potential}
           onReset={() => setDirectory({ kind: 'registered', request: ALL })}
         />
       </div>
@@ -243,7 +254,7 @@ function Kpi({ label, value, hint, tone, onClick }: { label: string; value: numb
   return <button className="uso2-kpi" style={{ ['--uso2-tone' as string]: tone }} onClick={onClick}><span>{label}</span><b>{n(value)}</b><em>{hint}</em></button>;
 }
 
-function Block({ title, hint, action, children }: { title: string; hint: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Block({ title, hint, action, children }: { title: string; hint: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="uso2-section">
       <header className="uso2-section-head"><div><h3>{title}</h3><p>{hint}</p></div>{action}</header>
