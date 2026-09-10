@@ -84,7 +84,12 @@ export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (enti
     if (!selected) return [];
     return (data?.leaders ?? [])
       .filter((row) => row.cohort_code === selected.cohort_code)
-      .sort((a,b) => metricOrder(a.metric_code) - metricOrder(b.metric_code))
+      .sort((a,b) => {
+        const aComparable = a.percentile != null ? 1 : 0;
+        const bComparable = b.percentile != null ? 1 : 0;
+        if (aComparable !== bComparable) return bComparable - aComparable;
+        return metricOrder(a.metric_code) - metricOrder(b.metric_code);
+      })
       .slice(0,8);
   }, [data?.leaders, selected]);
 
@@ -123,7 +128,7 @@ export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (enti
       </div>
 
       <div className="fintech-market-leaders">
-        <div className="fintech-market-leaders-head"><div><b>Líderes observables</b><span>Misma cohorte, métrica y alcance geográfico comparable; las unidades no se suman entre sí.</span></div><small>{leaders.length} métricas con señal</small></div>
+        <div className="fintech-market-leaders-head"><div><b>Líderes observables</b><span>Primero se muestran señales con pares válidos; misma cohorte, métrica y alcance geográfico comparable.</span></div><small>{leaders.length} métricas con señal</small></div>
         {leaders.length ? <div className="fintech-market-leader-list">{leaders.map((row) => <button key={`${row.cohort_code}-${row.metric_code}`} onClick={() => onSelectEntity(row.entity_name)} title={row.value_text ?? row.metric_label}>
           <span className="metric"><b>{shortMetric(row.metric_code,row.metric_label)}</b><small>{dimensionLabel(row.dimension)} · {geoLabel(row.geography)}</small></span>
           <span className="entity">{row.entity_name}</span>
@@ -133,7 +138,7 @@ export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (enti
       </div>
     </div>}
 
-    <div className="fintech-market-method"><span>Lectura</span><p>{data.methodology} Los percentiles se restringen además a alcances geográficos comparables y excluyen evidencia histórica.</p><small>{formatNumber(data.entities_profiled)} entidades con alguna métrica · {formatNumber(data.observations)} observaciones estructuradas.</small></div>
+    <div className="fintech-market-method"><span>Lectura</span><p>{data.methodology}</p><small>{formatNumber(data.entities_profiled)} entidades con alguna métrica · {formatNumber(data.observations)} observaciones estructuradas.</small></div>
   </>;
 }
 
