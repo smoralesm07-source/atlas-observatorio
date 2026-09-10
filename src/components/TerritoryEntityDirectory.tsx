@@ -36,7 +36,7 @@ export function TerritoryEntityDirectory({
   onNavigate: (hash: string) => void;
 }) {
   return (
-    <div className="subject-directory-scroll territory-entity-directory">
+    <div className="subject-directory-scroll territory-entity-directory" data-territory-directory="true">
       <table className="subject-directory-table">
         <thead>
           <tr>
@@ -54,8 +54,17 @@ export function TerritoryEntityDirectory({
             const score = row.priority_score ?? row.ipa3_score;
             const band = row.priority_band ?? null;
             const metric = row.priority_metric ?? (row.is_uaf_observed ? 'IPF' : 'IPA');
+            const sanctions = Math.max(row.sanction_count ?? 0, row.is_sanctioned ? 1 : 0);
             return (
-              <tr key={row.entity_id}>
+              <tr
+                key={row.entity_id}
+                data-territory-entity="true"
+                data-sector={normalizeFilterValue(row.uaf_sector)}
+                data-uaf={row.is_uaf_observed ? 'true' : 'false'}
+                data-sanction={sanctions > 0 ? 'true' : 'false'}
+                data-alert={row.alert_count > 0 ? 'true' : 'false'}
+                data-finding={row.finding_count > 0 ? 'true' : 'false'}
+              >
                 <td className="subject-directory-entity">
                   <b>{titleCase(row.name)}</b>
                   <span>
@@ -147,6 +156,14 @@ function TerritorySignals({ row }: { row: TerritoryEntity }) {
       )}
     </div>
   );
+}
+
+function normalizeFilterValue(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es')
+    .trim();
 }
 
 function stateLabel(status: string | null | undefined) {
