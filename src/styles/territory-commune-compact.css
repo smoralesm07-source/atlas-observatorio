@@ -1,0 +1,246 @@
+/* Detalle comunal · jerarquía compacta
+   La comuna se lee primero, luego las entidades domiciliadas y después el
+   desglose metodológico. Todo queda acotado al detalle comunal mediante :has(). */
+
+.fade-in:has(.territory-entity-directory) {
+  --tc-gap: 8px;
+  --tc-title: 11.5px;
+  --tc-body: 10.4px;
+  --tc-meta: 9.2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Prioridad vertical: navegación -> cabecera -> entidades -> detalle IGR -> alcance. */
+.fade-in:has(.territory-entity-directory) > * { order: 4; }
+.fade-in:has(.territory-entity-directory) > nav { order: 0; }
+.fade-in:has(.territory-entity-directory) > .ficha-head { order: 1; }
+.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) { order: 2; }
+.fade-in:has(.territory-entity-directory) > .grid.grid-main { order: 3; }
+
+/* Navegación superior mínima. */
+.fade-in:has(.territory-entity-directory) > nav {
+  min-height: 18px;
+  margin-bottom: 5px !important;
+  font-size: 10.5px !important;
+  line-height: 1.2;
+}
+.fade-in:has(.territory-entity-directory) > nav button {
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+}
+
+/* Cabecera: conserva la lectura de IGR, pero elimina altura improductiva. */
+.fade-in:has(.territory-entity-directory) .ficha-head {
+  align-items: center;
+  gap: 9px 12px;
+  padding: 9px 11px;
+  border-radius: 9px;
+}
+.fade-in:has(.territory-entity-directory) .ficha-title {
+  font-size: 18px;
+  line-height: 1.05;
+}
+.fade-in:has(.territory-entity-directory) .ficha-sub {
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 10.4px;
+  line-height: 1.2;
+}
+.fade-in:has(.territory-entity-directory) .ficha-head p {
+  display: -webkit-box;
+  max-width: 88ch !important;
+  margin: 4px 0 0 !important;
+  overflow: hidden;
+  font-size: 10.2px !important;
+  line-height: 1.28 !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.fade-in:has(.territory-entity-directory) .ficha-scores {
+  gap: 5px;
+  margin-left: auto;
+}
+.fade-in:has(.territory-entity-directory) .ficha-scores > div {
+  min-width: 94px !important;
+  padding: 6px 8px !important;
+  border-radius: 7px !important;
+}
+.fade-in:has(.territory-entity-directory) .ficha-scores > div > .num {
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+.fade-in:has(.territory-entity-directory) .ficha-scores > div > div:nth-child(2) {
+  margin-top: 2px !important;
+  font-size: 8px !important;
+  line-height: 1.05 !important;
+  letter-spacing: .075em !important;
+}
+.fade-in:has(.territory-entity-directory) .ficha-scores > div > div:nth-child(3) {
+  margin-top: 2px !important;
+  font-size: 8.4px !important;
+  line-height: 1.1 !important;
+}
+
+/* Directorio inmediatamente visible bajo la cabecera. */
+.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) {
+  margin-top: var(--tc-gap) !important;
+}
+.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) > .panel {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+}
+.fade-in:has(.territory-entity-directory) .territory-entity-directory {
+  max-height: 410px;
+}
+.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table th,
+.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Grilla analítica secundaria. */
+.fade-in:has(.territory-entity-directory) > .grid.grid-main {
+  gap: var(--tc-gap);
+  margin-top: var(--tc-gap) !important;
+  grid-template-columns: minmax(0, 1.72fr) minmax(300px, .88fr);
+}
+.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid {
+  gap: var(--tc-gap) !important;
+}
+
+/* Paneles: una única escala de títulos, metadata y cuerpo. */
+.fade-in:has(.territory-entity-directory) .panel {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.fade-in:has(.territory-entity-directory) .panel-head {
+  min-height: 32px;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.fade-in:has(.territory-entity-directory) .panel-head h3 {
+  font-size: var(--tc-title);
+  line-height: 1.15;
+  font-weight: 650;
+}
+.fade-in:has(.territory-entity-directory) .panel-head .meta {
+  font-size: var(--tc-meta);
+  line-height: 1.15;
+}
+.fade-in:has(.territory-entity-directory) .panel-pad {
+  padding: 8px 10px;
+}
+
+/* Medidores de capa: menos aire, misma lectura. */
+.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid:first-child .panel > div:last-child > div:first-child {
+  padding: 7px 10px !important;
+}
+.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid:first-child .panel > div:last-child > div:first-child > div > div:first-child {
+  margin-bottom: 3px !important;
+  font-size: 10px !important;
+}
+.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid:first-child .panel > div:last-child > div:first-child > div > div:nth-child(2) {
+  height: 4px !important;
+}
+
+/* Tablas del desglose: más densas y homogéneas. */
+.fade-in:has(.territory-entity-directory) .table {
+  font-size: 10.3px;
+}
+.fade-in:has(.territory-entity-directory) .table th {
+  padding: 5px 10px;
+  font-size: 8.6px;
+  line-height: 1.1;
+  letter-spacing: .055em;
+}
+.fade-in:has(.territory-entity-directory) .table td {
+  padding: 5px 10px;
+  font-size: 10.2px;
+  line-height: 1.18;
+}
+
+/* Lectura IGR / universo: compacta pares clave-valor. */
+.fade-in:has(.territory-entity-directory) .kv {
+  grid-template-columns: minmax(112px, .82fr) minmax(0, 1fr);
+  gap: 3px 11px;
+  font-size: var(--tc-body);
+  line-height: 1.25;
+}
+
+/* Notas metodológicas: visibles, pero sin dominar la altura. */
+.fade-in:has(.territory-entity-directory) .note {
+  display: -webkit-box;
+  margin-top: 6px !important;
+  padding: 6px 8px;
+  overflow: hidden;
+  font-size: 9.4px;
+  line-height: 1.32;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Prensa comunal: lista compacta y acotada. */
+.fade-in:has(.territory-entity-directory) .timeline {
+  max-height: 120px;
+  padding-left: 16px;
+  overflow: auto;
+}
+.fade-in:has(.territory-entity-directory) .timeline::before { left: 4px; }
+.fade-in:has(.territory-entity-directory) .tl-item {
+  padding-bottom: 8px;
+}
+.fade-in:has(.territory-entity-directory) .tl-item::before {
+  left: -14px;
+  width: 6px;
+  height: 6px;
+}
+.fade-in:has(.territory-entity-directory) .tl-when {
+  font-size: 8.8px;
+  line-height: 1.15;
+}
+.fade-in:has(.territory-entity-directory) .tl-what {
+  margin-top: 1px;
+  font-size: 10px;
+  line-height: 1.22;
+}
+
+/* Barras de sectores: no reservar 150 px cuando hay pocas categorías. */
+.fade-in:has(.territory-entity-directory) .panel [style*="min-height: 150px"] {
+  min-height: 92px !important;
+  gap: 5px !important;
+}
+.fade-in:has(.territory-entity-directory) .panel [style*="font-size: 12.5px"] {
+  font-size: 10px !important;
+}
+
+/* Alcance final sin bloque vertical excesivo. */
+.fade-in:has(.territory-entity-directory) > div:last-child {
+  margin-top: var(--tc-gap) !important;
+}
+.fade-in:has(.territory-entity-directory) .semantics {
+  padding: 7px 9px;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1180px) {
+  .fade-in:has(.territory-entity-directory) > .grid.grid-main {
+    grid-template-columns: 1fr;
+  }
+  .fade-in:has(.territory-entity-directory) .ficha-scores {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .fade-in:has(.territory-entity-directory) .ficha-head {
+    align-items: flex-start;
+  }
+  .fade-in:has(.territory-entity-directory) .ficha-scores > div {
+    min-width: 88px !important;
+  }
+  .fade-in:has(.territory-entity-directory) .territory-entity-directory {
+    max-height: 360px;
+  }
+}
