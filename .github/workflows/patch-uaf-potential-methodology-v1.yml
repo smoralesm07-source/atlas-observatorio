@@ -1,0 +1,47 @@
+name: Aplicar metodología Gestión SO v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_uaf_potential_methodology_v1.py'
+      - '.github/workflows/patch-uaf-potential-methodology-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar cambios de Universo SO
+        run: python3 scripts/patch_uaf_potential_methodology_v1.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_BASE: ${{ vars.VITE_BASE }}
+        run: npm run build
+      - name: Guardar implementación
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/lib/contracts.ts src/views/UniversoSOV2.tsx src/views/universo/PadronAxisV2.tsx src/views/universo/CasosAxis.tsx src/views/universo/CaseFile.tsx src/styles/universo-so-management.css
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: explica y prioriza muestra de potenciales SO"
+            git push origin HEAD:main
+          fi
