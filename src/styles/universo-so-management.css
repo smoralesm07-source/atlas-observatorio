@@ -382,3 +382,68 @@ body.uso-case-drawer-open {
     animation: none;
   }
 }
+
+/* ───────────────────────────────────────────── carril único Gestión SO
+   Cabecera, colas, filtros y grilla comparten exactamente el mismo eje. Esto
+   evita que la parte superior quede abierta a todo el viewport mientras la
+   cartera aparece como una pieza más estrecha y desconectada. */
+.uso-mode-casos {
+  --uso-management-page-width: 1540px;
+}
+
+.uso-mode-casos > .uso-head-compact,
+.uso-mode-casos > .uso-shared-error,
+.uso-mode-casos > .uso-axis-body {
+  width: min(100%, var(--uso-management-page-width));
+  margin-inline: auto;
+}
+
+.uso-mode-casos > .uso-head-compact {
+  min-height: 0;
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding: 5px 0 9px;
+}
+
+.uso-mode-casos > .uso-head-compact .uso-head-copy {
+  max-width: none;
+}
+
+.uso-mode-casos > .uso-head-compact .uso-kicker {
+  margin-bottom: 3px;
+}
+
+.uso-mode-casos > .uso-head-compact .uso-head-copy h1 {
+  margin: 0;
+  line-height: 1.05;
+}
+
+.uso-mode-casos > .uso-axis-body {
+  margin-top: 0;
+}
+
+.uso-mode-casos .uso-queues {
+  margin: 0 0 10px;
+  padding: 4px 0 6px;
+}
+
+.uso-mode-casos .uso-toolbar {
+  margin: 0 0 10px;
+}
+
+.uso-mode-casos .uso-work {
+  margin-top: 0;
+}
+
+/* El límite de lectura vive en el contenedor común; la tabla deja de imponer
+   un segundo ancho distinto. */
+.uso-mode-casos .uso-list-panel {
+  width: 100%;
+  margin-inline: 0;
+}
+
+@media (max-width: 1580px) {
+  .uso-mode-casos {
+    --uso-management-page-width: 100%;
+  }
+}
