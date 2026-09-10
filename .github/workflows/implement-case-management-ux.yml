@@ -1,0 +1,59 @@
+name: Implementar Mesa de Casos v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_case_management_ux.py'
+      - 'scripts/fix_case_management_patch.py'
+      - '.github/workflows/implement-case-management-ux.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar rediseño de gestión
+        run: |
+          python3 scripts/patch_case_management_ux.py
+          python3 scripts/fix_case_management_patch.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_BASE: ${{ vars.VITE_BASE }}
+        run: npm run build
+      - name: Guardar implementación verificada
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            src/lib/casework.ts \
+            src/views/UniversoSO.tsx \
+            src/views/universo/CasosAxis.tsx \
+            src/views/universo/CaseFile.tsx \
+            src/views/universo/OpenContactPanel.tsx \
+            src/components/CohortDrawer.tsx \
+            src/components/Entity360StatusMarks.tsx \
+            src/styles/universo-casework-compact.css \
+            supabase/migrations/20260910173500_case_management_completion_release.sql
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: optimiza gestión y trazabilidad de casos"
+            git push origin HEAD:main
+          fi
