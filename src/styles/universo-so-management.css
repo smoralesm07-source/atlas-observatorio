@@ -683,3 +683,229 @@ body.uso-case-drawer-open {
   color: var(--ink-3);
   font-size: 10.5px;
 }
+
+
+/* ayuda metodológica contextual · Potenciales SO */
+.uso-mode-casos .uso-queue-with-help {
+  position: relative;
+  min-width: 0;
+}
+
+.uso-mode-casos .uso-queue-with-help > .uso-queue-main {
+  width: 100%;
+  height: 100%;
+  padding-right: 44px;
+}
+
+.uso-mode-casos .uso-potential-help {
+  position: static;
+}
+
+.uso-mode-casos .uso-potential-help > summary {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  min-height: 25px !important;
+  padding: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-panel-2));
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  cursor: help;
+  list-style: none;
+  box-shadow: none;
+}
+
+.uso-mode-casos .uso-potential-help > summary::-webkit-details-marker { display: none; }
+.uso-mode-casos .uso-potential-help > summary:hover,
+.uso-mode-casos .uso-potential-help[open] > summary {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-panel-2));
+  color: var(--ink);
+}
+
+.uso-mode-casos .uso-potential-help-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 70;
+  width: min(640px, calc(100vw - 42px));
+  max-height: min(74vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 20px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line-strong));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-panel) 97%, var(--accent));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
+  color: var(--ink-2);
+}
+
+.uso-mode-casos .uso-potential-help-popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 18px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line-strong));
+  border-left: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line-strong));
+  background: var(--bg-panel);
+}
+
+.uso-mode-casos .uso-potential-help-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.uso-mode-casos .uso-potential-help-head h3 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+
+.uso-mode-casos .uso-potential-help-head > em {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-4);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.uso-mode-casos .uso-potential-help-lede {
+  margin: 14px 0;
+  font-size: 11.5px;
+  line-height: 1.68;
+  color: var(--ink-2);
+}
+
+.uso-mode-casos .uso-potential-help-lede strong,
+.uso-mode-casos .uso-potential-help-section strong,
+.uso-mode-casos .uso-potential-help-warning strong {
+  color: var(--ink);
+}
+
+.uso-mode-casos .uso-potential-help-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 15px;
+}
+
+.uso-mode-casos .uso-potential-help-metrics > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+}
+
+.uso-mode-casos .uso-potential-help-metrics b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.uso-mode-casos .uso-potential-help-metrics em {
+  color: var(--ink-4);
+  font-size: 8.5px;
+  font-style: normal;
+  line-height: 1.3;
+}
+
+.uso-mode-casos .uso-potential-help-section {
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.uso-mode-casos .uso-potential-help-section h4 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 720;
+}
+
+.uso-mode-casos .uso-potential-help-section p,
+.uso-mode-casos .uso-potential-help-section li {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.62;
+  color: var(--ink-3);
+}
+
+.uso-mode-casos .uso-potential-help-section ol {
+  margin: 7px 0 9px;
+  padding-left: 20px;
+}
+
+.uso-mode-casos .uso-potential-help-section li + li { margin-top: 4px; }
+
+.uso-mode-casos .uso-potential-help-warning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--sig-high) 30%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sig-high) 6%, var(--bg-panel-2));
+}
+
+.uso-mode-casos .uso-potential-help-warning strong {
+  flex: 0 0 100%;
+  margin-bottom: 2px;
+  font-size: 10.5px;
+}
+
+.uso-mode-casos .uso-potential-help-warning span {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 8.5px;
+}
+
+.uso-mode-casos .uso-potential-help-popover footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-4);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .uso-mode-casos .uso-potential-help-popover {
+    position: fixed;
+    top: 72px;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: none;
+  }
+
+  .uso-mode-casos .uso-potential-help-popover::before { display: none; }
+  .uso-mode-casos .uso-potential-help-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
