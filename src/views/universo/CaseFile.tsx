@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   CONTACT_FIELDS, KIND_META, PRIORITIES, STATE_FLOW, STATE_META,
-  type CaseContact, type CasePriority, type CaseRecord, type CaseState,
+  type CaseContact, type CasePriority, type CaseRecord,
   caseSummaryText, contactFilled, isTracked,
 } from '../../lib/casework';
 import { rutForms } from '../../lib/osint';
