@@ -61,7 +61,7 @@ const COHORT_ORDER = [
 
 const METRIC_ORDER = [
   'USERS','CLIENTS','BUSINESS_CLIENTS','MERCHANTS','INSURED_PERSONS','APP_DOWNLOADS_COUNT',
-  'TRANSACTIONS_MONTHLY_COUNT','TRANSACTIONS_QUARTERLY_COUNT','TRANSACTIONS_ANNUAL_COUNT',
+  'TRANSACTIONS_MONTHLY_COUNT','ORDERS_MONTHLY_COUNT','TRANSACTIONS_QUARTERLY_COUNT','TRANSACTIONS_ANNUAL_COUNT',
   'VERIFICATIONS_24H_COUNT','FINANCINGS_COUNT','PROJECTS_FINANCED_COUNT',
   'PROCESSED_VOLUME_MONTHLY_USD','PROCESSED_VOLUME_PERIOD_USD','ANNUAL_TRANSACTION_VOLUME_USD','ANNUALIZED_TRANSACTION_VOLUME_USD_EST',
   'CUMULATIVE_TRANSACTION_VOLUME_USD','TPV_USD','ORIGINATED_VOLUME_USD','AUM_AUC_USD',
@@ -123,9 +123,9 @@ export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (enti
       </div>
 
       <div className="fintech-market-leaders">
-        <div className="fintech-market-leaders-head"><div><b>Líderes observables</b><span>Cada fila usa una unidad propia; no se suman entre sí.</span></div><small>{leaders.length} métricas con señal</small></div>
+        <div className="fintech-market-leaders-head"><div><b>Líderes observables</b><span>Misma cohorte, métrica y alcance geográfico comparable; las unidades no se suman entre sí.</span></div><small>{leaders.length} métricas con señal</small></div>
         {leaders.length ? <div className="fintech-market-leader-list">{leaders.map((row) => <button key={`${row.cohort_code}-${row.metric_code}`} onClick={() => onSelectEntity(row.entity_name)} title={row.value_text ?? row.metric_label}>
-          <span className="metric"><b>{shortMetric(row.metric_code,row.metric_label)}</b><small>{dimensionLabel(row.dimension)}</small></span>
+          <span className="metric"><b>{shortMetric(row.metric_code,row.metric_label)}</b><small>{dimensionLabel(row.dimension)} · {geoLabel(row.geography)}</small></span>
           <span className="entity">{row.entity_name}</span>
           <strong>{formatMetricValue(row)}</strong>
           <em data-comparable={row.percentile!=null}>{row.percentile!=null ? `P${Math.round(row.percentile*100)} · ${row.peer_count} pares` : `${row.peer_count ?? 0} pares · insuf.`}</em>
@@ -133,7 +133,7 @@ export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (enti
       </div>
     </div>}
 
-    <div className="fintech-market-method"><span>Lectura</span><p>{data.methodology}</p><small>{formatNumber(data.entities_profiled)} entidades con alguna métrica · {formatNumber(data.observations)} observaciones estructuradas.</small></div>
+    <div className="fintech-market-method"><span>Lectura</span><p>{data.methodology} Los percentiles se restringen además a alcances geográficos comparables y excluyen evidencia histórica.</p><small>{formatNumber(data.entities_profiled)} entidades con alguna métrica · {formatNumber(data.observations)} observaciones estructuradas.</small></div>
   </>;
 }
 
@@ -148,16 +148,20 @@ function formatNumber(value:number|null|undefined) { return value==null ? 'n/d' 
 function compact(value:number) { return new Intl.NumberFormat('es-CL',{notation:'compact',maximumFractionDigits:1}).format(value); }
 function formatMetricValue(row:LeaderRow) {
   if (row.currency==='USD' || row.unit==='USD') return `USD ${compact(row.value_numeric)}`;
-  const suffix:Record<string,string>={ users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',institutions:' instituciones',sources:' fuentes',countries:' países',payment_methods:' medios',connections:' conexiones',agreements:' acuerdos',providers:' prestadores',policies:' pólizas',workers:' trabajadores' };
+  const suffix:Record<string,string>={ users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',orders:' órdenes',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',institutions:' instituciones',sources:' fuentes',countries:' países',payment_methods:' medios',connections:' conexiones',agreements:' acuerdos',providers:' prestadores',policies:' pólizas',workers:' trabajadores' };
   return `${compact(row.value_numeric)}${suffix[row.unit ?? ''] ?? (row.unit ? ` ${row.unit}` : '')}`;
 }
 function shortMetric(code:string,label:string) {
   const map:Record<string,string>={
     USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',APP_DOWNLOADS_COUNT:'Descargas app',
-    TRANSACTIONS_MONTHLY_COUNT:'Transacciones / mes',TRANSACTIONS_QUARTERLY_COUNT:'Transacciones / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Transacciones / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',
+    TRANSACTIONS_MONTHLY_COUNT:'Transacciones / mes',ORDERS_MONTHLY_COUNT:'Órdenes / mes',TRANSACTIONS_QUARTERLY_COUNT:'Transacciones / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Transacciones / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',
     PROCESSED_VOLUME_MONTHLY_USD:'Volumen procesado / mes',PROCESSED_VOLUME_PERIOD_USD:'Volumen del período',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',
     FINANCIAL_INSTITUTIONS_CONNECTED_COUNT:'Instituciones conectadas',DATA_SOURCES_CONNECTED_COUNT:'Fuentes conectadas',API_CONNECTIONS:'Conexiones API',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',AGREEMENTS_COUNT:'Acuerdos de red',HEALTH_PROVIDERS_NETWORK:'Red de prestadores',
   };
   return map[code] ?? label;
 }
 function dimensionLabel(value:string) { return ({ECONOMIC_SCALE:'escala económica',BUSINESS_ACTIVITY:'actividad',REACH:'alcance',CAPITAL:'capital'} as Record<string,string>)[value] ?? value.toLowerCase().replaceAll('_',' '); }
+function geoLabel(value:string|null) {
+  if (!value) return 'alcance n/d';
+  return ({CHILE:'Chile',LATAM:'LatAm',AMERICAS:'Américas',GLOBAL:'Global',INTERNATIONAL:'Internacional',COMPANY_WIDE:'Empresa'} as Record<string,string>)[value] ?? value;
+}
