@@ -57,6 +57,8 @@ export function Entity360StatusMarks({ entityId }: { entityId: string }) {
   const potentialTitle = data.uaf_sector
     ? `Screening de potencial SO · ${data.uaf_sector}. ${basis ?? ''}`.trim()
     : basis;
+  const terminated = /término de giro/i.test(target.textContent ?? '');
+  const manageableQueue = potential ? 'potenciales' : registered && terminated ? 'termino' : null;
 
   return createPortal(
     <>
@@ -67,6 +69,15 @@ export function Entity360StatusMarks({ entityId }: { entityId: string }) {
         <Badge tone="medium" title={potentialTitle}>
           Potencial SO
         </Badge>
+      )}
+      {manageableQueue && (
+        <button
+          className="entity360-manage-case"
+          onClick={() => { window.location.hash = `#/universo-so?vista=casos&cola=${manageableQueue}&q=${encodeURIComponent(data.rut ?? entityId)}`; }}
+          title={manageableQueue === 'termino' ? 'Abrir este universo en la mesa de casos' : 'Abrir potenciales SO en la mesa de casos'}
+        >
+          Gestionar
+        </button>
       )}
     </>,
     target,

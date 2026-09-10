@@ -375,6 +375,7 @@ function SubjectQuick({
   const ubicacion = s.commune
     ? `${s.commune}${s.region ? ` · ${s.region}` : ''}`
     : s.region ?? 'Sin territorio observado';
+  const manageable = s.sii_status === 'TERMINATED_AS_PUBLISHED' || Boolean(s.sii_termination_date);
 
   return (
     <div className="subject-quick" role="region" aria-label={`Vista rápida de ${s.name}`}>
@@ -424,6 +425,15 @@ function SubjectQuick({
 
       <div className="subject-quick-actions">
         <span>Vista rápida del listado. El expediente completo queda en Entidad 360.</span>
+        <div className="subject-quick-action-buttons">
+          {manageable && (
+            <button
+              className="subject-quick-manage"
+              onClick={() => { window.location.hash = `#/universo-so?vista=casos&cola=termino&q=${encodeURIComponent(s.rut)}`; }}
+            >
+              Gestionar
+            </button>
+          )}
         {s.entity_id && onOpenEntity ? (
           <button className="subject-quick-cta" onClick={() => onOpenEntity(s.entity_id!)}>
             Abrir Entidad 360 →
@@ -431,6 +441,7 @@ function SubjectQuick({
         ) : (
           <span className="subject-quick-unavailable">Sin ficha 360 vinculada</span>
         )}
+        </div>{/* casework-actions-close */}
       </div>
     </div>
   );

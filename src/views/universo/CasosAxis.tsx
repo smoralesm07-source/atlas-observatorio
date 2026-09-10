@@ -73,7 +73,10 @@ export function CasosAxis({
   onQueueChange: (queue: Queue) => void;
 }) {
   const [queue, setQueue] = useState<Queue>(initialQueue);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => {
+    const raw = window.location.hash.split('?')[1] ?? '';
+    return new URLSearchParams(raw).get('q') ?? '';
+  });
   const [sector, setSector] = useState(initialSector ?? '');
   const [region, setRegion] = useState('');
   const [gestion, setGestion] = useState('');
@@ -504,7 +507,11 @@ export function CasosAxis({
               onPatch={(patch) => {
                 const claim = !isTracked(active.record) && patch.state != null && patch.state !== 'SIN_TRABAJAR';
                 onPatch(active, patch);
-                if (claim) window.requestAnimationFrame(() => changeQueue('cartera'));
+                if (patch.state === 'DEVUELTO') {
+                  window.requestAnimationFrame(() => changeQueue(active.kind === 'TERMINO' ? 'termino' : 'potenciales'));
+                } else if (claim) {
+                  window.requestAnimationFrame(() => changeQueue('cartera'));
+                }
               }}
               onEntity={active.subject.entityId ? () => onEntity(active.subject.entityId as string) : undefined}
               onSector={(value) => { setSector(value); setActiveKey(active.key); }}
@@ -533,7 +540,7 @@ export function CasosAxis({
                 }}
               >
                 <option value="">Elegir…</option>
-                {STATES.map((meta) => <option key={meta.key} value={meta.key}>{meta.label}</option>)}
+                {STATES.filter((meta) => !['SIN_TRABAJAR', 'FINALIZADO', 'DEVUELTO'].includes(meta.key)).map((meta) => <option key={meta.key} value={meta.key}>{meta.label}</option>)}
               </select>
             </label>
             <label className="uso-select">
@@ -644,7 +651,9 @@ function CaseListRow({
           {openFilled > 0 && <i className="uso-row-contact uso-row-contact-open" title={`${openFilled} hallazgos de contacto observados en red abierta`}>◎{openFilled}</i>}
           {row.record.assignedEmail && (
             <small className="uso-row-owner" title={`Responsable: ${row.record.assignedName || row.record.assignedEmail}`}>
-              {row.record.isMine ? 'Tú' : (row.record.assignedName || row.record.assignedEmail.split('@')[0])}
+              {row.record.state === 'DEVUELTO'
+                ? `Revisó: ${row.record.isMine ? 'tú' : (row.record.assignedName || row.record.assignedEmail.split('@')[0])}`
+                : `Gestiona: ${row.record.isMine ? 'tú' : (row.record.assignedName || row.record.assignedEmail.split('@')[0])}`}
             </small>
           )}
         </span>

@@ -1,0 +1,122 @@
+/* Mesa de casos · densidad operativa v2
+   Conserva el lenguaje visual de Atlas y prioriza lectura simultánea grilla/ficha. */
+.uso .uso-axis-body { gap: 9px; }
+.uso .uso-queues { gap: 7px; }
+.uso .uso-queues button { min-height: 58px; padding: 7px 10px; grid-template-columns: minmax(0,1fr) auto; column-gap: 9px; row-gap: 1px; }
+.uso .uso-queues button > span { font-size: 11px; }
+.uso .uso-queues button > b { font-size: 18px; grid-row: 1 / 3; grid-column: 2; align-self: center; }
+.uso .uso-queues button > em { font-size: 9px; line-height: 1.25; }
+.uso .uso-context > summary { padding: 7px 34px 7px 11px; min-height: 44px; }
+.uso .uso-context > summary b { font-size: 12px; }
+.uso .uso-context > summary em { font-size: 9px; }
+.uso .uso-context-body { padding: 0 11px 8px; }
+.uso .uso-funnel { gap: 5px; }
+.uso .uso-funnel-step { padding: 6px 7px; }
+.uso .uso-funnel-step p { font-size: 9px; margin-top: 3px; }
+.uso .uso-funnel-facts { padding: 6px 0 0; gap: 5px 10px; font-size: 9px; }
+.uso .uso-cartera-context { padding: 8px 10px; }
+.uso .uso-state-counts { gap: 5px; margin-top: 6px; }
+.uso .uso-state-counts button { min-height: 31px; padding: 5px 7px; }
+.uso .uso-state-counts span { font-size: 9px; }
+.uso .uso-state-counts b { font-size: 12px; }
+.uso .uso-toolbar { padding: 7px 9px; gap: 6px 7px; border-radius: 9px; }
+.uso .uso-search input, .uso .uso-select select { min-height: 31px; font-size: 10px; }
+.uso .uso-select > span { font-size: 8px; }
+.uso .uso-toolbar-chips { gap: 4px; }
+.uso .uso-toolbar .chip { min-height: 26px; padding: 3px 7px; font-size: 9px; }
+
+/* La vista principal es realmente partida: la ficha deja de ser una barra lateral estrecha. */
+.uso .uso-work { grid-template-columns: minmax(520px, 1.12fr) minmax(430px, .88fr); gap: 9px; align-items: start; }
+.uso .uso-list-panel { border-radius: 9px; min-width: 0; }
+.uso .uso-list-head { min-height: 38px; padding: 6px 9px; }
+.uso .uso-list-head b { font-size: 14px; }
+.uso .uso-list-head span, .uso .uso-list-head em { font-size: 9px; }
+.uso .uso-list { max-height: calc(100vh - 230px); min-height: 380px; }
+.uso .uso-row-main { grid-template-columns: 4px minmax(175px,1.9fr) minmax(110px,1.25fr) 62px minmax(72px,.72fr) minmax(128px,1fr); gap: 6px; padding: 6px 8px 6px 3px; min-height: 49px; }
+.uso .uso-row-id b { font-size: 10px; line-height: 1.2; }
+.uso .uso-row-id em, .uso .uso-row-place span, .uso .uso-row-place em, .uso .uso-row-score em, .uso .uso-row-work > em { font-size: 8.5px; }
+.uso .uso-row-score b { font-size: 13px; }
+.uso .uso-row-marks { gap: 2px; }
+.uso .uso-row-marks i { width: 17px; height: 17px; font-size: 8px; }
+.uso .uso-row-work { gap: 3px; align-items: flex-start; }
+.uso .uso-row-owner { display: inline-flex; max-width: 126px; padding: 2px 5px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--panel-2) 86%, transparent); color: var(--ink-2); font-size: 8px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.uso .uso-row-contact { font-size: 8px; }
+.uso .uso-detail { position: sticky; top: 66px; min-width: 0; }
+.uso .uso-case { max-height: calc(100vh - 82px); border-radius: 9px; }
+.uso .uso-case-head { padding: 9px 10px 7px; gap: 7px; }
+.uso .uso-case-id h3 { font-size: 14px; margin: 3px 0 2px; }
+.uso .uso-case-id p { font-size: 9px; }
+.uso .uso-case-badges { gap: 4px; }
+.uso .uso-case-assignment { margin: 0 9px 7px; padding: 7px 9px; min-height: 46px; }
+.uso .uso-case-assignment b { font-size: 10px; }
+.uso .uso-case-assignment em { font-size: 8.5px; }
+.uso .uso-case-tabs { min-height: 34px; }
+.uso .uso-case-tabs button { padding: 7px 8px; font-size: 9px; }
+.uso .uso-case-body { padding: 9px 10px 12px; gap: 9px; }
+.uso .uso-section-head { margin-bottom: 5px; }
+.uso .uso-section-head h4 { font-size: 11px; }
+.uso .uso-section-head p { font-size: 8.5px; }
+.uso .uso-contact { gap: 6px; grid-template-columns: 1fr 1fr; }
+.uso .uso-contact-field span { font-size: 8px; }
+.uso .uso-contact-field input { min-height: 31px; font-size: 10px; padding: 5px 7px; }
+.uso .uso-flow { gap: 4px; }
+.uso .uso-flow button { min-height: 36px; padding: 5px 3px; }
+.uso .uso-flow button span { font-size: 8px; }
+.uso .uso-flow-alt { gap: 5px; }
+.uso .uso-flow-alt button { min-height: 27px; font-size: 8.5px; }
+.uso .uso-priority { min-height: 31px; }
+.uso .uso-note-field textarea { min-height: 62px; font-size: 10px; }
+
+.uso .uso-case-resolution { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 9px; align-items: center; padding: 8px 9px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--accent) 5%, var(--panel-2)); }
+.uso .uso-case-resolution[data-finalized="true"] { border-color: color-mix(in srgb, var(--present) 42%, var(--line)); background: color-mix(in srgb, var(--present) 7%, var(--panel-2)); }
+.uso .uso-case-resolution > div:first-child { display: grid; gap: 2px; }
+.uso .uso-case-resolution b { font-size: 10px; color: var(--ink-1); }
+.uso .uso-case-resolution em { font-size: 8.5px; line-height: 1.35; color: var(--ink-3); font-style: normal; }
+.uso .uso-case-resolution-actions { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+.uso .uso-release { border-color: color-mix(in srgb, var(--sig-watch) 40%, var(--line)); }
+
+/* El mejor dato observado queda a primera vista; el resto sigue disponible para auditoría. */
+.uso .uso-open-head { gap: 8px; }
+.uso .uso-open-head h4 { font-size: 12px; margin: 1px 0 2px; }
+.uso .uso-open-head p { font-size: 8.5px; line-height: 1.35; }
+.uso .uso-open-stats { gap: 5px; }
+.uso .uso-open-stats span { padding: 4px 6px; font-size: 8px; }
+.uso .uso-open-primary { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 8px 9px; border: 1px solid color-mix(in srgb, var(--present) 48%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--present) 7%, var(--panel-2)); }
+.uso .uso-open-primary[data-selected="true"] { box-shadow: inset 3px 0 0 var(--present); }
+.uso .uso-open-primary-glyph { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: color-mix(in srgb, var(--present) 14%, var(--panel)); color: var(--present); font-weight: 800; font-size: 11px; }
+.uso .uso-open-primary > div { display: grid; gap: 2px; min-width: 0; }
+.uso .uso-open-primary b { font-size: 10.5px; color: var(--ink-1); overflow-wrap: anywhere; }
+.uso .uso-open-primary em { font-size: 8px; color: var(--ink-3); font-style: normal; }
+.uso .uso-open-grid { gap: 5px; }
+.uso .uso-open-item { padding: 7px; gap: 6px; grid-template-columns: 26px minmax(0,1fr) 58px; }
+.uso .uso-open-kind { width: 25px; height: 25px; font-size: 9px; }
+.uso .uso-open-value b { font-size: 10px; }
+.uso .uso-open-value small, .uso .uso-open-value em { font-size: 8px; }
+.uso .uso-open-quality b { font-size: 11px; }
+.uso .uso-open-quality span, .uso .uso-open-quality small { font-size: 7.5px; }
+.uso .uso-open-actions { grid-column: 2 / -1; gap: 4px; }
+.uso .uso-open-actions button, .uso .uso-open-actions a { min-height: 24px; padding: 3px 6px; font-size: 8px; }
+.uso .uso-open-use[data-reliable="true"] { border-color: color-mix(in srgb, var(--present) 55%, var(--line)); color: var(--present); }
+.uso .uso-open-use:disabled { opacity: .46; cursor: not-allowed; }
+
+.subject-quick-action-buttons { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.subject-quick-manage, .entity360-manage-case { border: 1px solid color-mix(in srgb, var(--present) 65%, var(--line)); border-radius: 7px; background: color-mix(in srgb, var(--present) 10%, var(--panel)); color: var(--present); font: inherit; font-size: 10px; font-weight: 700; padding: 6px 10px; cursor: pointer; }
+.subject-quick-manage:hover, .entity360-manage-case:hover { background: color-mix(in srgb, var(--present) 17%, var(--panel)); }
+.entity360-manage-case { margin-left: 4px; align-self: center; }
+
+@media (min-width: 901px) and (max-width: 1080px) {
+  .uso .uso-work { grid-template-columns: minmax(470px, 1fr) 390px; }
+  .uso .uso-detail { position: sticky; top: 62px; }
+  .uso .uso-case { max-height: calc(100vh - 76px); }
+  .uso .uso-back { display: none; }
+  .uso .uso-row-main { grid-template-columns: 4px minmax(150px,1.8fr) minmax(95px,1fr) 56px minmax(60px,.6fr) 116px; }
+}
+
+@media (max-width: 900px) {
+  .uso .uso-work { grid-template-columns: 1fr; }
+  .uso .uso-detail { position: static; }
+  .uso .uso-case { max-height: none; }
+  .uso .uso-list { max-height: 58vh; min-height: 300px; }
+  .uso .uso-case-resolution, .uso .uso-open-primary { grid-template-columns: 1fr; }
+  .uso .uso-case-resolution-actions { justify-content: flex-start; }
+}

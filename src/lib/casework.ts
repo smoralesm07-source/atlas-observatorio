@@ -24,6 +24,8 @@ export type CaseState =
   | 'EN_UBICACION'
   | 'CONTACTO_OBTENIDO'
   | 'CONTACTADO'
+  | 'FINALIZADO'
+  | 'DEVUELTO'
   | 'SIN_UBICAR'
   | 'DESCARTADO';
 
@@ -86,6 +88,8 @@ export const STATES: { key: CaseState; label: string; short: string; tone: strin
   { key: 'EN_UBICACION', label: 'En ubicación', short: 'Ubicando', tone: 'var(--sig-watch)', step: 1 },
   { key: 'CONTACTO_OBTENIDO', label: 'Contacto obtenido', short: 'Con contacto', tone: 'var(--unknown)', step: 2 },
   { key: 'CONTACTADO', label: 'Contactado', short: 'Contactado', tone: 'var(--present)', step: 3 },
+  { key: 'FINALIZADO', label: 'Finalizado', short: 'Finalizado', tone: 'var(--present)', step: 4 },
+  { key: 'DEVUELTO', label: 'Devuelto al universo', short: 'Revisado antes', tone: 'var(--ink-3)', step: 0 },
   { key: 'SIN_UBICAR', label: 'No se pudo ubicar', short: 'No ubicable', tone: 'var(--sig-high)', step: 3 },
   { key: 'DESCARTADO', label: 'Descartado en revisión', short: 'Descartado', tone: 'var(--sig-none)', step: 3 },
 ];
@@ -292,9 +296,11 @@ export function hydrate(map: CaseMap, kind: CaseKind, subjects: CaseSubject[]): 
 }
 
 export const isTracked = (record: CaseRecord) =>
-  record.state !== 'SIN_TRABAJAR'
-  || record.note.trim().length > 0
-  || contactFilled(record.contact) > 0;
+  record.state !== 'DEVUELTO' && (
+    record.state !== 'SIN_TRABAJAR'
+    || record.note.trim().length > 0
+    || contactFilled(record.contact) > 0
+  );
 
 export const contactFilled = (contact: CaseContact) =>
   (Object.keys(EMPTY_CONTACT) as (keyof CaseContact)[])
@@ -337,6 +343,10 @@ export function casesToCsv(records: CaseRecord[]): string {
     r.contact.direccion,
     r.contact.persona,
     r.contact.fuente,
+    r.assignedName ?? '',
+    r.assignedEmail ?? '',
+    r.assignedAt ?? '',
+    r.contactedAt ?? '',
     r.note.replace(/\s+/g, ' ').trim(),
     r.updatedAt,
   ]);

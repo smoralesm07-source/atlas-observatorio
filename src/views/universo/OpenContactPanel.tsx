@@ -66,6 +66,12 @@ const STATUS_LABEL: Record<string, string> = {
 
 const statusRank = (status: string | null) => status === 'VERIFICADO' ? 3 : status === 'PROBABLE' ? 2 : 1;
 
+const isReliable = (contact: OpenContact) =>
+  contact.verification_status === 'VERIFICADO'
+  || (contact.verification_status === 'PROBABLE'
+    && Number(contact.confidence_pct ?? 0) >= 85
+    && Number(contact.evidence_count ?? 0) >= 2);
+
 function host(url: string | null): string {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -117,6 +123,9 @@ export function OpenContactPanel({
 
   const channels = new Set(items.map((item) => item.contact_type)).size;
   const verified = items.filter((item) => item.verification_status === 'VERIFICADO').length;
+  const recommended = items.find((item) => isReliable(item) && ['TELEFONO', 'EMAIL', 'DIRECCION'].includes(item.contact_type))
+    ?? items.find(isReliable)
+    ?? null;
   const target = {
     rut: row.subject.rut,
     name: row.subject.name,
@@ -153,6 +162,10 @@ export function OpenContactPanel({
   function adopt(contact: OpenContact) {
     const field = FIELD_BY_TYPE[contact.contact_type];
     if (!field) return;
+    if (!isReliable(contact)) {
+      setMessage('Valida este hallazgo o confirma evidencia suficiente antes de usarlo como medio de contacto.');
+      return;
+    }
     const source = [contact.source_label, contact.source_url].filter(Boolean).join(' · ');
     const currentSource = row.record.contact.fuente.trim();
     const patch: Partial<CaseContact> = { [field]: contact.contact_value };
@@ -232,6 +245,26 @@ export function OpenContactPanel({
         {items[0]?.last_observed_at && <span>observado {dateLabel(items[0].last_observed_at)}</span>}
       </div>
 
+      {recommended && (() => {
+        const field = FIELD_BY_TYPE[recommended.contact_type];
+        const selected = Boolean(field && row.record.contact[field] === recommended.contact_value);
+        return (
+          <div className="uso-open-primary" data-selected={selected ? 'true' : undefined}>
+            <span className="uso-open-primary-glyph" aria-hidden>{TYPE_GLYPH[recommended.contact_type] ?? '·'}</span>
+            <div>
+              <span className="uso-kicker">Dato confiable disponible</span>
+              <b>{TYPE_LABEL[recommended.contact_type] ?? recommended.contact_type}: {recommended.contact_value}</b>
+              <em>{recommended.source_label || host(recommended.source_url) || 'fuente abierta'} · {STATUS_LABEL[recommended.verification_status ?? 'NO_VERIFICADO'] ?? 'No verificado'} · {n1(Number(recommended.confidence_pct ?? 0))}% confianza</em>
+            </div>
+            {field && !readOnly && (
+              <button className="btn btn-sm btn-primary" disabled={selected} onClick={() => adopt(recommended)}>
+                {selected ? 'Medio seleccionado' : 'Usar como medio de contacto'}
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
       {(contacts.error || localError) && (
         <div className="uso-open-message uso-open-error">
           {contacts.error ?? localError}
@@ -250,6 +283,8 @@ export function OpenContactPanel({
             const href = directHref(contact);
             const domain = host(contact.source_url);
             const preview = previews[contact.contact_id];
+            const reliable = isReliable(contact);
+            const selected = Boolean(field && row.record.contact[field] === contact.contact_value);
             return (
               <article className="uso-open-item" key={contact.contact_id} data-status={contact.verification_status ?? 'NO_VERIFICADO'}>
                 <span className="uso-open-kind" aria-hidden>{TYPE_GLYPH[contact.contact_type] ?? '·'}</span>
@@ -282,7 +317,17 @@ export function OpenContactPanel({
                 </div>
                 <div className="uso-open-actions">
                   <CopyButton text={contact.contact_value} label="Copiar" done="Copiado" small />
-                  {field && !readOnly && <button className="uso-open-use" onClick={() => adopt(contact)}>Usar</button>}
+                  {field && !readOnly && (
+                    <button
+                      className="uso-open-use"
+                      data-reliable={reliable ? 'true' : undefined}
+                      disabled={!reliable || selected}
+                      title={!reliable ? 'Valida el hallazgo o exige al menos 85% de confianza con dos evidencias' : undefined}
+                      onClick={() => adopt(contact)}
+                    >
+                      {selected ? 'Seleccionado' : 'Usar como contacto'}
+                    </button>
+                  )}
                   {href && <a href={href} target={contact.contact_type === 'WEB' ? '_blank' : undefined} rel="noreferrer">Abrir</a>}
                   {contact.source_url && <a href={contact.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>}
                   {contact.verification_status !== 'VERIFICADO' && (

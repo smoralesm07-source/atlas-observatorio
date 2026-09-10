@@ -52,8 +52,10 @@ export function CaseFile({
   const { dotted } = rutForms(row.subject.rut);
   const filled = contactFilled(record.contact);
   const tracked = isTracked(record);
+  const released = record.state === 'DEVUELTO';
+  const finalized = record.state === 'FINALIZADO';
   const locked = tracked && record.isMine === false;
-  const canEdit = tracked && !locked;
+  const canEdit = tracked && !locked && !finalized;
   const owner = record.assignedName || record.assignedEmail || null;
 
   return (
@@ -94,11 +96,13 @@ export function CaseFile({
         {!tracked ? (
           <>
             <div>
-              <span className="uso-kicker">Disponible para gestión</span>
-              <b>Nadie está atendiendo este caso</b>
-              <em>Al tomarlo saldrá de la cola pendiente y el equipo verá que quedó asignado a ti.</em>
+              <span className="uso-kicker">{released ? 'Disponible nuevamente' : 'Disponible para gestión'}</span>
+              <b>{released ? 'Devuelto al universo sin gestión activa' : 'Nadie está atendiendo este caso'}</b>
+              <em>{released && owner
+                ? `Revisado antes por ${owner}${record.updatedAt ? ` · devuelto ${desde(record.updatedAt)}` : ''}. La traza se conserva.`
+                : 'Al tomarlo saldrá de la cola pendiente y el equipo verá que quedó asignado a ti.'}</em>
             </div>
-            <button className="btn btn-sm btn-primary" onClick={() => onPatch({ state: 'EN_UBICACION' })}>Tomar caso</button>
+            <button className="btn btn-sm btn-primary" onClick={() => onPatch({ state: 'EN_UBICACION' })}>{released ? 'Retomar caso' : 'Tomar caso'}</button>
           </>
         ) : (
           <>
@@ -173,7 +177,7 @@ export function CaseFile({
           <div className="uso-flow" role="group" aria-label="Avance de la gestión">
             {STATE_FLOW.map((key, index) => {
               const meta = STATE_META[key];
-              const done = meta.step <= state.step && record.state !== 'DESCARTADO' && record.state !== 'SIN_UBICAR';
+              const done = meta.step <= state.step && record.state !== 'DESCARTADO' && record.state !== 'SIN_UBICAR' && record.state !== 'DEVUELTO';
               return (
                 <button
                   key={key} data-on={record.state === key} data-done={done ? 'true' : undefined}
@@ -198,6 +202,41 @@ export function CaseFile({
                 {STATE_META[key].label}
               </button>
             ))}
+          </div>
+
+          <div className="uso-case-resolution" data-finalized={finalized ? 'true' : undefined}>
+            <div>
+              <span className="uso-kicker">Cierre de la gestión</span>
+              <b>{finalized ? 'Gestión finalizada' : 'Resultado del caso'}</b>
+              <em>{finalized
+                ? `Contacto logrado${record.contactedAt ? ` · ${fecha(record.contactedAt)}` : ''}. El caso queda cerrado en la mesa.`
+                : record.state === 'CONTACTADO'
+                  ? 'El contacto ya fue registrado. Marca Finalizado cuando la gestión haya concluido exitosamente.'
+                  : 'Finalizar se habilita sólo después de registrar que hubo contacto. También puedes devolver el caso al universo sin gestión activa.'}</em>
+            </div>
+            {!finalized && (
+              <div className="uso-case-resolution-actions">
+                <button
+                  className="btn btn-sm btn-primary uso-finalize"
+                  disabled={!canEdit || record.state !== 'CONTACTADO'}
+                  onClick={() => onPatch({ state: 'FINALIZADO' })}
+                  title={record.state !== 'CONTACTADO' ? 'Primero registra el estado Contactado' : 'Cerrar la gestión como exitosa'}
+                >
+                  Finalizar gestión
+                </button>
+                <button
+                  className="btn btn-sm uso-release"
+                  disabled={!canEdit}
+                  onClick={() => {
+                    if (window.confirm('El caso volverá al universo sin gestión activa. Se conservará la traza de esta revisión. ¿Continuar?')) {
+                      onPatch({ state: 'DEVUELTO' });
+                    }
+                  }}
+                >
+                  Devolver al universo
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="uso-priority" role="group" aria-label="Prioridad del caso">

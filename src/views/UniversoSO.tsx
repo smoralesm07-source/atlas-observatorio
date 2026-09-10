@@ -15,6 +15,7 @@ import { PadronAxis, type Focus } from './universo/PadronAxis';
 import { CasosAxis, type Queue } from './universo/CasosAxis';
 import type { CaseRow } from './universo/model';
 import '../styles/universo-so.css';
+import '../styles/universo-casework-compact.css';
 
 /* UNIVERSO SO · padrón + mesa operativa compartida
    ───────────────────────────────────────────────
