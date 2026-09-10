@@ -1,0 +1,29 @@
+/* Gestión SO · buscador
+   El campo vive dentro de una cápsula que ya comunica el foco. El outline
+   global aplicado directamente al input generaba un segundo rectángulo naranja
+   dentro del control. Se elimina sólo en este buscador y el foco permanece
+   visible en el contenedor mediante :focus-within. */
+
+.uso-mode-casos .uso-search {
+  position: relative;
+}
+
+.uso-mode-casos .uso-search input:focus,
+.uso-mode-casos .uso-search input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+.uso-mode-casos .uso-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Mantiene el icono como parte de la misma cápsula, sin una caja visual propia. */
+.uso-mode-casos .uso-search > i {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
