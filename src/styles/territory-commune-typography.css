@@ -5,7 +5,7 @@
   --tcw2-deep: color-mix(in srgb, var(--bg-panel) 48%, var(--bg-panel-2) 52%) !important;
   --tcw2-line: color-mix(in srgb, var(--line) 48%, var(--line-strong) 52%) !important;
   --tcw2-line-soft: color-mix(in srgb, var(--line) 78%, var(--line-strong) 22%) !important;
-  color: #fff;
+  color: color-mix(in srgb, var(--ink-2) 90%, var(--ink) 10%);
   font-size: 12.5px;
   line-height: 1.42;
 }
@@ -90,14 +90,42 @@
 .tcw2-state { font-size: 11.5px; }
 .tcw2-semantic { font-size: 10.5px; line-height: 1.5; }
 
-/* Legibilidad: toda la vista territorial comunal usa texto blanco puro. */
-.territory-commune-workspace.tcw2,
-.territory-commune-workspace.tcw2 * {
-  color: #fff !important;
+/* Contraste: la vista comunal deja de verse más opaca que el resto de ATLAS. */
+.tcw2-hero-copy > p,
+.tcw2-section-head p,
+.tcw2-section-note,
+.tcw2-layer-copy p,
+.tcw2-layer-side,
+.tcw2-card-head span,
+.tcw2-rank-copy small,
+.tcw2-anomaly-list small,
+.tcw2-dynamic-list small,
+.tcw2-dynamic-note,
+.tcw2-cohort-strip small,
+.tcw2-matrix thead th,
+.tcw2-matrix tbody th small,
+.tcw2-matrix-foot,
+.tcw2-directory-head p,
+.tcw2-directory-total small,
+.tcw2-entity-name > span,
+.tcw2-secondary,
+.tcw2-priority small,
+.tcw2-directory-foot,
+.tcw2-semantic,
+.tcw2-state {
+  color: color-mix(in srgb, var(--ink-3) 66%, var(--ink-2) 34%) !important;
 }
 
-.territory-commune-workspace.tcw2 input::placeholder {
-  color: rgba(255, 255, 255, 0.72) !important;
+.tcw2-meta span,
+.tcw2-hero-kpi > span,
+.tcw2-hero-kpi small,
+.tcw2-layer-score span,
+.tcw2-matrix tbody th span,
+.tcw2-cohort-strip span,
+.tcw2-entity-table td,
+.tcw2-active-filter span,
+.tcw2-sort button {
+  color: color-mix(in srgb, var(--ink-3) 48%, var(--ink-2) 52%) !important;
 }
 
 .tcw2-section-head p,
