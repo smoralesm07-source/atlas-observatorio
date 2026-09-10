@@ -124,9 +124,6 @@ export function Pulso({
         <div className="pulse-meta">
           <span className="pulse-meta-item"><i /><b>Padrón operativo</b> 30-06-2026</span>
           <span className="pulse-meta-item"><b>Reportabilidad</b> {data.reporting?.corte.periodo ?? '—'}</span>
-          {u.trabajadores != null && (
-            <span className="pulse-meta-item"><b>Escala declarada</b> {n(u.trabajadores)} trabajadores</span>
-          )}
           {data.snapshot && (
             <span className="pulse-meta-item"><b>Corte</b> {fecha(data.snapshot.published_at ?? data.snapshot.generated_at)}</span>
           )}
@@ -169,14 +166,6 @@ export function Pulso({
 
       {/* ── 3. Lectura del corte + panorama reorganizado ─────────────── */}
       <section className="pulse-briefing">
-        <div className="pulse-briefing-head">
-          <div>
-            <h2>La lectura del corte</h2>
-            <p>Una síntesis del corte junto a las dos distribuciones que mejor lo contextualizan.</p>
-          </div>
-          <span>{data.snapshot ? fecha(data.snapshot.published_at ?? data.snapshot.generated_at) : 'corte vigente'}</span>
-        </div>
-
         <div className="pulse-briefing-top">
           <div className="pulse-briefing-insight" aria-label="Lectura principal del corte">
             <div className="pulse-summary-grid">
