@@ -1,0 +1,1 @@
+Trigger GitHub Pages deployment after verified compact cohort-list update.
