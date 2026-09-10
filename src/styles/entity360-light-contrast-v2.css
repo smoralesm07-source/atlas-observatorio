@@ -1,0 +1,255 @@
+/* ATLAS Observatorio · Entidad 360 light contrast v2
+   Color-only override for dark-first Entity 360 surfaces. Dark mode untouched. */
+
+:root[data-theme='light'] .entity360 {
+  --e360-blue: var(--accent);
+  --e360-blue-2: var(--accent-dim);
+  --e360-blue-dim: var(--uaf-orange-soft);
+  --e360-blue-line: var(--line);
+  --e360-card: var(--bg-panel);
+  --e360-card-2: var(--bg-panel-2);
+}
+
+/* Structural surfaces */
+:root[data-theme='light'] .entity360-hero,
+:root[data-theme='light'] .entity360-card,
+:root[data-theme='light'] .entity360-tabs,
+:root[data-theme='light'] .entity360-score,
+:root[data-theme='light'] .entity360-finding[data-empty='true'] {
+  background: var(--bg-panel) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+
+:root[data-theme='light'] .entity360-hero {
+  background:
+    linear-gradient(135deg, rgba(232, 121, 36, .06), transparent 40%),
+    var(--bg-panel) !important;
+}
+
+:root[data-theme='light'] .entity360-hero::before {
+  background: linear-gradient(90deg, var(--accent), transparent) !important;
+}
+
+:root[data-theme='light'] .entity360-action,
+:root[data-theme='light'] .entity360-registry,
+:root[data-theme='light'] .entity360-purchase-facts > div,
+:root[data-theme='light'] .entity360-purchase-metric,
+:root[data-theme='light'] .entity360-semantics {
+  background: var(--bg-panel-2) !important;
+  border-color: var(--line) !important;
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .entity360-action:hover,
+:root[data-theme='light'] .entity360-primary-action:hover,
+:root[data-theme='light'] .entity360-tabs button:hover {
+  background: var(--uaf-orange-soft) !important;
+  border-color: var(--uaf-orange-line) !important;
+  color: var(--accent-dim) !important;
+}
+
+/* Identity/header */
+:root[data-theme='light'] .entity360-avatar {
+  background: linear-gradient(145deg, #fff8f2, #fff1e6) !important;
+  border-color: var(--uaf-orange-line) !important;
+  color: var(--uaf-orange-strong) !important;
+  box-shadow: inset 0 0 24px rgba(232, 121, 36, .07) !important;
+}
+
+:root[data-theme='light'] .entity360-titleline h1,
+:root[data-theme='light'] .entity360-card > header h2,
+:root[data-theme='light'] .entity360-kpi-copy > strong,
+:root[data-theme='light'] .entity360-bigfact strong,
+:root[data-theme='light'] .entity360-explain > strong,
+:root[data-theme='light'] .entity360-registry strong,
+:root[data-theme='light'] .entity360-purchase-metric strong,
+:root[data-theme='light'] .entity360-source strong {
+  color: var(--ink) !important;
+}
+
+:root[data-theme='light'] .entity360-eyebrow,
+:root[data-theme='light'] .entity360-location,
+:root[data-theme='light'] .entity360-score-label,
+:root[data-theme='light'] .entity360-score-foot,
+:root[data-theme='light'] .entity360-kpi-copy > span,
+:root[data-theme='light'] .entity360-kv dt,
+:root[data-theme='light'] .entity360-chart-note,
+:root[data-theme='light'] .entity360-bigfact span,
+:root[data-theme='light'] .entity360-bigfact small,
+:root[data-theme='light'] .entity360-activity-text span,
+:root[data-theme='light'] .entity360-registry span,
+:root[data-theme='light'] .entity360-registry small,
+:root[data-theme='light'] .entity360-timeline-stop span,
+:root[data-theme='light'] .entity360-mini-table th,
+:root[data-theme='light'] .entity360-card-footnote,
+:root[data-theme='light'] .entity360-purchase-facts span,
+:root[data-theme='light'] .entity360-full-table th,
+:root[data-theme='light'] .entity360-purchase-metric span,
+:root[data-theme='light'] .entity360-source span,
+:root[data-theme='light'] .entity360-semantics {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .entity360-meta,
+:root[data-theme='light'] .entity360-finding p,
+:root[data-theme='light'] .entity360-kv dd,
+:root[data-theme='light'] .entity360-activity-text strong,
+:root[data-theme='light'] .entity360-timeline-stop strong,
+:root[data-theme='light'] .entity360-mini-table td,
+:root[data-theme='light'] .entity360-press-list summary strong,
+:root[data-theme='light'] .entity360-purchase-facts strong,
+:root[data-theme='light'] .entity360-full-table td,
+:root[data-theme='light'] .entity360-feature-list span,
+:root[data-theme='light'] .entity360-source strong {
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .entity360-card > header > span,
+:root[data-theme='light'] .entity360-kpi-copy > small,
+:root[data-theme='light'] .entity360-bar-value {
+  color: var(--ink-3) !important;
+}
+
+/* Tabs */
+:root[data-theme='light'] .entity360-tabs button {
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .entity360-tabs button[data-active='true'] {
+  color: var(--accent-dim) !important;
+}
+
+:root[data-theme='light'] .entity360-tabs button[data-active='true']::after {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+/* KPI and activity cards */
+:root[data-theme='light'] .entity360-kpi {
+  background: var(--bg-panel) !important;
+  border-color: var(--line) !important;
+}
+
+:root[data-theme='light'] .entity360-kpi-icon,
+:root[data-theme='light'] .entity360-registry-icon {
+  background: var(--uaf-orange-soft) !important;
+  color: var(--accent-dim) !important;
+}
+
+:root[data-theme='light'] .entity360-kpi[data-tone='present'],
+:root[data-theme='light'] .entity360-registry[data-status='present'] {
+  border-color: #b9dacb !important;
+  background: #f4fbf7 !important;
+}
+
+:root[data-theme='light'] .entity360-kpi[data-tone='present'] .entity360-kpi-icon,
+:root[data-theme='light'] .entity360-registry[data-status='present'] .entity360-registry-icon {
+  background: #e6f5ee !important;
+  color: #1f7a57 !important;
+}
+
+:root[data-theme='light'] .entity360-kpi[data-tone='critical'] {
+  border-color: #e4b4ad !important;
+  background: #fff6f4 !important;
+}
+
+:root[data-theme='light'] .entity360-kpi[data-tone='critical'] .entity360-kpi-icon {
+  background: #fde8e4 !important;
+  color: #b74539 !important;
+}
+
+/* Tables, dividers and charts */
+:root[data-theme='light'] .entity360-card > header,
+:root[data-theme='light'] .entity360-kv dt,
+:root[data-theme='light'] .entity360-kv dd,
+:root[data-theme='light'] .entity360-activity,
+:root[data-theme='light'] .entity360-mini-table th,
+:root[data-theme='light'] .entity360-mini-table td,
+:root[data-theme='light'] .entity360-full-table th,
+:root[data-theme='light'] .entity360-full-table td,
+:root[data-theme='light'] .entity360-press-list details,
+:root[data-theme='light'] .entity360-card-footnote,
+:root[data-theme='light'] .entity360-chart-note {
+  border-color: var(--line-soft) !important;
+}
+
+:root[data-theme='light'] .entity360-bars-grid {
+  background: repeating-linear-gradient(to top, var(--line-soft) 0 1px, transparent 1px 34px) !important;
+  border-bottom-color: var(--line) !important;
+}
+
+:root[data-theme='light'] .entity360-bar-wrap i {
+  background: linear-gradient(to top, #d86b17, #f59a4a) !important;
+  box-shadow: none !important;
+}
+
+/* Timeline */
+:root[data-theme='light'] .entity360-timeline-line {
+  opacity: .55 !important;
+}
+
+:root[data-theme='light'] .entity360-timeline-stop > i {
+  background: var(--bg-panel) !important;
+  box-shadow: 0 0 0 3px rgba(232, 121, 36, .08) !important;
+}
+
+:root[data-theme='light'] .entity360-timeline-stop time,
+:root[data-theme='light'] .entity360-inline-link,
+:root[data-theme='light'] .entity360-press-list summary time,
+:root[data-theme='light'] .entity360-press-detail a,
+:root[data-theme='light'] .entity360-linkbtn {
+  color: var(--accent-dim) !important;
+}
+
+/* Registry absence should remain neutral but readable. */
+:root[data-theme='light'] .entity360-registry[data-status='absent'] {
+  opacity: 1 !important;
+  background: #fafbfc !important;
+  border-color: var(--line) !important;
+}
+
+:root[data-theme='light'] .entity360-registry[data-status='absent'] .entity360-registry-icon {
+  background: #eef1f3 !important;
+  color: var(--ink-3) !important;
+}
+
+/* UAF status marks in the title line. */
+:root[data-theme='light'] .entity360-titleline > .badge-absent {
+  opacity: 1 !important;
+  filter: none !important;
+  color: #65717c !important;
+  border-color: #cbd2d9 !important;
+  background: #f5f7f8 !important;
+}
+
+:root[data-theme='light'] .entity360-titleline > .badge-present {
+  color: #176543 !important;
+  border-color: #a9d3bf !important;
+  background: #eaf7f0 !important;
+}
+
+:root[data-theme='light'] .entity360-titleline > .badge-medium {
+  color: #9b6100 !important;
+  border-color: #e1bd70 !important;
+  background: #fff3d9 !important;
+  box-shadow: none !important;
+}
+
+/* Empty/findings and semantics */
+:root[data-theme='light'] .entity360-finding:not([data-empty='true']) {
+  background: #fff6f4 !important;
+  border-color: #e4b4ad !important;
+}
+
+:root[data-theme='light'] .entity360-finding-label,
+:root[data-theme='light'] .entity360-finding-icon {
+  color: #b74539 !important;
+}
+
+:root[data-theme='light'] .entity360-primary-action {
+  background: var(--uaf-orange-soft) !important;
+  border-color: var(--uaf-orange-line) !important;
+  color: var(--accent-dim) !important;
+}
