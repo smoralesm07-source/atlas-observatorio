@@ -1,0 +1,39 @@
+name: Patch Pulso briefing layout v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-pulso-briefing-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply Pulso layout fix
+        run: python3 scripts/apply_pulso_briefing_v2.py
+      - name: Verify build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          rm -f .github/workflows/patch-pulso-briefing.yml .github/workflows/patch-pulso-briefing-v2.yml
+          rm -f scripts/patch_pulso_briefing_layout.py scripts/apply_pulso_briefing_v2.py
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/Pulso.tsx src/styles/pulso.css .github/workflows/patch-pulso-briefing.yml .github/workflows/patch-pulso-briefing-v2.yml scripts/patch_pulso_briefing_layout.py scripts/apply_pulso_briefing_v2.py
+          git commit -m "fix: reorganiza lectura del corte en Pulso"
+          git pull --rebase origin main
+          git push origin HEAD:main
