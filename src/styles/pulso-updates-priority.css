@@ -1,0 +1,67 @@
+.pulse-update[data-kind='POTENCIAL'] { --update-tone: var(--sig-watch); }
+.pulse-update[data-kind='BAJA_SO'] { --update-tone: var(--sig-high); }
+
+.pulse-update-topline {
+  justify-content: flex-start;
+}
+
+.pulse-update-topline time {
+  margin-left: auto;
+}
+
+.pulse-update-priority {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-panel-2) 82%, transparent);
+  color: var(--ink-3);
+  font-size: 7.5px;
+  font-weight: 680;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+
+.pulse-update[data-priority='1'] .pulse-update-priority {
+  border-color: color-mix(in srgb, var(--sig-critical) 24%, var(--line));
+  color: var(--sig-critical);
+}
+
+.pulse-update[data-priority='2'] .pulse-update-priority {
+  border-color: color-mix(in srgb, var(--sig-watch) 24%, var(--line));
+  color: var(--sig-watch);
+}
+
+.pulse-update[data-priority='3'] .pulse-update-priority {
+  border-color: color-mix(in srgb, var(--sig-high) 28%, var(--line));
+  color: var(--sig-high);
+}
+
+.pulse-update[data-priority='4'] .pulse-update-priority {
+  border-color: color-mix(in srgb, var(--present) 24%, var(--line));
+  color: var(--present);
+}
+
+.pulse-updates-compact .pulse-update-priority {
+  min-height: 13px;
+  padding: 0 4px;
+  font-size: 6.35px;
+}
+
+.pulse-updates-compact .pulse-update-kind {
+  font-size: 6.3px;
+}
+
+.pulse-updates-compact .pulse-update-topline {
+  gap: 4px;
+}
+
+.pulse-updates-compact .pulse-update h4 {
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  .pulse-update-priority { font-size: 7px; }
+}
