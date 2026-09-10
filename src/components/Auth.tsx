@@ -10,6 +10,7 @@ type Access =
   | { state: 'error'; message: string; transport: boolean };
 
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
+const FRESH_LOGIN_KEY = 'atlas-observatorio-fresh-login';
 
 function isTransportError(message: string) {
   return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(message);
@@ -19,6 +20,28 @@ function delay(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
+async function signInWithMicrosoft() {
+  // This flag survives the round-trip through Microsoft in the same tab. It
+  // lets AuthGate distinguish a session that was just chosen explicitly from
+  // an older persisted session restored from localStorage.
+  sessionStorage.setItem(FRESH_LOGIN_KEY, '1');
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'email',
+      redirectTo,
+      // Entra otherwise tends to reuse the account already active in the
+      // browser. select_account makes testing and shared-workstation use safe
+      // and explicit without forcing users to type credentials every time.
+      queryParams: { prompt: 'select_account' },
+    },
+  });
+
+  if (error) sessionStorage.removeItem(FRESH_LOGIN_KEY);
+  return error;
+}
+
 /** The Observatorio reuses the ATLAS identity model exactly: Microsoft Entra
  *  proves who you are, and the aml_allowed_users allowlist decides whether you
  *  read anything. Authenticating is not authorization, so the two outcomes are
@@ -26,16 +49,32 @@ function delay(ms: number) {
 export function AuthGate({ children }: { children: (session: Session) => ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
+  const [confirmStoredSession, setConfirmStoredSession] = useState(false);
   const [access, setAccess] = useState<Access>({ state: 'checking' });
   const [validationKey, setValidationKey] = useState(0);
 
   useEffect(() => {
+    let live = true;
+    const freshLogin = sessionStorage.getItem(FRESH_LOGIN_KEY) === '1';
+    if (freshLogin) sessionStorage.removeItem(FRESH_LOGIN_KEY);
+
     supabase.auth.getSession().then(({ data }) => {
+      if (!live) return;
       setSession(data.session);
+      setConfirmStoredSession(Boolean(data.session && !freshLogin));
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (!live) return;
+      setSession(s);
+      if (!s) setConfirmStoredSession(false);
+    });
+
+    return () => {
+      live = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   // A temporary loss of connectivity must not strand an already authenticated
@@ -49,7 +88,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
   }, []);
 
   useEffect(() => {
-    if (!session) {
+    if (!session || confirmStoredSession) {
       setAccess({ state: 'checking' });
       return;
     }
@@ -108,7 +147,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
     return () => {
       live = false;
     };
-  }, [session, validationKey]);
+  }, [session, confirmStoredSession, validationKey]);
 
   if (configError) {
     return (
@@ -127,6 +166,15 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
   }
 
   if (!session) return <SignIn />;
+
+  if (confirmStoredSession) {
+    return (
+      <StoredSessionChoice
+        session={session}
+        onContinue={() => setConfirmStoredSession(false)}
+      />
+    );
+  }
 
   if (access.state === 'checking') {
     return (
@@ -176,6 +224,73 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
   return <>{children(session)}</>;
 }
 
+function StoredSessionChoice({
+  session,
+  onContinue,
+}: {
+  session: Session;
+  onContinue: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const email = session.user.email ?? 'cuenta actual';
+
+  async function useAnotherAccount() {
+    setBusy(true);
+    setError(null);
+
+    const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+    if (signOutError) {
+      setError(signOutError.message);
+      setBusy(false);
+      return;
+    }
+
+    const signInError = await signInWithMicrosoft();
+    if (signInError) {
+      setError(signInError.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="ATLAS Observatorio" eyebrow="Sesión encontrada">
+      <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
+        Hay una sesión guardada en este navegador. ¿Quieres continuar con esta cuenta o
+        ingresar con un usuario distinto?
+      </p>
+
+      <div className="note" style={{ marginBottom: 14 }}>
+        <span style={{ display: 'block', color: 'var(--ink-3)', fontSize: 10.5, marginBottom: 4 }}>
+          CUENTA ACTUAL
+        </span>
+        <strong style={{ color: 'var(--ink-1)', fontSize: 13 }}>{email}</strong>
+      </div>
+
+      {error && <div className="note note-warn">{error}</div>}
+
+      <button
+        className="btn btn-primary"
+        style={{ width: '100%' }}
+        onClick={onContinue}
+        disabled={busy}
+      >
+        Continuar como {email}
+      </button>
+
+      <button
+        className="btn"
+        style={{ width: '100%', marginTop: 10 }}
+        onClick={useAnotherAccount}
+        disabled={busy}
+      >
+        <MicrosoftLogo />
+        {busy ? 'Abriendo selector…' : 'Usar otra cuenta'}
+      </button>
+    </Card>
+  );
+}
+
 function SignIn() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,10 +298,7 @@ function SignIn() {
   async function signIn() {
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: { scopes: 'email', redirectTo },
-    });
+    const err = await signInWithMicrosoft();
     if (err) {
       setError(err.message);
       setBusy(false);
@@ -220,7 +332,7 @@ function SignOutButton({ marginTop = 18 }: { marginTop?: number }) {
     <button
       className="btn"
       style={{ width: '100%', marginTop }}
-      onClick={() => supabase.auth.signOut()}
+      onClick={() => supabase.auth.signOut({ scope: 'local' })}
     >
       Cerrar sesión
     </button>
