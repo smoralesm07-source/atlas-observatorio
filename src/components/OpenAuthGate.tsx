@@ -110,7 +110,12 @@ function OpenSignIn() {
     setError(null);
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: value,
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        // Never allow an email login initiated by ATLAS Observatorio to inherit
+        // the legacy AML-Workbench-Portal redirect from shared Supabase Auth.
+        emailRedirectTo: redirectTo,
+      },
     });
 
     if (otpError) {
@@ -223,7 +228,7 @@ function OpenSignIn() {
               </button>
             </div>
             <div className="note">
-              Enviamos un código de acceso a <strong>{normalizedEmail(email)}</strong>. Escríbelo completo tal como aparece en el correo; no necesitas abrir ATLAS desde el mensaje.
+              Enviamos un código de acceso a <strong>{normalizedEmail(email)}</strong>. Escríbelo completo tal como aparece en el correo; no necesitas abrir ningún enlace del mensaje.
             </div>
           </>
         )}
