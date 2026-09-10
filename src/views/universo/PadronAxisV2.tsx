@@ -228,8 +228,8 @@ export function PadronAxisV2({
       </section>
 
       <section className="uso2-trend-grid">
-        <TrendBlock title="Sectores que más aumentaron" hint="Variación neta del stock sectorial publicado 2020 → 2026" rows={evolution.data?.increases ?? []} loading={evolution.loading} tone="var(--present)" onPick={(row) => selectRegistered({ cohort: 'SECTOR', value: row.sector, title: titleCase(row.sector) })} />
-        <TrendBlock title="Sectores con mayor contracción" hint="Menor stock inscrito entre los cortes comparables 2020 → 2026" rows={evolution.data?.decreases ?? []} loading={evolution.loading} tone="var(--sig-high)" note={evolution.data?.note} onPick={(row) => selectRegistered({ cohort: 'SECTOR', value: row.sector, title: titleCase(row.sector) })} />
+        <TrendBlock title="Sectores que más aumentaron" hint="Variación neta en los últimos cinco cortes anuales publicados, 2022–2026" rows={evolution.data?.increases ?? []} loading={evolution.loading} tone="var(--present)" onPick={(row) => selectRegistered({ cohort: 'SECTOR', value: row.sector, title: titleCase(row.sector) })} />
+        <TrendBlock title="Sectores con mayor contracción" hint="Menor stock inscrito entre los últimos cinco cortes comparables, 2022–2026" rows={evolution.data?.decreases ?? []} loading={evolution.loading} tone="var(--sig-high)" note={evolution.data?.note} onPick={(row) => selectRegistered({ cohort: 'SECTOR', value: row.sector, title: titleCase(row.sector) })} />
       </section>
 
       <section className="uso2-review">
