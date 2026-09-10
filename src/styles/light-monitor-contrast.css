@@ -1,0 +1,506 @@
+/* ATLAS Observatorio · light monitor contrast
+   Contrast corrections for the three monitor workspaces that were originally
+   authored dark-first. Color-only overrides: no geometry or typography changes. */
+
+/* -------------------------------------------------------------------------- */
+/* OSFL                                                                        */
+/* -------------------------------------------------------------------------- */
+:root[data-theme='light'] .osfl-filterbar {
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .osfl-search,
+:root[data-theme='light'] .osfl-filter select,
+:root[data-theme='light'] .osfl-open,
+:root[data-theme='light'] .osfl-detail-head > button,
+:root[data-theme='light'] .osfl-pagination button {
+  background: var(--bg-panel);
+  border-color: var(--line-strong);
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .osfl-search input {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .osfl-search input::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+:root[data-theme='light'] .osfl-search svg,
+:root[data-theme='light'] .osfl-filter > span,
+:root[data-theme='light'] .osfl-card-title,
+:root[data-theme='light'] .osfl-table th,
+:root[data-theme='light'] .osfl-detail-kicker,
+:root[data-theme='light'] .osfl-fact span,
+:root[data-theme='light'] .osfl-chart-top small,
+:root[data-theme='light'] .osfl-reference span,
+:root[data-theme='light'] .osfl-chart-note,
+:root[data-theme='light'] .osfl-timeline-note,
+:root[data-theme='light'] .osfl-background-row span,
+:root[data-theme='light'] .osfl-source-badges em {
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .osfl-filter select,
+:root[data-theme='light'] .osfl-table td,
+:root[data-theme='light'] .osfl-fact b,
+:root[data-theme='light'] .osfl-background-row b {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .osfl-table td.entity-name,
+:root[data-theme='light'] .osfl-detail-head h3,
+:root[data-theme='light'] .osfl-card-heading {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .osfl-table tbody tr:hover,
+:root[data-theme='light'] .osfl-table tbody tr[data-selected='true'] {
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .osfl-pagination button:hover:not(:disabled),
+:root[data-theme='light'] .osfl-open:hover,
+:root[data-theme='light'] .osfl-detail-head > button:hover {
+  border-color: var(--accent);
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .osfl-timeline::before {
+  background: var(--line-strong);
+}
+
+:root[data-theme='light'] .osfl-timeline-event > i {
+  border-color: var(--bg-panel);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Fintech                                                                     */
+/* -------------------------------------------------------------------------- */
+:root[data-theme='light'] .fintech-filterbar,
+:root[data-theme='light'] .fintech-th,
+:root[data-theme='light'] .fintech-boundary {
+  background: var(--bg-panel-2) !important;
+}
+
+:root[data-theme='light'] .fintech-search,
+:root[data-theme='light'] .fintech-select select,
+:root[data-theme='light'] .fintech-pagination button,
+:root[data-theme='light'] .fintech-detail-head > button,
+:root[data-theme='light'] .fintech-kind-row span {
+  background: var(--bg-panel);
+  border-color: var(--line-strong);
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .fintech-search input {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .fintech-search input::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+:root[data-theme='light'] .fintech-search svg,
+:root[data-theme='light'] .fintech-select > span,
+:root[data-theme='light'] .fintech-th > span,
+:root[data-theme='light'] .fintech-card-title,
+:root[data-theme='light'] .fintech-results-head span,
+:root[data-theme='light'] .fintech-detail-head > div > span,
+:root[data-theme='light'] .fintech-detail-grid span,
+:root[data-theme='light'] .fintech-info-row span,
+:root[data-theme='light'] .fintech-detail-footer > span,
+:root[data-theme='light'] .fintech-chart-top small,
+:root[data-theme='light'] .fintech-chart-note,
+:root[data-theme='light'] .fintech-mini-head span,
+:root[data-theme='light'] .fintech-event-row time {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .fintech-tr,
+:root[data-theme='light'] .fintech-detail-grid b,
+:root[data-theme='light'] .fintech-info-row b,
+:root[data-theme='light'] .fintech-kind-row b {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .fintech-tr > span:first-child b,
+:root[data-theme='light'] .fintech-card-heading,
+:root[data-theme='light'] .fintech-detail-head h3 {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .fintech-tr:not(.fintech-th):hover,
+:root[data-theme='light'] .fintech-tr[data-active='true'],
+:root[data-theme='light'] .fintech-operating-list button:hover,
+:root[data-theme='light'] .fintech-operating-list button[data-active='true'],
+:root[data-theme='light'] .fintech-model-mini button:hover {
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .fintech-pagination button:hover:not(:disabled),
+:root[data-theme='light'] .fintech-detail-head > button:hover {
+  border-color: var(--accent);
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .fintech-donut::after {
+  background: var(--bg-panel);
+}
+
+:root[data-theme='light'] .fintech-segment-row > div,
+:root[data-theme='light'] .fintech-coverage-list > div > i,
+:root[data-theme='light'] .fintech-operating-list em,
+:root[data-theme='light'] .fintech-bars-list button > i {
+  background: var(--bg-raised);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sanciones                                                                   */
+/* -------------------------------------------------------------------------- */
+:root[data-theme='light'] .atlas-v2-sanctions {
+  --san-bg: var(--bg-canvas);
+  --san-panel: var(--bg-panel);
+  --san-panel-2: var(--bg-panel-2);
+  --san-line: var(--line);
+  --san-line-strong: var(--line-strong);
+  --san-text: var(--ink);
+  --san-muted: #65717c;
+  --san-cyan: var(--uaf-info);
+  --san-cyan-2: #4f84b6;
+  --san-orange: var(--accent);
+  --san-red: var(--sig-critical);
+  --san-green: var(--present);
+  --san-yellow: #b77a11;
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .atlas-v2-sanctions .atlas-v2-eyebrow {
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .san-command-head p,
+:root[data-theme='light'] .san-freshness,
+:root[data-theme='light'] .san-panel-head p,
+:root[data-theme='light'] .san-kpi span,
+:root[data-theme='light'] .san-universe > span,
+:root[data-theme='light'] .san-pager,
+:root[data-theme='light'] .san-detail-empty,
+:root[data-theme='light'] .san-empty {
+  color: var(--san-muted);
+}
+
+:root[data-theme='light'] .san-freshness strong,
+:root[data-theme='light'] .san-detail-empty h2 {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-freshness small {
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-filterbar,
+:root[data-theme='light'] .san-kpi,
+:root[data-theme='light'] .san-panel,
+:root[data-theme='light'] .san-detail {
+  background: var(--bg-panel);
+  border-color: var(--line);
+  box-shadow: var(--shadow-panel);
+}
+
+:root[data-theme='light'] .san-filter > span,
+:root[data-theme='light'] .san-kpi small {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-filter select,
+:root[data-theme='light'] .san-filter-search input,
+:root[data-theme='light'] .san-pager button {
+  background: var(--bg-panel);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-filter select option {
+  background: var(--bg-panel);
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-filter-search input::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+:root[data-theme='light'] .san-search-button {
+  border-color: var(--uaf-orange-line);
+  background: var(--uaf-orange-soft);
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .san-search-button:hover {
+  border-color: var(--accent);
+  background: #ffe7d4;
+}
+
+:root[data-theme='light'] .san-reset {
+  border-color: var(--line-strong);
+  background: var(--bg-panel);
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-reset:hover {
+  border-color: var(--accent);
+  background: var(--uaf-orange-soft);
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .san-icon {
+  border-color: var(--line);
+  background: var(--bg-panel-2);
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-icon.cyan {
+  color: var(--uaf-info);
+  border-color: #bfd1e2;
+  background: #eef5fb;
+}
+
+:root[data-theme='light'] .san-icon.orange {
+  color: var(--accent-dim);
+  border-color: var(--uaf-orange-line);
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .san-universe {
+  border-color: var(--line);
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .san-universe:hover,
+:root[data-theme='light'] .san-universe.active {
+  border-color: var(--accent);
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .san-universe-foot,
+:root[data-theme='light'] .san-supervisor-column > span:last-child {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-mini-track,
+:root[data-theme='light'] .san-region-list i {
+  background: var(--bg-raised);
+}
+
+:root[data-theme='light'] .san-supervisor-chart {
+  border-bottom-color: var(--line);
+}
+
+:root[data-theme='light'] .san-stack {
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+:root[data-theme='light'] .san-region-list button {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-region-list button:hover,
+:root[data-theme='light'] .san-region-list button.active {
+  background: var(--uaf-orange-soft);
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-region-list b {
+  background: var(--bg-raised);
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-region-list strong {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-region-share {
+  color: var(--uaf-info);
+}
+
+:root[data-theme='light'] .san-region-metric {
+  border-color: var(--line);
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .san-region-metric.orange {
+  border-color: var(--uaf-orange-line);
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .san-region-metric small,
+:root[data-theme='light'] .san-region-metric span {
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-region-metric strong {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-region-metric.orange strong {
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .san-donut {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+:root[data-theme='light'] .san-donut::after {
+  background: var(--bg-panel);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+:root[data-theme='light'] .san-donut > span {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-type-legend button {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-type-legend button:hover,
+:root[data-theme='light'] .san-type-legend button.active {
+  border-color: var(--uaf-orange-line);
+  background: var(--uaf-orange-soft);
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-type-legend strong {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-year-point {
+  fill: var(--bg-panel);
+}
+
+:root[data-theme='light'] .san-chart-label {
+  fill: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-table-head {
+  border-top-color: var(--line);
+  border-bottom-color: var(--line);
+  background: var(--bg-panel-2);
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-event {
+  border-bottom-color: var(--line-soft);
+}
+
+:root[data-theme='light'] .san-event:nth-child(even) {
+  background: #fbfbfa;
+}
+
+:root[data-theme='light'] .san-event:hover,
+:root[data-theme='light'] .san-event.active {
+  background: var(--uaf-orange-soft);
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+:root[data-theme='light'] .san-cell {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-cell.entity strong {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-cell.entity small,
+:root[data-theme='light'] .san-detail-head small,
+:root[data-theme='light'] .san-detail-field span,
+:root[data-theme='light'] .san-detail-block > small,
+:root[data-theme='light'] .san-amount-pair span,
+:root[data-theme='light'] .san-timeline time,
+:root[data-theme='light'] .san-document a span,
+:root[data-theme='light'] .san-guardrail {
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-row-arrow {
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .san-pager button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--uaf-orange-soft);
+  color: var(--accent-dim);
+}
+
+:root[data-theme='light'] .san-detail-entity {
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .san-detail-entity span,
+:root[data-theme='light'] .san-detail-block p,
+:root[data-theme='light'] .san-document p,
+:root[data-theme='light'] .san-timeline span {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-detail-field strong {
+  color: var(--ink);
+}
+
+:root[data-theme='light'] .san-detail-block,
+:root[data-theme='light'] .san-document {
+  border-top-color: var(--line);
+}
+
+:root[data-theme='light'] .san-cgr-note {
+  border-color: #bfd1e2;
+  background: #eef5fb;
+}
+
+:root[data-theme='light'] .san-cgr-note small {
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-document a {
+  border-color: var(--line);
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .san-document a:hover {
+  border-color: var(--accent);
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .san-detail-cta {
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  color: #ffffff !important;
+  box-shadow: 0 8px 22px rgba(232, 121, 36, 0.16);
+}
+
+:root[data-theme='light'] .san-method-note {
+  border-color: var(--line);
+  background: var(--bg-panel-2);
+  color: var(--ink-3);
+}
+
+:root[data-theme='light'] .san-method-note strong {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-loading {
+  color: var(--ink-2);
+}
+
+:root[data-theme='light'] .san-error {
+  border-color: #e5b6b1;
+  background: #fff3f1;
+  color: #7f3e38;
+}
+
+:root[data-theme='light'] .san-error strong {
+  color: var(--sig-critical);
+}
