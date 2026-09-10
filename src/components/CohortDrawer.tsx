@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRpc } from '../lib/rpc';
-import { fecha, n, n1, rutFormat, titleCase } from '../lib/format';
+import { n, n1, rutFormat, titleCase } from '../lib/format';
 import { Empty, ErrorBox, Loading } from './primitives';
-import { RefMeter } from './charts';
 import type {
-  UafCohort, UafDossier, UafDossierSubject, UafMotive, UafSubjectRow,
+  UafCohort, UafMotive, UafSubjectRow,
 } from '../lib/contracts';
 
 export interface CohortRequest {
@@ -60,17 +60,6 @@ const bandaIpf = (b: string | null | undefined) =>
 /** El productor entrega el método de resolución en clave. Un antecedente que
  *  llegó por criterio conservador puede venir emitido bajo otra razón social
  *  del mismo RUT, así que la advertencia va en español y junto al hecho. */
-function identityNote(status: string): string {
-  switch (status) {
-    case 'RESOLVED_CONSERVATIVE':
-      return 'Vinculado por RUT con criterio conservador: el documento puede estar emitido bajo otra razón social del mismo contribuyente. Verifica la identidad antes de concluir.';
-    case 'RESOLVED_EXACT_NAME':
-      return 'Vinculado por coincidencia exacta de nombre, no por RUT. Verifica la identidad antes de concluir.';
-    default:
-      return 'Vínculo de identidad establecido por el productor. Verifica antes de concluir.';
-  }
-}
-
 type Orden = 'relevancia' | 'ipf' | 'antecedentes' | 'antiguedad' | 'nombre';
 
 const ORDENES: { key: Orden; label: string }[] = [
@@ -178,7 +167,7 @@ export function CohortDrawer({
     };
   }, [data]);
 
-  return (
+  return createPortal(
     <>
       <div className="drawer-scrim" onClick={onClose} />
       <aside className="drawer" role="dialog" aria-label={request.title}>
@@ -287,7 +276,8 @@ export function CohortDrawer({
           )}
         </div>
       </aside>
-    </>
+    </>,
+    document.body,
   );
 }
 
@@ -368,281 +358,80 @@ function SubjectRow({
         </span>
         <span className="subject-caret" aria-hidden>{open ? '▲' : '▼'}</span>
       </button>
-      {open && <SubjectDossier rut={s.rut} entityId={s.entity_id} onOpenEntity={onOpenEntity} />}
+      {open && <SubjectQuick subject={s} onOpenEntity={onOpenEntity} />}
     </div>
   );
 }
 
-function Tile({
-  label, value, foot, tone,
-}: {
-  label: string; value: string; foot?: string; tone?: string;
-}) {
-  return (
-    <div className="tile">
-      <span className="tile-label">{label}</span>
-      <b className="tile-value num" style={tone ? { color: tone } : undefined}>{value}</b>
-      {foot && <span className="tile-foot">{foot}</span>}
-    </div>
-  );
-}
-
-/** El antecedente, tal como lo publica su fuente. Cuando la fuente no entrega
- *  enlace, se dice: ofrecer un link inexistente seria peor que no ofrecerlo. */
-function SubjectDossier({
-  rut,
-  entityId,
+function SubjectQuick({
+  subject: s,
   onOpenEntity,
 }: {
-  rut: string;
-  entityId: string | null;
+  subject: UafSubjectRow;
   onOpenEntity?: (entityId: string) => void;
 }) {
-  const { data, error, loading } = useRpc<UafDossier>('obs_uaf_subject_dossier', { p_rut: rut });
-
-  if (loading) return <div className="dossier"><Loading label="Buscando antecedentes…" /></div>;
-  if (error) return <div className="dossier"><ErrorBox error={error} /></div>;
-
-  const ev = data?.evidence ?? [];
-  const s = data?.subject as UafDossierSubject | null | undefined;
-  const peers = data?.peers ?? null;
-  const pos = data?.position ?? null;
-
-  const ipfTone = s?.ipf_band ? IPF_TONE[s.ipf_band] ?? 'var(--accent)' : 'var(--accent)';
-  const estado = s?.sii_status ? SII_STATE[s.sii_status] : undefined;
-
-  /* Señales del perfil tributario. Sólo se dibujan las que están encendidas:
-     una lista de "no" ocupa el mismo espacio y no dice nada. */
-  const senales: { label: string; hint: string }[] = [];
-  if (s?.sii_activity_changed) {
-    senales.push({ label: 'Cambió de actividad', hint: 'el giro declarado ante el SII cambió respecto del corte anterior' });
-  }
-  if (s?.sii_region_changed) {
-    senales.push({ label: 'Cambió de región', hint: 'la región tributaria cambió respecto del corte anterior' });
-  }
-  if ((s?.sii_signal_count ?? 0) > 0) {
-    senales.push({ label: `${n(s!.sii_signal_count)} señal${s!.sii_signal_count === 1 ? '' : 'es'} del SII`, hint: 'marcas del propio perfil tributario, como amplitud del historial de domicilios' });
-  }
-  if ((s?.ownership_edge_count ?? 0) > 0) {
-    senales.push({ label: `${n(s!.ownership_edge_count)} vínculo${s!.ownership_edge_count === 1 ? '' : 's'} societario${s!.ownership_edge_count === 1 ? '' : 's'}`, hint: 'aristas de propiedad observadas hacia otras entidades' });
-  }
-  if ((s?.activity_atypicality ?? 0) >= 0.9 && s?.activity_peer_share != null) {
-    senales.push({
-      label: `Giro atípico · ${n1(s.activity_peer_share * 100)}% de sus pares`,
-      hint: 'su actividad principal es poco frecuente entre los inscritos del mismo sector obligado',
-    });
-  }
+  const estado = s.sii_status ? SII_STATE[s.sii_status] : undefined;
+  const ipfTone = s.ipf_band ? IPF_TONE[s.ipf_band] ?? 'var(--accent)' : 'var(--ink-4)';
+  const ubicacion = s.commune
+    ? `${s.commune}${s.region ? ` · ${s.region}` : ''}`
+    : s.region ?? 'Sin territorio observado';
 
   return (
-    <div className="dossier">
-      {s && (
-        <>
-          {/* La fila ya rotula el motivo, el estado y las marcas. Aquí va lo
-              que la fila no alcanza a decir: qué tipo de contribuyente es, de
-              dónde sale su territorio y de qué corte viene la ficha. */}
-          <div className="dossier-id">
-            {s.entity_type && <Chip>{s.entity_type}</Chip>}
-            {s.uaf_sector && <Chip tone="var(--accent)">{titleCase(s.uaf_sector)}</Chip>}
-            {s.sii_termination_date && estado && (
-              <span className="state-pill" style={{ ['--pill' as string]: estado.tone }}>
-                Giro cerrado el {fecha(s.sii_termination_date)}
-              </span>
-            )}
-            {s.territory_basis === 'PADRON_ENTIDAD' && (
-              <Chip title="La comuna proviene del propio padrón, no de una inferencia">
-                Territorio del padrón
-              </Chip>
-            )}
-            {s.refreshed_at && (
-              <span className="dossier-corte">corte {fecha(s.refreshed_at)}</span>
-            )}
-          </div>
+    <div className="subject-quick" role="region" aria-label={`Vista rápida de ${s.name}`}>
+      <div className="subject-quick-facts">
+        <span className="subject-quick-fact">
+          <small>RUT</small>
+          <b className="mono">{rutFormat(s.rut)}</b>
+        </span>
+        <span className="subject-quick-fact">
+          <small>Estado SII</small>
+          <b style={estado ? { color: estado.tone } : undefined}>{estado?.label ?? 'Sin perfil'}</b>
+        </span>
+        <span className="subject-quick-fact">
+          <small>IPF</small>
+          <b className="num" style={{ color: ipfTone }}>
+            {s.ipf_score != null ? `${n1(s.ipf_score)} · ${bandaIpf(s.ipf_band) ?? '—'}` : 'Sin medir'}
+          </b>
+        </span>
+        <span className="subject-quick-fact">
+          <small>Antigüedad</small>
+          <b>{s.activity_years != null ? `${n(s.activity_years)} años` : 'Sin dato'}</b>
+        </span>
+        <span className="subject-quick-fact subject-quick-location" title={ubicacion}>
+          <small>Ubicación</small>
+          <b>{ubicacion}</b>
+        </span>
+      </div>
 
-          <div className="dossier-grid">
-            <section className="dossier-block">
-              <h4>Índices, contra sus pares</h4>
-              <div style={{ display: 'grid', gap: 14 }}>
-                <RefMeter
-                  label="IPF · prioridad fiscalizadora"
-                  value={s.ipf_score}
-                  tone={ipfTone}
-                  valueLabel={s.ipf_score != null
-                    ? `${n1(s.ipf_score)}${bandaIpf(s.ipf_band) ? ` · ${bandaIpf(s.ipf_band)}` : ''}`
-                    : 'sin medir'}
-                  refValue={peers?.ipf_mediana ?? null}
-                  refLabel={peers ? `mediana de ${n(peers.sujetos)} pares` : undefined}
-                  percentile={pos?.ipf_percentil_sector ?? null}
-                  hint={s.ipf_credibility_pct != null
-                    ? `calculado con ${n1(s.ipf_credibility_pct)}% de los insumos`
-                    : undefined}
-                />
-                <RefMeter
-                  label="IGR de la comuna donde opera"
-                  value={s.igr_score}
-                  tone="var(--sig-medium)"
-                  valueLabel={s.igr_score != null
-                    ? `${n1(s.igr_score)}${s.igr_level ? ` · ${s.igr_level}` : ''}`
-                    : 'sin comuna observada'}
-                  hint="Describe el entorno de la comuna, nunca al sujeto."
-                />
-              </div>
-              {peers ? (
-                <div className="peer-mix">
-                  <span>
-                    Su sector: <b className="num">{n(peers.sujetos)}</b> inscritos
-                  </span>
-                  <span>
-                    <b className="num">{n(peers.sancionados)}</b> con sanción
-                  </span>
-                  <span>
-                    <b className="num">{n(peers.terminados)}</b> con término
-                  </span>
-                  <span>
-                    <b className="num">{n(peers.en_atencion)}</b> en revisión
-                  </span>
-                </div>
-              ) : (
-                <p className="dossier-note">
-                  Su sector no tiene otros inscritos en este corte: no hay mediana con
-                  la cual comparar.
-                </p>
-              )}
-            </section>
-
-            <section className="dossier-block">
-              <h4>Perfil tributario</h4>
-              <div className="tile-grid">
-                <Tile
-                  label="Antigüedad"
-                  value={s.activity_years != null ? `${n(s.activity_years)} años` : '—'}
-                  foot={
-                    s.activity_years == null
-                      ? 'el SII no publica fecha de inicio'
-                      : pos?.antiguedad_percentil_sector != null
-                        ? `P${n1(pos.antiguedad_percentil_sector)} de su sector · mediana ${n1(peers?.antiguedad_mediana ?? 0)}`
-                        : `desde ${fecha(s.sii_activity_start_date)}`
-                  }
-                />
-                {/* El tramo 1 del SII es ausencia de informacion, no ventas
-                    cero: se rotula como tal en vez de imprimir un rango. */}
-                <Tile
-                  label="Ventas declaradas"
-                  value={
-                    s.sales_band_rank == null
-                      ? 'Sin tramo'
-                      : s.sales_band_size ?? 'Sin información'
-                  }
-                  foot={
-                    s.sales_band_rank == null
-                      ? 'el SII no publica tramo para este RUT'
-                      : s.sales_band_uf ?? undefined
-                  }
-                />
-                <Tile
-                  label="Posición por ventas"
-                  value={
-                    s.sales_band_rank != null && peers?.ventas_rank_max
-                      ? `${n(s.sales_band_rank)} de ${n(peers.ventas_rank_max)}`
-                      : '—'
-                  }
-                  foot={
-                    peers?.ventas_rank_mediana != null && s.sales_band_rank != null
-                      ? s.sales_band_rank > peers.ventas_rank_mediana
-                        ? 'sobre la mediana de su sector'
-                        : s.sales_band_rank < peers.ventas_rank_mediana
-                          ? 'bajo la mediana de su sector'
-                          : 'en la mediana de su sector'
-                      : undefined
-                  }
-                />
-                <Tile
-                  label="Trabajadores"
-                  value={s.workers != null ? n(s.workers) : '—'}
-                />
-              </div>
-              {(s.main_activity || s.economic_sector) && (
-                <p className="dossier-act">
-                  {s.main_activity && <b>{titleCase(s.main_activity)}</b>}
-                  {s.economic_sector && <span> · {titleCase(s.economic_sector)}</span>}
-                  {s.economic_subsector && <span> · {titleCase(s.economic_subsector)}</span>}
-                </p>
-              )}
-              {s.is_state_supplier && s.supplier_amount_12m != null && (
-                <p className="dossier-note">
-                  Proveedor del Estado · {n(Math.round(s.supplier_amount_12m / 1_000_000))} millones
-                  en 12 meses{s.supplier_order_count != null ? ` en ${n(s.supplier_order_count)} órdenes` : ''}.
-                </p>
-              )}
-            </section>
-          </div>
-
-          {senales.length > 0 && (
-            <section className="dossier-block dossier-signals">
-              <h4>Señales del perfil</h4>
-              <div className="subject-chips">
-                {senales.map((x) => (
-                  <Chip key={x.label} tone="var(--sig-medium)" title={x.hint}>{x.label}</Chip>
-                ))}
-              </div>
-              <p className="dossier-note">
-                Una señal describe el perfil tributario y no imputa incumplimiento.
-              </p>
-            </section>
-          )}
-        </>
-      )}
-
-      <section className="dossier-block">
-        <h4>
-          Antecedentes
-          {ev.length > 0 && <span className="dossier-count">{n(ev.length)}</span>}
-        </h4>
-        {ev.length === 0 ? (
-          <p className="dossier-note">
-            Sin antecedentes de sanción ni de prensa en el corte vigente.
-          </p>
-        ) : (
-          <ol className="ev-rail">
-            {ev.map((e, i) => (
-              <li className="ev-node" data-kind={e.kind} key={i}>
-                <div className="ev-head">
-                  <span className="ev-src">
-                    {e.kind === 'SANCION' ? e.source_label ?? 'Sanción' : 'Prensa'}
-                  </span>
-                  <span className="ev-date">{fecha(e.event_date)}</span>
-                  {e.amount_uf != null && <span className="ev-amount num">{n(e.amount_uf)} UF</span>}
-                </div>
-                {e.headline && <p className="ev-title">{e.headline}</p>}
-                {e.summary && e.summary !== e.headline && <p className="ev-sum">{e.summary}</p>}
-                {/* La resolución por RUT puede traer un registro emitido bajo otra
-                    razón social: mismo contribuyente, nombre anterior, o un empate
-                    que hay que revisar. Callarlo dejaría al analista sin el dato
-                    que necesita para descartar. */}
-                {e.identity_status && e.identity_status !== 'RESOLVED_SOURCE' && (
-                  <p className="ev-sum" style={{ color: 'var(--ink-4)' }}>
-                    {identityNote(e.identity_status)}
-                  </p>
-                )}
-                {e.has_link && e.document_url ? (
-                  <a className="ev-link" href={e.document_url} target="_blank" rel="noreferrer">
-                    Abrir documento original →
-                  </a>
-                ) : (
-                  <span className="ev-nolink">
-                    La fuente no publica enlace para este registro.
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
+      <div className="subject-quick-signals" aria-label="Marcas principales">
+        {s.attention_motive && (
+          <span data-tone="critical">{MOTIVE_LABEL[s.attention_motive] ?? s.attention_motive}</span>
         )}
-      </section>
+        {s.sanction_evidence_count > 0 && (
+          <span data-tone="high">{n(s.sanction_evidence_count)} sanción{s.sanction_evidence_count === 1 ? '' : 'es'}</span>
+        )}
+        {s.press_evidence_count > 0 && (
+          <span data-tone="watch">{n(s.press_evidence_count)} prensa</span>
+        )}
+        {s.sii_status === 'TERMINATED_AS_PUBLISHED' && <span data-tone="term">Término de giro</span>}
+        {s.is_osfl && <span data-tone="neutral">OSFL</span>}
+        {s.is_state_supplier && <span data-tone="present">Proveedor del Estado</span>}
+        {!s.attention_motive && s.sanction_evidence_count === 0 && s.press_evidence_count === 0 &&
+          s.sii_status !== 'TERMINATED_AS_PUBLISHED' && !s.is_osfl && !s.is_state_supplier && (
+            <span data-tone="neutral">Sin marcas adicionales en este corte</span>
+          )}
+      </div>
 
-      {entityId && onOpenEntity && (
-        <button className="btn dossier-cta" onClick={() => onOpenEntity(entityId)}>
-          Ver ficha completa de la entidad →
-        </button>
-      )}
+      <div className="subject-quick-actions">
+        <span>Vista rápida del listado. El expediente completo queda en Entidad 360.</span>
+        {s.entity_id && onOpenEntity ? (
+          <button className="subject-quick-cta" onClick={() => onOpenEntity(s.entity_id!)}>
+            Abrir Entidad 360 →
+          </button>
+        ) : (
+          <span className="subject-quick-unavailable">Sin ficha 360 vinculada</span>
+        )}
+      </div>
     </div>
   );
 }
