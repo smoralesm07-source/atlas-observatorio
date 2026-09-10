@@ -157,3 +157,89 @@
   .uso .uso-case-jumpbar strong { grid-column: 1 / -1; justify-self: start; padding-left: 2px; }
   .uso .uso-case-jumpbar button { justify-content: center; }
 }
+
+/* ───────────────────────────────────────────── correcciones de cierre v2
+   La Gestión SO no necesita el banner metodológico global al pie: en una ficha
+   larga competía visualmente con las acciones y podía parecer superpuesto. */
+.uso-mode-casos > .semantics {
+  display: none;
+}
+
+/* Evita que el navegador intente recolocar la página cuando aparecen bloques
+   de evidencia o cambia el alto de la ficha. */
+.uso .uso-case-progressive {
+  overflow-anchor: none;
+  margin-bottom: 24px;
+}
+
+.uso .uso-case-management {
+  overflow: visible;
+  padding-bottom: 2px;
+}
+
+/* El título exterior duplicaba "Resultado del caso" y consumía altura justo
+   antes de las acciones. El cierre queda como una sola unidad operativa. */
+.uso .uso-management-close {
+  padding: 12px 10px 18px;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 0 !important;
+}
+
+.uso .uso-management-close > .uso-section-head {
+  display: none;
+}
+
+.uso .uso-management-close .uso-case-resolution {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px 11px;
+  margin: 0;
+}
+
+.uso .uso-case-resolution > div:first-child {
+  min-width: 0;
+}
+
+.uso .uso-case-resolution-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  justify-content: stretch;
+}
+
+.uso .uso-case-resolution-actions .btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 31px;
+  margin: 0;
+  justify-content: center;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.uso .uso-case-resolution-actions .uso-finalize {
+  grid-column: 1 / -1;
+}
+
+/* La nota mantiene una caja más contenida y una línea de estado legible; el
+   usuario puede ampliar verticalmente sólo cuando realmente lo necesita. */
+.uso .uso-management-meta .uso-note-field textarea {
+  min-height: 74px;
+  max-height: 180px;
+}
+
+.uso .uso-note-foot {
+  min-height: 28px;
+  padding-top: 2px;
+}
+
+@media (max-width: 520px) {
+  .uso .uso-case-resolution-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .uso .uso-case-resolution-actions .uso-finalize {
+    grid-column: auto;
+  }
+}
