@@ -307,9 +307,30 @@ function RegisteredSignals({ row }: { row: UafSubjectRow }) {
       {row.sanction_evidence_count > 0 && <span className="subject-directory-signal" data-kind="sanction">Sanción · {n(row.sanction_evidence_count)}</span>}
       {row.press_evidence_count > 0 && <span className="subject-directory-signal" data-kind="press">Prensa · {n(row.press_evidence_count)}</span>}
       {row.is_osfl && <span className="subject-directory-signal" data-kind="osfl">OSFL</span>}
-      {row.attention_motive && <span className="subject-directory-signal" data-kind="attention">Revisión</span>}
+      {row.attention_motive && (
+        <span
+          className="subject-directory-signal"
+          data-kind="attention"
+          title={`Motivo de atención: ${attentionLabel(row.attention_motive)}`}
+        >
+          {attentionLabel(row.attention_motive)}
+        </span>
+      )}
     </div>
   );
+}
+
+function attentionLabel(motive: string) {
+  const labels: Record<string, string> = {
+    GIRO_ATIPICO: 'Giro atípico',
+    TERMINO_GIRO: 'Término de giro',
+    IPF_ALTA: 'IPF alto',
+    SANCION_HISTORICA: 'Sanción histórica',
+    SANCION_RECIENTE: 'Sanción reciente',
+    SECTOR_SIN_ROS: 'Sector sin ROS',
+    SIN_TERRITORIO: 'Sin territorio',
+  };
+  return labels[motive] ?? titleCase(motive.replace(/_/g, ' '));
 }
 
 function PotentialSignals({ row }: { row: PotentialDirectoryRow }) {
