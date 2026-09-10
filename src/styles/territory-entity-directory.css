@@ -35,9 +35,9 @@
   font-family: var(--font);
 }
 
-/* Detalle territorial: la evidencia CEAD/IGR queda en un bloque continuo y el
-   contexto de entidades se presenta después. Evita columnas de altura desigual
-   que generaban grandes vacíos visuales bajo las capas CEAD. */
+/* Detalle territorial v2: la evidencia CEAD/IGR queda en un bloque continuo y
+   el contexto de entidades se presenta después. Evita columnas de altura
+   desigual que generaban grandes vacíos visuales bajo las capas CEAD. */
 .territory-detail-segment {
   margin-top: 18px;
 }
