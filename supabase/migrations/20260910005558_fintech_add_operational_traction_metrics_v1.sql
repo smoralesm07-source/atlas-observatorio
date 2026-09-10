@@ -1,0 +1,5 @@
+insert into public.aml_fintech_market_metric_catalog(metric_code,label,dimension,unit_kind,default_unit,default_currency,comparable_scope,higher_means_more_weight,description,sort_order)
+values
+('VERIFICATIONS_24H_COUNT','Verificaciones observadas en 24 horas','BUSINESS_ACTIVITY','COUNT','verifications',null,'SAME_METRIC',true,'Número de verificaciones o consultas procesadas en una ventana móvil de 24 horas. Es una señal operativa puntual y debe conservar fecha/hora de observación.',35),
+('FINANCINGS_COUNT','Financiamientos otorgados acumulados','BUSINESS_ACTIVITY','COUNT','financings',null,'SAME_METRIC',true,'Número acumulado de financiamientos otorgados o cursados declarado por la plataforma. No equivale a usuarios ni monto originado.',36)
+on conflict(metric_code) do update set label=excluded.label,dimension=excluded.dimension,unit_kind=excluded.unit_kind,default_unit=excluded.default_unit,comparable_scope=excluded.comparable_scope,higher_means_more_weight=excluded.higher_means_more_weight,description=excluded.description,sort_order=excluded.sort_order;
