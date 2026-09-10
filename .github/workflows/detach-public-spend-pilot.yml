@@ -1,5 +1,6 @@
 name: Desacoplar Gasto público para piloto
 
+# Ejecuta el desacople verificado del módulo de gasto para el piloto.
 on:
   push:
     branches: [main]
