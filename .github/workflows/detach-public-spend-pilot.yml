@@ -24,6 +24,18 @@ jobs:
           cache: npm
       - name: Aplicar alcance del piloto
         run: python3 scripts/detach_public_spend_pilot.py
+      - name: Ajustar firma de resumen Entidad 360
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/views/EntityExpediente.tsx')
+          text = p.read_text(encoding='utf-8')
+          old = "function ResumenTab({ data, press, articles, timeline, activities, history, purchase, registry, onNavigate }: {"
+          new = "function ResumenTab({ data, press, articles, timeline, activities, history, purchase, registry }: {"
+          if old not in text:
+              raise SystemExit('No se encontró la firma esperada de ResumenTab')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
       - name: Instalar dependencias
         run: npm ci
       - name: Verificar tipos
