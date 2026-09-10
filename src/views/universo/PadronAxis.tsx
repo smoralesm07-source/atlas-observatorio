@@ -189,6 +189,9 @@ export function PadronAxis({
   const sinIgr = (pulse.igr_mix ?? []).find((row) => IGR_STEP[row.banda] == null)?.sujetos ?? 0;
   const rep = pulse.reporting?.totales ?? null;
   const potentialTotal = potential?.totales?.accionables ?? 0;
+  const stateTotal = u.activos + u.terminados + u.sin_perfil;
+  const natureTotal = u.juridicas + u.naturales + u.organismos;
+  const withoutTerritory = Math.max(0, total - u.con_territorio);
 
   return (
     <div className="uso-axis-body fade-in">
@@ -213,7 +216,7 @@ export function PadronAxis({
         />
         <Tile
           label="Sin perfil ante el SII" value={n(u.sin_perfil)}
-          foot="personas naturales u organismos sin nómina PJ"
+          foot="personas naturales sin perfil de persona jurídica"
           tone="var(--unknown)"
           onClick={() => onCohort({ cohort: 'SIN_PERFIL_SII', title: 'Sujetos sin perfil SII' })}
         />
@@ -229,50 +232,109 @@ export function PadronAxis({
         <SectionHead
           kicker="1 · Composición"
           title="De qué está hecho el padrón vigente"
-          hint="Estado registral ante el SII y naturaleza jurídica de los inscritos. Cada franja abre sus entidades."
+          hint={`Dos lecturas del mismo padrón: situación publicada ante el SII y naturaleza del inscrito. Todos los porcentajes usan como denominador los ${n(total)} sujetos.`}
         />
-        <div className="uso-composition">
-          <div className="uso-statebar" role="group" aria-label="Estado registral del padrón">
-            <div className="uso-statebar-track">
-              <button
-                data-tone="active" style={{ width: `${share(u.activos, total) ?? 0}%` }}
-                onClick={() => onCohort({ cohort: 'ACTIVO', title: 'Sujetos activos ante el SII' })}
-                aria-label={`Activos ante el SII: ${n(u.activos)}`}
-              />
-              <button
-                data-tone="terminated" style={{ width: `${share(u.terminados, total) ?? 0}%` }}
-                onClick={() => onCohort({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro' })}
-                aria-label={`Con término de giro: ${n(u.terminados)}`}
-              />
-              <button
-                data-tone="unknown" style={{ width: `${share(u.sin_perfil, total) ?? 0}%` }}
-                onClick={() => onCohort({ cohort: 'SIN_PERFIL_SII', title: 'Sujetos sin perfil SII' })}
-                aria-label={`Sin perfil SII: ${n(u.sin_perfil)}`}
-              />
+        <div className="uso-composition uso-composition-context">
+          <div className="uso-composition-block">
+            <div className="uso-composition-label">
+              <span>Situación publicada ante el SII</span>
+              <em className="num">{n(stateTotal)} de {n(total)} sujetos</em>
             </div>
-            <div className="uso-statebar-legend">
-              <button onClick={() => onCohort({ cohort: 'ACTIVO', title: 'Sujetos activos ante el SII' })}>
-                <i data-tone="active" />Activos <b className="num">{n(u.activos)}</b>
-                <em>{n1(share(u.activos, total))}%</em>
-              </button>
-              <button onClick={() => onCohort({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro' })}>
-                <i data-tone="terminated" />Término de giro <b className="num">{n(u.terminados)}</b>
-                <em>{n1(share(u.terminados, total))}%</em>
-              </button>
-              <button onClick={() => onCohort({ cohort: 'SIN_PERFIL_SII', title: 'Sujetos sin perfil SII' })}>
-                <i data-tone="unknown" />Sin perfil SII <b className="num">{n(u.sin_perfil)}</b>
-                <em>{n1(share(u.sin_perfil, total))}%</em>
-              </button>
+            <div className="uso-statebar" role="group" aria-label="Situación publicada ante el SII">
+              <div className="uso-statebar-track">
+                <button
+                  data-tone="active" style={{ width: `${share(u.activos, total) ?? 0}%` }}
+                  onClick={() => onCohort({ cohort: 'ACTIVO', title: 'Sujetos activos ante el SII' })}
+                  aria-label={`Activos ante el SII: ${n(u.activos)}`}
+                />
+                <button
+                  data-tone="terminated" style={{ width: `${share(u.terminados, total) ?? 0}%` }}
+                  onClick={() => onCohort({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro' })}
+                  aria-label={`Con término de giro: ${n(u.terminados)}`}
+                />
+                <button
+                  data-tone="unknown" style={{ width: `${share(u.sin_perfil, total) ?? 0}%` }}
+                  onClick={() => onCohort({ cohort: 'SIN_PERFIL_SII', title: 'Sujetos sin perfil SII' })}
+                  aria-label={`Sin perfil de persona jurídica en SII: ${n(u.sin_perfil)}`}
+                />
+              </div>
+              <div className="uso-statebar-legend">
+                <button onClick={() => onCohort({ cohort: 'ACTIVO', title: 'Sujetos activos ante el SII' })}>
+                  <i data-tone="active" />Activos <b className="num">{n(u.activos)}</b>
+                  <em>{n1(share(u.activos, total))}% del padrón</em>
+                </button>
+                <button onClick={() => onCohort({ cohort: 'TERMINO_GIRO', title: 'Sujetos con término de giro' })}>
+                  <i data-tone="terminated" />Término de giro <b className="num">{n(u.terminados)}</b>
+                  <em>{n1(share(u.terminados, total))}% del padrón</em>
+                </button>
+                <button onClick={() => onCohort({ cohort: 'SIN_PERFIL_SII', title: 'Sujetos sin perfil SII' })}>
+                  <i data-tone="unknown" />Sin perfil PJ SII <b className="num">{n(u.sin_perfil)}</b>
+                  <em>{n1(share(u.sin_perfil, total))}% del padrón</em>
+                </button>
+              </div>
             </div>
+            <p className="uso-composition-note">
+              Los tres estados son excluyentes y deben sumar el padrón completo.{' '}
+              {u.sin_perfil === u.naturales
+                ? `En este corte, los ${n(u.sin_perfil)} sin perfil SII coinciden con las personas naturales: no significa inactividad ni término de giro.`
+                : 'Sin perfil SII significa que la nómina tributaria de personas jurídicas no entrega perfil para ese inscrito; no acredita inactividad.'}
+            </p>
+            {stateTotal !== total && (
+              <p className="uso-data-warning">
+                Inconsistencia del corte: los estados SII suman {n(stateTotal)} y el padrón informa {n(total)}. Diferencia: {n(Math.abs(total - stateTotal))}.
+              </p>
+            )}
           </div>
-          <dl className="uso-facts">
-            <div><dt>Personas jurídicas</dt><dd className="num">{n(u.juridicas)}</dd></div>
-            <div><dt>Personas naturales</dt><dd className="num">{n(u.naturales)}</dd></div>
-            <div><dt>Organismos</dt><dd className="num">{n(u.organismos)}</dd></div>
-            <div><dt>Antigüedad media</dt><dd className="num">{u.antiguedad_media == null ? '—' : `${n1(u.antiguedad_media)} años`}</dd></div>
-            <div><dt>Trabajadores declarados</dt><dd className="num">{n(u.trabajadores)}</dd></div>
-            <div><dt>Con territorio observado</dt><dd className="num">{n(u.con_territorio)}</dd></div>
-          </dl>
+
+          <div className="uso-composition-block">
+            <div className="uso-composition-label">
+              <span>Naturaleza del inscrito</span>
+              <em className="num">{n(natureTotal)} de {n(total)} sujetos</em>
+            </div>
+            <dl className="uso-nature-grid">
+              <div>
+                <dt>Personas jurídicas</dt>
+                <dd className="num">{n(u.juridicas)}</dd>
+                <em>{n1(share(u.juridicas, total))}% del padrón</em>
+              </div>
+              <div>
+                <dt>Personas naturales</dt>
+                <dd className="num">{n(u.naturales)}</dd>
+                <em>{n1(share(u.naturales, total))}% del padrón</em>
+              </div>
+              <div>
+                <dt>Organismos públicos</dt>
+                <dd className="num">{n(u.organismos)}</dd>
+                <em>{n1(share(u.organismos, total))}% del padrón</em>
+              </div>
+            </dl>
+            <p className="uso-composition-note">
+              Esta es otra partición de los mismos {n(total)} inscritos. No se suma a la barra de estado SII: responde una pregunta distinta.
+            </p>
+            {natureTotal !== total && (
+              <p className="uso-data-warning">
+                Inconsistencia del corte: la naturaleza identificada suma {n(natureTotal)} y difiere del padrón en {n(Math.abs(total - natureTotal))} sujetos.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="uso-context-strip" aria-label="Cobertura de caracterización del padrón">
+          <div>
+            <span>Antigüedad media</span>
+            <b className="num">{u.antiguedad_media == null ? '—' : `${n1(u.antiguedad_media)} años`}</b>
+            <em>media sobre {n(u.con_inicio)} sujetos con fecha de inicio SII</em>
+          </div>
+          <div>
+            <span>Trabajadores informados</span>
+            <b className="num">{n(u.trabajadores)}</b>
+            <em>suma de dotación declarada en perfiles SII; no es número de sujetos</em>
+          </div>
+          <div>
+            <span>Territorio observado</span>
+            <b className="num">{n(u.con_territorio)}</b>
+            <em>{n1(share(u.con_territorio, total))}% del padrón · {n(withoutTerritory)} sin territorio observado</em>
+          </div>
         </div>
       </section>
 
