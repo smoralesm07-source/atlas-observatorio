@@ -1,6 +1,6 @@
-/* Detalle comunal · jerarquía compacta
-   La comuna se lee primero, luego las entidades domiciliadas y después el
-   desglose metodológico. Todo queda acotado al detalle comunal mediante :has(). */
+/* Detalle comunal · compacto, sin columnas desbalanceadas.
+   La evidencia territorial ocupa todo el ancho; el contexto queda en una fila
+   compacta y el directorio de entidades cierra la página. */
 
 .fade-in:has(.territory-entity-directory) {
   --tc-gap: 8px;
@@ -12,12 +12,12 @@
   gap: 0;
 }
 
-/* Prioridad vertical: navegación -> cabecera -> entidades -> detalle IGR -> alcance. */
-.fade-in:has(.territory-entity-directory) > * { order: 4; }
+/* Orden deliberado: navegación -> comuna -> IGR/CEAD -> contexto -> alcance -> entidades. */
 .fade-in:has(.territory-entity-directory) > nav { order: 0; }
 .fade-in:has(.territory-entity-directory) > .ficha-head { order: 1; }
-.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) { order: 2; }
-.fade-in:has(.territory-entity-directory) > .grid.grid-main { order: 3; }
+.fade-in:has(.territory-entity-directory) > .territory-detail-segment { order: 2; }
+.fade-in:has(.territory-entity-directory) > div:not(:has(.territory-entity-directory)) { order: 3; }
+.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) { order: 4; }
 
 /* Navegación superior mínima. */
 .fade-in:has(.territory-entity-directory) > nav {
@@ -31,12 +31,12 @@
   line-height: 1.2 !important;
 }
 
-/* Cabecera: conserva la lectura de IGR, pero elimina altura improductiva. */
+/* Cabecera comunal: mucha información en una sola franja. */
 .fade-in:has(.territory-entity-directory) .ficha-head {
   align-items: center;
-  gap: 9px 12px;
-  padding: 9px 11px;
-  border-radius: 9px;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
 }
 .fade-in:has(.territory-entity-directory) .ficha-title {
   font-size: 18px;
@@ -50,7 +50,7 @@
 }
 .fade-in:has(.territory-entity-directory) .ficha-head p {
   display: -webkit-box;
-  max-width: 88ch !important;
+  max-width: 90ch !important;
   margin: 4px 0 0 !important;
   overflow: hidden;
   font-size: 10.2px !important;
@@ -83,30 +83,123 @@
   line-height: 1.1 !important;
 }
 
-/* Directorio inmediatamente visible bajo la cabecera. */
-.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) {
-  margin-top: var(--tc-gap) !important;
+/* Segmentos: no reservan altura extra ni construyen columnas laterales vacías. */
+.fade-in:has(.territory-entity-directory) .territory-detail-segment {
+  margin-top: var(--tc-gap);
 }
-.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) > .panel {
-  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+.fade-in:has(.territory-entity-directory) .territory-detail-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 1px 6px;
+  padding: 0 2px;
 }
-.fade-in:has(.territory-entity-directory) .territory-entity-directory {
-  max-height: 410px;
+.fade-in:has(.territory-entity-directory) .territory-detail-section-head > div:first-child {
+  min-width: 0;
 }
-.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table th,
-.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table td {
-  padding-top: 6px;
-  padding-bottom: 6px;
+.fade-in:has(.territory-entity-directory) .territory-detail-kicker {
+  display: block;
+  margin-bottom: 1px;
+  color: var(--ink-4);
+  font-size: 8.2px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.fade-in:has(.territory-entity-directory) .territory-detail-section-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12.4px;
+  line-height: 1.15;
+}
+.fade-in:has(.territory-entity-directory) .territory-detail-section-head p {
+  max-width: 110ch;
+  margin: 2px 0 0;
+  color: var(--ink-3);
+  font-size: 9.3px;
+  line-height: 1.25;
+}
+.fade-in:has(.territory-entity-directory) .territory-detail-section-meta {
+  flex: 0 0 auto;
+  color: var(--ink-4);
+  font-family: var(--mono);
+  font-size: 9px;
+  white-space: nowrap;
 }
 
-/* Grilla analítica secundaria. */
-.fade-in:has(.territory-entity-directory) > .grid.grid-main {
+/* Lectura IGR + comparación de capas, ambos arriba y sin grandes alturas. */
+.fade-in:has(.territory-entity-directory) .territory-cead-overview {
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.28fr);
   gap: var(--tc-gap);
-  margin-top: var(--tc-gap) !important;
-  grid-template-columns: minmax(0, 1.72fr) minmax(300px, .88fr);
+  align-items: start;
 }
-.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid {
-  gap: var(--tc-gap) !important;
+.fade-in:has(.territory-entity-directory) .territory-layer-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.fade-in:has(.territory-entity-directory) .territory-layer-summary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-raised);
+}
+.fade-in:has(.territory-entity-directory) .territory-layer-summary-row strong {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 10px;
+  font-weight: 620;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fade-in:has(.territory-entity-directory) .territory-layer-summary-row > .num {
+  font-size: 11px;
+  font-weight: 680;
+}
+.fade-in:has(.territory-entity-directory) .territory-layer-summary-row small {
+  grid-column: 1 / -1;
+  color: var(--ink-4);
+  font-size: 8.6px;
+  line-height: 1.15;
+}
+.fade-in:has(.territory-entity-directory) .territory-layer-track {
+  grid-column: 1 / -1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--bg-panel-2);
+}
+.fade-in:has(.territory-entity-directory) .territory-layer-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+/* Cada capa usa el ancho completo. Así desaparece el gran vacío producido por
+   columnas de distinta altura y las siete columnas siguen siendo legibles. */
+.fade-in:has(.territory-entity-directory) .territory-cead-layers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tc-gap);
+  margin-top: var(--tc-gap);
+}
+
+/* Contexto en una fila independiente: no fuerza la altura de las capas CEAD. */
+.fade-in:has(.territory-entity-directory) .territory-context-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(280px, 1fr) minmax(260px, 1fr);
+  gap: var(--tc-gap);
+  align-items: start;
+}
+.fade-in:has(.territory-entity-directory) .territory-context-grid > div {
+  min-width: 0;
 }
 
 /* Paneles: una única escala de títulos, metadata y cuerpo. */
@@ -115,7 +208,7 @@
   box-shadow: none;
 }
 .fade-in:has(.territory-entity-directory) .panel-head {
-  min-height: 32px;
+  min-height: 31px;
   gap: 8px;
   padding: 6px 10px;
 }
@@ -132,19 +225,17 @@
   padding: 8px 10px;
 }
 
-/* Medidores de capa: menos aire, misma lectura. */
-.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid:first-child .panel > div:last-child > div:first-child {
-  padding: 7px 10px !important;
+/* Medidores y tablas del IGR más densos. */
+.fade-in:has(.territory-entity-directory) .territory-cead-layers .panel > div:last-child > div:first-child {
+  padding: 6px 10px !important;
 }
-.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid:first-child .panel > div:last-child > div:first-child > div > div:first-child {
+.fade-in:has(.territory-entity-directory) .territory-cead-layers .panel > div:last-child > div:first-child > div > div:first-child {
   margin-bottom: 3px !important;
-  font-size: 10px !important;
+  font-size: 9.8px !important;
 }
-.fade-in:has(.territory-entity-directory) > .grid.grid-main > .grid:first-child .panel > div:last-child > div:first-child > div > div:nth-child(2) {
+.fade-in:has(.territory-entity-directory) .territory-cead-layers .panel > div:last-child > div:first-child > div > div:nth-child(2) {
   height: 4px !important;
 }
-
-/* Tablas del desglose: más densas y homogéneas. */
 .fade-in:has(.territory-entity-directory) .table {
   font-size: 10.3px;
 }
@@ -159,16 +250,12 @@
   font-size: 10.2px;
   line-height: 1.18;
 }
-
-/* Lectura IGR / universo: compacta pares clave-valor. */
 .fade-in:has(.territory-entity-directory) .kv {
   grid-template-columns: minmax(112px, .82fr) minmax(0, 1fr);
   gap: 3px 11px;
   font-size: var(--tc-body);
   line-height: 1.25;
 }
-
-/* Notas metodológicas: visibles, pero sin dominar la altura. */
 .fade-in:has(.territory-entity-directory) .note {
   display: -webkit-box;
   margin-top: 6px !important;
@@ -180,16 +267,34 @@
   -webkit-line-clamp: 2;
 }
 
-/* Prensa comunal: lista compacta y acotada. */
+/* Los indicadores de Universo observado funcionan como filtros del directorio. */
+.fade-in:has(.territory-entity-directory) .territory-context-grid .kv dt,
+.fade-in:has(.territory-entity-directory) .territory-context-grid .kv dd {
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .14s var(--ease), color .14s var(--ease);
+}
+.fade-in:has(.territory-entity-directory) .territory-context-grid .kv dt:hover,
+.fade-in:has(.territory-entity-directory) .territory-context-grid .kv dd:hover,
+.fade-in:has(.territory-entity-directory) [data-territory-filter-active='true'] {
+  background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
+  color: var(--accent) !important;
+}
+.fade-in:has(.territory-entity-directory) .territory-context-grid .panel button[data-territory-filter-active='true'] {
+  padding: 4px 5px !important;
+  border-radius: 5px !important;
+  outline: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Prensa y barras: sólo la altura que necesitan. */
 .fade-in:has(.territory-entity-directory) .timeline {
-  max-height: 120px;
+  max-height: 112px;
   padding-left: 16px;
   overflow: auto;
 }
 .fade-in:has(.territory-entity-directory) .timeline::before { left: 4px; }
-.fade-in:has(.territory-entity-directory) .tl-item {
-  padding-bottom: 8px;
-}
+.fade-in:has(.territory-entity-directory) .tl-item { padding-bottom: 7px; }
 .fade-in:has(.territory-entity-directory) .tl-item::before {
   left: -14px;
   width: 6px;
@@ -204,29 +309,59 @@
   font-size: 10px;
   line-height: 1.22;
 }
-
-/* Barras de sectores: no reservar 150 px cuando hay pocas categorías. */
-.fade-in:has(.territory-entity-directory) .panel [style*="min-height: 150px"] {
-  min-height: 92px !important;
-  gap: 5px !important;
+.fade-in:has(.territory-entity-directory) .territory-context-grid .panel [style*="min-height"] {
+  min-height: 0 !important;
 }
-.fade-in:has(.territory-entity-directory) .panel [style*="font-size: 12.5px"] {
-  font-size: 10px !important;
+.fade-in:has(.territory-entity-directory) .territory-context-grid .panel button {
+  min-height: 0 !important;
 }
 
-/* Alcance final sin bloque vertical excesivo. */
-.fade-in:has(.territory-entity-directory) > div:last-child {
+/* Alcance queda antes del directorio, compacto. */
+.fade-in:has(.territory-entity-directory) > div:not(:has(.territory-entity-directory)) {
   margin-top: var(--tc-gap) !important;
 }
 .fade-in:has(.territory-entity-directory) .semantics {
-  padding: 7px 9px;
-  font-size: 9.5px;
-  line-height: 1.35;
+  padding: 6px 8px;
+  font-size: 9.3px;
+  line-height: 1.3;
+}
+
+/* Directorio al final de toda la página. Cambia en tiempo real con los gráficos
+   de contexto sin mover al usuario a otra vista. */
+.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) {
+  margin-top: var(--tc-gap) !important;
+}
+.fade-in:has(.territory-entity-directory) > div:has(.territory-entity-directory) > .panel {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+}
+.fade-in:has(.territory-entity-directory) .territory-entity-directory {
+  max-height: 520px;
+}
+.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-panel);
+}
+.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table th,
+.fade-in:has(.territory-entity-directory) .territory-entity-directory .subject-directory-table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.fade-in:has(.territory-entity-directory) .territory-directory-empty {
+  padding: 20px 12px !important;
+  color: var(--ink-3);
+  text-align: center;
+  font-size: 10.5px !important;
 }
 
 @media (max-width: 1180px) {
-  .fade-in:has(.territory-entity-directory) > .grid.grid-main {
+  .fade-in:has(.territory-entity-directory) .territory-cead-overview,
+  .fade-in:has(.territory-entity-directory) .territory-context-grid {
     grid-template-columns: 1fr;
+  }
+  .fade-in:has(.territory-entity-directory) .territory-layer-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .fade-in:has(.territory-entity-directory) .ficha-scores {
     margin-left: 0;
@@ -240,7 +375,14 @@
   .fade-in:has(.territory-entity-directory) .ficha-scores > div {
     min-width: 88px !important;
   }
+  .fade-in:has(.territory-entity-directory) .territory-layer-summary {
+    grid-template-columns: 1fr;
+  }
+  .fade-in:has(.territory-entity-directory) .territory-detail-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
   .fade-in:has(.territory-entity-directory) .territory-entity-directory {
-    max-height: 360px;
+    max-height: 420px;
   }
 }
