@@ -11,18 +11,10 @@ function response(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: jsonHeaders });
 }
 
-function jwtRole(req: Request): string | null {
+function hasServiceCredential(req: Request): boolean {
   const auth = req.headers.get("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
-    return JSON.parse(atob(padded))?.role ?? null;
-  } catch {
-    return null;
-  }
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  return token.length > 20 && SERVICE_ROLE.length > 20 && token === SERVICE_ROLE;
 }
 
 function text(value: unknown): string | null {
@@ -58,6 +50,7 @@ function integer(value: unknown, fallback = 0): number {
 }
 
 function numberOrNull(value: unknown): number | null {
+  if (value == null || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -93,8 +86,10 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return response(405, { error: "POST required" });
   if (!SUPABASE_URL || !SERVICE_ROLE) return response(500, { error: "Supabase environment unavailable" });
 
-  // verify_jwt=true valida la firma; además restringimos la mutación al rol de servicio.
-  if (jwtRole(req) !== "service_role") return response(403, { error: "service_role required" });
+  // El gateway queda independiente del formato JWT/opaque de la service key.
+  // La mutación sólo se admite si la credencial recibida coincide exactamente
+  // con el secreto de servicio disponible dentro de la función.
+  if (!hasServiceCredential(req)) return response(403, { error: "service_role required" });
 
   const runId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
