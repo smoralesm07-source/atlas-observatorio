@@ -1,0 +1,206 @@
+/* ATLAS Observatorio · UAF light palette
+   Color-only repaint. This file intentionally changes no layout, spacing,
+   typography, sizing or interaction behaviour. */
+
+:root[data-theme='light'] {
+  --map-nodata: #e7ebef;
+  --uaf-orange-soft: #fff1e6;
+  --uaf-orange-line: #f3c39a;
+  --uaf-orange-strong: #b95616;
+  --uaf-info: #2f6fae;
+}
+
+:root[data-theme='light'] body {
+  background:
+    radial-gradient(ellipse 900px 500px at 5% -10%, rgba(232, 121, 36, 0.045), transparent 60%),
+    radial-gradient(ellipse 700px 400px at 95% 10%, rgba(79, 89, 99, 0.025), transparent 60%),
+    var(--bg-canvas);
+}
+
+:root[data-theme='light'] ::selection {
+  background: #f3c39a;
+  color: #26282b;
+}
+
+/* OSFL — replace the local dark shell with the shared UAF light scale. */
+:root[data-theme='light'] .osfl-page {
+  --osfl-orange: var(--accent);
+  --osfl-orange-soft: var(--accent-glow);
+  --osfl-blue: var(--uaf-info);
+  --osfl-blue-soft: rgba(47, 111, 174, 0.10);
+  --osfl-sky: #7fa6cc;
+  --osfl-muted: var(--ink-3);
+  --osfl-navy: var(--bg-canvas);
+  --osfl-panel: var(--bg-panel);
+  --osfl-panel-2: var(--bg-panel-2);
+  --osfl-line: var(--line);
+  --osfl-line-soft: var(--line-soft);
+}
+
+:root[data-theme='light'] .osfl-head-meta span,
+:root[data-theme='light'] .osfl-section,
+:root[data-theme='light'] .osfl-source-card,
+:root[data-theme='light'] .osfl-evolution-card,
+:root[data-theme='light'] .osfl-chart-card,
+:root[data-theme='light'] .osfl-results-panel,
+:root[data-theme='light'] .osfl-detail-panel {
+  background: var(--bg-panel);
+}
+
+:root[data-theme='light'] .osfl-hero-card,
+:root[data-theme='light'] .osfl-alert-card,
+:root[data-theme='light'] .osfl-cross-card {
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .osfl-source-row:hover,
+:root[data-theme='light'] .osfl-cross-card button:hover,
+:root[data-theme='light'] .osfl-donut-legend button:hover,
+:root[data-theme='light'] .osfl-donut-legend button[data-active='true'],
+:root[data-theme='light'] .osfl-bars-list button:hover,
+:root[data-theme='light'] .osfl-bars-list button[data-active='true'] {
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+}
+
+:root[data-theme='light'] .osfl-progress,
+:root[data-theme='light'] .osfl-bars-list button > i {
+  background: var(--bg-raised);
+}
+
+:root[data-theme='light'] .osfl-evolution-card .gridline { stroke: var(--line-soft); }
+:root[data-theme='light'] .osfl-evolution-card .axis-label { fill: var(--ink-3); }
+:root[data-theme='light'] .osfl-evolution-card .stock-dot { stroke: var(--bg-panel); }
+:root[data-theme='light'] .osfl-donut::after { background: var(--bg-panel); }
+
+/* Fintech — same neutral hierarchy; blue remains only as an informational semantic. */
+:root[data-theme='light'] .fintech-page {
+  --fin-orange: var(--accent);
+  --fin-orange-soft: var(--accent-glow);
+  --fin-blue: var(--uaf-info);
+  --fin-blue-soft: rgba(47, 111, 174, 0.10);
+  --fin-sky: #7fa6cc;
+  --fin-teal: var(--present);
+  --fin-muted: var(--ink-3);
+  --fin-panel: var(--bg-panel);
+  --fin-panel-2: var(--bg-panel-2);
+  --fin-line: var(--line);
+  --fin-line-soft: var(--line-soft);
+}
+
+:root[data-theme='light'] .fintech-head-meta > span,
+:root[data-theme='light'] .fintech-section,
+:root[data-theme='light'] .fintech-source-card,
+:root[data-theme='light'] .fintech-segment-card,
+:root[data-theme='light'] .fintech-chart-card,
+:root[data-theme='light'] .fintech-results-panel,
+:root[data-theme='light'] .fintech-detail-panel,
+:root[data-theme='light'] .fintech-events-card,
+:root[data-theme='light'] .fintech-insight-card,
+:root[data-theme='light'] .fintech-model-mini {
+  background: var(--bg-panel);
+}
+
+:root[data-theme='light'] .fintech-hero-card,
+:root[data-theme='light'] .fintech-alert-card,
+:root[data-theme='light'] .fintech-cross-card {
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .fintech-source-row[data-filterable='true']:hover,
+:root[data-theme='light'] .fintech-source-row[data-active='true'],
+:root[data-theme='light'] .fintech-cross-card button:hover,
+:root[data-theme='light'] .fintech-bars-list button:hover,
+:root[data-theme='light'] .fintech-bars-list button[data-active='true'] {
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+}
+
+:root[data-theme='light'] .fintech-progress,
+:root[data-theme='light'] .fintech-segment-row > div,
+:root[data-theme='light'] .fintech-bars-list button > i,
+:root[data-theme='light'] .fintech-kind-row span {
+  background: var(--bg-raised);
+}
+
+/* Entity 360 — decorative selection language follows UAF orange in light mode. */
+:root[data-theme='light'] .entity360 {
+  --e360-blue: var(--accent);
+  --e360-blue-2: var(--accent-dim);
+  --e360-blue-dim: rgba(232, 121, 36, 0.10);
+  --e360-blue-line: rgba(232, 121, 36, 0.24);
+  --e360-card: var(--bg-panel);
+  --e360-card-2: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .entity360-hero {
+  background:
+    linear-gradient(135deg, rgba(232, 121, 36, 0.08), transparent 42%),
+    var(--bg-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+:root[data-theme='light'] .entity360-avatar {
+  border-color: var(--uaf-orange-line);
+  background: linear-gradient(145deg, #fff8f2, #fff1e6);
+  color: var(--uaf-orange-strong);
+  box-shadow: inset 0 0 24px rgba(232, 121, 36, 0.07);
+}
+
+:root[data-theme='light'] .entity360-action,
+:root[data-theme='light'] .entity360-score,
+:root[data-theme='light'] .entity360-finding[data-empty='true'] {
+  background: var(--bg-panel-2);
+}
+
+:root[data-theme='light'] .entity360-tabs {
+  background: var(--bg-panel);
+}
+
+:root[data-theme='light'] .entity360-tabs button:hover {
+  background: var(--uaf-orange-soft);
+}
+
+:root[data-theme='light'] .entity360-card {
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+:root[data-theme='light'] .entity360-kv dt,
+:root[data-theme='light'] .entity360-kv dd {
+  border-bottom-color: var(--line-soft);
+}
+
+:root[data-theme='light'] .entity360-bars-grid {
+  background: repeating-linear-gradient(to top, var(--line-soft) 0 1px, transparent 1px 34px);
+  border-bottom-color: var(--line);
+}
+
+/* Territory narrative — neutral light surfaces with restrained orange focus. */
+:root[data-theme='light'] .territory-commune-workspace.tcw2 {
+  --tcw2-panel: var(--bg-panel);
+  --tcw2-soft: var(--bg-panel-2);
+  --tcw2-deep: #fafaf9;
+  --tcw2-line: var(--line);
+  --tcw2-line-soft: var(--line-soft);
+  --tcw2-orange: var(--accent);
+}
+
+:root[data-theme='light'] .tcw2-hero {
+  background:
+    radial-gradient(circle at 83% 0%, rgba(232, 121, 36, 0.08), transparent 27%),
+    linear-gradient(180deg, #ffffff, #fafaf9);
+  box-shadow: var(--shadow-panel);
+}
+
+:root[data-theme='light'] .tcw2-meta span,
+:root[data-theme='light'] .tcw2-hero-kpi,
+:root[data-theme='light'] .tcw2-layer-detail {
+  background: var(--bg-panel-2);
+}
+
+/* Shared focus treatment: color only, preserving every component's geometry. */
+:root[data-theme='light'] button:focus-visible,
+:root[data-theme='light'] input:focus-visible,
+:root[data-theme='light'] select:focus-visible,
+:root[data-theme='light'] textarea:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-glow), inset 0 0 0 1px var(--accent) !important;
+}
