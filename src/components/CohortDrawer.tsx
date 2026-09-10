@@ -14,7 +14,7 @@ export interface CohortRequest {
   hint?: string;
 }
 
-const PAGE = 40;
+const PAGE = 80;
 
 /* LA FICHA DEL SUJETO
    ───────────────────
@@ -255,6 +255,14 @@ export function CohortDrawer({
             />
           ) : (
             <>
+              <div className="subject-columns" aria-hidden="true">
+                <span className="subject-columns-main">
+                  <span>Entidad · identificación · ubicación</span>
+                  <span>Marcas</span>
+                </span>
+                <span>IPF</span>
+                <span />
+              </div>
               <div className="rows">
                 {visibles.map((s) => (
                   <SubjectRow
