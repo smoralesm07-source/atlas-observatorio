@@ -4,6 +4,7 @@ import { Columns } from '../../components/charts';
 import { Empty, Panel } from '../../components/primitives';
 import { n, n1, titleCase } from '../../lib/format';
 import type { CohortRequest } from '../../components/CohortDrawer';
+import '../../styles/pulso-analysis-compact.css';
 
 const SERIES: { key: string; label: string; unit: string; lede: string; accent: string }[] = [
   { key: 'ros_recibidos', label: 'ROS', unit: 'reportes de operación sospechosa',
@@ -55,18 +56,18 @@ export function LenteReportabilidad({ data }: { data: UafPulse; onCohort: (req: 
         </div>
       }
     >
-      <p style={{ margin: '0 0 4px', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.55, maxWidth: '72ch' }}>
+      <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--ink-2)', lineHeight: 1.45, maxWidth: '68ch' }}>
         {serieActiva.lede}
       </p>
       {chartData.length ? (
         <>
-          <Columns accent={serieActiva.accent} data={chartData} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
-            <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
+          <Columns accent={serieActiva.accent} data={chartData} height={156} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+            <span style={{ fontSize: 9.8, color: 'var(--ink-4)' }}>
               {serieActiva.unit} · corte {serieDatos?.corte ?? '—'}
             </span>
             {sourceHref && (
-              <a className="ev-link" style={{ marginTop: 0, fontSize: 11.5 }}
+              <a className="ev-link" style={{ marginTop: 0, fontSize: 9.8 }}
                 href={sourceHref} target="_blank" rel="noreferrer">
                 {sourceLabel} →
               </a>
@@ -97,7 +98,7 @@ export function QuienSostieneReportabilidad({
     return <Empty title="Sin corte de reportabilidad publicado" />;
   }
 
-  const visible = compact ? 10 : 14;
+  const visible = compact ? 8 : 14;
 
   return (
     <Panel
