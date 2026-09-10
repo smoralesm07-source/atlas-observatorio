@@ -1,0 +1,5 @@
+insert into public.aml_fintech_market_metric_catalog(metric_code,label,dimension,unit_kind,default_unit,default_currency,comparable_scope,higher_means_more_weight,description,sort_order)
+values
+('FINANCIAL_INSTITUTIONS_AVAILABLE_COUNT','Instituciones financieras disponibles','REACH','COUNT','institutions',null,'SAME_METRIC',true,'Cantidad de instituciones financieras o medios institucionales documentados como disponibles dentro de un producto. No implica contrato bilateral ni conexión API exclusiva.',62),
+('TRANSACTIONS_DAILY_COUNT','Operaciones diarias declaradas','BUSINESS_ACTIVITY','COUNT','transactions',null,'SAME_METRIC',true,'Cantidad diaria de transacciones declarada por la entidad. No se anualiza ni mensualiza automáticamente.',22)
+on conflict(metric_code) do update set label=excluded.label,dimension=excluded.dimension,unit_kind=excluded.unit_kind,default_unit=excluded.default_unit,default_currency=excluded.default_currency,comparable_scope=excluded.comparable_scope,higher_means_more_weight=excluded.higher_means_more_weight,description=excluded.description,sort_order=excluded.sort_order;
