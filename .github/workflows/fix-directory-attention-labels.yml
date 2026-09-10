@@ -1,0 +1,91 @@
+name: Fix directory attention labels
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-directory-attention-labels.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Replace generic revision label
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/SubjectDirectory.tsx')
+          s = p.read_text(encoding='utf-8')
+          old = '''      {row.attention_motive && <span className="subject-directory-signal" data-kind="attention">Revisión</span>}'''
+          new = '''      {row.attention_motive && (
+        <span
+          className="subject-directory-signal"
+          data-kind={attentionKind(row.attention_motive)}
+          title={`Motivo de atención: ${attentionLabel(row.attention_motive)}`}
+        >
+          {attentionLabel(row.attention_motive)}
+        </span>
+      )}'''
+          if old not in s:
+              raise SystemExit('Generic Revisión mark not found; refusing an ambiguous patch')
+          s = s.replace(old, new, 1)
+          anchor = '''function PotentialSignals({ row }: { row: PotentialDirectoryRow }) {'''
+          helper = '''function attentionLabel(motive: string) {
+  const labels: Record<string, string> = {
+    GIRO_ATIPICO: 'Giro atípico',
+    TERMINO_GIRO: 'Término de giro',
+    IPF_ALTA: 'IPF alto',
+    SANCION_HISTORICA: 'Sanción histórica',
+    SANCION_RECIENTE: 'Sanción reciente',
+    SECTOR_SIN_ROS: 'Sector sin ROS',
+    SIN_TERRITORIO: 'Sin territorio',
+  };
+  return labels[motive] ?? titleCase(motive.replace(/_/g, ' '));
+}
+
+function attentionKind(motive: string) {
+  if (motive === 'TERMINO_GIRO' || motive === 'SANCION_RECIENTE') return 'attention-high';
+  if (motive === 'SANCION_HISTORICA' || motive === 'IPF_ALTA') return 'attention-medium';
+  if (motive === 'GIRO_ATIPICO' || motive === 'SECTOR_SIN_ROS') return 'attention-watch';
+  return 'attention';
+}
+
+'''
+          if anchor not in s:
+              raise SystemExit('PotentialSignals anchor not found')
+          s = s.replace(anchor, helper + anchor, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Add motive-specific tones
+        run: |
+          cat >> src/styles/subject-directory.css <<'CSS'
+
+/* Motivos de atención explícitos: la etiqueta explica por qué la entidad
+   aparece priorizada. El color refuerza severidad, nunca sustituye el texto. */
+.subject-directory-signal[data-kind='attention-high'] {
+  color: var(--sig-high);
+  border-color: color-mix(in srgb, var(--sig-high) 32%, var(--line));
+}
+.subject-directory-signal[data-kind='attention-medium'] {
+  color: var(--sig-medium);
+  border-color: color-mix(in srgb, var(--sig-medium) 30%, var(--line));
+}
+.subject-directory-signal[data-kind='attention-watch'] {
+  color: var(--sig-watch);
+  border-color: color-mix(in srgb, var(--sig-watch) 28%, var(--line));
+}
+CSS
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/SubjectDirectory.tsx src/styles/subject-directory.css
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: show explicit Universo SO review motives'
+          git push
