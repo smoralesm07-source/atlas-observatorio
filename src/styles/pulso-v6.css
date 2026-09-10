@@ -239,3 +239,145 @@
   .p6-kpis, .p6-row-one, .p6-row-two, .p6-crosscuts { grid-template-columns: 1fr; }
   .p6-row-two > .pulse-updates-compact { grid-column: auto; }
 }
+
+/* --------------------------------------------------------------------------
+   Pulso · escala tipográfica homologada al Directorio de sujetos obligados
+   --------------------------------------------------------------------------
+   La tabla de Directorio mantiene sus estilos originales y actúa como patrón.
+   Se normaliza el resto de Pulso en una escala 9.3 / 9.6 / 10.1 / 11 / 11.6,
+   reservando 20 px para métricas y 22 px para el título de la vista.
+   No se alteran retícula, alturas ni proporciones de los elementos.
+   -------------------------------------------------------------------------- */
+
+.pulse-v6 .p6-kicker {
+  font-size: 9.6px;
+}
+
+.pulse-v6 .p6-head p {
+  font-size: 11.5px;
+}
+
+.pulse-v6 .p6-meta span {
+  font-size: 10.1px;
+}
+
+.pulse-v6 .p6-kpi-label {
+  font-size: 10.1px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-kpi-value {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.pulse-v6 .p6-kpi-share {
+  font-size: 10.1px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-kpi-foot {
+  font-size: 9.3px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-panel-head h3,
+.pulse-v6 .pulse-updates-compact > .panel > .panel-head h3 {
+  font-size: 11.6px;
+  line-height: 1.2;
+  font-weight: 650;
+}
+
+.pulse-v6 .p6-panel-head button {
+  font-size: 9.6px;
+  line-height: 1.1;
+}
+
+.pulse-v6 .p6-insight b {
+  font-size: 11.6px;
+  line-height: 1.25;
+}
+
+.pulse-v6 .p6-insight p {
+  font-size: 10.1px;
+  line-height: 1.38;
+}
+
+.pulse-v6 .p6-insight button {
+  font-size: 9.6px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-status-total {
+  font-size: 13px;
+}
+
+.pulse-v6 .p6-status-legend button {
+  font-size: 10.1px;
+  line-height: 1.25;
+}
+
+.pulse-v6 .p6-rank-name,
+.pulse-v6 .p6-row-two .p6-rank-name {
+  font-size: 10.1px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-rank-value {
+  font-size: 10.1px;
+  line-height: 1;
+}
+
+.pulse-v6 .p6-note {
+  font-size: 9.6px;
+  line-height: 1.35;
+}
+
+.pulse-v6 .p6-trend text {
+  font-size: 9.6px;
+}
+
+.pulse-v6 .p6-trend .p6-year {
+  font-size: 9.3px;
+}
+
+.pulse-v6 .p6-crosscut span {
+  font-size: 10.3px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-crosscut small {
+  font-size: 9.3px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .p6-crosscut b {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.pulse-v6 .pulse-updates-compact .pulse-updates-live {
+  font-size: 9.3px;
+}
+
+.pulse-v6 .pulse-updates-compact .pulse-update-priority,
+.pulse-v6 .pulse-updates-compact .pulse-update-kind,
+.pulse-v6 .pulse-updates-compact .pulse-update time {
+  font-size: 9.3px;
+  line-height: 1.1;
+}
+
+.pulse-v6 .pulse-updates-compact .pulse-update h4 {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.pulse-v6 .pulse-updates-compact .pulse-update-foot,
+.pulse-v6 .pulse-updates-compact .pulse-updates-caption {
+  font-size: 9.3px;
+  line-height: 1.2;
+}
+
+.pulse-v6 .pulse-updates-compact .pulse-updates-state {
+  font-size: 10.1px;
+}
