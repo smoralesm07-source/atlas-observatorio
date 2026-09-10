@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import type { TerritoryCommune, TerritoryDetail, TerritoryMap } from '../lib/contracts';
 import { Bars, Meter, OrderedDistribution } from '../components/charts';
-import { Badge, Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
+import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
 import { ChileMap } from '../components/ChileMap';
+import { TerritoryEntityDirectory } from '../components/TerritoryEntityDirectory';
 import { pressForCommune, type PressCommuneResult } from '../lib/press';
-import { hrefFor } from '../lib/router';
-import { n, n1, rutFormat, titleCase } from '../lib/format';
+import { n, n1, titleCase } from '../lib/format';
 
 /** Paso de la rampa secuencial por nivel. El nombre del nivel acompaña siempre
  *  al color, porque los pasos bajos no alcanzan 3:1 contra la superficie. */
@@ -536,37 +536,15 @@ function ComunaDetalle({
         <div style={{ marginTop: 16 }}>
           <Panel
             title={`Entidades domiciliadas · ${data.entidades.length}`}
-            meta="orden por prioridad analítica"
+            meta="marcas propias de entidad · separadas del IGR"
             pad={false}
           >
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Entidad</th><th>RUT</th><th>Sector UAF</th>
-                  <th className="right">Prioridad</th><th className="right">Fuentes</th>
-                  <th className="right">Señales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.entidades.map((e) => (
-                  <tr
-                    key={e.entity_id}
-                    onClick={() => onNavigate(hrefFor({ view: 'ficha', entityId: e.entity_id }))}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td style={{ fontWeight: 600 }}>
-                      {titleCase(e.name)}
-                      {e.is_sanctioned && <Badge tone="critical" dot>Sancionada</Badge>}
-                    </td>
-                    <td className="mono">{e.rut ? rutFormat(e.rut) : 'sin RUT'}</td>
-                    <td style={{ color: 'var(--ink-3)' }}>{e.uaf_sector ? titleCase(e.uaf_sector) : '—'}</td>
-                    <td className="right num">{n1(e.ipa3_score)}</td>
-                    <td className="right num">{n(e.source_count)}</td>
-                    <td className="right num">{n(e.alert_count)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TerritoryEntityDirectory
+              rows={data.entidades}
+              region={t.region_name}
+              commune={t.commune_name}
+              onNavigate={onNavigate}
+            />
           </Panel>
         </div>
       )}
