@@ -1,0 +1,6 @@
+insert into public.aml_fintech_market_metric_catalog(metric_code,label,dimension,unit_kind,default_unit,default_currency,comparable_scope,higher_means_more_weight,description,sort_order)
+values
+('FINANCIAL_INSTITUTIONS_CONNECTED_COUNT','Instituciones financieras conectadas','REACH','COUNT','institutions',null,'SAME_METRIC',true,'Número observable de bancos u otras instituciones financieras accesibles o conectadas a la infraestructura.',63),
+('DATA_SOURCES_CONNECTED_COUNT','Fuentes de datos conectadas','REACH','COUNT','sources',null,'SAME_METRIC',true,'Número observable de fuentes bancarias, financieras, tributarias u otras fuentes de datos accesibles a través de la infraestructura.',64),
+('PROCESSED_VOLUME_PERIOD_USD','Volumen procesado en período','BUSINESS_ACTIVITY','CURRENCY','USD','USD','SAME_METRIC',true,'Volumen monetario procesado o automatizado durante un período explícitamente delimitado. Debe conservar period_start y period_end y no compararse con métricas anuales o acumuladas.',35)
+on conflict(metric_code) do update set label=excluded.label,dimension=excluded.dimension,unit_kind=excluded.unit_kind,default_unit=excluded.default_unit,default_currency=excluded.default_currency,comparable_scope=excluded.comparable_scope,higher_means_more_weight=excluded.higher_means_more_weight,description=excluded.description,sort_order=excluded.sort_order;
