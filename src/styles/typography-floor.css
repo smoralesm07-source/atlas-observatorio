@@ -1,0 +1,234 @@
+/* ATLAS Observatorio · app-wide readability floor
+   Reference: Fuentes uses 10.5 px for its smallest functional labels/badges and
+   11.5 px for supporting metadata. The runtime enhancer adds .atlas-text-floor
+   only to rendered text that would otherwise fall below that benchmark.
+
+   This stylesheet also gives the densest workspaces a little more vertical
+   room so the larger text wraps or grows safely instead of escaping cards. */
+
+:root {
+  --atlas-text-floor: 10.5px;
+  --atlas-text-support: 11.5px;
+}
+
+.atlas-text-floor {
+  font-size: var(--atlas-text-floor) !important;
+}
+
+.main .atlas-text-floor {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Fintech · most compressed workspace                                         */
+/* -------------------------------------------------------------------------- */
+.fintech-cohort-grid > button {
+  min-height: 118px;
+}
+.fintech-cohort-grid span {
+  min-height: 30px;
+}
+.fintech-market-stat-grid > div {
+  min-height: 62px;
+}
+.fintech-market-leader-list > button {
+  min-height: 54px;
+}
+.fintech-market-method {
+  align-items: start;
+}
+.fintech-market-method p,
+.fintech-context-note,
+.fintech-chart-note,
+.fintech-boundary,
+.fintech-detail-footer > span,
+.fintech-entity-market-card > p {
+  overflow-wrap: anywhere;
+}
+.fintech-market-method p,
+.fintech-entity-market-card > p {
+  line-height: 1.45;
+}
+.fintech-entity-market-metrics > div {
+  min-height: 46px;
+}
+.fintech-source-row {
+  min-height: 38px;
+}
+.fintech-segment-row {
+  min-height: 32px;
+}
+.fintech-bars-list button,
+.fintech-coverage-list > div {
+  min-height: 25px;
+}
+.fintech-tr {
+  min-height: 42px;
+}
+.fintech-th {
+  min-height: 35px;
+}
+.fintech-detail-grid > div {
+  min-height: 58px;
+}
+.fintech-detail-panel {
+  min-height: 440px;
+}
+.fintech-tabs {
+  min-height: 36px;
+  height: auto;
+}
+.fintech-tabs button {
+  min-height: 35px;
+  height: auto;
+}
+.fintech-tab-body {
+  max-height: 230px;
+}
+.fintech-detail-footer {
+  align-items: flex-start;
+}
+
+/* Dense grid text should truncate where the component is explicitly a one-line
+   directory, and wrap where it is explanatory prose. */
+.fintech-source-row > span,
+.fintech-tr > span,
+.fintech-bars-list button > span,
+.fintech-coverage-list span,
+.fintech-market-leader-list .entity {
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Universo SO · keep compact analytical density without microtype             */
+/* -------------------------------------------------------------------------- */
+.uso2-kpi {
+  min-height: 70px;
+}
+.uso2-section-head {
+  min-height: 44px;
+}
+.uso2-section-head p {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.uso2-section-head .seg button,
+.uso2 .seg.seg-sm button {
+  min-height: 28px;
+}
+.uso2-rank {
+  min-height: 28px;
+}
+.uso2-mark {
+  min-height: 80px;
+}
+.uso2-questions button {
+  min-height: 30px;
+}
+.uso2-edge-row {
+  min-height: 34px;
+}
+.uso2-gap-row {
+  min-height: 30px;
+}
+.uso2-trend-row {
+  min-height: 50px;
+}
+.uso2-edge-note,
+.uso2-section-head p,
+.uso2-mark em,
+.uso2-trend-name span {
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Entidad 360 · prevent compact evidence cells from clipping                  */
+/* -------------------------------------------------------------------------- */
+.entity360-registry {
+  min-height: 72px;
+}
+.entity360-timeline-rail {
+  min-height: 128px;
+}
+.entity360-source {
+  min-height: 58px;
+}
+.entity360-purchase-facts > div {
+  min-height: 58px;
+}
+.entity360-card-message {
+  min-height: 98px;
+}
+.entity360-registry span,
+.entity360-registry strong,
+.entity360-registry small,
+.entity360-semantics,
+.entity360-card-footnote,
+.entity360-chart-note {
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------------------- */
+/* OSFL / Sanciones / Territorio / shared directories                         */
+/* -------------------------------------------------------------------------- */
+.osfl-table tr,
+.san-event,
+.subject-directory-table tr,
+.tcw2-directory-table tr {
+  min-height: 34px;
+}
+
+.osfl-filter select,
+.fintech-select select,
+.san-filter select,
+.main input,
+.main textarea,
+.main select,
+.main button {
+  text-rendering: optimizeLegibility;
+}
+
+/* Any analytical surface may grow with its content. min-width:0 is the key
+   protection against a larger label forcing the whole dashboard wider. */
+.main :is(
+  .panel,
+  .fintech-section,
+  .fintech-source-card,
+  .fintech-segment-card,
+  .fintech-chart-card,
+  .fintech-results-panel,
+  .fintech-detail-panel,
+  .osfl-section,
+  .entity360-card,
+  .uso2-section,
+  .san-panel,
+  .subject-directory,
+  .territory-commune-workspace
+) {
+  min-width: 0;
+}
+
+/* Long prose can wrap, but table/directory identifiers keep their existing
+   ellipsis behaviour. */
+.main :is(
+  .semantics,
+  .entity360-semantics,
+  .san-method-note,
+  .fintech-boundary,
+  .fintech-market-method,
+  .osfl-chart-note,
+  .tcw2-semantic
+) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+  .fintech-market-leader-list > button {
+    min-height: 58px;
+  }
+  .uso2-section-head p {
+    max-width: none;
+  }
+}
