@@ -1,0 +1,222 @@
+/* ATLAS Observatorio · Fintech light theme contrast v2
+   Color-only layer. Keeps the dark theme untouched and removes dark-first
+   surfaces that remained inside the Fintech market/cohort components. */
+
+:root[data-theme='light'] .fintech-page {
+  --fin-orange: var(--accent);
+  --fin-orange-soft: var(--uaf-orange-soft);
+  --fin-blue: #2f6fae;
+  --fin-blue-soft: #eaf2f9;
+  --fin-sky: #5d91bf;
+  --fin-teal: #1f8f78;
+  --fin-muted: #65717c;
+  --fin-panel: var(--bg-panel);
+  --fin-panel-2: var(--bg-panel-2);
+  --fin-line: var(--line);
+  --fin-line-soft: var(--line-soft);
+}
+
+/* Main Fintech surfaces */
+:root[data-theme='light'] .fintech-section,
+:root[data-theme='light'] .fintech-hero-card,
+:root[data-theme='light'] .fintech-alert-card,
+:root[data-theme='light'] .fintech-cross-card,
+:root[data-theme='light'] .fintech-source-card,
+:root[data-theme='light'] .fintech-segment-card,
+:root[data-theme='light'] .fintech-chart-card,
+:root[data-theme='light'] .fintech-results-panel,
+:root[data-theme='light'] .fintech-detail-panel,
+:root[data-theme='light'] .fintech-events-card,
+:root[data-theme='light'] .fintech-insight-card,
+:root[data-theme='light'] .fintech-model-mini,
+:root[data-theme='light'] .fintech-head-meta > span,
+:root[data-theme='light'] .fintech-head-meta > button {
+  background: var(--bg-panel) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+:root[data-theme='light'] .fintech-section {
+  box-shadow: var(--shadow-panel) !important;
+}
+
+:root[data-theme='light'] .fintech-cross-title,
+:root[data-theme='light'] .fintech-cross-card button,
+:root[data-theme='light'] .fintech-source-row,
+:root[data-theme='light'] .fintech-section-head {
+  border-color: var(--line-soft) !important;
+}
+
+:root[data-theme='light'] .fintech-cross-card button:hover,
+:root[data-theme='light'] .fintech-source-row[data-filterable='true']:hover,
+:root[data-theme='light'] .fintech-source-row[data-active='true'] {
+  background: var(--uaf-orange-soft) !important;
+}
+
+/* Cohort cards: previously hard-coded dark gradients. */
+:root[data-theme='light'] .fintech-cohort-grid > button {
+  background: var(--bg-panel) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 1px 2px rgba(38, 40, 43, .04);
+}
+
+:root[data-theme='light'] .fintech-cohort-grid > button:hover {
+  background: #fff8f2 !important;
+  border-color: var(--uaf-orange-line) !important;
+}
+
+:root[data-theme='light'] .fintech-cohort-grid > button[data-active='true'] {
+  background: var(--uaf-orange-soft) !important;
+  border-color: var(--accent) !important;
+  box-shadow: inset 0 3px 0 var(--accent), 0 1px 2px rgba(38, 40, 43, .05) !important;
+}
+
+:root[data-theme='light'] .fintech-cohort-grid span {
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .fintech-cohort-grid strong {
+  color: var(--uaf-info) !important;
+}
+
+:root[data-theme='light'] .fintech-cohort-grid small,
+:root[data-theme='light'] .fintech-cohort-grid em {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .fintech-cohort-grid .coverage,
+:root[data-theme='light'] .fintech-market-stat-grid i {
+  background: #e3e9ee !important;
+}
+
+/* Active cohort summary and leader panel. */
+:root[data-theme='light'] .fintech-market-summary,
+:root[data-theme='light'] .fintech-market-leaders {
+  background: var(--bg-panel) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 1px 2px rgba(38, 40, 43, .04);
+}
+
+:root[data-theme='light'] .fintech-market-summary-head h3,
+:root[data-theme='light'] .fintech-market-leaders-head b,
+:root[data-theme='light'] .fintech-market-leader-list .metric b,
+:root[data-theme='light'] .fintech-market-leader-list .entity {
+  color: var(--ink) !important;
+}
+
+:root[data-theme='light'] .fintech-market-summary-head span,
+:root[data-theme='light'] .fintech-market-method > span {
+  color: var(--accent-dim) !important;
+}
+
+:root[data-theme='light'] .fintech-market-summary-head > b,
+:root[data-theme='light'] .fintech-market-leader-list strong {
+  color: var(--uaf-info) !important;
+}
+
+:root[data-theme='light'] .fintech-market-stat-grid > div {
+  background: var(--bg-panel-2) !important;
+  border-color: var(--line) !important;
+}
+
+:root[data-theme='light'] .fintech-market-stat-grid span,
+:root[data-theme='light'] .fintech-market-stat-grid b small,
+:root[data-theme='light'] .fintech-market-stat-grid > div > small,
+:root[data-theme='light'] .fintech-market-leaders-head span,
+:root[data-theme='light'] .fintech-market-leaders-head > small,
+:root[data-theme='light'] .fintech-market-leader-list .metric small,
+:root[data-theme='light'] .fintech-market-method p,
+:root[data-theme='light'] .fintech-market-method small {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .fintech-market-stat-grid b,
+:root[data-theme='light'] .fintech-market-signal-row b {
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .fintech-market-signal-row span {
+  background: var(--bg-panel-2) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .fintech-market-leaders-head,
+:root[data-theme='light'] .fintech-market-leader-list > button {
+  border-color: var(--line) !important;
+}
+
+:root[data-theme='light'] .fintech-market-leader-list > button:hover {
+  background: var(--uaf-orange-soft) !important;
+}
+
+:root[data-theme='light'] .fintech-market-leader-list em {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .fintech-market-leader-list em[data-comparable='true'] {
+  color: #1f7a57 !important;
+}
+
+/* Entity 360 Fintech market position card. */
+:root[data-theme='light'] .fintech-entity-market-card {
+  background: var(--bg-panel) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 1px 2px rgba(38, 40, 43, .04);
+}
+
+:root[data-theme='light'] .fintech-entity-market-head,
+:root[data-theme='light'] .fintech-entity-market-metrics > div,
+:root[data-theme='light'] .fintech-entity-market-card > p {
+  border-color: var(--line) !important;
+}
+
+:root[data-theme='light'] .fintech-entity-market-head span {
+  color: var(--accent-dim) !important;
+}
+
+:root[data-theme='light'] .fintech-entity-market-head b,
+:root[data-theme='light'] .fintech-entity-market-metrics span b {
+  color: var(--ink) !important;
+}
+
+:root[data-theme='light'] .fintech-entity-market-head > small,
+:root[data-theme='light'] .fintech-entity-market-metrics span small,
+:root[data-theme='light'] .fintech-entity-market-card > p {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .fintech-entity-market-metrics strong {
+  color: var(--uaf-info) !important;
+}
+
+:root[data-theme='light'] .fintech-entity-market-metrics em {
+  color: var(--ink-3) !important;
+}
+
+:root[data-theme='light'] .fintech-entity-market-metrics em[data-comparable='true'] {
+  color: #1f7a57 !important;
+}
+
+/* Remaining hard-coded dark progress surfaces. */
+:root[data-theme='light'] .fintech-progress,
+:root[data-theme='light'] .fintech-segment-row > div,
+:root[data-theme='light'] .fintech-bars-list button > i,
+:root[data-theme='light'] .fintech-coverage-list > div > i,
+:root[data-theme='light'] .fintech-operating-list em {
+  background: #e3e9ee !important;
+}
+
+:root[data-theme='light'] .fintech-kind-row span {
+  background: var(--bg-panel-2) !important;
+  border-color: var(--line) !important;
+  color: var(--ink-2) !important;
+}
+
+:root[data-theme='light'] .fintech-donut::after {
+  background: var(--bg-panel) !important;
+  box-shadow: 0 0 0 1px var(--line) !important;
+}
