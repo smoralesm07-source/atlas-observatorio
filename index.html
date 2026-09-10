@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="atlas-build" content="2026-09-10-cohort-overlay-v2" />
+    <meta name="atlas-build" content="2026-09-10-pulso-priority-balance-v1" />
     <meta name="description" content="ATLAS Observatorio · monitor de fuentes abiertas para analisis de entidades" />
     <title>ATLAS Observatorio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,6 +17,183 @@
       rel="stylesheet"
     />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%232dd4a7' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%232dd4a7'/%3E%3C/svg%3E" />
+    <style id="pulse-layout-tuning">
+      /* Pulso · rebalanceo vertical de escritorio.
+         Comprime la franja superior y entrega más aire al bloque analítico,
+         con especial protagonismo para Novedades prioritarias. */
+      @media (min-width: 1181px) {
+        body .pulse-v4 .kpi-row {
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        body .pulse-v4 .kpi {
+          min-height: 68px;
+          padding: 7px 10px 7px 12px;
+        }
+
+        body .pulse-v4 .kpi-glyph {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+        }
+
+        body .pulse-v4 .kpi-value {
+          margin-top: 2px;
+          padding-left: 31px;
+          font-size: 19px;
+        }
+
+        body .pulse-v4 .kpi-share {
+          margin-top: 1px;
+          padding-left: 31px;
+          font-size: 9px;
+        }
+
+        body .pulse-v4 .kpi-foot {
+          margin-top: 0;
+          padding-left: 31px;
+          font-size: 8.2px;
+          line-height: 1.22;
+        }
+
+        body .pulse-v4 .pulse-briefing-top > .pulse-mini-panel,
+        body .pulse-v4 .pulse-briefing-insight {
+          min-height: 160px;
+        }
+
+        body .pulse-v4 .pulse-briefing-insight .pulse-summary-item,
+        body .pulse-v4 .pulse-briefing-insight .pulse-mini-empty {
+          min-height: 160px;
+        }
+
+        body .pulse-v4 .pulse-briefing-insight .pulse-summary-item {
+          padding: 13px 18px;
+          row-gap: 5px;
+        }
+
+        body .pulse-v4 .pulse-briefing-insight .pulse-summary-figure {
+          font-size: clamp(26px, 2vw, 34px);
+        }
+
+        body .pulse-v4 .pulse-briefing-insight .pulse-summary-title {
+          font-size: 11.1px;
+        }
+
+        body .pulse-v4 .pulse-briefing-insight .pulse-summary-copy {
+          font-size: 9.2px;
+          line-height: 1.38;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-mini-body {
+          padding: 7px 10px 8px;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-status-total {
+          margin-bottom: 5px;
+          font-size: 12px;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-status-track {
+          height: 24px;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-status-legend {
+          gap: 4px;
+          margin-top: 8px;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-rank-list {
+          gap: 3px;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-rank-row {
+          padding: 1px 0;
+        }
+
+        body .pulse-v4 .pulse-briefing-top .pulse-mini-note {
+          margin-top: 2px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three {
+          grid-template-columns: minmax(0, .80fr) minmax(0, .88fr) minmax(0, 1.32fr);
+          gap: 8px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three > .pulse-mini-panel,
+        body .pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact,
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-mini-panel {
+          min-height: 252px;
+          height: 252px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-trend-svg {
+          height: 176px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-rank-list {
+          gap: 8px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-rank-row {
+          grid-template-columns: minmax(105px, .95fr) minmax(58px, .95fr) 40px;
+          gap: 7px;
+          padding: 5px 0;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-rank-name {
+          font-size: 9.3px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-rank-track {
+          height: 10px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-updates-shell {
+          min-height: 216px;
+          height: 216px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-updates-list {
+          max-height: 184px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-update {
+          grid-template-columns: 14px minmax(0, 1fr);
+          padding: 9px 10px 8px 7px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-update-kind {
+          min-height: 15px;
+          padding: 0 5px;
+          font-size: 7.1px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-update time {
+          font-size: 7.3px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-update h4 {
+          margin-top: 4px;
+          font-size: 9.5px;
+          line-height: 1.25;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-update-foot {
+          margin-top: 3px;
+          font-size: 7.4px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-updates-caption {
+          padding: 6px 10px;
+          font-size: 7px;
+        }
+
+        body .pulse-v4 .pulse-briefing-bottom-three .pulse-updates-live {
+          font-size: 8px;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
