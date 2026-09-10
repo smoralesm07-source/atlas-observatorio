@@ -17,6 +17,7 @@ import { Territorio } from './views/Territorio';
 import { GastoPublico } from './views/GastoPublico';
 import { Metodologia } from './views/Metodologia';
 import { Administracion } from './views/Administracion';
+import './styles/territory-commune-typography.css';
 
 export default function App() {
   return <AuthGate>{(session, role) => <Routed session={session} role={role} />}</AuthGate>;
