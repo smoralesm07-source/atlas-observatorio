@@ -73,6 +73,7 @@ export function Entity360StatusMarks({ entityId }: { entityId: string }) {
       {manageableQueue && (
         <button
           className="entity360-manage-case"
+          aria-label="Gestionar entidad en la mesa de casos"
           onClick={() => { window.location.hash = `#/universo-so?vista=casos&cola=${manageableQueue}&q=${encodeURIComponent(data.rut ?? entityId)}`; }}
           title={manageableQueue === 'termino' ? 'Abrir este universo en la mesa de casos' : 'Abrir potenciales SO en la mesa de casos'}
         >
