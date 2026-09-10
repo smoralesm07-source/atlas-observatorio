@@ -12,6 +12,7 @@ import './styles/fintech-entity-market-position.css';
 import './styles/fintech-accessibility.css';
 import './styles/fintech-ui-cleanup.css';
 import './styles/territorio-map.css';
+import './styles/territory-commune-compact.css';
 import './styles/entity-expediente.css';
 import './styles/entity-expediente-typography.css';
 import './styles/entities-search.css';
