@@ -71,6 +71,12 @@ function formatDate(value: string | null) {
   }).format(date);
 }
 
+function providerLabel(provider: string | null) {
+  if (provider === 'azure') return 'Microsoft Entra';
+  if (provider === 'email') return 'Correo institucional';
+  return provider ?? 'Identidad verificada';
+}
+
 async function invokeAdmin(body: Record<string, unknown>): Promise<Snapshot> {
   const { data, error } = await supabase.functions.invoke<Snapshot | ApiFailure>('atlas-user-admin', { body });
 
@@ -155,7 +161,7 @@ export function Administracion({ session }: { session: Session }) {
           <div className="admin-kicker">Gobierno de acceso</div>
           <h1 className="view-title">Administración</h1>
           <p className="view-lede">
-            Microsoft Entra acredita la identidad. Desde aquí decides quién entra a ATLAS Observatorio,
+            Microsoft Entra o el correo institucional acreditan la identidad. Desde aquí decides quién entra a ATLAS Observatorio,
             con qué rol y desde cuándo. Cada cambio queda registrado.
           </p>
         </div>
@@ -172,9 +178,9 @@ export function Administracion({ session }: { session: Session }) {
       )}
 
       <div className="admin-metrics" aria-label="Resumen de accesos">
-        <Metric label="Identidades" value={users.length} foot="Cuentas que ya pasaron por Entra" />
+        <Metric label="Identidades" value={users.length} foot="Identidades verificadas o autorizadas" />
         <Metric label="Habilitados" value={enabled.length} foot="Con acceso vigente" />
-        <Metric label="Pendientes" value={pending.length} foot="Autenticados, aún sin habilitar" emphasis={pending.length > 0} />
+        <Metric label="Pendientes" value={pending.length} foot="Verificados, aún sin habilitar" emphasis={pending.length > 0} />
         <Metric label="Administradores" value={admins.length} foot="Con facultad para gestionar accesos" />
       </div>
 
@@ -182,7 +188,7 @@ export function Administracion({ session }: { session: Session }) {
         <div className="admin-section-head">
           <div>
             <h2 id="pending-title">Solicitudes pendientes</h2>
-            <p>Usuarios que ya se autenticaron con Microsoft pero todavía no están en la lista de habilitación.</p>
+            <p>Identidades verificadas por Microsoft o correo institucional que todavía no están en la lista de habilitación.</p>
           </div>
           <span className="admin-count">{pending.length}</span>
         </div>
@@ -201,7 +207,7 @@ export function Administracion({ session }: { session: Session }) {
                 <div className="admin-user-avatar">{user.email.slice(0, 1).toUpperCase()}</div>
                 <div className="admin-user-main">
                   <strong>{user.email || 'Cuenta sin correo'}</strong>
-                  <span>Primera identidad: {formatDate(user.created_at)}</span>
+                  <span>{providerLabel(user.provider)} · {formatDate(user.created_at)}</span>
                 </div>
                 <div className="admin-pending-actions">
                   <select
@@ -237,7 +243,7 @@ export function Administracion({ session }: { session: Session }) {
         <div className="admin-section-head admin-section-head-search">
           <div>
             <h2 id="users-title">Usuarios y permisos</h2>
-            <p>Cambiar el rol no modifica la identidad de Microsoft. Deshabilitar conserva el historial.</p>
+            <p>Cambiar el rol no modifica la identidad. Deshabilitar conserva el historial y la trazabilidad.</p>
           </div>
           <label className="admin-search">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -314,7 +320,7 @@ export function Administracion({ session }: { session: Session }) {
                       )}
                     </td>
                     <td className="admin-date">{formatDate(user.last_sign_in_at)}</td>
-                    <td><span className="admin-provider">{user.provider === 'azure' ? 'Microsoft Entra' : user.provider ?? 'Microsoft Entra'}</span></td>
+                    <td><span className="admin-provider">{providerLabel(user.provider)}</span></td>
                     <td className="admin-action-col">
                       {!access ? (
                         <button className="btn btn-primary admin-inline-btn" type="button" onClick={() => void mutate(user, { action: 'grant', role: 'viewer' })} disabled={isBusy}>
