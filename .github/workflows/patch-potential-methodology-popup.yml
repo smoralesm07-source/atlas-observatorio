@@ -1,0 +1,47 @@
+name: Aplicar ayuda Potenciales SO
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_potential_methodology_popup.py'
+      - '.github/workflows/patch-potential-methodology-popup.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar pop-up metodológico
+        run: python3 scripts/patch_potential_methodology_popup.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
+        run: npm run build
+      - name: Guardar cambio verificado
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/universo/CasosAxis.tsx src/styles/universo-so-management.css
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: ubica ayuda metodológica junto a Potenciales SO"
+            git push origin HEAD:main
+          fi
