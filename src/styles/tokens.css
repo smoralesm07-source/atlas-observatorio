@@ -76,44 +76,57 @@
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg-abyss: #eef1f6;
-  --bg-canvas: #f6f8fb;
-  --bg-panel: #ffffff;
-  --bg-panel-2: #f8fafc;
-  --bg-raised: #eef2f7;
-  --bg-input: #ffffff;
-  --line: #dde4ed;
-  --line-soft: #e8edf4;
-  --line-strong: #c3cedd;
-  --ink: #0d1724;
-  --ink-2: #43556c;
-  --ink-3: #64748b;
-  --ink-4: #94a3b8;
-  --sig-critical: #d61f45;
-  --sig-high: #c2620a;
-  --sig-medium: #9a6b00;
-  --sig-watch: #0a7ea4;
-  --sig-none: #7b8aa0;
-  --present: #0d8f6f;
-  --absent: #8494a8;
-  --unknown: #7c3aed;
-  --accent: #0d8f6f;
-  --accent-dim: #0a6e56;
-  --accent-glow: rgba(13, 143, 111, 0.12);
-  --class-producer: #0d8f6f;
-  --class-official: #0369a1;
-  --class-connector: #6d28d9;
-  --class-osint: #b45309;
-  --class-dataset: #be185d;
 
-  /* Pasos propios del tema claro: aquí la magnitud crece con la oscuridad. */
-  --igr-1: #eba98d;
-  --igr-2: #dd7f57;
-  --igr-3: #c85a30;
-  --igr-4: #a33d1a;
-  --igr-5: #732205;
-  --shadow-panel: 0 1px 2px rgba(15, 30, 50, 0.06), 0 8px 24px rgba(15, 30, 50, 0.07);
-  --shadow-pop: 0 16px 48px rgba(15, 30, 50, 0.18);
+  /* UAF light ground */
+  --bg-abyss: #eef1f3;
+  --bg-canvas: #f6f7f8;
+  --bg-panel: #ffffff;
+  --bg-panel-2: #f3f5f6;
+  --bg-raised: #e7ebef;
+  --bg-input: #ffffff;
+
+  /* UAF neutral lines */
+  --line: #d7dde3;
+  --line-soft: #e6eaed;
+  --line-strong: #c7ced6;
+
+  /* UAF graphite ink */
+  --ink: #26282b;
+  --ink-2: #4f5963;
+  --ink-3: #76808a;
+  --ink-4: #a6afb8;
+
+  /* Signal scale: semantic colours stay distinct from the UAF navigation accent. */
+  --sig-critical: #c94a3f;
+  --sig-high: #b95616;
+  --sig-medium: #d48a14;
+  --sig-watch: #2f6fae;
+  --sig-none: #8f99a3;
+
+  /* Semantic + UAF accent */
+  --present: #1f8f5f;
+  --absent: #929da7;
+  --unknown: #6d5aae;
+  --accent: #e87924;
+  --accent-dim: #d86b17;
+  --accent-glow: rgba(232, 121, 36, 0.16);
+
+  /* Source classes retain meaning but use a restrained light-mode scale. */
+  --class-producer: #1f8f5f;
+  --class-official: #2f6fae;
+  --class-connector: #6d5aae;
+  --class-osint: #d48a14;
+  --class-dataset: #a44f73;
+
+  /* IGR: sequential UAF-adjacent orange ramp; magnitude grows with darkness. */
+  --igr-1: #f3c39a;
+  --igr-2: #e79a61;
+  --igr-3: #d96f2f;
+  --igr-4: #b95616;
+  --igr-5: #7a3412;
+
+  --shadow-panel: 0 1px 2px rgba(38, 40, 43, 0.04), 0 8px 24px rgba(38, 40, 43, 0.07);
+  --shadow-pop: 0 16px 48px rgba(38, 40, 43, 0.16);
 }
 
 @media (prefers-reduced-motion: reduce) {
