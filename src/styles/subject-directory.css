@@ -257,6 +257,39 @@
 .subject-directory-signal[data-kind='attention'] { color: var(--sig-medium); border-color: color-mix(in srgb, var(--sig-medium) 28%, var(--line)); }
 .subject-directory-signal[data-kind='potential'] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 28%, var(--line)); }
 
+/* Light mode: analytical marks must read as alerts, not as faint outlines. */
+:root[data-theme='light'] .subject-directory-signal {
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(38, 40, 43, .08);
+}
+:root[data-theme='light'] .subject-directory-signal[data-kind='sanction'] {
+  color: #a93f18;
+  border-color: #d97345;
+  background: #ffe3d5;
+  box-shadow: 0 0 0 1px rgba(217, 115, 69, .10), 0 2px 6px rgba(169, 63, 24, .10);
+}
+:root[data-theme='light'] .subject-directory-signal[data-kind='attention'] {
+  color: #9a5d00;
+  border-color: #d9a63f;
+  background: #fff0c9;
+  box-shadow: 0 0 0 1px rgba(217, 166, 63, .10), 0 2px 6px rgba(154, 93, 0, .08);
+}
+:root[data-theme='light'] .subject-directory-signal[data-kind='press'] {
+  color: #245f98;
+  border-color: #6e9fcb;
+  background: #e6f0fa;
+}
+:root[data-theme='light'] .subject-directory-signal[data-kind='osfl'] {
+  color: #5e4596;
+  border-color: #9c87c8;
+  background: #f0ebfa;
+}
+:root[data-theme='light'] .subject-directory-signal[data-kind='potential'] {
+  color: #a94e12;
+  border-color: #e08a4d;
+  background: #fff0e3;
+}
+
 .subject-directory-score {
   text-align: right !important;
   font-family: var(--mono);
