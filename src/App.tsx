@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { AuthGate, type AtlasRole } from './components/Auth';
+import { AuthGate, type AtlasRole } from './components/OpenAuthGate';
 import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
 import { useRoute } from './lib/router';
