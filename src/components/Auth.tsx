@@ -18,6 +18,7 @@ type RequestState =
   | { state: 'error'; message: string };
 
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
+const EMAIL_FALLBACK_DOMAIN = 'uaf.gob.cl';
 
 function isTransportError(message: string) {
   return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(message);
@@ -31,6 +32,26 @@ function asAtlasRole(value: unknown): AtlasRole {
   return value === 'admin' || value === 'analyst' || value === 'viewer' ? value : 'viewer';
 }
 
+function normalizedEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function validInstitutionalEmail(value: string) {
+  const email = normalizedEmail(value);
+  const [local, domain, extra] = email.split('@');
+  return Boolean(local && domain === EMAIL_FALLBACK_DOMAIN && !extra);
+}
+
+function identityLabel(session: Session) {
+  const providers = Array.isArray(session.user.app_metadata?.providers)
+    ? session.user.app_metadata.providers.map(String)
+    : [];
+  const primary = String(session.user.app_metadata?.provider ?? '');
+  return primary === 'azure' || providers.includes('azure')
+    ? 'Microsoft Entra'
+    : 'Correo institucional verificado';
+}
+
 async function signInWithMicrosoft() {
   return (
     await supabase.auth.signInWithOAuth({
@@ -38,18 +59,12 @@ async function signInWithMicrosoft() {
       options: {
         scopes: 'email',
         redirectTo,
-        // El selector de cuenta se solicita únicamente cuando el usuario llega
-        // al flujo de login (primera entrada, sesión vencida o cierre explícito).
-        // Una sesión válida persistida nunca vuelve a pasar por este flujo.
         queryParams: { prompt: 'select_account' },
       },
     })
   ).error;
 }
 
-/** Microsoft Entra prueba identidad y aml_allowed_users decide autorización.
- *  La sesión se persiste en el navegador: recargar la página no debe volver a
- *  pedir una cuenta mientras esa sesión siga siendo válida. */
 export function AuthGate({ children }: { children: (session: Session, role: AtlasRole) => ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -77,8 +92,6 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
     };
   }, []);
 
-  // Una pérdida temporal de conectividad no debe dejar a un analista ya
-  // autenticado atrapado en error. RLS continúa siendo la autoridad.
   useEffect(() => {
     const retryWhenOnline = () => setValidationKey((value) => value + 1);
     window.addEventListener('online', retryWhenOnline);
@@ -114,8 +127,6 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
 
           if (!error) {
             if (!data) {
-              // La identidad fue autenticada pero aún no autorizada. La vista
-              // PendingAccess registrará una solicitud explícita en servidor.
               setAccess({ state: 'pending' });
             } else if (data.enabled) {
               setAccess({ state: 'granted', role: asAtlasRole(data.role) });
@@ -167,9 +178,6 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
     );
   }
 
-  // Sin sesión: recién aquí se ofrece iniciar con Microsoft. Como el OAuth
-  // usa prompt=select_account, después de cerrar sesión se puede escoger otra
-  // cuenta aunque Microsoft mantenga otras identidades abiertas en el navegador.
   if (!session) return <SignIn />;
 
   if (access.state === 'checking') {
@@ -202,23 +210,17 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
   }
 
   if (access.state === 'pending') {
-    return (
-      <PendingAccess
-        session={session}
-        onRecheck={() => setValidationKey((value) => value + 1)}
-      />
-    );
+    return <PendingAccess session={session} onRecheck={() => setValidationKey((value) => value + 1)} />;
   }
 
   if (access.state === 'disabled') {
     return (
       <Card title="Acceso deshabilitado">
         <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
-          Tu identidad Microsoft sigue siendo válida, pero el acceso a ATLAS Observatorio fue
-          deshabilitado por la administración.
+          Tu identidad sigue siendo válida, pero el acceso a ATLAS Observatorio fue deshabilitado por la administración.
         </p>
         <div className="note note-warn">
-          Cuenta: {session.user.email ?? 'Correo no informado por Microsoft'}
+          Cuenta: {session.user.email ?? 'Correo no informado'}
         </div>
         <button
           className="btn"
@@ -238,6 +240,7 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
 function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: () => void }) {
   const [request, setRequest] = useState<RequestState>({ state: 'saving' });
   const [retryKey, setRetryKey] = useState(0);
+  const identity = identityLabel(session);
 
   useEffect(() => {
     let live = true;
@@ -254,7 +257,17 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
       if (!live) return;
 
       if (error) {
-        setRequest({ state: 'error', message: error.message || 'No fue posible registrar la solicitud.' });
+        let message = error.message || 'No fue posible registrar la solicitud.';
+        const context = (error as { context?: unknown }).context;
+        if (context instanceof Response) {
+          try {
+            const payload = await context.clone().json() as { message?: string };
+            message = payload.message ?? message;
+          } catch {
+            // Conserva el mensaje de transporte.
+          }
+        }
+        setRequest({ state: 'error', message });
         return;
       }
 
@@ -282,12 +295,11 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
   return (
     <Card title={saved ? 'Solicitud de acceso registrada' : request.state === 'saving' ? 'Registrando solicitud…' : 'No fue posible registrar la solicitud'}>
       <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
-        Microsoft verificó correctamente tu identidad. ATLAS mantiene los datos cerrados hasta
-        que un administrador autorice esta cuenta.
+        Tu identidad fue verificada mediante {identity}. ATLAS mantiene los datos cerrados hasta que un administrador autorice esta cuenta.
       </p>
       <div className="note">
-        <strong style={{ display: 'block', marginBottom: 5, color: 'var(--ink-1)' }}>Cuenta Microsoft</strong>
-        {session.user.email ?? 'Correo no informado por Microsoft'}
+        <strong style={{ display: 'block', marginBottom: 5, color: 'var(--ink-1)' }}>{identity}</strong>
+        {session.user.email ?? 'Correo no informado'}
       </div>
 
       {request.state === 'saving' && (
@@ -298,8 +310,7 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
 
       {request.state === 'saved' && (
         <p style={{ color: 'var(--ink-3)', fontSize: 12, lineHeight: 1.55, marginBottom: 0 }}>
-          La solicitud quedó persistida y ya puede ser revisada desde Administración. Cuando sea
-          aprobada, podrás comprobar la autorización sin volver a iniciar sesión.
+          La solicitud ya puede ser revisada desde Administración. Cuando sea aprobada, podrás comprobar la autorización sin volver a iniciar sesión.
         </p>
       )}
 
@@ -317,11 +328,7 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
       )}
 
       {request.state === 'saved' && (
-        <button
-          className="btn btn-primary"
-          style={{ width: '100%', marginTop: 18 }}
-          onClick={onRecheck}
-        >
+        <button className="btn btn-primary" style={{ width: '100%', marginTop: 18 }} onClick={onRecheck}>
           Comprobar autorización
         </button>
       )}
@@ -331,36 +338,110 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
 }
 
 function SignIn() {
-  const [busy, setBusy] = useState(false);
+  const [microsoftBusy, setMicrosoftBusy] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function signIn() {
-    setBusy(true);
+  async function signInMicrosoft() {
+    setMicrosoftBusy(true);
     setError(null);
     const err = await signInWithMicrosoft();
     if (err) {
       setError(err.message);
-      setBusy(false);
+      setMicrosoftBusy(false);
     }
+  }
+
+  async function signInEmail() {
+    const value = normalizedEmail(email);
+    if (!validInstitutionalEmail(value)) {
+      setError(`Por ahora el acceso alternativo está habilitado únicamente para correos @${EMAIL_FALLBACK_DOMAIN}.`);
+      return;
+    }
+
+    setEmailBusy(true);
+    setError(null);
+    setEmailSent(false);
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: value,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: redirectTo,
+      },
+    });
+
+    if (otpError) {
+      setError(otpError.message);
+      setEmailBusy(false);
+      return;
+    }
+
+    setEmailSent(true);
+    setEmailBusy(false);
   }
 
   return (
     <Card title="ATLAS Observatorio" eyebrow="Monitor de fuentes abiertas">
       <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-        Entorno de análisis sobre fuentes abiertas gobernadas, protegido por Microsoft
-        Entra, lista de habilitación y Row Level Security.
+        Autentica tu identidad. El ingreso a los datos solo se habilita después de la autorización de un administrador de ATLAS.
       </p>
 
       {error && <div className="note note-warn">{error}</div>}
 
-      <button className="btn btn-primary" onClick={signIn} disabled={busy}>
+      <button className="btn btn-primary" style={{ width: '100%' }} onClick={signInMicrosoft} disabled={microsoftBusy || emailBusy}>
         <MicrosoftLogo />
-        {busy ? 'Redirigiendo…' : 'Ingresar con Microsoft'}
+        {microsoftBusy ? 'Redirigiendo…' : 'Ingresar con Microsoft'}
       </button>
 
-      <div className="note">
-        Puedes autenticar tu identidad Microsoft para solicitar acceso. La autenticación no
-        habilita automáticamente los datos: un administrador de ATLAS debe autorizar la cuenta.
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0', color: 'var(--ink-3)', fontSize: 11 }}>
+        <span style={{ height: 1, background: 'var(--line)', flex: 1 }} />
+        <span>o</span>
+        <span style={{ height: 1, background: 'var(--line)', flex: 1 }} />
+      </div>
+
+      <div style={{ display: 'grid', gap: 9 }}>
+        <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Correo institucional UAF</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setEmailSent(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !emailBusy) void signInEmail();
+          }}
+          placeholder={`nombre@${EMAIL_FALLBACK_DOMAIN}`}
+          autoComplete="email"
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            border: '1px solid var(--line)',
+            borderRadius: 9,
+            background: 'var(--surface-2)',
+            color: 'var(--ink-1)',
+            padding: '10px 12px',
+            outline: 'none',
+            font: 'inherit',
+            fontSize: 13,
+          }}
+        />
+        <button className="btn" style={{ width: '100%' }} onClick={() => void signInEmail()} disabled={emailBusy || microsoftBusy}>
+          {emailBusy ? 'Enviando…' : 'Enviar enlace seguro al correo'}
+        </button>
+      </div>
+
+      {emailSent && (
+        <div className="note" style={{ marginTop: 12 }}>
+          Revisa <strong>{normalizedEmail(email)}</strong> y abre el enlace de verificación. Al volver a ATLAS, la solicitud quedará registrada automáticamente para revisión.
+        </div>
+      )}
+
+      <div className="note" style={{ marginTop: 12 }}>
+        Si Microsoft exige aprobación del administrador de tu organización, usa el correo institucional. Ninguno de los dos métodos otorga acceso automático a los datos.
       </div>
     </Card>
   );
@@ -378,15 +459,7 @@ function SignOutButton({ marginTop = 18 }: { marginTop?: number }) {
   );
 }
 
-function Card({
-  title,
-  eyebrow,
-  children,
-}: {
-  title: string;
-  eyebrow?: string;
-  children: ReactNode;
-}) {
+function Card({ title, eyebrow, children }: { title: string; eyebrow?: string; children: ReactNode }) {
   return (
     <div className="auth-wrap">
       <div className="auth-card fade-in">
