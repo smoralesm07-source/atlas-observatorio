@@ -1,0 +1,50 @@
+/* Entidades · sanciones: la tabla compacta debe vivir siempre dentro de su tarjeta.
+   Se reserva ancho por columna y se recorta contenido largo, evitando scroll horizontal. */
+.entity360 .entity360-mini-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.entity360 .entity360-mini-table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.entity360 .entity360-mini-table th,
+.entity360 .entity360-mini-table td {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.entity360 .entity360-mini-table th:nth-child(1),
+.entity360 .entity360-mini-table td:nth-child(1) {
+  width: 13%;
+}
+
+.entity360 .entity360-mini-table th:nth-child(2),
+.entity360 .entity360-mini-table td:nth-child(2) {
+  width: 12%;
+}
+
+.entity360 .entity360-mini-table th:nth-child(3),
+.entity360 .entity360-mini-table td:nth-child(3) {
+  width: 60%;
+}
+
+.entity360 .entity360-mini-table th:nth-child(4),
+.entity360 .entity360-mini-table td:nth-child(4) {
+  width: 15%;
+  overflow: hidden;
+}
+
+.entity360 .entity360-mini-table td:nth-child(4) .entity360-inline-link {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
