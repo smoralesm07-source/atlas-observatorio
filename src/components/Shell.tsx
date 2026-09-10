@@ -6,6 +6,16 @@ import type { AtlasRole } from './Auth';
 import { Mark } from './Mark';
 import '../styles/monitores-nav.css';
 
+const THEME_KEY = 'atlas-obs-theme-v2';
+
+function readThemePreference(): 'dark' | 'light' {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
 const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
 ];
@@ -75,9 +85,7 @@ export function Shell({
   role: AtlasRole;
   children: ReactNode;
 }) {
-  const [theme, setTheme] = useState<'dark' | 'light'>(
-    () => (localStorage.getItem('atlas-obs-theme') as 'dark' | 'light') ?? 'dark',
-  );
+  const [theme, setTheme] = useState<'dark' | 'light'>(readThemePreference);
   const [openMenu, setOpenMenu] = useState<'monitors' | 'universo' | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
   const monitorsOpen = openMenu === 'monitors';
@@ -88,7 +96,11 @@ export function Shell({
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem('atlas-obs-theme', theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // The visual preference still applies for the current session when storage is unavailable.
+    }
   }, [theme]);
 
   useEffect(() => {
