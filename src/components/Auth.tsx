@@ -86,6 +86,7 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
   const [ready, setReady] = useState(false);
   const [access, setAccess] = useState<Access>({ state: 'checking' });
   const [validationKey, setValidationKey] = useState(0);
+  const sessionUserId = session?.user.id ?? null;
 
   useEffect(() => {
     let live = true;
@@ -115,16 +116,19 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
   }, []);
 
   useEffect(() => {
-    if (!session) {
+    if (!sessionUserId) {
       setAccess({ state: 'checking' });
       return;
     }
 
-    const userId = session.user.id;
+    const userId = sessionUserId;
     let live = true;
 
     async function validateAccess() {
-      setAccess({ state: 'checking' });
+      // Una renovación ordinaria del token no cambia la identidad del usuario y
+      // no debe desmontar toda la aplicación. En revalidaciones explícitas se
+      // mantiene la vista montada si el acceso ya estaba concedido.
+      setAccess((current) => current.state === 'granted' ? current : { state: 'checking' });
       let lastMessage = 'No fue posible consultar la lista de habilitación.';
       let transport = false;
 
@@ -176,7 +180,7 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
     return () => {
       live = false;
     };
-  }, [session, validationKey]);
+  }, [sessionUserId, validationKey]);
 
   if (configError) {
     return (
