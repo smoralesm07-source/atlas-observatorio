@@ -14,10 +14,26 @@ function flushFocusedField(detail: HTMLElement | null) {
   if (active instanceof HTMLElement && detail?.contains(active)) active.blur();
 }
 
+function syncDrawerTop(work?: HTMLElement | null) {
+  const topbar = document.querySelector<HTMLElement>('.topbar');
+  const fallback = window.innerWidth <= 720 ? 56 : 60;
+  const measured = topbar ? Math.max(0, Math.round(topbar.getBoundingClientRect().bottom)) : fallback;
+  const value = `${measured}px`;
+
+  if (work) {
+    work.style.setProperty('--uso-case-drawer-top', value);
+    return;
+  }
+
+  document.querySelectorAll<HTMLElement>(WORK_SELECTOR)
+    .forEach((item) => item.style.setProperty('--uso-case-drawer-top', value));
+}
+
 function openDrawer(work: HTMLElement, trigger?: HTMLElement | null) {
   const detail = work.querySelector<HTMLElement>('.uso-detail');
   if (!detail) return;
 
+  syncDrawerTop(work);
   work.setAttribute(OPEN_ATTR, 'true');
   document.body.classList.add('uso-case-drawer-open');
   detail.setAttribute('role', 'dialog');
@@ -99,4 +115,8 @@ document.addEventListener('keydown', (event) => {
   closeDrawer(open);
 });
 
+/* La navegación puede cambiar de altura al envolver elementos o variar el
+   ancho de la ventana. El drawer se recalibra contra el borde inferior real del
+   menú para no dejar franjas ni cubrir la navegación. */
+window.addEventListener('resize', () => syncDrawerTop());
 window.addEventListener('hashchange', () => closeAll(false));
