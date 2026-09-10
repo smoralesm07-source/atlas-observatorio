@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CohortRequest } from './CohortDrawer';
-import type { UafPotential, UafPotentialCandidate, UafSubjectRow } from '../lib/contracts';
+import type { UafSubjectRow } from '../lib/contracts';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
 import { n, n1, rutFormat, titleCase } from '../lib/format';
@@ -21,9 +21,30 @@ export type DirectorySelection =
       sector?: string | null;
       region?: string | null;
       activity?: string | null;
+      industry?: string | null;
     };
 
 type SortMode = 'relevance' | 'name' | 'score' | 'signals';
+type PotentialDirectoryRow = {
+  rut: string;
+  entity_id: string | null;
+  name: string;
+  implied_sector: string | null;
+  matched_activity: string | null;
+  economic_sector: string | null;
+  region: string | null;
+  commune: string | null;
+  sales_band_size: string | null;
+  sales_band_uf: string | null;
+  detection_tier: string | null;
+  evidence_class: string | null;
+  ivo_score: number | null;
+  ivo_band: string | null;
+  res_available: boolean;
+  uaf_sanction_events: number;
+  flags: string[] | null;
+  total_count: number;
+};
 
 const PAGE = 80;
 const DEFAULT_REQUEST: CohortRequest = {
@@ -34,12 +55,10 @@ const DEFAULT_REQUEST: CohortRequest = {
 export function SubjectDirectory({
   id,
   selection,
-  potential,
   onReset,
 }: {
   id?: string;
   selection: DirectorySelection;
-  potential?: UafPotential | null;
   onReset?: () => void;
 }) {
   const [query, setQuery] = useState('');
@@ -47,13 +66,13 @@ export function SubjectDirectory({
   const [sort, setSort] = useState<SortMode>('relevance');
   const [page, setPage] = useState(0);
   const request = selection.kind === 'registered' ? selection.request : DEFAULT_REQUEST;
-  const registeredSelectionKey = selection.kind === 'registered'
-    ? `${selection.request.cohort}|${selection.request.value ?? ''}|${selection.clientSector ?? ''}|${selection.clientRegion ?? ''}|${selection.clientIndustry ?? ''}`
-    : 'potential';
+  const selectionKey = selection.kind === 'registered'
+    ? `r|${selection.request.cohort}|${selection.request.value ?? ''}|${selection.clientSector ?? ''}|${selection.clientRegion ?? ''}|${selection.clientIndustry ?? ''}`
+    : `p|${selection.sector ?? ''}|${selection.region ?? ''}|${selection.activity ?? ''}|${selection.industry ?? ''}`;
 
-  useEffect(() => setPage(0), [registeredSelectionKey]);
+  useEffect(() => setPage(0), [selectionKey]);
 
-  const cohort = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v2', {
+  const registered = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v2', {
     p_cohort: request.cohort,
     p_value: request.value ?? null,
     p_q: debouncedQuery.trim() || null,
@@ -65,31 +84,28 @@ export function SubjectDirectory({
     p_offset: page * PAGE,
   }, { skip: selection.kind !== 'registered' });
 
-  const potentialRows = useMemo(() => {
-    if (selection.kind !== 'potential') return [];
-    const q = debouncedQuery.trim().toLowerCase();
-    const rows = (potential?.candidatos ?? []).filter((row) => {
-      if (selection.sector && row.implied_sector !== selection.sector) return false;
-      if (selection.region && row.region !== selection.region) return false;
-      if (selection.activity && row.matched_activity !== selection.activity) return false;
-      if (!q) return true;
-      return [row.name, row.rut, row.implied_sector, row.region, row.commune, row.matched_activity]
-        .some((value) => (value ?? '').toLowerCase().includes(q));
-    });
-    return sortPotential(rows, sort);
-  }, [selection, potential, debouncedQuery, sort]);
+  const potentials = useRpc<PotentialDirectoryRow[]>('obs_uaf_potential_directory_v2', {
+    p_q: debouncedQuery.trim() || null,
+    p_sector: selection.kind === 'potential' ? selection.sector ?? null : null,
+    p_region: selection.kind === 'potential' ? selection.region ?? null : null,
+    p_activity: selection.kind === 'potential' ? selection.activity ?? null : null,
+    p_industry: selection.kind === 'potential' ? selection.industry ?? null : null,
+    p_order: sort === 'name' ? 'nombre' : sort === 'score' ? 'ivo' : sort === 'signals' ? 'senales' : 'relevancia',
+    p_limit: PAGE,
+    p_offset: page * PAGE,
+  }, { skip: selection.kind !== 'potential' });
 
-  const registeredRows = selection.kind === 'registered' ? cohort.data ?? [] : [];
-  const registeredTotal = registeredRows[0]?.total_count ?? 0;
-  const visibleTotal = selection.kind === 'registered' ? registeredTotal : potentialRows.length;
-  const totalPages = selection.kind === 'registered' ? Math.max(1, Math.ceil(registeredTotal / PAGE)) : 1;
-  const start = selection.kind === 'registered' && registeredTotal > 0 ? page * PAGE + 1 : potentialRows.length ? 1 : 0;
-  const end = selection.kind === 'registered' ? Math.min(registeredTotal, (page + 1) * PAGE) : potentialRows.length;
+  const rows = selection.kind === 'registered' ? registered.data ?? [] : potentials.data ?? [];
+  const total = rows[0]?.total_count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE));
+  const start = total > 0 ? page * PAGE + 1 : 0;
+  const end = Math.min(total, (page + 1) * PAGE);
   const title = selection.kind === 'registered' ? selection.request.title : selection.title;
   const hint = selection.kind === 'registered' ? selection.request.hint : selection.hint;
   const clientFilter = selection.kind === 'registered'
     ? [selection.clientSector, selection.clientRegion, selection.clientIndustry].filter(Boolean).join(' · ')
-    : [selection.sector, selection.region, selection.activity].filter(Boolean).join(' · ');
+    : [selection.sector, selection.region, selection.industry, selection.activity].filter(Boolean).join(' · ');
+  const activeRpc = selection.kind === 'registered' ? registered : potentials;
 
   const changeQuery = (value: string) => {
     setQuery(value);
@@ -116,8 +132,8 @@ export function SubjectDirectory({
           </p>
         </div>
         <div className="subject-directory-count">
-          {selection.kind === 'registered' && cohort.loading && !cohort.data ? '…' : n(visibleTotal)}
-          <small>{selection.kind === 'registered' ? 'sujetos en la cohorte exacta' : 'candidatos coincidentes'}</small>
+          {activeRpc.loading && !activeRpc.data ? '…' : n(total)}
+          <small>{selection.kind === 'registered' ? 'sujetos en la cohorte exacta' : 'candidatos en la cohorte exacta'}</small>
         </div>
       </header>
 
@@ -134,7 +150,7 @@ export function SubjectDirectory({
             type="search"
             value={query}
             onChange={(event) => changeQuery(event.target.value)}
-            placeholder="Buscar por nombre, RUT, sector, actividad o territorio…"
+            placeholder="Buscar por nombre, RUT, sector, actividad, industria o territorio…"
             aria-label="Filtrar directorio"
           />
           {query && <button onClick={() => changeQuery('')} aria-label="Limpiar búsqueda">×</button>}
@@ -147,37 +163,28 @@ export function SubjectDirectory({
         </div>
       </div>
 
-      {selection.kind === 'registered' ? (
-        cohort.error ? (
-          <div className="subject-directory-statebar">
-            <div>El directorio no pudo cargar esta cohorte. <button className="btn btn-sm" onClick={cohort.reload}>Reintentar</button></div>
-          </div>
-        ) : cohort.loading && !cohort.data ? (
-          <div className="subject-directory-statebar">Leyendo la cohorte exacta del padrón…</div>
-        ) : !registeredRows.length ? (
-          <div className="subject-directory-statebar">No hay sujetos que coincidan con esta selección.</div>
-        ) : (
-          <RegisteredTable rows={registeredRows} />
-        )
-      ) : !potentialRows.length ? (
-        <div className="subject-directory-statebar">No hay potenciales sujetos obligados que coincidan con esta selección.</div>
+      {activeRpc.error ? (
+        <div className="subject-directory-statebar">
+          <div>El directorio no pudo cargar esta cohorte. <button className="btn btn-sm" onClick={activeRpc.reload}>Reintentar</button></div>
+        </div>
+      ) : activeRpc.loading && !activeRpc.data ? (
+        <div className="subject-directory-statebar">Leyendo la cohorte exacta…</div>
+      ) : !rows.length ? (
+        <div className="subject-directory-statebar">No hay entidades que coincidan con esta selección.</div>
+      ) : selection.kind === 'registered' ? (
+        <RegisteredTable rows={registered.data ?? []} />
       ) : (
-        <PotentialTable rows={potentialRows} />
+        <PotentialTable rows={potentials.data ?? []} />
       )}
 
       <footer className="subject-directory-foot">
-        <span>
-          {selection.kind === 'registered'
-            ? <><b>{n(start)}–{n(end)}</b> de <b>{n(registeredTotal)}</b> sujetos del corte seleccionado.</>
-            : <><b>{n(potentialRows.length)}</b> candidatos del corte de conciliación SII ↔ UAF.</>}
-        </span>
-        {selection.kind === 'registered' ? (
-          <div className="subject-directory-pages">
-            <button disabled={page === 0 || cohort.loading} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Anterior</button>
-            <span>{page + 1} / {totalPages}</span>
-            <button disabled={page + 1 >= totalPages || cohort.loading} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Siguiente →</button>
-          </div>
-        ) : <span>IVO ordena revisión registral; no acredita obligación ni incumplimiento.</span>}
+        <span><b>{n(start)}–{n(end)}</b> de <b>{n(total)}</b> entidades del corte seleccionado.</span>
+        <div className="subject-directory-pages">
+          <button disabled={page === 0 || activeRpc.loading} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Anterior</button>
+          <span>{page + 1} / {totalPages}</span>
+          <button disabled={page + 1 >= totalPages || activeRpc.loading} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Siguiente →</button>
+        </div>
+        <span>{selection.kind === 'registered' ? 'IPF ordena revisión; no mide riesgo LA/FT.' : 'IVO ordena revisión registral; no acredita obligación ni incumplimiento.'}</span>
       </footer>
     </section>
   );
@@ -219,12 +226,12 @@ function RegisteredTable({ rows }: { rows: UafSubjectRow[] }) {
   );
 }
 
-function PotentialTable({ rows }: { rows: UafPotentialCandidate[] }) {
+function PotentialTable({ rows }: { rows: PotentialDirectoryRow[] }) {
   return (
     <div className="subject-directory-scroll">
       <table className="subject-directory-table">
         <thead><tr>
-          <th>Entidad</th><th>Sector sugerido</th><th>Evidencia / territorio</th><th>Caracterización</th><th>IVO</th><th />
+          <th>Entidad</th><th>Sector sugerido</th><th>Industria / evidencia</th><th>Caracterización</th><th>IVO</th><th />
         </tr></thead>
         <tbody>
           {rows.map((row) => (
@@ -235,11 +242,11 @@ function PotentialTable({ rows }: { rows: UafPotentialCandidate[] }) {
               </td>
               <td>
                 <div className="subject-directory-main">{row.implied_sector ? titleCase(row.implied_sector) : 'sin sector sugerido'}</div>
-                <span className="subject-directory-secondary">{row.detection_tier ?? row.evidence_class ?? 'conciliación por giro'}</span>
+                <span className="subject-directory-secondary">{row.commune ? `${titleCase(row.commune)} · ${titleCase(row.region)}` : row.region ? titleCase(row.region) : 'sin territorio observado'}</span>
               </td>
               <td>
-                <div className="subject-directory-main">{row.matched_activity ? titleCase(row.matched_activity) : 'sin actividad gatillante'}</div>
-                <span className="subject-directory-secondary">{row.commune ? `${titleCase(row.commune)} · ${titleCase(row.region)}` : row.region ? titleCase(row.region) : 'sin territorio observado'}</span>
+                <div className="subject-directory-main">{row.economic_sector ? titleCase(row.economic_sector) : 'sin industria SII observada'}</div>
+                <span className="subject-directory-secondary">{row.matched_activity ? titleCase(row.matched_activity) : 'sin actividad gatillante'}</span>
               </td>
               <td><PotentialSignals row={row} /></td>
               <td className="subject-directory-score">
@@ -268,7 +275,7 @@ function RegisteredSignals({ row }: { row: UafSubjectRow }) {
   );
 }
 
-function PotentialSignals({ row }: { row: UafPotentialCandidate }) {
+function PotentialSignals({ row }: { row: PotentialDirectoryRow }) {
   const flags = row.flags ?? [];
   return (
     <div className="subject-directory-signals">
@@ -278,18 +285,6 @@ function PotentialSignals({ row }: { row: UafPotentialCandidate }) {
       {flags.slice(0, 2).map((flag) => <span className="subject-directory-signal" key={flag}>{titleCase(flag.replace(/_/g, ' '))}</span>)}
     </div>
   );
-}
-
-function sortPotential(rows: UafPotentialCandidate[], sort: SortMode) {
-  const copy = rows.slice();
-  if (sort === 'name') return copy.sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  if (sort === 'score') return copy.sort((a, b) => (b.ivo_score ?? -1) - (a.ivo_score ?? -1));
-  if (sort === 'signals') return copy.sort((a, b) => potentialSignalCount(b) - potentialSignalCount(a));
-  return copy;
-}
-
-function potentialSignalCount(row: UafPotentialCandidate) {
-  return row.uaf_sanction_events + (row.flags?.length ?? 0) + (row.res_available ? 1 : 0);
 }
 
 function stateLabel(status: string | null) {
