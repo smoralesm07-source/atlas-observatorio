@@ -1,0 +1,45 @@
+name: Archivar prensa en ATLAS
+
+# El Monitor de Prensa mantiene su ventana de frescura y no se modifica aquí.
+# ATLAS consume su bridge publicado, hace upsert acumulativo y resuelve identidad
+# contra su padrón propio. Ninguna fila histórica se elimina porque deje de
+# aparecer en la ventana vigente del Monitor.
+
+on:
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: atlas-press-archive
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Consumir bridge de prensa y persistir en ATLAS
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          response=$(curl --fail-with-body -sS \
+            -X POST "$SUPABASE_URL/functions/v1/atlas-press-ingest" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+
+          echo "$response" | jq .
+          echo '### Archivo histórico de prensa' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo "$response" | jq -r '
+            "- Bridge: `" + (.bridge_generated_at // "sin fecha") + "`\n" +
+            "- Artículos recibidos: " + ((.ingested.articles // 0)|tostring) + "\n" +
+            "- Entidades de prensa: " + ((.ingested.entities // 0)|tostring) + "\n" +
+            "- Menciones: " + ((.ingested.mentions // 0)|tostring) + "\n" +
+            "- Vínculos resueltos: " + ((.resolved_links // 0)|tostring) + "\n" +
+            "- Evidencias aplicadas al padrón: " + ((.applied_evidence // 0)|tostring)
+          ' >> "$GITHUB_STEP_SUMMARY"
