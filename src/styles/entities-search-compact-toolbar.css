@@ -1,5 +1,7 @@
 /* Entidades · toolbar compacta de filtros y nóminas rápidas.
-   Mantiene una sola línea funcional en escritorio sin sacrificar la salida responsive. */
+   La barra prioriza lectura completa: ninguna nómina se recorta ni depende de
+   un scroll horizontal oculto. En escritorio comparte la fila con los filtros
+   cuando cabe y los chips se redistribuyen de forma natural si falta ancho. */
 
 .entity-search-view {
   gap: 13px;
@@ -26,14 +28,18 @@
 }
 
 .entity-search-console {
+  min-width: 0;
   padding: 11px;
+  overflow: visible;
 }
 
 .entity-search-box-row {
   gap: 8px;
+  min-width: 0;
 }
 
 .entity-search-box {
+  min-width: 0;
   min-height: 46px;
   gap: 10px;
   padding: 0 12px;
@@ -41,6 +47,7 @@
 }
 
 .entity-search-box input {
+  min-width: 0;
   font-size: 14.5px;
 }
 
@@ -77,6 +84,7 @@
 }
 
 .entity-quick-row > span {
+  flex: 0 0 auto;
   margin-right: 1px;
   font-size: 8.75px;
   letter-spacing: .12em;
@@ -84,6 +92,8 @@
 }
 
 .entity-quick-chip {
+  flex: 0 0 auto;
+  min-width: max-content;
   padding-inline: 8px;
 }
 
@@ -99,7 +109,7 @@
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
     column-gap: 10px;
-    align-items: center;
+    align-items: start;
   }
 
   .entity-search-box-row {
@@ -121,25 +131,48 @@
     margin-left: 0;
   }
 
+  /* No usar overflow horizontal aquí: con cifras de distinta longitud el
+     último chip podía quedar parcialmente fuera del panel. La fila se adapta
+     y baja sólo los chips que no caben, manteniendo todos visibles. */
   .entity-quick-row {
     grid-column: 2;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
+    align-content: center;
     gap: 6px;
     min-width: 0;
+    max-width: 100%;
     margin: 0;
     padding: 9px 0 0 10px;
     border-top: 0;
     border-left: 1px solid var(--line-soft);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
+    overflow: visible;
+  }
+}
+
+/* En anchos intermedios se evita comprimir dos grupos independientes en una
+   misma línea. Filtros y nóminas ocupan todo el panel, con el mismo ritmo y sin
+   crear scroll lateral. */
+@media (min-width: 1180px) and (max-width: 1450px) {
+  .entity-search-console {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .entity-quick-row > span,
-  .entity-quick-chip {
-    flex: 0 0 auto;
+  .entity-filters,
+  .entity-quick-row {
+    grid-column: 1;
+  }
+
+  .entity-filters {
+    flex-wrap: wrap;
+  }
+
+  .entity-quick-row {
+    margin-top: 8px;
+    padding: 9px 0 0;
+    border-top: 1px solid var(--line-soft);
+    border-left: 0;
   }
 }
 
@@ -150,9 +183,14 @@
   }
 
   .entity-quick-row {
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
+    min-width: 0;
+    max-width: 100%;
     padding-top: 9px;
     margin-top: 8px;
+    overflow: visible;
   }
 }
 
@@ -173,5 +211,10 @@
     min-height: 40px;
     min-width: 72px;
     padding-inline: 12px;
+  }
+
+  .entity-quick-row > span {
+    flex-basis: 100%;
+    margin-bottom: 1px;
   }
 }
