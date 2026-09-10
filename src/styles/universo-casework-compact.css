@@ -104,6 +104,22 @@
 .subject-quick-manage:hover, .entity360-manage-case:hover { background: color-mix(in srgb, var(--present) 17%, var(--panel)); }
 .entity360-manage-case { margin-left: 4px; align-self: center; }
 
+/* Las acciones hermanas de la vista rápida comparten exactamente la misma
+   caja. La prioridad visual se expresa por color, no por una altura distinta. */
+.subject-quick-action-buttons .subject-quick-manage,
+.subject-quick-action-buttons .subject-quick-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-height: 28px;
+  padding-top: 0;
+  padding-bottom: 0;
+  box-sizing: border-box;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 @media (min-width: 901px) and (max-width: 1080px) {
   .uso .uso-work { grid-template-columns: minmax(470px, 1fr) 390px; }
   .uso .uso-detail { position: sticky; top: 62px; }
