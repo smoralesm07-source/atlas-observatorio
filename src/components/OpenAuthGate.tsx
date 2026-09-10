@@ -7,6 +7,8 @@ import { configError, redirectTo, supabase } from '../lib/supabase';
 export type { AtlasRole } from './Auth';
 
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
+const OTP_MIN_LENGTH = 6;
+const OTP_MAX_LENGTH = 10;
 
 function normalizedEmail(value: string) {
   return value.trim().toLowerCase();
@@ -28,6 +30,9 @@ function isRateLimitError(error: { code?: string; message?: string } | null | un
 function emailAuthErrorMessage(error: { code?: string; message?: string } | null | undefined) {
   if (isRateLimitError(error)) {
     return 'Se alcanzó temporalmente el límite de envío de códigos. Espera antes de solicitar otro. Si continúa, la cuota horaria de correo todavía no se ha liberado.';
+  }
+  if (/token has expired or is invalid/i.test(String(error?.message ?? ''))) {
+    return 'El código venció o no es válido. Solicita uno nuevo e ingrésalo completo tal como aparece en el correo.';
   }
   return error?.message || 'No fue posible completar la autenticación por correo.';
 }
@@ -123,13 +128,13 @@ function OpenSignIn() {
 
   async function verifyCode() {
     const value = normalizedEmail(email);
-    const token = code.replace(/\D/g, '').slice(0, 6);
+    const token = code.replace(/\D/g, '').slice(0, OTP_MAX_LENGTH);
     if (!validEmail(value)) {
       setError('El correo no es válido.');
       return;
     }
-    if (token.length !== 6) {
-      setError('Ingresa el código de 6 dígitos enviado a tu correo.');
+    if (token.length < OTP_MIN_LENGTH || token.length > OTP_MAX_LENGTH) {
+      setError('Ingresa el código completo enviado a tu correo.');
       return;
     }
 
@@ -149,6 +154,7 @@ function OpenSignIn() {
   }
 
   const locked = microsoftBusy || emailBusy || verifyBusy;
+  const codeReady = code.length >= OTP_MIN_LENGTH && code.length <= OTP_MAX_LENGTH;
 
   return (
     <Card title="ATLAS Observatorio" eyebrow="Monitor de fuentes abiertas">
@@ -186,7 +192,7 @@ function OpenSignIn() {
 
         {!codeSent ? (
           <button className="btn" style={{ width: '100%' }} onClick={() => void sendCode()} disabled={locked || resendCooldown > 0}>
-            {emailBusy ? 'Enviando…' : resendCooldown > 0 ? `Intentar nuevamente en ${resendCooldown}s` : 'Enviar código de 6 dígitos'}
+            {emailBusy ? 'Enviando…' : resendCooldown > 0 ? `Intentar nuevamente en ${resendCooldown}s` : 'Enviar código de acceso'}
           </button>
         ) : (
           <>
@@ -195,17 +201,17 @@ function OpenSignIn() {
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={6}
+              maxLength={OTP_MAX_LENGTH}
               autoFocus
               autoComplete="one-time-code"
               value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              onKeyDown={(event) => { if (event.key === 'Enter' && !locked) void verifyCode(); }}
-              placeholder="000000"
-              aria-label="Código de verificación de 6 dígitos"
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, OTP_MAX_LENGTH))}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !locked && codeReady) void verifyCode(); }}
+              placeholder="Código recibido"
+              aria-label="Código de verificación"
               style={{ ...inputStyle, letterSpacing: '0.28em', textAlign: 'center', fontWeight: 700, fontSize: 18 }}
             />
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => void verifyCode()} disabled={locked || code.length !== 6}>
+            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => void verifyCode()} disabled={locked || !codeReady}>
               {verifyBusy ? 'Verificando…' : 'Verificar e ingresar'}
             </button>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -217,7 +223,7 @@ function OpenSignIn() {
               </button>
             </div>
             <div className="note">
-              Enviamos un código de 6 dígitos a <strong>{normalizedEmail(email)}</strong>. Escríbelo aquí; no necesitas abrir ATLAS desde el correo.
+              Enviamos un código de acceso a <strong>{normalizedEmail(email)}</strong>. Escríbelo completo tal como aparece en el correo; no necesitas abrir ATLAS desde el mensaje.
             </div>
           </>
         )}
