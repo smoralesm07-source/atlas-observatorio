@@ -9,6 +9,7 @@ type Access =
   | { state: 'checking' }
   | { state: 'granted'; role: AtlasRole }
   | { state: 'pending' }
+  | { state: 'disabled' }
   | { state: 'error'; message: string; transport: boolean };
 
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
@@ -107,10 +108,15 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
           if (!live) return;
 
           if (!error) {
-            if (data?.enabled) {
+            if (!data) {
+              // La identidad ya fue autenticada por Microsoft y queda visible
+              // para Administración a través de Supabase Auth. La ausencia en
+              // aml_allowed_users equivale a una solicitud aún no resuelta.
+              setAccess({ state: 'pending' });
+            } else if (data.enabled) {
               setAccess({ state: 'granted', role: asAtlasRole(data.role) });
             } else {
-              setAccess({ state: 'pending' });
+              setAccess({ state: 'disabled' });
             }
             return;
           }
@@ -193,16 +199,49 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
 
   if (access.state === 'pending') {
     return (
-      <Card title="Acceso pendiente de habilitación">
+      <Card title="Solicitud de acceso registrada">
         <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
-          Tu identidad quedó autenticada correctamente, pero el Observatorio mantiene los
-          datos cerrados hasta que la cuenta esté habilitada en la lista de acceso.
+          Microsoft verificó correctamente tu identidad. Tu solicitud quedó disponible para
+          revisión por un administrador de ATLAS Observatorio.
         </p>
         <div className="note">
-          Autenticarse no otorga acceso: la autorización se valida por separado, en la
-          base de datos, con la misma lista que gobierna ATLAS.
+          <strong style={{ display: 'block', marginBottom: 5, color: 'var(--ink-1)' }}>Cuenta Microsoft</strong>
+          {session.user.email ?? 'Correo no informado por Microsoft'}
         </div>
-        <SignOutButton />
+        <p style={{ color: 'var(--ink-3)', fontSize: 12, lineHeight: 1.55, marginBottom: 0 }}>
+          La autenticación no entrega acceso automático a los datos. Cuando un administrador
+          habilite esta identidad, podrás comprobar la autorización sin volver a iniciar sesión.
+        </p>
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: 18 }}
+          onClick={() => setValidationKey((value) => value + 1)}
+        >
+          Comprobar autorización
+        </button>
+        <SignOutButton marginTop={10} />
+      </Card>
+    );
+  }
+
+  if (access.state === 'disabled') {
+    return (
+      <Card title="Acceso deshabilitado">
+        <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
+          Tu identidad Microsoft sigue siendo válida, pero el acceso a ATLAS Observatorio fue
+          deshabilitado por la administración.
+        </p>
+        <div className="note note-warn">
+          Cuenta: {session.user.email ?? 'Correo no informado por Microsoft'}
+        </div>
+        <button
+          className="btn"
+          style={{ width: '100%', marginTop: 18 }}
+          onClick={() => setValidationKey((value) => value + 1)}
+        >
+          Comprobar nuevamente
+        </button>
+        <SignOutButton marginTop={10} />
       </Card>
     );
   }
@@ -239,8 +278,8 @@ function SignIn() {
       </button>
 
       <div className="note">
-        Autenticarse no otorga acceso automático: la autorización se valida por separado
-        contra la lista de habilitación.
+        Puedes autenticar tu identidad Microsoft para solicitar acceso. La autenticación no
+        habilita automáticamente los datos: un administrador de ATLAS debe autorizar la cuenta.
       </div>
     </Card>
   );
