@@ -4,7 +4,8 @@ import { hrefFor } from '../../lib/router';
 import { supabase } from '../../lib/supabase';
 import './Novedades.css';
 
-type UpdateKind = 'CORTE' | 'PRENSA' | 'FUENTE' | 'SANCION' | 'ESTADO';
+type UpdateKind = 'CORTE' | 'PRENSA' | 'FUENTE' | 'SANCION' | 'ESTADO' | 'POTENCIAL' | 'BAJA_SO';
+type PriorityGroup = 1 | 2 | 3 | 4;
 
 interface UpdateItem {
   id: string;
@@ -17,10 +18,14 @@ interface UpdateItem {
   entity_id: string | null;
   entity_name: string | null;
   meta: string | null;
+  priority_group?: PriorityGroup;
+  priority_label?: string | null;
+  action_hash?: string | null;
+  action_label?: string | null;
 }
 
 interface UpdatesFeed {
-  contract: 'ATLAS_OBS_UAF_UPDATES_V1';
+  contract: 'ATLAS_OBS_UAF_UPDATES_V1' | 'ATLAS_OBS_UAF_UPDATES_V2';
   generated_at: string;
   items: UpdateItem[];
   semantics: string;
@@ -29,12 +34,21 @@ interface UpdatesFeed {
 const LABEL: Record<UpdateKind, string> = {
   CORTE: 'CORTE',
   PRENSA: 'PRENSA',
-  FUENTE: 'RADAR',
+  FUENTE: 'FUENTES',
   SANCION: 'SANCIÓN',
   ESTADO: 'ESTADO SO',
+  POTENCIAL: 'POTENCIAL',
+  BAJA_SO: 'TÉRMINO GIRO',
 };
 
-const SEMANTICS = 'Novedades observadas por Atlas. Combina cambios de ciclo de vida de sujetos obligados, antecedentes sancionatorios y actualizaciones de fuentes. Una actualización de fuente indica nueva sincronización o registros observados; no implica por sí sola un hallazgo de riesgo.';
+const PRIORITY_LABEL: Record<PriorityGroup, string> = {
+  1: 'Padrón SO',
+  2: 'Potenciales SO',
+  3: 'Bajas SO',
+  4: 'Fuentes y radares',
+};
+
+const SEMANTICS = 'Novedades operativas priorizadas: primero hechos sobre sujetos obligados inscritos; luego potenciales SO, empresas nuevas o nuevos giros relacionados; después términos de giro del último lote para revisión de cancelación; finalmente salud e incidencias de radares y fuentes. Las señales de potenciales son hipótesis de registro y no acreditan incumplimiento.';
 
 export function NovedadesObservatorio({ compact = false }: { compact?: boolean }) {
   const [feed, setFeed] = useState<UpdatesFeed | null>(null);
@@ -52,11 +66,8 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
       setError(null);
       return;
     } catch (firstError) {
-      // Un fallo de este RPC no es evidencia de una sesión vencida. Supabase
-      // renueva el token de forma automática; forzar refreshSession() aquí
-      // dispara TOKEN_REFRESHED y puede hacer que la capa de autorización
-      // desmonte y vuelva a montar toda la aplicación. Caemos directamente al
-      // read model alternativo sin tocar la sesión del usuario.
+      // Un fallo del feed nunca debe tocar la sesión del usuario. La ruta
+      // alternativa sólo lee modelos ya expuestos por Atlas.
       try {
         const directFeed = await loadDirectFeed();
         setFeed(directFeed);
@@ -78,16 +89,17 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
     return () => window.clearInterval(timer);
   }, [load]);
 
-  const items = (feed?.items ?? []).slice(0, compact ? 4 : 8);
+  const allItems = (feed?.items ?? []).map(withPriorityDefaults);
+  const items = compact ? selectCompactPriorities(allItems) : allItems.slice(0, 8);
 
   return (
     <div className={compact ? 'pulse-updates-compact' : undefined}>
       <Panel
-        title="Novedades del observatorio"
+        title="Novedades prioritarias"
         pad={false}
         actions={
           <div className="pulse-updates-actions">
-            <span className="pulse-updates-live" title="El cuadro se vuelve a consultar automáticamente cada 5 minutos">
+            <span className="pulse-updates-live" title="El panel se consulta silenciosamente cada 5 minutos sin alterar la navegación">
               <i /> dinámico
             </span>
             <button
@@ -105,7 +117,7 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
       >
         <div className="pulse-updates-shell">
           {loading && !feed ? (
-            <div className="pulse-updates-state">Leyendo novedades de Atlas…</div>
+            <div className="pulse-updates-state">Leyendo prioridades operativas…</div>
           ) : error && !feed ? (
             <div className="pulse-updates-state pulse-updates-error">
               <b>No fue posible cargar las novedades.</b>
@@ -115,43 +127,93 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
             <div className="pulse-updates-state">Sin novedades observadas en las fuentes activas.</div>
           ) : (
             <div className="pulse-updates-list" aria-live="polite">
-              {items.map((item) => (
-                <article className="pulse-update" data-kind={item.kind} key={item.id}>
-                  <div className="pulse-update-rail"><i /></div>
-                  <div className="pulse-update-body">
-                    <div className="pulse-update-topline">
-                      <span className="pulse-update-kind">{LABEL[item.kind]}</span>
-                      <time dateTime={item.event_at}>{formatEvent(item.event_at)}</time>
+              {items.map((item) => {
+                const priority = priorityFor(item);
+                return (
+                  <article
+                    className="pulse-update"
+                    data-kind={item.kind}
+                    data-priority={priority}
+                    key={item.id}
+                  >
+                    <div className="pulse-update-rail"><i /></div>
+                    <div className="pulse-update-body">
+                      <div className="pulse-update-topline">
+                        <span className="pulse-update-priority">P{priority} · {item.priority_label ?? PRIORITY_LABEL[priority]}</span>
+                        <span className="pulse-update-kind">{LABEL[item.kind]}</span>
+                        <time dateTime={item.event_at}>{formatEvent(item.event_at)}</time>
+                      </div>
+                      <h4>{displayTitle(item)}</h4>
+                      {!compact && item.detail && <p>{item.detail}</p>}
+                      <div className="pulse-update-foot">
+                        <span>{item.source_label ?? item.meta ?? 'Atlas'}</span>
+                        <span className="pulse-update-links">
+                          {item.action_hash && (
+                            <a href={item.action_hash}>{item.action_label ?? 'Abrir'} →</a>
+                          )}
+                          {item.entity_id && (!item.action_hash || !compact) && (
+                            <a href={hrefFor({ view: 'ficha', entityId: item.entity_id })}>Ficha →</a>
+                          )}
+                          {item.source_url && (
+                            <a href={item.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>
+                          )}
+                        </span>
+                      </div>
                     </div>
-                    <h4>{item.title}</h4>
-                    {!compact && item.detail && <p>{item.detail}</p>}
-                    <div className="pulse-update-foot">
-                      <span>{item.source_label ?? item.meta ?? 'Atlas'}</span>
-                      <span className="pulse-update-links">
-                        {item.entity_id && (
-                          <a href={hrefFor({ view: 'ficha', entityId: item.entity_id })}>Ficha →</a>
-                        )}
-                        {item.source_url && (
-                          <a href={item.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
 
           <div className="pulse-updates-caption">
-            <span>
-              {feed?.generated_at ? `Actualizado ${formatGenerated(feed.generated_at)}` : 'Actualización automática cada 5 min'}
-            </span>
+            <span>{feed?.generated_at ? `Actualizado ${formatGenerated(feed.generated_at)}` : 'Prioridad operativa Atlas'}</span>
             {error && feed && <em title={error}>última sincronización no disponible</em>}
           </div>
         </div>
       </Panel>
     </div>
   );
+}
+
+function withPriorityDefaults(item: UpdateItem): UpdateItem {
+  const priority = priorityFor(item);
+  return {
+    ...item,
+    priority_group: priority,
+    priority_label: item.priority_label ?? PRIORITY_LABEL[priority],
+  };
+}
+
+function priorityFor(item: UpdateItem): PriorityGroup {
+  if (item.priority_group && item.priority_group >= 1 && item.priority_group <= 4) return item.priority_group;
+  if (item.kind === 'POTENCIAL') return 2;
+  if (item.kind === 'BAJA_SO') return 3;
+  if (item.kind === 'FUENTE' || item.kind === 'CORTE') return 4;
+  return 1;
+}
+
+function selectCompactPriorities(items: UpdateItem[]) {
+  const picked: UpdateItem[] = [];
+  for (const priority of [1, 2, 3, 4] as PriorityGroup[]) {
+    const match = items.find((item) => priorityFor(item) === priority);
+    if (match) picked.push(match);
+  }
+  if (picked.length < 4) {
+    for (const item of items) {
+      if (picked.some((current) => current.id === item.id)) continue;
+      picked.push(item);
+      if (picked.length === 4) break;
+    }
+  }
+  return picked.slice(0, 4);
+}
+
+function displayTitle(item: UpdateItem) {
+  if (item.kind === 'PRENSA' && /^document:press:/i.test(item.title)) {
+    return `${item.entity_name ?? 'Sujeto obligado'} · nueva mención en prensa`;
+  }
+  return item.title;
 }
 
 async function loadRpcFeed(): Promise<UpdatesFeed> {
@@ -162,147 +224,216 @@ async function loadRpcFeed(): Promise<UpdatesFeed> {
 }
 
 async function loadDirectFeed(): Promise<UpdatesFeed> {
-  const [sourceResult, sanctionResult, lifecycleResult, snapshotResult] = await Promise.all([
+  const [sourceResult, sanctionResult, pressResult, potentialResult, termResult] = await Promise.all([
     supabase
       .from('obs_source_health')
-      .select('source_code,source_name,last_successful_ingest_at,refreshed_at,records_24h,data_status')
-      .like('source_code', 'RADAR_%')
-      .order('last_successful_ingest_at', { ascending: false, nullsFirst: false })
-      .limit(8),
+      .select('source_code,source_name,software_status,data_status,records_24h,refreshed_at'),
     supabase
       .from('obs_uaf_evidence')
       .select('evidence_id,rut,event_date,refreshed_at,headline,summary,source_label,document_url,has_link')
       .eq('kind', 'SANCION')
-      .not('event_date', 'is', null)
-      .order('event_date', { ascending: false })
-      .limit(2),
+      .order('event_date', { ascending: false, nullsFirst: false })
+      .limit(8),
+    supabase
+      .from('obs_uaf_evidence')
+      .select('evidence_id,rut,event_date,refreshed_at,headline,summary,source_label,document_url,has_link')
+      .eq('kind', 'PRENSA')
+      .order('refreshed_at', { ascending: false })
+      .limit(8),
+    supabase
+      .from('obs_uaf_potential_candidate')
+      .select('rut,entity_id,name,implied_sector,matched_activity,sii_activity_start_date,ivo_score,refreshed_at')
+      .order('ivo_score', { ascending: false, nullsFirst: false })
+      .limit(150),
     supabase
       .from('aml_entity_lifecycle_v0680')
-      .select('entity_id,event_date,event_type,event_label,source_system,source_url,refreshed_at')
-      .in('event_type', ['SII_TERMINO_GIRO', 'SII_INICIO_ACTIVIDADES'])
-      .order('event_date', { ascending: false, nullsFirst: false })
-      .limit(5),
-    supabase
-      .from('obs_snapshot')
-      .select('snapshot_id,generated_at,status,published_at')
-      .order('generated_at', { ascending: false })
-      .limit(1),
+      .select('entity_id,event_date,refreshed_at')
+      .eq('event_type', 'SII_TERMINO_GIRO')
+      .order('refreshed_at', { ascending: false })
+      .limit(100),
   ]);
 
-  const errors = [sourceResult.error, sanctionResult.error, lifecycleResult.error, snapshotResult.error].filter(Boolean);
-  if (errors.length === 4) throw new Error(errors.map((item) => item?.message).filter(Boolean).join(' · '));
+  const errors = [sourceResult.error, sanctionResult.error, pressResult.error, potentialResult.error, termResult.error].filter(Boolean);
+  if (errors.length === 5) throw new Error(errors.map((item) => item?.message).filter(Boolean).join(' · '));
 
-  const lifecycleRows = lifecycleResult.data ?? [];
-  const sanctionRows = sanctionResult.data ?? [];
-  const entityIds = Array.from(new Set(lifecycleRows.map((row) => row.entity_id).filter(Boolean)));
-  const sanctionRuts = Array.from(new Set(sanctionRows.map((row) => row.rut).filter(Boolean)));
+  const sanctions = sanctionResult.data ?? [];
+  const press = pressResult.data ?? [];
+  const terms = termResult.data ?? [];
+  const evidenceRuts = Array.from(new Set([...sanctions, ...press].map((row) => row.rut).filter(Boolean)));
+  const termEntityIds = Array.from(new Set(terms.map((row) => row.entity_id).filter(Boolean)));
 
-  let stateSubjects: Array<{ entity_id: string; name: string; uaf_sector: string | null }> = [];
-  let sanctionSubjects: Array<{ rut: string; entity_id: string; name: string; uaf_sector: string | null }> = [];
+  const [evidenceSubjectsResult, termSubjectsResult] = await Promise.all([
+    evidenceRuts.length
+      ? supabase.from('obs_uaf_subject').select('rut,entity_id,name,uaf_sector').in('rut', evidenceRuts)
+      : Promise.resolve({ data: [], error: null }),
+    termEntityIds.length
+      ? supabase.from('obs_uaf_subject').select('entity_id,name,uaf_sector').in('entity_id', termEntityIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
-  if (entityIds.length) {
-    const { data } = await supabase
-      .from('obs_uaf_subject')
-      .select('entity_id,name,uaf_sector')
-      .in('entity_id', entityIds);
-    stateSubjects = (data ?? []) as typeof stateSubjects;
-  }
-
-  if (sanctionRuts.length) {
-    const { data } = await supabase
-      .from('obs_uaf_subject')
-      .select('rut,entity_id,name,uaf_sector')
-      .in('rut', sanctionRuts);
-    sanctionSubjects = (data ?? []) as typeof sanctionSubjects;
-  }
-
-  const stateById = new Map(stateSubjects.map((row) => [row.entity_id, row]));
-  const sanctionByRut = new Map(sanctionSubjects.map((row) => [row.rut, row]));
+  const evidenceSubjects = (evidenceSubjectsResult.data ?? []) as Array<{ rut: string; entity_id: string; name: string; uaf_sector: string | null }>;
+  const termSubjects = (termSubjectsResult.data ?? []) as Array<{ entity_id: string; name: string; uaf_sector: string | null }>;
+  const byRut = new Map(evidenceSubjects.map((row) => [row.rut, row]));
+  const byEntity = new Map(termSubjects.map((row) => [row.entity_id, row]));
   const items: UpdateItem[] = [];
 
-  for (const row of snapshotResult.data ?? []) {
-    const eventAt = row.published_at ?? row.generated_at;
-    if (!eventAt) continue;
+  const sanction = sanctions.find((row) => row.rut && byRut.has(row.rut));
+  if (sanction?.rut) {
+    const subject = byRut.get(sanction.rut)!;
     items.push({
-      id: `corte:${row.snapshot_id}`,
-      kind: 'CORTE',
-      event_at: eventAt,
-      title: 'Nuevo corte del Observatorio disponible',
-      detail: `Snapshot ${row.snapshot_id} · estado ${String(row.status ?? 'publicado').toLowerCase()}`,
-      source_label: 'Atlas Observatorio',
-      source_url: null,
-      entity_id: null,
-      entity_name: null,
-      meta: 'Corte',
-    });
-  }
-
-  const sourceRows = (sourceResult.data ?? [])
-    .filter((row) => row.source_code === 'RADAR_PRENSA' || Number(row.records_24h ?? 0) > 0)
-    .slice(0, 3);
-
-  for (const row of sourceRows) {
-    const eventAt = row.last_successful_ingest_at ?? row.refreshed_at;
-    if (!eventAt) continue;
-    const count = Number(row.records_24h ?? 0);
-    const isPress = row.source_code === 'RADAR_PRENSA';
-    const sourceName = row.source_name ?? row.source_code;
-    items.push({
-      id: `source:${row.source_code}`,
-      kind: isPress ? 'PRENSA' : 'FUENTE',
-      event_at: eventAt,
-      title: isPress ? 'Radar Prensa · índice actualizado' : `${String(sourceName).replace(/\s*·.*$/, '')} · fuente actualizada`,
-      detail: count > 0 ? `${count.toLocaleString('es-CL')} registros observados en las últimas 24 h` : 'Fuente sincronizada en el último corte',
-      source_label: sourceName,
-      source_url: null,
-      entity_id: null,
-      entity_name: null,
-      meta: String(row.data_status ?? 'actualizada').toUpperCase(),
-    });
-  }
-
-  for (const row of sanctionRows) {
-    const subject = row.rut ? sanctionByRut.get(row.rut) : undefined;
-    const eventAt = row.event_date ?? row.refreshed_at;
-    if (!eventAt) continue;
-    items.push({
-      id: `sancion:${row.evidence_id}`,
+      id: `sancion:${sanction.evidence_id}`,
       kind: 'SANCION',
-      event_at: eventAt,
-      title: row.headline || `${subject?.name ?? row.rut ?? 'Entidad'} · nuevo antecedente sancionatorio`,
-      detail: row.summary && row.summary !== row.headline ? row.summary : subject?.uaf_sector ?? null,
-      source_label: row.source_label,
-      source_url: row.has_link ? row.document_url : null,
-      entity_id: subject?.entity_id ?? null,
-      entity_name: subject?.name ?? null,
-      meta: 'Antecedente sancionatorio',
-    });
-  }
-
-  for (const row of lifecycleRows) {
-    const subject = stateById.get(row.entity_id);
-    if (!subject) continue;
-    const eventAt = row.event_date ?? row.refreshed_at;
-    if (!eventAt) continue;
-    const ending = row.event_type === 'SII_TERMINO_GIRO';
-    items.push({
-      id: `estado:${row.entity_id}:${row.event_type}:${row.event_date ?? 'sin-fecha'}`,
-      kind: 'ESTADO',
-      event_at: eventAt,
-      title: `${subject.name} · ${ending ? 'término de giro' : 'inicio de actividades'}`,
-      detail: subject.uaf_sector ?? row.event_label ?? null,
-      source_label: row.source_system ?? 'SII',
-      source_url: row.source_url ?? null,
-      entity_id: row.entity_id,
+      event_at: sanction.event_date ?? sanction.refreshed_at,
+      title: sanction.headline || `${subject.name} · antecedente sancionatorio`,
+      detail: sanction.summary || subject.uaf_sector,
+      source_label: sanction.source_label,
+      source_url: sanction.has_link ? sanction.document_url : null,
+      entity_id: subject.entity_id,
       entity_name: subject.name,
-      meta: ending ? 'Estado tributario' : 'Ciclo de vida',
+      meta: 'SO inscrito · sanción',
+      priority_group: 1,
+      priority_label: PRIORITY_LABEL[1],
+      action_hash: null,
+      action_label: 'Abrir ficha',
     });
   }
 
-  items.sort((a, b) => sortableDate(b.event_at) - sortableDate(a.event_at));
+  const pressRow = press.find((row) => row.rut && byRut.has(row.rut));
+  if (pressRow?.rut) {
+    const subject = byRut.get(pressRow.rut)!;
+    items.push({
+      id: `prensa:${pressRow.evidence_id}`,
+      kind: 'PRENSA',
+      event_at: pressRow.event_date ?? pressRow.refreshed_at,
+      title: pressRow.headline || `${subject.name} · nueva mención en prensa`,
+      detail: pressRow.summary || subject.uaf_sector,
+      source_label: pressRow.source_label ?? 'Prensa',
+      source_url: pressRow.has_link ? pressRow.document_url : null,
+      entity_id: subject.entity_id,
+      entity_name: subject.name,
+      meta: 'SO inscrito · prensa',
+      priority_group: 1,
+      priority_label: PRIORITY_LABEL[1],
+      action_hash: null,
+      action_label: 'Abrir ficha',
+    });
+  }
 
+  const candidates = (potentialResult.data ?? []) as Array<{
+    rut: string;
+    entity_id: string | null;
+    name: string;
+    implied_sector: string | null;
+    matched_activity: string | null;
+    sii_activity_start_date: string | null;
+    ivo_score: number | string | null;
+    refreshed_at: string;
+  }>;
+  const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  const newestCompany = candidates
+    .filter((row) => row.sii_activity_start_date && new Date(`${row.sii_activity_start_date}T00:00:00Z`).getTime() >= oneYearAgo)
+    .sort((a, b) => sortableDate(b.sii_activity_start_date ?? '') - sortableDate(a.sii_activity_start_date ?? ''))[0];
+  const radarCandidate = candidates
+    .filter((row) => row.rut !== newestCompany?.rut)
+    .sort((a, b) => Number(b.ivo_score ?? 0) - Number(a.ivo_score ?? 0))[0];
+
+  for (const [candidate, kind] of [[newestCompany, 'EMPRESA_NUEVA'], [radarCandidate, 'RADAR']] as const) {
+    if (!candidate) continue;
+    const newCompany = kind === 'EMPRESA_NUEVA';
+    items.push({
+      id: `potencial:${candidate.rut}:${kind.toLowerCase()}`,
+      kind: 'POTENCIAL',
+      event_at: newCompany ? candidate.sii_activity_start_date! : candidate.refreshed_at,
+      title: `${candidate.name} · ${newCompany ? 'empresa nueva con giro relacionado' : 'potencial SO observado en Radar'}`,
+      detail: [candidate.implied_sector, candidate.matched_activity, candidate.ivo_score != null ? `IVO ${Number(candidate.ivo_score).toFixed(1)}` : null].filter(Boolean).join(' · '),
+      source_label: 'Radar SII · screening potenciales',
+      source_url: null,
+      entity_id: candidate.entity_id,
+      entity_name: candidate.name,
+      meta: newCompany ? 'Empresa nueva · hipótesis de registro' : 'Screening · hipótesis de registro',
+      priority_group: 2,
+      priority_label: PRIORITY_LABEL[2],
+      action_hash: hrefFor({ view: 'universo', mode: 'casos', cola: 'potenciales' }),
+      action_label: 'Revisar potencial',
+    });
+  }
+
+  const matchedTerms = terms
+    .map((row) => ({ ...row, subject: byEntity.get(row.entity_id) }))
+    .filter((row) => row.subject && row.refreshed_at);
+  const latestTermRefresh = Math.max(0, ...matchedTerms.map((row) => sortableDate(row.refreshed_at)));
+  const latestBatch = matchedTerms.filter((row) => sortableDate(row.refreshed_at) >= latestTermRefresh - 24 * 60 * 60 * 1000);
+  if (latestBatch.length) {
+    const latestEvent = latestBatch
+      .map((row) => row.event_date)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null;
+    items.push({
+      id: `baja-so:${latestTermRefresh}`,
+      kind: 'BAJA_SO',
+      event_at: new Date(latestTermRefresh).toISOString(),
+      title: `${latestBatch.length} SO con término de giro en la última actualización`,
+      detail: `Términos registrados hasta ${latestEvent ?? 'fecha no informada'} · revisar cancelación o desvinculación del padrón.`,
+      source_label: 'Radar SII × padrón UAF',
+      source_url: null,
+      entity_id: null,
+      entity_name: null,
+      meta: 'Acción de gestión · revisar cancelación',
+      priority_group: 3,
+      priority_label: PRIORITY_LABEL[3],
+      action_hash: hrefFor({ view: 'universo', mode: 'casos', cola: 'termino' }),
+      action_label: 'Revisar bajas',
+    });
+  }
+
+  const sources = (sourceResult.data ?? []) as Array<{
+    source_code: string;
+    source_name: string;
+    software_status: string | null;
+    data_status: string | null;
+    records_24h: number | string | null;
+    refreshed_at: string;
+  }>;
+  const severity = (row: typeof sources[number]) => {
+    const software = String(row.software_status ?? '').toLowerCase();
+    const data = String(row.data_status ?? '').toLowerCase();
+    if (['error', 'blocked', 'down', 'failed'].includes(software) || ['error', 'blocked', 'stale', 'failed'].includes(data)) return 1;
+    if (software === 'watch' || data === 'silent') return 2;
+    return 9;
+  };
+  const critical = sources.filter((row) => severity(row) === 1);
+  const watch = sources.filter((row) => severity(row) === 2);
+  const freshRadars = sources.filter((row) => row.source_code.startsWith('RADAR_') && String(row.data_status).toLowerCase() === 'fresh');
+  const issueNames = [...critical, ...watch].slice(0, 3).map((row) => row.source_name).join(' · ');
+  const radarRecords = sources
+    .filter((row) => row.source_code.startsWith('RADAR_'))
+    .reduce((sum, row) => sum + Number(row.records_24h ?? 0), 0);
+  const latestSource = Math.max(0, ...sources.map((row) => sortableDate(row.refreshed_at)));
+  items.push({
+    id: `fuentes:${latestSource}`,
+    kind: 'FUENTE',
+    event_at: latestSource ? new Date(latestSource).toISOString() : new Date().toISOString(),
+    title: critical.length
+      ? `${critical.length} fuente(s) con bloqueo o error`
+      : watch.length
+        ? `${watch.length} fuente(s) requieren vigilancia`
+        : `${freshRadars.length} radares actualizados sin incidencias declaradas`,
+    detail: [issueNames || null, `${freshRadars.length} radares fresh`, `${radarRecords.toLocaleString('es-CL')} registros en 24 h`].filter(Boolean).join(' · '),
+    source_label: 'Salud de fuentes',
+    source_url: null,
+    entity_id: null,
+    entity_name: null,
+    meta: critical.length ? 'INCIDENCIA' : watch.length ? 'VIGILAR' : 'OPERATIVO',
+    priority_group: 4,
+    priority_label: PRIORITY_LABEL[4],
+    action_hash: hrefFor({ view: 'fuentes' }),
+    action_label: 'Ver fuentes',
+  });
+
+  items.sort((a, b) => priorityFor(a) - priorityFor(b) || sortableDate(b.event_at) - sortableDate(a.event_at));
   return {
-    contract: 'ATLAS_OBS_UAF_UPDATES_V1',
+    contract: 'ATLAS_OBS_UAF_UPDATES_V2',
     generated_at: new Date().toISOString(),
     items: items.slice(0, 8),
     semantics: SEMANTICS,
