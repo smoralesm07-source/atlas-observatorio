@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   CONTACT_FIELDS, KIND_META, PRIORITIES, STATE_FLOW, STATE_META,
   type CaseContact, type CasePriority, type CaseRecord, type CaseState,
@@ -10,11 +10,6 @@ import { CopyButton, Field, Pill, SectionHead } from './bits';
 import type { CaseRow } from './model';
 import { OpenContactPanel } from './OpenContactPanel';
 import '../../styles/universo-case-flow.css';
-
-/* FICHA DE GESTIÓN · FLUJO PROGRESIVO
-   Antes de tomar un caso se muestra sólo lo necesario para decidir: identidad,
-   motivo, prioridad/señales y disponibilidad. Al tomarlo, la superficie de
-   trabajo se despliega debajo sin cambiar de pestaña ni de contexto. */
 
 const REVIEW_LABEL: Record<string, string> = {
   CANDIDATO_SELECCIONADO: 'Seleccionado como candidato',
@@ -41,24 +36,47 @@ export function CaseFile({
   const kind = KIND_META[row.kind];
   const state = STATE_META[record.state];
   const { dotted } = rutForms(row.subject.rut);
-  const filled = contactFilled(record.contact);
   const tracked = isTracked(record);
   const released = record.state === 'DEVUELTO';
   const finalized = record.state === 'FINALIZADO';
   const locked = tracked && record.isMine === false;
   const canEdit = tracked && !locked && !finalized;
   const owner = record.assignedName || record.assignedEmail || null;
-  const managementRef = useRef<HTMLDivElement>(null);
-  const wasTracked = useRef(tracked);
+
+  const [contactDraft, setContactDraft] = useState<CaseContact>(() => ({ ...record.contact }));
+  const [noteDraft, setNoteDraft] = useState(record.note);
+  const locateRef = useRef<HTMLDivElement>(null);
+  const registerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const justClaimed = tracked && !wasTracked.current && record.isMine !== false;
-    wasTracked.current = tracked;
-    if (!justClaimed) return;
-    window.requestAnimationFrame(() => {
-      managementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [tracked, record.isMine]);
+    setContactDraft({ ...record.contact });
+    setNoteDraft(record.note);
+  }, [row.key, record.contact, record.note]);
+
+  const filled = contactFilled(contactDraft);
+  const noteDirty = noteDraft !== record.note;
+  const score = row.candidate?.ivo_score ?? row.termination?.ipf_score ?? null;
+  const scoreLabel = row.candidate ? 'IVO' : 'IPF';
+
+  const jump = (ref: RefObject<HTMLDivElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const saveContactField = (key: keyof CaseContact) => {
+    const value = contactDraft[key];
+    if (value !== record.contact[key]) onPatch({ contact: { [key]: value } });
+  };
+
+  const saveNote = () => {
+    if (noteDraft !== record.note) onPatch({ note: noteDraft });
+  };
+
+  const clearContact = () => {
+    const empty: CaseContact = { telefono: '', correo: '', sitio: '', direccion: '', persona: '', fuente: '' };
+    setContactDraft(empty);
+    onPatch({ contact: empty });
+  };
 
   return (
     <section className="uso-case uso-case-progressive" aria-label={`Ficha de gestión de ${row.subject.name || dotted}`}>
@@ -94,10 +112,25 @@ export function CaseFile({
         </div>
       </header>
 
-      <div className="uso-case-body uso-case-snapshot">
-        <p className="uso-case-motive">{row.subject.motive}</p>
-        {row.candidate ? <PotentialSnapshot row={row} /> : <TerminationSnapshot row={row} />}
-      </div>
+      {!tracked ? (
+        <div className="uso-case-body uso-case-snapshot">
+          <p className="uso-case-motive">{row.subject.motive}</p>
+          {row.candidate ? <PotentialSnapshot row={row} /> : <TerminationSnapshot row={row} />}
+        </div>
+      ) : (
+        <details className="uso-case-summary">
+          <summary>
+            <span>
+              <b>Resumen del caso</b>
+              <em>{row.subject.motive}</em>
+            </span>
+            {score != null && <strong>{scoreLabel} {n1(score)}</strong>}
+          </summary>
+          <div className="uso-case-body uso-case-snapshot">
+            {row.candidate ? <PotentialSnapshot row={row} /> : <TerminationSnapshot row={row} />}
+          </div>
+        </details>
+      )}
 
       <div className="uso-case-assignment" data-mode={!tracked ? 'open' : locked ? 'other' : 'mine'}>
         {!tracked ? (
@@ -107,7 +140,7 @@ export function CaseFile({
               <b>{released ? 'Devuelto al universo sin gestión activa' : 'Nadie está atendiendo este caso'}</b>
               <em>{released && owner
                 ? `Revisado antes por ${owner}${record.updatedAt ? ` · devuelto ${desde(record.updatedAt)}` : ''}. La traza se conserva.`
-                : 'Al tomarlo saldrá de la cola pendiente y el equipo verá que quedó asignado a ti.'}</em>
+                : 'Tómalo sólo cuando vayas a trabajarlo. Quedará asignado a ti y saldrá de la cola pendiente.'}</em>
             </div>
             <button className="btn btn-sm btn-primary" onClick={() => onPatch({ state: 'EN_UBICACION' })}>
               {released ? 'Retomar caso' : 'Tomar caso'}
@@ -127,13 +160,16 @@ export function CaseFile({
       </div>
 
       {tracked && (
-        <div ref={managementRef} className="uso-case-management fade-in" aria-live="polite">
+        <div className="uso-case-management" aria-live="polite">
+          <nav className="uso-case-jumpbar" aria-label="Navegación de la gestión">
+            <button onClick={() => jump(locateRef)}><i>1</i><span>Ubicar</span></button>
+            <button onClick={() => jump(registerRef)}><i>2</i><span>Registrar</span></button>
+            <button onClick={() => jump(closeRef)}><i>3</i><span>Cerrar</span></button>
+            <strong>{STATE_META[record.state].label}</strong>
+          </nav>
+
           <div className="uso-case-body uso-management-state">
-            <SectionHead
-              title="Estado de la gestión"
-              hint="Avanza el caso desde la ubicación hasta el contacto, sin abandonar esta ficha."
-            />
-            <div className="uso-flow" role="group" aria-label="Avance de la gestión">
+            <div className="uso-flow uso-flow-compact" role="group" aria-label="Avance de la gestión">
               {STATE_FLOW.map((key, index) => {
                 const meta = STATE_META[key];
                 const done = meta.step <= state.step && record.state !== 'DESCARTADO' && record.state !== 'SIN_UBICAR' && record.state !== 'DEVUELTO';
@@ -152,27 +188,16 @@ export function CaseFile({
                 );
               })}
             </div>
-            <div className="uso-flow-alt">
-              {(['SIN_UBICAR', 'DESCARTADO'] as CaseState[]).map((key) => (
-                <button
-                  key={key}
-                  data-on={record.state === key}
-                  style={{ ['--flow-tone' as string]: STATE_META[key].tone }}
-                  disabled={!canEdit}
-                  onClick={() => onPatch({ state: key })}
-                >
-                  {STATE_META[key].label}
-                </button>
-              ))}
-            </div>
           </div>
 
-          <OpenContactPanel row={row} onPatch={onPatch} readOnly={!canEdit} />
+          <div ref={locateRef} className="uso-case-anchor">
+            <OpenContactPanel row={row} onPatch={onPatch} readOnly={!canEdit} />
+          </div>
 
-          <div className="uso-case-body uso-management-capture">
+          <div ref={registerRef} className="uso-case-body uso-management-capture uso-case-anchor">
             <SectionHead
-              title="Datos de contacto encontrados"
-              hint="Consolida aquí sólo los datos que usarás en la gestión y conserva su fuente."
+              title="Registrar gestión"
+              hint="Completa sólo lo útil para contactar o dejar traza. Los campos se guardan al salir de ellos."
             />
             <div className="uso-contact">
               {CONTACT_FIELDS.map((field) => (
@@ -180,28 +205,19 @@ export function CaseFile({
                   <span>{field.label}</span>
                   <input
                     type={field.type}
-                    value={record.contact[field.key]}
+                    value={contactDraft[field.key]}
                     placeholder={field.placeholder}
                     disabled={!canEdit}
-                    onChange={(e) => onPatch({ contact: { [field.key]: e.target.value } })}
+                    onChange={(e) => setContactDraft((current) => ({ ...current, [field.key]: e.target.value }))}
+                    onBlur={() => saveContactField(field.key)}
                   />
                 </label>
               ))}
             </div>
             <div className="uso-contact-foot">
-              <span className="uso-contact-meter" aria-hidden>
-                <i style={{ width: `${(filled / CONTACT_FIELDS.length) * 100}%` }} />
-              </span>
-              <em>{filled} de {CONTACT_FIELDS.length} campos capturados</em>
-              {filled > 0 && (
-                <button
-                  className="uso-linkish"
-                  disabled={!canEdit}
-                  onClick={() => onPatch({ contact: { telefono: '', correo: '', sitio: '', direccion: '', persona: '', fuente: '' } })}
-                >
-                  Limpiar contacto
-                </button>
-              )}
+              <span className="uso-contact-meter" aria-hidden><i style={{ width: `${(filled / CONTACT_FIELDS.length) * 100}%` }} /></span>
+              <em>{filled} de {CONTACT_FIELDS.length} campos con dato</em>
+              {filled > 0 && <button className="uso-linkish" disabled={!canEdit} onClick={clearContact}>Limpiar contacto</button>}
             </div>
 
             <div className="uso-management-meta">
@@ -221,46 +237,48 @@ export function CaseFile({
                 </div>
               </div>
 
-              <label className="uso-note-field">
+              <label className="uso-note-field uso-note-draft">
                 <span>Nota de gestión</span>
                 <textarea
-                  value={record.note}
+                  value={noteDraft}
                   maxLength={600}
                   disabled={!canEdit}
-                  placeholder="Qué se intentó, con quién se habló, qué falta."
-                  onChange={(e) => onPatch({ note: e.target.value })}
+                  placeholder="Qué se intentó, con quién se habló y qué falta."
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  onBlur={saveNote}
                 />
-                <em>{record.note.length}/600 · actualizado {desde(record.updatedAt)}</em>
+                <div className="uso-note-foot">
+                  <em>{noteDraft.length}/600 · {noteDirty ? 'cambios sin guardar' : `guardado ${desde(record.updatedAt)}`}</em>
+                  <button className="btn btn-sm" disabled={!canEdit || !noteDirty} onClick={saveNote}>Guardar nota</button>
+                </div>
               </label>
             </div>
+          </div>
 
+          <div ref={closeRef} className="uso-case-body uso-management-close uso-case-anchor">
+            <SectionHead title="Cerrar o devolver" hint="Resuelve la gestión cuando ya tengas un resultado suficiente." />
             <div className="uso-case-resolution" data-finalized={finalized ? 'true' : undefined}>
               <div>
-                <span className="uso-kicker">Cierre de la gestión</span>
-                <b>{finalized ? 'Gestión finalizada' : 'Resultado del caso'}</b>
+                <span className="uso-kicker">Resultado del caso</span>
+                <b>{finalized ? 'Gestión finalizada' : STATE_META[record.state].label}</b>
                 <em>{finalized
                   ? `Contacto logrado${record.contactedAt ? ` · ${fecha(record.contactedAt)}` : ''}. El caso queda cerrado en Gestión SO.`
                   : record.state === 'CONTACTADO'
-                    ? 'El contacto ya fue registrado. Finaliza cuando la gestión haya concluido.'
-                    : 'Finalizar se habilita después de registrar contacto. También puedes devolver el caso al universo.'}</em>
+                    ? 'El contacto está registrado. Puedes finalizar la gestión.'
+                    : 'Si no corresponde continuar, puedes marcar no ubicable, descartar o devolver el caso.'}</em>
               </div>
               {!finalized && (
                 <div className="uso-case-resolution-actions">
-                  <button
-                    className="btn btn-sm btn-primary uso-finalize"
-                    disabled={!canEdit || record.state !== 'CONTACTADO'}
-                    onClick={() => onPatch({ state: 'FINALIZADO' })}
-                    title={record.state !== 'CONTACTADO' ? 'Primero registra el estado Contactado' : 'Cerrar la gestión como exitosa'}
-                  >
+                  <button className="btn btn-sm btn-primary uso-finalize" disabled={!canEdit || record.state !== 'CONTACTADO'} onClick={() => onPatch({ state: 'FINALIZADO' })}>
                     Finalizar gestión
                   </button>
+                  <button className="btn btn-sm" disabled={!canEdit} onClick={() => onPatch({ state: 'SIN_UBICAR' })}>No ubicable</button>
+                  <button className="btn btn-sm" disabled={!canEdit} onClick={() => onPatch({ state: 'DESCARTADO' })}>Descartar</button>
                   <button
                     className="btn btn-sm uso-release"
                     disabled={!canEdit}
                     onClick={() => {
-                      if (window.confirm('El caso volverá al universo sin gestión activa. Se conservará la traza de esta revisión. ¿Continuar?')) {
-                        onPatch({ state: 'DEVUELTO' });
-                      }
+                      if (window.confirm('El caso volverá al universo sin gestión activa. Se conservará la traza de esta revisión. ¿Continuar?')) onPatch({ state: 'DEVUELTO' });
                     }}
                   >
                     Devolver al universo
@@ -268,11 +286,6 @@ export function CaseFile({
                 </div>
               )}
             </div>
-
-            <p className="uso-note uso-management-footnote">
-              La gestión se guarda con responsable, estado y trazabilidad. El resto del equipo puede ver el avance;
-              sólo el responsable del caso puede modificarlo.
-            </p>
           </div>
         </div>
       )}
@@ -294,9 +307,7 @@ function PotentialSnapshot({ row }: { row: CaseRow }) {
             banda {titleCase(c.ivo_band ?? '—')}
             {c.ivo_credibility_pct != null && ` · credibilidad ${n1(c.ivo_credibility_pct)}%`}
           </em>
-          <span className="uso-score-track" aria-hidden>
-            <i style={{ width: `${Math.min(100, c.ivo_score ?? 0)}%` }} />
-          </span>
+          <span className="uso-score-track" aria-hidden><i style={{ width: `${Math.min(100, c.ivo_score ?? 0)}%` }} /></span>
           <p>Ordena revisión. No acredita obligación ni riesgo LA/FT.</p>
         </div>
       </div>
@@ -328,11 +339,7 @@ function PotentialSnapshot({ row }: { row: CaseRow }) {
 function TerminationSnapshot({ row }: { row: CaseRow }) {
   const s = row.termination;
   if (!s) {
-    return (
-      <p className="uso-note">
-        La fila del corte no está cargada en esta sesión. Abre la cola de término de giro para refrescar su caracterización.
-      </p>
-    );
+    return <p className="uso-note">La fila del corte no está cargada en esta sesión. Abre la cola de término de giro para refrescar su caracterización.</p>;
   }
 
   return (
@@ -345,9 +352,7 @@ function TerminationSnapshot({ row }: { row: CaseRow }) {
             {s.ipf_band ? `banda ${titleCase(s.ipf_band.replace(/_/g, ' '))}` : 'sin banda'}
             {s.ipf_percentile != null && ` · percentil ${n1(s.ipf_percentile)} del padrón`}
           </em>
-          <span className="uso-score-track" aria-hidden>
-            <i style={{ width: `${Math.min(100, s.ipf_score ?? 0)}%` }} />
-          </span>
+          <span className="uso-score-track" aria-hidden><i style={{ width: `${Math.min(100, s.ipf_score ?? 0)}%` }} /></span>
           <p>Ordena esfuerzo de fiscalización. No es probabilidad de LA/FT.</p>
         </div>
         <div className="uso-score-parts uso-score-marks">
