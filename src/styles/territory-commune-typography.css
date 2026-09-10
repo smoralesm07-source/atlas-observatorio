@@ -1,0 +1,91 @@
+.territory-commune-workspace.tcw2 {
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* Jerarquía general: ningún texto operativo queda por debajo de un tamaño cómodo. */
+.tcw2-back { font-size: 11.5px; }
+.tcw2-eyebrow,
+.tcw2-kicker { font-size: 10px; }
+.tcw2-hero h1 { font-size: clamp(26px, 2.5vw, 36px); }
+.tcw2-hero h2 { font-size: 14px; }
+.tcw2-hero-copy > p { font-size: 12px; line-height: 1.55; }
+.tcw2-meta span { font-size: 10px; }
+
+.tcw2-hero-kpi > span { font-size: 9.5px; }
+.tcw2-hero-kpi strong { font-size: 21px; }
+.tcw2-hero-kpi small { font-size: 9.5px; }
+
+.tcw2-section-head h2 { font-size: 17px; }
+.tcw2-section-head p { font-size: 11px; line-height: 1.5; }
+.tcw2-section-note { font-size: 10px; }
+
+.tcw2-layer-index { font-size: 10px; }
+.tcw2-layer-name { font-size: 12px; }
+.tcw2-layer-score strong { font-size: 21px; }
+.tcw2-layer-score span { font-size: 9.5px; }
+.tcw2-layer-copy p { font-size: 10.5px; line-height: 1.45; }
+.tcw2-layer-side { font-size: 9.5px; }
+.tcw2-layer-side b { font-size: 10px; }
+.tcw2-layer-detail-head h3 { font-size: 12px; }
+.tcw2-layer-detail-head button { font-size: 10px; }
+.tcw2-layer-table { font-size: 10.5px; }
+.tcw2-layer-table th { font-size: 9px; }
+
+.tcw2-card-head h3 { font-size: 11.5px; }
+.tcw2-card-head span { font-size: 9.5px; }
+.tcw2-rank { font-size: 9.5px; }
+.tcw2-rank-copy b,
+.tcw2-anomaly-list b,
+.tcw2-dynamic-list b { font-size: 10.5px; }
+.tcw2-rank-copy small,
+.tcw2-anomaly-list small,
+.tcw2-dynamic-list small { font-size: 9px; }
+.tcw2-rank-list strong,
+.tcw2-anomaly-list strong,
+.tcw2-dynamic-list strong { font-size: 10px; }
+.tcw2-anomaly-list em { font-size: 9px; }
+.tcw2-dynamic-note { font-size: 9px; line-height: 1.45; }
+
+.tcw2-cohort-strip span { font-size: 9.5px; }
+.tcw2-cohort-strip strong { font-size: 16px; }
+.tcw2-cohort-strip small { font-size: 9px; }
+.tcw2-matrix thead th { font-size: 9.5px; }
+.tcw2-matrix tbody th span { font-size: 10.5px; }
+.tcw2-matrix tbody th small { font-size: 9px; }
+.tcw2-matrix td strong { font-size: 10.5px; }
+.tcw2-matrix-foot,
+.tcw2-matrix-foot button { font-size: 9.5px; }
+
+.tcw2-directory-head h2 { font-size: 16px; }
+.tcw2-directory-head p { font-size: 10.5px; line-height: 1.5; }
+.tcw2-directory-total strong { font-size: 20px; }
+.tcw2-directory-total small { font-size: 9.5px; }
+.tcw2-active-filter span,
+.tcw2-active-filter button { font-size: 9.5px; }
+.tcw2-search input { font-size: 10.5px; }
+.tcw2-sort button { font-size: 9.5px; }
+
+.tcw2-entity-table thead th { font-size: 9.5px; }
+.tcw2-entity-table td { font-size: 10.5px; line-height: 1.4; }
+.tcw2-entity-table td > b { font-size: 11px; }
+.tcw2-entity-name b { font-size: 11.5px !important; }
+.tcw2-entity-name > span,
+.tcw2-secondary { font-size: 9.5px; line-height: 1.4; }
+.tcw2-priority strong { font-size: 11.5px; }
+.tcw2-priority small { font-size: 9px; }
+.tcw2-open { font-size: 9.5px; }
+.tcw2-signals > span,
+.tcw2-state-pill { font-size: 9px; min-height: 20px; }
+
+.tcw2-directory-foot { font-size: 9.5px; }
+.tcw2-pages button { font-size: 9.5px; }
+.tcw2-state { font-size: 10.5px; }
+.tcw2-semantic { font-size: 9.5px; line-height: 1.5; }
+
+/* Leve compensación de alto para que el aumento tipográfico conserve la densidad ATLAS. */
+.tcw2-layer-card { min-height: 112px; }
+.tcw2-cohort-strip > button { min-height: 58px; }
+.tcw2-matrix tbody th > button,
+.tcw2-matrix td > button { min-height: 42px; }
+.tcw2-entity-table td { padding-top: 8px; padding-bottom: 8px; }
