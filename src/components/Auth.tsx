@@ -340,8 +340,10 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
 function SignIn() {
   const [microsoftBusy, setMicrosoftBusy] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
   const [email, setEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [code, setCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function signInMicrosoft() {
@@ -354,7 +356,7 @@ function SignIn() {
     }
   }
 
-  async function signInEmail() {
+  async function sendCode() {
     const value = normalizedEmail(email);
     if (!validInstitutionalEmail(value)) {
       setError(`Por ahora el acceso alternativo está habilitado únicamente para correos @${EMAIL_FALLBACK_DOMAIN}.`);
@@ -363,13 +365,12 @@ function SignIn() {
 
     setEmailBusy(true);
     setError(null);
-    setEmailSent(false);
+    setCode('');
 
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: value,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: redirectTo,
       },
     });
 
@@ -379,19 +380,52 @@ function SignIn() {
       return;
     }
 
-    setEmailSent(true);
+    setCodeSent(true);
     setEmailBusy(false);
   }
+
+  async function verifyCode() {
+    const value = normalizedEmail(email);
+    const token = code.replace(/\D/g, '').slice(0, 6);
+
+    if (!validInstitutionalEmail(value)) {
+      setError('El correo institucional no es válido.');
+      return;
+    }
+    if (token.length !== 6) {
+      setError('Ingresa el código de 6 dígitos enviado a tu correo.');
+      return;
+    }
+
+    setVerifyBusy(true);
+    setError(null);
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: value,
+      token,
+      type: 'email',
+    });
+
+    if (verifyError) {
+      setError(verifyError.message);
+      setVerifyBusy(false);
+      return;
+    }
+
+    setVerifyBusy(false);
+  }
+
+  const locked = microsoftBusy || emailBusy || verifyBusy;
 
   return (
     <Card title="ATLAS Observatorio" eyebrow="Monitor de fuentes abiertas">
       <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-        Autentica tu identidad. El ingreso a los datos solo se habilita después de la autorización de un administrador de ATLAS.
+        Autentica tu identidad. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
       </p>
 
       {error && <div className="note note-warn">{error}</div>}
 
-      <button className="btn btn-primary" style={{ width: '100%' }} onClick={signInMicrosoft} disabled={microsoftBusy || emailBusy}>
+      <button className="btn btn-primary" style={{ width: '100%' }} onClick={signInMicrosoft} disabled={locked}>
         <MicrosoftLogo />
         {microsoftBusy ? 'Redirigiendo…' : 'Ingresar con Microsoft'}
       </button>
@@ -407,45 +441,95 @@ function SignIn() {
         <input
           type="email"
           value={email}
+          disabled={codeSent || locked}
           onChange={(event) => {
             setEmail(event.target.value);
-            setEmailSent(false);
+            setError(null);
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !emailBusy) void signInEmail();
+            if (event.key === 'Enter' && !locked && !codeSent) void sendCode();
           }}
           placeholder={`nombre@${EMAIL_FALLBACK_DOMAIN}`}
           autoComplete="email"
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            border: '1px solid var(--line)',
-            borderRadius: 9,
-            background: 'var(--surface-2)',
-            color: 'var(--ink-1)',
-            padding: '10px 12px',
-            outline: 'none',
-            font: 'inherit',
-            fontSize: 13,
-          }}
+          style={inputStyle}
         />
-        <button className="btn" style={{ width: '100%' }} onClick={() => void signInEmail()} disabled={emailBusy || microsoftBusy}>
-          {emailBusy ? 'Enviando…' : 'Enviar enlace seguro al correo'}
-        </button>
+
+        {!codeSent ? (
+          <button className="btn" style={{ width: '100%' }} onClick={() => void sendCode()} disabled={locked}>
+            {emailBusy ? 'Enviando…' : 'Enviar código de 6 dígitos'}
+          </button>
+        ) : (
+          <>
+            <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600, marginTop: 4 }}>
+              Código de verificación
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              autoFocus
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !locked) void verifyCode();
+              }}
+              placeholder="000000"
+              aria-label="Código de verificación de 6 dígitos"
+              style={{ ...inputStyle, letterSpacing: '0.28em', textAlign: 'center', fontWeight: 700, fontSize: 18 }}
+            />
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              onClick={() => void verifyCode()}
+              disabled={locked || code.length !== 6}
+            >
+              {verifyBusy ? 'Verificando…' : 'Verificar e ingresar'}
+            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  setCodeSent(false);
+                  setCode('');
+                  setError(null);
+                }}
+                disabled={locked}
+              >
+                Cambiar correo
+              </button>
+              <button className="btn" style={{ flex: 1 }} onClick={() => void sendCode()} disabled={locked}>
+                {emailBusy ? 'Reenviando…' : 'Reenviar código'}
+              </button>
+            </div>
+            <div className="note">
+              Enviamos un código de 6 dígitos a <strong>{normalizedEmail(email)}</strong>. Escríbelo aquí; no necesitas abrir ATLAS desde el correo.
+            </div>
+          </>
+        )}
       </div>
 
-      {emailSent && (
-        <div className="note" style={{ marginTop: 12 }}>
-          Revisa <strong>{normalizedEmail(email)}</strong> y abre el enlace de verificación. Al volver a ATLAS, la solicitud quedará registrada automáticamente para revisión.
-        </div>
-      )}
-
       <div className="note" style={{ marginTop: 12 }}>
-        Si Microsoft exige aprobación del administrador de tu organización, usa el correo institucional. Ninguno de los dos métodos otorga acceso automático a los datos.
+        Microsoft y el correo institucional solo acreditan identidad. El acceso a los datos sigue sujeto a la autorización de ATLAS.
       </div>
     </Card>
   );
 }
+
+const inputStyle = {
+  width: '100%',
+  boxSizing: 'border-box' as const,
+  border: '1px solid var(--line)',
+  borderRadius: 9,
+  background: 'var(--surface-2)',
+  color: 'var(--ink-1)',
+  padding: '10px 12px',
+  outline: 'none',
+  font: 'inherit',
+  fontSize: 13,
+};
 
 function SignOutButton({ marginTop = 18 }: { marginTop?: number }) {
   return (
