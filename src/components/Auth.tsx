@@ -12,6 +12,11 @@ type Access =
   | { state: 'disabled' }
   | { state: 'error'; message: string; transport: boolean };
 
+type RequestState =
+  | { state: 'saving' }
+  | { state: 'saved' }
+  | { state: 'error'; message: string };
+
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
 
 function isTransportError(message: string) {
@@ -109,9 +114,8 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
 
           if (!error) {
             if (!data) {
-              // La identidad ya fue autenticada por Microsoft y queda visible
-              // para Administración a través de Supabase Auth. La ausencia en
-              // aml_allowed_users equivale a una solicitud aún no resuelta.
+              // La identidad fue autenticada pero aún no autorizada. La vista
+              // PendingAccess registrará una solicitud explícita en servidor.
               setAccess({ state: 'pending' });
             } else if (data.enabled) {
               setAccess({ state: 'granted', role: asAtlasRole(data.role) });
@@ -199,28 +203,10 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
 
   if (access.state === 'pending') {
     return (
-      <Card title="Solicitud de acceso registrada">
-        <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
-          Microsoft verificó correctamente tu identidad. Tu solicitud quedó disponible para
-          revisión por un administrador de ATLAS Observatorio.
-        </p>
-        <div className="note">
-          <strong style={{ display: 'block', marginBottom: 5, color: 'var(--ink-1)' }}>Cuenta Microsoft</strong>
-          {session.user.email ?? 'Correo no informado por Microsoft'}
-        </div>
-        <p style={{ color: 'var(--ink-3)', fontSize: 12, lineHeight: 1.55, marginBottom: 0 }}>
-          La autenticación no entrega acceso automático a los datos. Cuando un administrador
-          habilite esta identidad, podrás comprobar la autorización sin volver a iniciar sesión.
-        </p>
-        <button
-          className="btn btn-primary"
-          style={{ width: '100%', marginTop: 18 }}
-          onClick={() => setValidationKey((value) => value + 1)}
-        >
-          Comprobar autorización
-        </button>
-        <SignOutButton marginTop={10} />
-      </Card>
+      <PendingAccess
+        session={session}
+        onRecheck={() => setValidationKey((value) => value + 1)}
+      />
     );
   }
 
@@ -247,6 +233,101 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
   }
 
   return <>{children(session, access.role)}</>;
+}
+
+function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: () => void }) {
+  const [request, setRequest] = useState<RequestState>({ state: 'saving' });
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+
+    async function register() {
+      setRequest({ state: 'saving' });
+      const { data, error } = await supabase.functions.invoke<{
+        ok?: boolean;
+        state?: 'pending' | 'granted' | 'disabled';
+        message?: string;
+        error?: string;
+      }>('atlas-access-request', { body: {} });
+
+      if (!live) return;
+
+      if (error) {
+        setRequest({ state: 'error', message: error.message || 'No fue posible registrar la solicitud.' });
+        return;
+      }
+
+      if (data?.state === 'granted' || data?.state === 'disabled') {
+        onRecheck();
+        return;
+      }
+
+      if (data?.ok && data.state === 'pending') {
+        setRequest({ state: 'saved' });
+        return;
+      }
+
+      setRequest({ state: 'error', message: data?.message ?? 'La solicitud no pudo confirmarse en el servidor.' });
+    }
+
+    void register();
+    return () => {
+      live = false;
+    };
+  }, [session.user.id, retryKey]);
+
+  const saved = request.state === 'saved';
+
+  return (
+    <Card title={saved ? 'Solicitud de acceso registrada' : request.state === 'saving' ? 'Registrando solicitud…' : 'No fue posible registrar la solicitud'}>
+      <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
+        Microsoft verificó correctamente tu identidad. ATLAS mantiene los datos cerrados hasta
+        que un administrador autorice esta cuenta.
+      </p>
+      <div className="note">
+        <strong style={{ display: 'block', marginBottom: 5, color: 'var(--ink-1)' }}>Cuenta Microsoft</strong>
+        {session.user.email ?? 'Correo no informado por Microsoft'}
+      </div>
+
+      {request.state === 'saving' && (
+        <p style={{ color: 'var(--ink-3)', fontSize: 12, lineHeight: 1.55, marginBottom: 0 }}>
+          Confirmando la solicitud en la cola administrativa…
+        </p>
+      )}
+
+      {request.state === 'saved' && (
+        <p style={{ color: 'var(--ink-3)', fontSize: 12, lineHeight: 1.55, marginBottom: 0 }}>
+          La solicitud quedó persistida y ya puede ser revisada desde Administración. Cuando sea
+          aprobada, podrás comprobar la autorización sin volver a iniciar sesión.
+        </p>
+      )}
+
+      {request.state === 'error' && (
+        <>
+          <div className="note note-warn" style={{ marginTop: 12 }}>{request.message}</div>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: 18 }}
+            onClick={() => setRetryKey((value) => value + 1)}
+          >
+            Reintentar solicitud
+          </button>
+        </>
+      )}
+
+      {request.state === 'saved' && (
+        <button
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: 18 }}
+          onClick={onRecheck}
+        >
+          Comprobar autorización
+        </button>
+      )}
+      <SignOutButton marginTop={10} />
+    </Card>
+  );
 }
 
 function SignIn() {
