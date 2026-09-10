@@ -8,8 +8,9 @@ import '../styles/territory-commune-workspace.css';
 const PAGE = 80;
 const MATRIX_VISIBLE = 7;
 
-type Segment = 'ALL' | 'SO' | 'POTENTIAL' | 'SANCTIONED' | 'PRESS' | 'OSFL' | 'FINTECH';
+type Segment = 'UNIVERSE' | 'ALL' | 'SO' | 'POTENTIAL' | 'SANCTIONED' | 'PRESS' | 'OSFL' | 'FINTECH';
 type SortMode = 'relevance' | 'score' | 'signals' | 'name';
+type UniverseStatus = 'ALL' | 'ACTIVE' | 'TERMINATED';
 
 type MatrixRow = {
   sector: string;
@@ -44,6 +45,48 @@ type CommuneContext = {
   }[];
   matrix?: MatrixRow[];
   semantics: string;
+};
+
+type TerritoryUniverse = {
+  contract: 'ATLAS_OBS_TERRITORY_UNIVERSE_V1';
+  territory_id: string;
+  commune_name: string;
+  region_name: string;
+  metrics: {
+    universe_total: number;
+    sii_total: number;
+    sii_active: number;
+    sii_terminated: number;
+    res_total: number;
+    atlas_observed: number;
+    uaf_observed: number;
+    osfl_observed: number;
+    potential_observed: number;
+    fintech_observed: number;
+    atlas_coverage_pct: number | null;
+  };
+  semantics: string;
+  refreshed_at: string;
+};
+
+type UniverseEntity = {
+  rut: string;
+  name: string;
+  entity_type: string;
+  region: string | null;
+  commune: string | null;
+  geo_source: string;
+  sii_status: string | null;
+  in_res: boolean;
+  in_sii: boolean;
+  in_atlas: boolean;
+  in_uaf: boolean;
+  in_osfl: boolean;
+  in_potential: boolean;
+  in_fintech: boolean;
+  atlas_entity_id: string | null;
+  source_count: number;
+  total_count: number;
 };
 
 type CommuneEntity = {
@@ -99,7 +142,8 @@ type CommunePotential = {
 };
 
 const SEGMENTS: { key: Segment; label: string; short: string; helper: string }[] = [
-  { key: 'ALL', label: 'Todas las entidades', short: 'Entidades', helper: 'universo observado' },
+  { key: 'UNIVERSE', label: 'Universo territorial', short: 'Universo', helper: 'base amplia SII + RES' },
+  { key: 'ALL', label: 'Entidades observadas por Atlas', short: 'Atlas', helper: 'con señales analíticas' },
   { key: 'SO', label: 'Sujetos obligados UAF', short: 'SO UAF', helper: 'inscritos en la comuna' },
   { key: 'POTENTIAL', label: 'Potenciales sujetos obligados', short: 'Potenciales', helper: 'candidatos por giro' },
   { key: 'SANCTIONED', label: 'Entidades con sanción', short: 'Sancionadas', helper: 'evidencia sancionatoria' },
@@ -108,7 +152,7 @@ const SEGMENTS: { key: Segment; label: string; short: string; helper: string }[]
   { key: 'FINTECH', label: 'Entidades fintech', short: 'Fintech', helper: 'ecosistema identificado' },
 ];
 
-const MATRIX_COLUMNS: { key: Exclude<Segment, 'ALL'>; label: string; field: keyof MatrixRow }[] = [
+const MATRIX_COLUMNS: { key: Exclude<Segment, 'ALL' | 'UNIVERSE'>; label: string; field: keyof MatrixRow }[] = [
   { key: 'SO', label: 'SO UAF', field: 'so_count' },
   { key: 'POTENTIAL', label: 'Potenciales', field: 'potential_count' },
   { key: 'SANCTIONED', label: 'Sancionadas', field: 'sanctioned_count' },
@@ -137,7 +181,8 @@ export function TerritoryCommuneWorkspace({
   const p = data.posicion;
   const layers = useMemo(() => Object.entries(t.layers ?? {}), [t.layers]);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
-  const [segment, setSegment] = useState<Segment>('ALL');
+  const [segment, setSegment] = useState<Segment>('UNIVERSE');
+  const [universeStatus, setUniverseStatus] = useState<UniverseStatus>('ALL');
   const [sector, setSector] = useState<string | null>(null);
   const [matrixExpanded, setMatrixExpanded] = useState(false);
   const [query, setQuery] = useState('');
@@ -149,6 +194,19 @@ export function TerritoryCommuneWorkspace({
     p_territory_id: t.territory_id,
   });
 
+  const universeSummary = useRpc<TerritoryUniverse | null>('obs_territory_universe_summary', {
+    p_territory_id: t.territory_id,
+  });
+
+  const universeDirectory = useRpc<UniverseEntity[]>('obs_territory_universe_directory', {
+    p_territory_id: t.territory_id,
+    p_q: debouncedQuery.trim() || null,
+    p_status: universeStatus,
+    p_order: sort === 'name' ? 'name' : 'coverage',
+    p_limit: PAGE,
+    p_offset: page * PAGE,
+  }, { skip: segment !== 'UNIVERSE' });
+
   const entityDirectory = useRpc<CommuneEntity[]>('obs_territory_entity_directory_v2', {
     p_territory_id: t.territory_id,
     p_segment: segment,
@@ -157,7 +215,7 @@ export function TerritoryCommuneWorkspace({
     p_order: sort,
     p_limit: PAGE,
     p_offset: page * PAGE,
-  }, { skip: segment === 'POTENTIAL' });
+  }, { skip: segment === 'POTENTIAL' || segment === 'UNIVERSE' });
 
   const potentialDirectory = useRpc<CommunePotential[]>('obs_territory_potential_directory_v2', {
     p_territory_id: t.territory_id,
@@ -168,7 +226,7 @@ export function TerritoryCommuneWorkspace({
     p_offset: page * PAGE,
   }, { skip: segment !== 'POTENTIAL' });
 
-  useEffect(() => setPage(0), [segment, sector, debouncedQuery, sort]);
+  useEffect(() => setPage(0), [segment, universeStatus, sector, debouncedQuery, sort]);
 
   const drivers = useMemo(() => layers.flatMap(([layerKey, layer]) =>
     (layer.components ?? []).map((component) => ({ layerKey, layerLabel: layer.label, component })),
@@ -200,8 +258,13 @@ export function TerritoryCommuneWorkspace({
   const visibleMatrix = matrixExpanded ? matrix : matrix.slice(0, MATRIX_VISIBLE);
   const matrixMax = Math.max(1, ...matrix.flatMap((row) => MATRIX_COLUMNS.map((column) => Number(row[column.field] ?? 0))));
   const metrics = context.data?.metrics;
-  const activeRows = segment === 'POTENTIAL' ? (potentialDirectory.data ?? []) : (entityDirectory.data ?? []);
-  const activeRpc = segment === 'POTENTIAL' ? potentialDirectory : entityDirectory;
+  const broad = universeSummary.data?.metrics;
+  const activeRows = segment === 'UNIVERSE'
+    ? (universeDirectory.data ?? [])
+    : segment === 'POTENTIAL'
+      ? (potentialDirectory.data ?? [])
+      : (entityDirectory.data ?? []);
+  const activeRpc = segment === 'UNIVERSE' ? universeDirectory : segment === 'POTENTIAL' ? potentialDirectory : entityDirectory;
   const total = activeRows[0]?.total_count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE));
   const start = total ? page * PAGE + 1 : 0;
@@ -209,6 +272,7 @@ export function TerritoryCommuneWorkspace({
   const selectedLayerData = selectedLayer ? t.layers?.[selectedLayer] : null;
 
   const metricFor = (key: Segment) => {
+    if (key === 'UNIVERSE') return broad?.universe_total ?? null;
     if (!metrics) return null;
     if (key === 'ALL') return metrics.entities;
     if (key === 'SO') return metrics.uaf;
@@ -221,10 +285,21 @@ export function TerritoryCommuneWorkspace({
 
   const chooseSegment = (next: Segment) => {
     setSegment(next);
+    setSector(null);
+    if (next === 'UNIVERSE') setUniverseStatus('ALL');
     setPage(0);
   };
 
-  const chooseMatrixCell = (nextSegment: Exclude<Segment, 'ALL'>, nextSector: string) => {
+  const chooseUniverse = (status: UniverseStatus) => {
+    setSegment('UNIVERSE');
+    setUniverseStatus(status);
+    setSector(null);
+    setSort('relevance');
+    setPage(0);
+    requestAnimationFrame(() => document.getElementById('tcw-directory')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
+  const chooseMatrixCell = (nextSegment: Exclude<Segment, 'ALL' | 'UNIVERSE'>, nextSector: string) => {
     setSegment(nextSegment);
     setSector(nextSector);
     setPage(0);
@@ -387,12 +462,55 @@ export function TerritoryCommuneWorkspace({
         </div>
       </section>
 
+      <section className="tcw2-panel tcw2-universe" aria-labelledby="tcw2-universe-title">
+        <div className="tcw2-section-head">
+          <div>
+            <span className="tcw2-kicker">Base territorial amplia</span>
+            <h2 id="tcw2-universe-title">Universo económico y cobertura Atlas</h2>
+            <p>El denominador territorial se construye por RUT con geografía disponible. RES aporta domicilio masivo y SII determina vigencia cuando existe coincidencia.</p>
+          </div>
+          <span className="tcw2-section-note">fuera del IGR · directorio paginado</span>
+        </div>
+
+        {universeSummary.error ? (
+          <div className="tcw2-state">No fue posible cargar el universo territorial. <button type="button" onClick={universeSummary.reload}>Reintentar</button></div>
+        ) : (
+          <div className="tcw2-cohort-strip" aria-label="Universo territorial de la comuna">
+            <button type="button" data-active={segment === 'UNIVERSE' && universeStatus === 'ALL'} onClick={() => chooseUniverse('ALL')}>
+              <span>Universo territorial</span>
+              <strong className="num">{universeSummary.loading && !broad ? '…' : n(broad?.universe_total)}</strong>
+              <small>RUT territorializados</small>
+            </button>
+            <button type="button" data-active={segment === 'UNIVERSE' && universeStatus === 'ACTIVE'} onClick={() => chooseUniverse('ACTIVE')}>
+              <span>Activas SII</span>
+              <strong className="num">{universeSummary.loading && !broad ? '…' : n(broad?.sii_active)}</strong>
+              <small>vigentes según publicación</small>
+            </button>
+            <button type="button" data-active={segment === 'UNIVERSE' && universeStatus === 'TERMINATED'} onClick={() => chooseUniverse('TERMINATED')}>
+              <span>Término de giro</span>
+              <strong className="num">{universeSummary.loading && !broad ? '…' : n(broad?.sii_terminated)}</strong>
+              <small>estado SII publicado</small>
+            </button>
+            <button type="button" data-active={segment === 'ALL'} onClick={() => chooseSegment('ALL')}>
+              <span>Observadas por Atlas</span>
+              <strong className="num">{universeSummary.loading && !broad ? '…' : n(broad?.atlas_observed)}</strong>
+              <small>materializadas analíticamente</small>
+            </button>
+            <button type="button" data-active={false} onClick={() => chooseSegment('ALL')}>
+              <span>Cobertura Atlas</span>
+              <strong className="num">{broad?.atlas_coverage_pct == null ? '—' : `${n1(broad.atlas_coverage_pct)}%`}</strong>
+              <small>observadas / universo</small>
+            </button>
+          </div>
+        )}
+      </section>
+
       <section className="tcw2-panel tcw2-matrix-section" aria-labelledby="tcw2-matrix-title">
         <div className="tcw2-section-head tcw2-matrix-head">
           <div>
             <span className="tcw2-kicker">Quiénes están aquí</span>
             <h2 id="tcw2-matrix-title">Matriz de entidades por sector y cohorte</h2>
-            <p>Selecciona una celda para cruzar inmediatamente una industria de la Ley 19.913 con una cohorte del universo observado.</p>
+            <p>Selecciona una celda para cruzar inmediatamente una industria de la Ley 19.913 con una cohorte del universo analíticamente observado.</p>
           </div>
           <span className="tcw2-section-note">contexto · fuera del IGR</span>
         </div>
@@ -405,7 +523,9 @@ export function TerritoryCommuneWorkspace({
               {SEGMENTS.map((item) => (
                 <button type="button" key={item.key} data-active={segment === item.key} onClick={() => chooseSegment(item.key)}>
                   <span>{item.short}</span>
-                  <strong className="num">{context.loading && !metrics ? '…' : n(metricFor(item.key))}</strong>
+                  <strong className="num">{item.key === 'UNIVERSE'
+                    ? (universeSummary.loading && !broad ? '…' : n(metricFor(item.key)))
+                    : (context.loading && !metrics ? '…' : n(metricFor(item.key)))}</strong>
                   <small>{item.helper}</small>
                 </button>
               ))}
@@ -466,7 +586,7 @@ export function TerritoryCommuneWorkspace({
         <div className="tcw2-directory-head">
           <div>
             <span className="tcw2-kicker">Directorio comunal</span>
-            <h2 id="tcw2-directory-title">{segmentLabel(segment)}{sector ? ` · ${titleCase(sector)}` : ''}</h2>
+            <h2 id="tcw2-directory-title">{segmentLabel(segment)}{segment === 'UNIVERSE' && universeStatus !== 'ALL' ? ` · ${universeStatus === 'ACTIVE' ? 'Activas SII' : 'Término de giro'}` : ''}{sector ? ` · ${titleCase(sector)}` : ''}</h2>
             <p>{directoryHint(segment)}</p>
           </div>
           <div className="tcw2-directory-total"><strong className="num">{activeRpc.loading && !activeRpc.data ? '…' : n(total)}</strong><small>entidades del corte exacto</small></div>
@@ -474,21 +594,35 @@ export function TerritoryCommuneWorkspace({
 
         <div className="tcw2-active-filter">
           <span>{segmentLabel(segment)}</span>
+          {segment === 'UNIVERSE' && universeStatus !== 'ALL' && <span>{universeStatus === 'ACTIVE' ? 'Activas SII' : 'Término de giro'}</span>}
           {sector && <span>{titleCase(sector)}</span>}
-          {(segment !== 'ALL' || sector) && <button type="button" onClick={() => { setSegment('ALL'); setSector(null); }}>Restablecer corte ×</button>}
+          {(segment !== 'UNIVERSE' || universeStatus !== 'ALL' || sector) && <button type="button" onClick={() => { setSegment('UNIVERSE'); setUniverseStatus('ALL'); setSector(null); }}>Restablecer corte ×</button>}
         </div>
 
         <div className="tcw2-directory-tools">
           <label className="tcw2-search">
-            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, RUT, actividad, sector o industria…" aria-label="Buscar en directorio comunal" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={segment === 'UNIVERSE' ? 'Buscar por inicio del nombre o RUT…' : 'Buscar por nombre, RUT, actividad, sector o industria…'}
+              aria-label="Buscar en directorio comunal"
+            />
             {query && <button type="button" onClick={() => setQuery('')} aria-label="Limpiar búsqueda">×</button>}
           </label>
-          <div className="tcw2-sort" aria-label="Orden del directorio">
-            <button type="button" data-active={sort === 'relevance'} onClick={() => setSort('relevance')}>Relevancia</button>
-            <button type="button" data-active={sort === 'score'} onClick={() => setSort('score')}>{segment === 'POTENTIAL' ? 'IVO' : 'Prioridad'}</button>
-            <button type="button" data-active={sort === 'signals'} onClick={() => setSort('signals')}>Señales</button>
-            <button type="button" data-active={sort === 'name'} onClick={() => setSort('name')}>Nombre</button>
-          </div>
+          {segment === 'UNIVERSE' ? (
+            <div className="tcw2-sort" aria-label="Orden del directorio">
+              <button type="button" data-active={sort !== 'name'} onClick={() => setSort('relevance')}>Cobertura</button>
+              <button type="button" data-active={sort === 'name'} onClick={() => setSort('name')}>Nombre</button>
+            </div>
+          ) : (
+            <div className="tcw2-sort" aria-label="Orden del directorio">
+              <button type="button" data-active={sort === 'relevance'} onClick={() => setSort('relevance')}>Relevancia</button>
+              <button type="button" data-active={sort === 'score'} onClick={() => setSort('score')}>{segment === 'POTENTIAL' ? 'IVO' : 'Prioridad'}</button>
+              <button type="button" data-active={sort === 'signals'} onClick={() => setSort('signals')}>Señales</button>
+              <button type="button" data-active={sort === 'name'} onClick={() => setSort('name')}>Nombre</button>
+            </div>
+          )}
         </div>
 
         {activeRpc.error ? (
@@ -497,6 +631,8 @@ export function TerritoryCommuneWorkspace({
           <div className="tcw2-state">Leyendo el directorio comunal…</div>
         ) : !activeRows.length ? (
           <div className="tcw2-state">No hay entidades que coincidan con esta selección.</div>
+        ) : segment === 'UNIVERSE' ? (
+          <UniverseTable rows={universeDirectory.data ?? []} onNavigate={onNavigate} />
         ) : segment === 'POTENTIAL' ? (
           <PotentialTable rows={potentialDirectory.data ?? []} onNavigate={onNavigate} />
         ) : (
@@ -514,7 +650,7 @@ export function TerritoryCommuneWorkspace({
         </footer>
       </section>
 
-      <div className="tcw2-semantic"><strong>Lectura correcta.</strong> El IGR caracteriza presión criminógena territorial. SO, potenciales, sanciones, prensa, OSFL y fintech se muestran como contexto independiente y no modifican el puntaje de la comuna.</div>
+      <div className="tcw2-semantic"><strong>Lectura correcta.</strong> El universo territorial describe la mayor población identificable con geografía disponible; Atlas, UAF, OSFL, fintech y otras marcas son capas superpuestas. El IGR continúa caracterizando presión criminógena territorial y no se modifica por estos conteos.</div>
     </div>
   );
 }
@@ -530,6 +666,37 @@ function HeroKpi({ label, value, foot, tone }: { label: string; value: string; f
 function DotScale({ value }: { value: number }) {
   const filled = Math.max(0, Math.min(10, Math.round(value / 10)));
   return <div className="tcw2-dot-scale" aria-label={`Puntaje ${n1(value)} de 100`}>{Array.from({ length: 10 }, (_, index) => <i key={index} data-on={index < filled} />)}</div>;
+}
+
+function UniverseTable({ rows, onNavigate }: { rows: UniverseEntity[]; onNavigate: (hash: string) => void }) {
+  return (
+    <div className="tcw2-table-scroll">
+      <table className="tcw2-entity-table">
+        <thead><tr><th>Entidad</th><th>Situación SII</th><th>Fuentes</th><th>Cobertura Atlas</th><th>Geografía</th><th>Acción</th></tr></thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.rut}>
+              <td className="tcw2-entity-name"><b>{titleCase(row.name)}</b><span>{rutFormat(row.rut)} · {titleCase(row.entity_type)}</span></td>
+              <td><State status={row.sii_status} /></td>
+              <td>
+                <div className="tcw2-signals">
+                  {row.in_sii && <span data-kind="sii">SII</span>}
+                  {row.in_res && <span data-kind="res">RES</span>}
+                  {row.in_uaf && <span data-kind="uaf">SO UAF</span>}
+                  {row.in_osfl && <span data-kind="osfl">OSFL</span>}
+                  {row.in_potential && <span data-kind="potential">Potencial</span>}
+                  {row.in_fintech && <span data-kind="fintech">Fintech</span>}
+                </div>
+              </td>
+              <td>{row.in_atlas ? <span className="tcw2-state-pill" data-tone="active"><i />Observada</span> : <span className="tcw2-secondary">sin ficha analítica</span>}</td>
+              <td><b>{row.commune ? titleCase(row.commune) : 'sin comuna'}</b><span className="tcw2-secondary">{row.geo_source.replace(/_/g, ' ')}</span></td>
+              <td>{row.atlas_entity_id ? <button type="button" className="tcw2-open" onClick={() => onNavigate(hrefFor({ view: 'ficha', entityId: row.atlas_entity_id! }))}>Entidad 360 →</button> : <span className="tcw2-secondary">disponible como registro base</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function EntityTable({ rows, onNavigate }: { rows: CommuneEntity[]; onNavigate: (hash: string) => void }) {
@@ -627,13 +794,14 @@ function segmentLabel(segment: Segment) {
 }
 
 function directoryHint(segment: Segment) {
+  if (segment === 'UNIVERSE') return 'Mayor universo territorial identificable por RUT con comuna disponible. El directorio se pagina en servidor y sólo materializa Entidad 360 cuando Atlas ya dispone de una ficha analítica.';
   if (segment === 'POTENTIAL') return 'Candidatos construidos desde evidencia registral y actividad económica. IVO ordena revisión y no acredita obligación.';
   if (segment === 'SO') return 'Sujetos obligados observados en el padrón UAF y domiciliados en la comuna.';
   if (segment === 'SANCTIONED') return 'Entidades de la comuna con evidencia sancionatoria resuelta a su identidad.';
   if (segment === 'PRESS') return 'Entidades con identidad resuelta en el monitor de prensa; la mención no acredita conducta.';
   if (segment === 'OSFL') return 'Entidades reconocidas como OSFL en las fuentes integradas por ATLAS.';
   if (segment === 'FINTECH') return 'Entidades del ecosistema fintech con presencia comunal resuelta en fuentes abiertas.';
-  return 'Universo observado de entidades domiciliadas. La tabla conserva las marcas y permite profundizar en Entidad 360.';
+  return 'Entidades que Atlas ya materializó analíticamente. Mantienen señales, prioridades y acceso directo a Entidad 360.';
 }
 
 function layerDescription(index: number) {
