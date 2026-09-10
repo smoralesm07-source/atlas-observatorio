@@ -17,6 +17,7 @@ import './styles/entities-search-mobile-fixes.css';
 import './styles/ui-fixes.css';
 import './styles/cohort-dense.css';
 import './styles/cohort-overlay-v2.css';
+import './styles/pulso-updates-priority.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Falta el nodo #root.');
