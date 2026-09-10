@@ -1,0 +1,3 @@
+insert into public.aml_fintech_market_metric_catalog(metric_code,label,dimension,unit_kind,default_unit,comparable_scope,higher_means_more_weight,description,sort_order)
+values('ORDERS_MONTHLY_COUNT','Órdenes mensuales declaradas','BUSINESS_ACTIVITY','COUNT','orders','SAME_METRIC',true,'Cantidad mensual de órdenes o pedidos procesados declarada por la entidad. No equivale necesariamente a transacciones financieras liquidadas.',46)
+on conflict(metric_code) do update set label=excluded.label,dimension=excluded.dimension,unit_kind=excluded.unit_kind,default_unit=excluded.default_unit,comparable_scope=excluded.comparable_scope,higher_means_more_weight=excluded.higher_means_more_weight,description=excluded.description,sort_order=excluded.sort_order;
