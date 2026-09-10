@@ -68,13 +68,8 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.pulse-update:last-child {
-  border-bottom: 0;
-}
-
-.pulse-update:hover {
-  background: color-mix(in srgb, var(--accent) 2.6%, transparent);
-}
+.pulse-update:last-child { border-bottom: 0; }
+.pulse-update:hover { background: color-mix(in srgb, var(--accent) 2.6%, transparent); }
 
 .pulse-update-rail {
   position: relative;
@@ -91,9 +86,7 @@
   background: var(--line-soft);
 }
 
-.pulse-update:last-child .pulse-update-rail::after {
-  display: none;
-}
+.pulse-update:last-child .pulse-update-rail::after { display: none; }
 
 .pulse-update-rail i {
   position: relative;
@@ -112,9 +105,7 @@
 .pulse-update[data-kind='SANCION'] { --update-tone: var(--sig-critical); }
 .pulse-update[data-kind='ESTADO'] { --update-tone: var(--sig-high); }
 
-.pulse-update-body {
-  min-width: 0;
-}
+.pulse-update-body { min-width: 0; }
 
 .pulse-update-topline,
 .pulse-update-foot {
@@ -186,9 +177,7 @@
   font-weight: 600;
 }
 
-.pulse-update-links a:hover {
-  text-decoration: underline;
-}
+.pulse-update-links a:hover { text-decoration: underline; }
 
 .pulse-updates-caption {
   display: flex;
@@ -217,13 +206,8 @@
   text-align: center;
 }
 
-.pulse-updates-error {
-  gap: 8px;
-}
-
-.pulse-updates-error b {
-  color: var(--ink-2);
-}
+.pulse-updates-error { gap: 8px; }
+.pulse-updates-error b { color: var(--ink-2); }
 
 .pulse-updates-error button {
   padding: 4px 8px;
@@ -235,7 +219,80 @@
   cursor: pointer;
 }
 
+/* Modo compacto: comparte altura con evolución del padrón y Top 5 sectores. */
+.pulse-updates-compact,
+.pulse-updates-compact > section {
+  min-width: 0;
+  height: 100%;
+}
+
+.pulse-updates-compact .pulse-updates-shell {
+  min-height: 176px;
+  height: 176px;
+}
+
+.pulse-updates-compact .pulse-updates-list {
+  max-height: 142px;
+}
+
+.pulse-updates-compact .pulse-update {
+  grid-template-columns: 13px minmax(0, 1fr);
+  padding: 6px 9px 5px 7px;
+}
+
+.pulse-updates-compact .pulse-update-rail i {
+  width: 6px;
+  height: 6px;
+  margin-top: 3px;
+}
+
+.pulse-updates-compact .pulse-update-rail::after {
+  top: 10px;
+  bottom: -6px;
+}
+
+.pulse-updates-compact .pulse-update-kind {
+  min-height: 14px;
+  padding: 0 4px;
+  font-size: 6.8px;
+}
+
+.pulse-updates-compact .pulse-update time { font-size: 7px; }
+.pulse-updates-compact .pulse-update h4 {
+  margin-top: 3px;
+  font-size: 8.9px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pulse-updates-compact .pulse-update-foot {
+  margin-top: 2px;
+  font-size: 7.1px;
+}
+
+.pulse-updates-compact .pulse-updates-caption {
+  padding: 5px 9px;
+  font-size: 6.8px;
+}
+
+.pulse-updates-compact .pulse-updates-state {
+  min-height: 142px;
+  padding: 10px;
+  font-size: 8.5px;
+}
+
+.pulse-updates-compact .pulse-updates-live { font-size: 7.5px; }
+.pulse-updates-compact .pulse-updates-refresh {
+  width: 21px;
+  height: 21px;
+  font-size: 11px;
+}
+
 @media (max-width: 760px) {
   .pulse-updates-list { max-height: 390px; }
   .pulse-updates-shell { min-height: 260px; }
+  .pulse-updates-compact .pulse-updates-shell { height: auto; min-height: 210px; }
+  .pulse-updates-compact .pulse-updates-list { max-height: 260px; }
 }
