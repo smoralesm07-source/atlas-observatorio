@@ -1,0 +1,177 @@
+/* Entidades · toolbar compacta de filtros y nóminas rápidas.
+   Mantiene una sola línea funcional en escritorio sin sacrificar la salida responsive. */
+
+.entity-search-view {
+  gap: 13px;
+}
+
+.entity-search-head {
+  gap: 20px;
+  padding-top: 2px;
+}
+
+.entity-search-head h1 {
+  margin-top: 5px;
+  font-size: clamp(23px, 2.25vw, 31px);
+}
+
+.entity-search-head p {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.entity-search-legend {
+  gap: 10px;
+  font-size: 10px;
+}
+
+.entity-search-console {
+  padding: 11px;
+}
+
+.entity-search-box-row {
+  gap: 8px;
+}
+
+.entity-search-box {
+  min-height: 46px;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+
+.entity-search-box input {
+  font-size: 14.5px;
+}
+
+.entity-search-button {
+  min-width: 84px;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.entity-filters select,
+.entity-filters button,
+.entity-quick-chip {
+  min-height: 29px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.entity-filters select {
+  min-width: 132px;
+}
+
+.entity-filters select:first-child {
+  min-width: 156px;
+  max-width: 176px;
+}
+
+.entity-filters select:nth-child(2) {
+  min-width: 118px;
+  max-width: 138px;
+}
+
+.entity-quick-row > span {
+  margin-right: 1px;
+  font-size: 8.75px;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+
+.entity-quick-chip {
+  padding-inline: 8px;
+}
+
+.entity-quick-chip b {
+  margin-left: 5px;
+  color: color-mix(in srgb, var(--accent) 82%, var(--ink));
+  font-size: 9.75px;
+  font-weight: 760;
+}
+
+@media (min-width: 1180px) {
+  .entity-search-console {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: center;
+  }
+
+  .entity-search-box-row {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .entity-filters {
+    grid-column: 1;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding-top: 9px;
+  }
+
+  .entity-filter-clear {
+    margin-left: 0;
+  }
+
+  .entity-quick-row {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 9px 0 0 10px;
+    border-top: 0;
+    border-left: 1px solid var(--line-soft);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .entity-quick-row > span,
+  .entity-quick-chip {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 1179px) {
+  .entity-filters {
+    gap: 6px;
+    padding-top: 9px;
+  }
+
+  .entity-quick-row {
+    gap: 6px;
+    padding-top: 9px;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 560px) {
+  .entity-search-head h1 {
+    font-size: 24px;
+  }
+
+  .entity-search-console {
+    padding: 9px;
+  }
+
+  .entity-search-box {
+    min-height: 46px;
+  }
+
+  .entity-search-button {
+    min-height: 40px;
+    min-width: 72px;
+    padding-inline: 12px;
+  }
+}
