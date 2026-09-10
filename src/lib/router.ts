@@ -46,7 +46,8 @@ export type Route =
   | { view: 'gasto'; familia?: string }
   | { view: 'gastoActor'; actorId: string; role: 'BUYER' | 'SUPPLIER' }
   | { view: 'fuentes' }
-  | { view: 'metodologia' };
+  | { view: 'metodologia' }
+  | { view: 'administracion' };
 
 /** Hash routing: the app is a static bundle, so it must survive a hard reload
  *  and a shared link from any host without server rewrites. */
@@ -104,6 +105,8 @@ export function parseHash(hash: string): Route {
       return { view: 'fuentes' };
     case 'metodologia':
       return { view: 'metodologia' };
+    case 'administracion':
+      return { view: 'administracion' };
     default:
       return { view: 'pulso' };
   }
@@ -146,6 +149,8 @@ export function hrefFor(r: Route): string {
       return '#/fuentes';
     case 'metodologia':
       return '#/metodologia';
+    case 'administracion':
+      return '#/administracion';
     case 'pulso':
       return r.lente ? `#/pulso?lente=${r.lente}` : '#/pulso';
     default:
