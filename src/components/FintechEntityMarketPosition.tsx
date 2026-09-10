@@ -36,12 +36,25 @@ type Metric = {
   sort_order: number;
 };
 
+type Regulation = {
+  regulator: string;
+  registry: string;
+  service: string | null;
+  status: string;
+  registration_no: string | null;
+  effective_date: string | null;
+  end_date: string | null;
+  source_url: string | null;
+  observed_at: string;
+};
+
 type MarketDetail = {
   error?: string;
   subject_type: string;
   subject_key: string;
   cohort: Cohort | null;
   metrics: Metric[];
+  regulation: Regulation[];
   note: string;
 };
 
@@ -94,6 +107,7 @@ export function FintechEntityMarketPosition({ rut, label }: { rut: string | null
   if (search.error || detail.error || !resolved || detail.data?.error) return null;
   const cohort = detail.data?.cohort;
   if (!cohort || !metrics.length) return null;
+  const regulation = detail.data?.regulation ?? [];
 
   return <div className="fintech-entity-market-card">
     <div className="fintech-entity-market-head">
@@ -111,7 +125,8 @@ export function FintechEntityMarketPosition({ rut, label }: { rut: string | null
         </em>
       </div>)}
     </div>
-    <p>Comparación dentro de la misma cohorte y métrica. No es cuota de mercado ni un score compuesto.</p>
+    {regulation.length > 0 && <p><b>Huella regulatoria:</b> {regulation.map(formatRegulation).join(' · ')}</p>}
+    <p>Comparación dentro de la misma cohorte y métrica. Regulación y tamaño se informan por separado; no es cuota de mercado ni un score compuesto.</p>
   </div>;
 }
 
@@ -121,14 +136,19 @@ function compact(value:number) { return new Intl.NumberFormat('es-CL',{notation:
 function formatValue(row:Metric) {
   if (row.value_numeric == null) return row.value_text ?? 'n/d';
   if (row.currency==='USD' || row.unit==='USD') return `USD ${compact(row.value_numeric)}`;
-  const suffix:Record<string,string>={rank:' tramo',workers:' trab.',users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',transactions:' tx',countries:' países',payment_methods:' medios',connections:' API',agreements:' acuerdos',providers:' prestadores',policies:' pólizas'};
+  const suffix:Record<string,string>={rank:' tramo',workers:' trab.',users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',countries:' países',payment_methods:' medios',connections:' API',agreements:' acuerdos',providers:' prestadores',policies:' pólizas'};
   return `${compact(row.value_numeric)}${suffix[row.unit ?? ''] ?? (row.unit ? ` ${row.unit}` : '')}`;
 }
 function shortLabel(code:string,label:string) {
-  const map:Record<string,string>={SII_SALES_BAND_RANK:'Ventas SII',WORKERS:'Trabajadores',USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',TRANSACTIONS_MONTHLY_COUNT:'Tx / mes',TRANSACTIONS_QUARTERLY_COUNT:'Tx / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Tx / año',PROCESSED_VOLUME_MONTHLY_USD:'Volumen / mes',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',API_CONNECTIONS:'Conexiones API',AGREEMENTS_COUNT:'Acuerdos',HEALTH_PROVIDERS_NETWORK:'Prestadores'};
+  const map:Record<string,string>={SII_SALES_BAND_RANK:'Ventas SII',WORKERS:'Trabajadores',USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',APP_DOWNLOADS_COUNT:'Descargas app',TRANSACTIONS_MONTHLY_COUNT:'Tx / mes',TRANSACTIONS_QUARTERLY_COUNT:'Tx / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Tx / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',PROCESSED_VOLUME_MONTHLY_USD:'Volumen / mes',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',API_CONNECTIONS:'Conexiones API',AGREEMENTS_COUNT:'Acuerdos',HEALTH_PROVIDERS_NETWORK:'Prestadores'};
   return map[code] ?? label;
 }
 function geoLabel(value:string|null) {
   if (!value) return 'alcance n/d';
   return ({CHILE:'Chile',LATAM:'LatAm',GLOBAL:'Global',INTERNATIONAL:'Internacional',COMPANY_WIDE:'Empresa'} as Record<string,string>)[value] ?? value;
+}
+function formatRegulation(row:Regulation) {
+  if (row.regulator === 'CMF') return row.registration_no ? `CMF ${row.registry} N° ${row.registration_no}` : `CMF ${row.registry}`;
+  if (row.regulator === 'UAF') return row.status === 'INSCRITO_PUBLICADO' ? 'UAF · inscrito publicado' : `UAF · ${row.status}`;
+  return `${row.regulator} ${row.registry}`;
 }
