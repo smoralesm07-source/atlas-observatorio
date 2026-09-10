@@ -126,7 +126,7 @@ export function FintechEntityMarketPosition({ rut, label }: { rut: string | null
       </div>)}
     </div>
     {regulation.length > 0 && <p><b>Huella regulatoria:</b> {regulation.map(formatRegulation).join(' · ')}</p>}
-    <p>Comparación dentro de la misma cohorte, métrica y alcance geográfico comparable. La evidencia histórica queda visible, pero no determina el percentil vigente. Regulación y tamaño se informan por separado.</p>
+    <p>Comparación dentro de la misma cohorte, métrica y alcance geográfico comparable. La evidencia histórica se conserva para auditoría, pero no determina el percentil vigente. Regulación y tamaño se informan por separado.</p>
   </div>;
 }
 
