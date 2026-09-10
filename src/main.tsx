@@ -28,6 +28,15 @@ import './styles/cohort-overlay-v2.css';
 import './styles/pulso-updates-priority.css';
 import './styles/light-uaf-palette.css';
 
+const initialTheme = (() => {
+  try {
+    return localStorage.getItem('atlas-obs-theme-v2') === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+})();
+document.documentElement.dataset.theme = initialTheme;
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Falta el nodo #root.');
 
