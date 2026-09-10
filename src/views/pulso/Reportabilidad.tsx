@@ -4,6 +4,7 @@ import { Columns } from '../../components/charts';
 import { Empty, Panel } from '../../components/primitives';
 import { n, n1, titleCase } from '../../lib/format';
 import type { CohortRequest } from '../../components/CohortDrawer';
+import { NovedadesObservatorio } from './Novedades';
 
 /* LENTE · REPORTABILIDAD
    ──────────────────────
@@ -40,16 +41,7 @@ export function LenteReportabilidad({
 
   const rep = data.reporting;
   const sectores = useMemo(() => ordenarSectores(rep?.sectores ?? [], orden), [rep, orden]);
-  const masIntenso = useMemo(
-    () => ordenarSectores(rep?.sectores ?? [], 'volumen')[0] ?? null,
-    [rep],
-  );
-  const masNumerosos = useMemo(
-    () => ordenarSectores(rep?.sectores ?? [], 'padron').slice(0, 3),
-    [rep],
-  );
 
-  const t = rep?.totales;
   const serieActiva = SERIES.find((s) => s.key === serie) ?? SERIES[0];
   const serieDatos = rep?.nacional?.[serie];
   const puntosPublicados = (serieDatos?.puntos ?? [])
@@ -61,13 +53,6 @@ export function LenteReportabilidad({
     : [...puntosPublicados, { label: '2026', value: null, ghost: true, note: 'sin publicar' }];
   const sourceHref = serie === 'entidades_reportantes_total' ? UAF_REGISTRY_2026 : serieDatos?.fuente;
   const sourceLabel = serie === 'entidades_reportantes_total' ? 'Padrón UAF 30-06-2026' : 'Informe Estadístico UAF';
-
-  /* Concentración: la cifra que cambia la lectura de todo el tablero. Tres
-     sectores de cincuenta explican la mayor parte del volumen reportado, y el
-     contraste con los tres sectores más numerosos del padrón es la lectura. */
-  const concentracion = t?.ros_2025 ? (t.ros_top3 / t.ros_2025) * 100 : null;
-  const rosDeLosNumerosos = masNumerosos.reduce((a, x) => a + (x.ros_2025 ?? 0), 0);
-  const inscritosDeLosNumerosos = masNumerosos.reduce((a, x) => a + (x.padron_sujetos ?? 0), 0);
 
   if (!rep?.disponible) {
     return <Empty title="Sin corte de reportabilidad publicado" hint="El Informe Estadístico UAF no está disponible en este snapshot." />;
@@ -112,36 +97,7 @@ export function LenteReportabilidad({
           )}
         </Panel>
 
-        <Panel title="Concentración del volumen" meta={`${n(data.universe?.sectores_uaf ?? 0)} sectores`}>
-          {concentracion != null && t && masIntenso && masNumerosos.length === 3 ? (
-            <>
-              <div className="callout accent">
-                <div>
-                  <b>Tres sectores explican el {n1(concentracion)}% de los ROS de 2025.</b>{' '}
-                  De {n(t.ros_2025 ?? 0)} reportes del año, {n(t.ros_top3)} vienen de los tres
-                  sectores que más reportan, encabezados por {titleCase(masIntenso.etiqueta)} con{' '}
-                  {n(masIntenso.padron_sujetos ?? masIntenso.registered_so_2025 ?? 0)} inscritos.
-                  En el otro extremo, los tres sectores más numerosos del padrón suman{' '}
-                  {n(inscritosDeLosNumerosos)} inscritos y {n(rosDeLosNumerosos)} ROS en el mismo
-                  año. La intensidad de reporte no sigue al tamaño del padrón, y es esa brecha
-                  —no el volumen— la que orienta dónde mirar.
-                </div>
-              </div>
-              {t.sectores_silenciosos > 0 && (
-                <div className="callout" style={{ marginTop: 10 }}>
-                  <div>
-                    <b>{n(t.sectores_silenciosos)} sectores no registran ningún ROS entre 2021 y 2025</b>,
-                    con {n(t.sujetos_en_silencio)} inscritos vigentes entre todos. Otros{' '}
-                    {n(t.sectores_sin_inscritos)} sectores canónicos de la ley no tienen ningún
-                    inscrito en el padrón. {data.coverage.silence_note}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <Empty title="Sin totales de reportabilidad en este corte" />
-          )}
-        </Panel>
+        <NovedadesObservatorio />
       </div>
 
       <Panel
