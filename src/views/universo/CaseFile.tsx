@@ -5,10 +5,11 @@ import {
   type CaseContact, type CasePriority, type CaseRecord, type CaseState,
   caseSummaryText, contactFilled,
 } from '../../lib/casework';
-import { LOCATE_FIRST_PASS, LOCATE_LIMIT, locateGroups, locateQueriesText, rutForms } from '../../lib/osint';
+import { rutForms } from '../../lib/osint';
 import { desde, fecha, n, n1, titleCase } from '../../lib/format';
 import { CopyButton, Field, Pill, SectionHead } from './bits';
 import type { CaseRow } from './model';
+import { OpenContactPanel } from './OpenContactPanel';
 
 /* LA FICHA DE GESTIÓN
    ──────────────────
@@ -44,7 +45,7 @@ export function CaseFile({
   onEntity?: () => void;
   onSector?: (sector: string) => void;
 }) {
-  const [tab, setTab] = useState<'motivo' | 'ubicar' | 'gestion'>('motivo');
+  const [tab, setTab] = useState<'motivo' | 'ubicar' | 'gestion'>('ubicar');
   const record = row.record;
   const kind = KIND_META[row.kind];
   const state = STATE_META[record.state];
@@ -87,7 +88,7 @@ export function CaseFile({
 
       <nav className="uso-case-tabs" aria-label="Secciones de la ficha">
         <button data-on={tab === 'motivo'} onClick={() => setTab('motivo')}>Por qué es caso</button>
-        <button data-on={tab === 'ubicar'} onClick={() => setTab('ubicar')}>Ubicar</button>
+        <button data-on={tab === 'ubicar'} onClick={() => setTab('ubicar')}>Contacto abierto</button>
         <button data-on={tab === 'gestion'} onClick={() => setTab('gestion')}>
           Gestión
           {filled > 0 && <em>{filled}/{CONTACT_FIELDS.length}</em>}
@@ -102,49 +103,7 @@ export function CaseFile({
       )}
 
       {tab === 'ubicar' && (
-        <div className="uso-case-body fade-in">
-          <SectionHead
-            title="Ubicar en fuentes abiertas"
-            hint="Consultas armadas con la razón social y el RUT de este caso. Se abren en una pestaña nueva."
-            actions={(
-              <CopyButton
-                text={locateQueriesText({
-                  rut: row.subject.rut, name: row.subject.name,
-                  region: row.subject.region, commune: row.subject.commune, sector: row.subject.sector,
-                })}
-                label="Copiar consultas" done="Consultas copiadas" small
-              />
-            )}
-          />
-          {locateGroups({
-            rut: row.subject.rut, name: row.subject.name,
-            region: row.subject.region, commune: row.subject.commune, sector: row.subject.sector,
-          }).map((group) => (
-            <div className="uso-locate-group" key={group.id}>
-              <div className="uso-locate-head">
-                <b>{group.title}</b>
-                <em>{group.purpose}</em>
-              </div>
-              <div className="uso-locate-links">
-                {group.links.map((link) => (
-                  <a
-                    key={link.id} href={link.url} target="_blank" rel="noreferrer"
-                    data-first={(LOCATE_FIRST_PASS as readonly string[]).includes(link.id) ? 'true' : undefined}
-                    data-kind={link.kind}
-                  >
-                    <span>
-                      <b>{link.label}</b>
-                      {link.manual && <em className="uso-tag" data-tone="watch">pide el RUT</em>}
-                    </span>
-                    <em>{link.hint}</em>
-                    <i aria-hidden>↗</i>
-                  </a>
-                ))}
-              </div>
-            </div>
-          ))}
-          <p className="uso-note">{LOCATE_LIMIT}</p>
-        </div>
+        <OpenContactPanel row={row} onPatch={onPatch} />
       )}
 
       {tab === 'gestion' && (

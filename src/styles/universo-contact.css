@@ -1,0 +1,202 @@
+/* Universo SO · contacto abierto */
+.uso-open-contact { gap: 12px; }
+
+.uso-open-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.uso-open-head h4 {
+  margin: 3px 0 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.uso-open-head p {
+  max-width: 72ch;
+  margin: 5px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.uso-open-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-2);
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.uso-open-stats b { color: var(--ink); font-size: 12px; }
+
+.uso-open-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--present) 28%, var(--line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--present) 7%, var(--bg-panel));
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.uso-open-error {
+  border-color: color-mix(in srgb, var(--sig-high) 35%, var(--line));
+  background: color-mix(in srgb, var(--sig-high) 7%, var(--bg-panel));
+}
+
+.uso-open-message button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.uso-open-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.uso-open-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 78px auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-2);
+}
+
+.uso-open-item[data-status='VERIFICADO'] {
+  border-color: color-mix(in srgb, var(--present) 42%, var(--line));
+}
+
+.uso-open-kind {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.uso-open-value { min-width: 0; }
+.uso-open-value > span { display: block; color: var(--ink-4); font-size: 9.5px; }
+.uso-open-value > b {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uso-open-value > small { display: block; overflow: hidden; margin-top: 2px; color: var(--ink-4); font-size: 9.5px; text-overflow: ellipsis; white-space: nowrap; }
+.uso-open-value > em { display: block; overflow: hidden; margin-top: 2px; color: var(--ink-3); font-size: 9.5px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+
+.uso-open-quality { text-align: right; }
+.uso-open-quality b { display: block; color: var(--ink); font-size: 12px; }
+.uso-open-quality span, .uso-open-quality small { display: block; color: var(--ink-4); font-size: 9px; }
+.uso-open-item[data-status='VERIFICADO'] .uso-open-quality span { color: var(--present); }
+
+.uso-open-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.uso-open-actions > button:not(.copy-btn),
+.uso-open-actions > a {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 9.5px;
+  line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
+}
+.uso-open-actions > button:hover,
+.uso-open-actions > a:hover { border-color: var(--line-strong); color: var(--ink); }
+.uso-open-actions .uso-open-use { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--accent); }
+.uso-open-actions .uso-open-discard { color: var(--ink-4); }
+
+.uso-open-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.uso-open-empty b { color: var(--ink-2); }
+
+.uso-open-manual {
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
+}
+.uso-open-manual summary {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.uso-open-manual-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+}
+.uso-open-manual-tools p { margin: 0; color: var(--ink-4); font-size: 10px; }
+.uso-open-manual-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+.uso-open-manual-groups > div { padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg-panel-2); }
+.uso-open-manual-groups b { display: block; color: var(--ink-2); font-size: 10.5px; }
+.uso-open-manual-groups span { display: block; margin-top: 2px; color: var(--ink-4); font-size: 9px; line-height: 1.4; }
+.uso-open-manual-groups nav { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.uso-open-manual-groups a { padding: 3px 5px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink-3); font-size: 9px; text-decoration: none; }
+.uso-open-manual-groups a:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+
+.uso-open-limit { margin: 0; color: var(--ink-4); font-size: 9.5px; line-height: 1.45; }
+
+/* La navegación de la ficha se mantiene disponible mientras se revisa una lista larga. */
+.uso-case-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg-panel);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+@media (max-width: 1240px) {
+  .uso-open-item { grid-template-columns: 26px minmax(0, 1fr) 68px; }
+  .uso-open-actions { grid-column: 2 / -1; justify-content: flex-start; }
+}
+
+@media (max-width: 720px) {
+  .uso-open-head { flex-direction: column; }
+  .uso-open-item { grid-template-columns: 24px minmax(0, 1fr); }
+  .uso-open-quality { grid-column: 2; text-align: left; display: flex; gap: 6px; }
+  .uso-open-actions { grid-column: 2; }
+  .uso-open-manual-groups { grid-template-columns: 1fr; }
+}
