@@ -70,6 +70,7 @@ export function UniversoSOV2({
     change: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> },
   ) => {
     const claiming = !isTracked(row.record);
+    const lifecycleChange = claiming || change.state !== undefined;
     setCaseError(null);
     setCases((current) => applyPatch(current, row.kind, row.subject, change));
 
@@ -83,8 +84,15 @@ export function UniversoSOV2({
       p_contact: change.contact ?? null,
       p_claim: claiming,
     }).then(({ error }) => {
-      if (error) setCaseError(error.message);
-      management.reload();
+      if (error) {
+        setCaseError(error.message);
+        management.reload();
+        return;
+      }
+      // Estado/asignación sí necesita reconciliar dueño y marcas del servidor.
+      // Ediciones de texto, prioridad y contacto quedan optimistas para no
+      // reconstruir la ficha ni mover el scroll mientras el analista escribe.
+      if (lifecycleChange) management.reload();
     });
   }, [management.reload]);
 
