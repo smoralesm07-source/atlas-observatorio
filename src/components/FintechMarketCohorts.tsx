@@ -60,13 +60,13 @@ const COHORT_ORDER = [
 ];
 
 const METRIC_ORDER = [
-  'USERS','CLIENTS','BUSINESS_CLIENTS','MERCHANTS','INSURED_PERSONS','APP_DOWNLOADS_COUNT',
-  'TRANSACTIONS_MONTHLY_COUNT','ORDERS_MONTHLY_COUNT','TRANSACTIONS_QUARTERLY_COUNT','TRANSACTIONS_ANNUAL_COUNT',
-  'VERIFICATIONS_24H_COUNT','FINANCINGS_COUNT','PROJECTS_FINANCED_COUNT',
-  'PROCESSED_VOLUME_MONTHLY_USD','PROCESSED_VOLUME_PERIOD_USD','ANNUAL_TRANSACTION_VOLUME_USD','ANNUALIZED_TRANSACTION_VOLUME_USD_EST',
-  'CUMULATIVE_TRANSACTION_VOLUME_USD','TPV_USD','ORIGINATED_VOLUME_USD','AUM_AUC_USD',
-  'FINANCIAL_INSTITUTIONS_CONNECTED_COUNT','DATA_SOURCES_CONNECTED_COUNT','API_CONNECTIONS',
-  'COUNTRIES_SERVICE_REACH','COUNTRIES_OPERATING','PAYMENT_METHODS_COUNT','AGREEMENTS_COUNT','HEALTH_PROVIDERS_NETWORK',
+  'USERS','CLIENTS','BUSINESS_CLIENTS','MERCHANTS','INSURED_PERSONS','POLICIES_ACTIVE_COUNT','APP_DOWNLOADS_COUNT',
+  'TRANSACTIONS_DAILY_COUNT','TRANSACTIONS_MONTHLY_COUNT','ORDERS_MONTHLY_COUNT','TRANSACTIONS_QUARTERLY_COUNT','TRANSACTIONS_ANNUAL_COUNT',
+  'CLAIMS_PROCESSED_COUNT','VERIFICATIONS_24H_COUNT','FINANCINGS_COUNT','PROJECTS_FINANCED_COUNT',
+  'DIRECT_PREMIUM_USD','PROCESSED_VOLUME_MONTHLY_USD','PROCESSED_VOLUME_PERIOD_USD','ANNUAL_TRANSACTION_VOLUME_USD','ANNUALIZED_TRANSACTION_VOLUME_USD_EST',
+  'CUMULATIVE_TRANSACTION_VOLUME_USD','TPV_USD','ORIGINATED_VOLUME_USD','AUM_AUC_USD','INSURANCE_SALES_ENABLED_USD',
+  'FINANCIAL_INSTITUTIONS_AVAILABLE_COUNT','FINANCIAL_INSTITUTIONS_CONNECTED_COUNT','DATA_SOURCES_CONNECTED_COUNT','API_CONNECTIONS',
+  'CONNECTED_VEHICLES_COUNT','IMPLEMENTATIONS_COUNT','COUNTRIES_SERVICE_REACH','COUNTRIES_OPERATING','PAYMENT_METHODS_COUNT','AGREEMENTS_COUNT','HEALTH_PROVIDERS_NETWORK',
 ];
 
 export function FintechMarketCohorts({ onSelectEntity }: { onSelectEntity: (entityName: string) => void }) {
@@ -148,15 +148,15 @@ function formatNumber(value:number|null|undefined) { return value==null ? 'n/d' 
 function compact(value:number) { return new Intl.NumberFormat('es-CL',{notation:'compact',maximumFractionDigits:1}).format(value); }
 function formatMetricValue(row:LeaderRow) {
   if (row.currency==='USD' || row.unit==='USD') return `USD ${compact(row.value_numeric)}`;
-  const suffix:Record<string,string>={ users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',orders:' órdenes',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',institutions:' instituciones',sources:' fuentes',countries:' países',payment_methods:' medios',connections:' conexiones',agreements:' acuerdos',providers:' prestadores',policies:' pólizas',workers:' trabajadores' };
+  const suffix:Record<string,string>={ users:' usuarios',clients:' clientes',companies:' empresas',merchants:' comercios',insured_persons:' asegurados',downloads:' descargas',transactions:' tx',orders:' órdenes',claims:' siniestros',verifications:' verificaciones',financings:' financiamientos',projects:' proyectos',institutions:' entidades',sources:' fuentes',countries:' países',payment_methods:' medios',connections:' conexiones',agreements:' acuerdos',providers:' prestadores',policies:' pólizas',vehicles:' vehículos',implementations:' implementaciones',workers:' trabajadores' };
   return `${compact(row.value_numeric)}${suffix[row.unit ?? ''] ?? (row.unit ? ` ${row.unit}` : '')}`;
 }
 function shortMetric(code:string,label:string) {
   const map:Record<string,string>={
-    USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',APP_DOWNLOADS_COUNT:'Descargas app',
-    TRANSACTIONS_MONTHLY_COUNT:'Transacciones / mes',ORDERS_MONTHLY_COUNT:'Órdenes / mes',TRANSACTIONS_QUARTERLY_COUNT:'Transacciones / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Transacciones / año',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',
-    PROCESSED_VOLUME_MONTHLY_USD:'Volumen procesado / mes',PROCESSED_VOLUME_PERIOD_USD:'Volumen del período',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',
-    FINANCIAL_INSTITUTIONS_CONNECTED_COUNT:'Instituciones conectadas',DATA_SOURCES_CONNECTED_COUNT:'Fuentes conectadas',API_CONNECTIONS:'Conexiones API',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',AGREEMENTS_COUNT:'Acuerdos de red',HEALTH_PROVIDERS_NETWORK:'Red de prestadores',
+    USERS:'Usuarios',CLIENTS:'Clientes',BUSINESS_CLIENTS:'Clientes empresa',MERCHANTS:'Comercios',INSURED_PERSONS:'Asegurados',POLICIES_ACTIVE_COUNT:'Pólizas vigentes',APP_DOWNLOADS_COUNT:'Descargas app',
+    TRANSACTIONS_DAILY_COUNT:'Transacciones / día',TRANSACTIONS_MONTHLY_COUNT:'Transacciones / mes',ORDERS_MONTHLY_COUNT:'Órdenes / mes',TRANSACTIONS_QUARTERLY_COUNT:'Transacciones / trimestre',TRANSACTIONS_ANNUAL_COUNT:'Transacciones / año',CLAIMS_PROCESSED_COUNT:'Siniestros procesados',VERIFICATIONS_24H_COUNT:'Verificaciones / 24h',FINANCINGS_COUNT:'Financiamientos',PROJECTS_FINANCED_COUNT:'Proyectos financiados',
+    DIRECT_PREMIUM_USD:'Prima directa',PROCESSED_VOLUME_MONTHLY_USD:'Volumen procesado / mes',PROCESSED_VOLUME_PERIOD_USD:'Volumen del período',ANNUAL_TRANSACTION_VOLUME_USD:'Volumen anual',ANNUALIZED_TRANSACTION_VOLUME_USD_EST:'Volumen anualizado',CUMULATIVE_TRANSACTION_VOLUME_USD:'Volumen acumulado',TPV_USD:'TPV',ORIGINATED_VOLUME_USD:'Originación',AUM_AUC_USD:'AUM / AUC',INSURANCE_SALES_ENABLED_USD:'Ventas de seguros habilitadas',
+    FINANCIAL_INSTITUTIONS_AVAILABLE_COUNT:'Entidades disponibles',FINANCIAL_INSTITUTIONS_CONNECTED_COUNT:'Instituciones conectadas',DATA_SOURCES_CONNECTED_COUNT:'Fuentes conectadas',API_CONNECTIONS:'Conexiones API',CONNECTED_VEHICLES_COUNT:'Vehículos conectados',IMPLEMENTATIONS_COUNT:'Implementaciones',COUNTRIES_SERVICE_REACH:'Alcance países',COUNTRIES_OPERATING:'Países operando',PAYMENT_METHODS_COUNT:'Métodos de pago',AGREEMENTS_COUNT:'Acuerdos de red',HEALTH_PROVIDERS_NETWORK:'Red de prestadores',
   };
   return map[code] ?? label;
 }
