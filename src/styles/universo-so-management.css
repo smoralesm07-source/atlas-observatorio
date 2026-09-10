@@ -447,3 +447,208 @@ body.uso-case-drawer-open {
     --uso-management-page-width: 100%;
   }
 }
+
+/* ───────────────────────────────────── corrección estructural del inspector
+   Las animaciones de entrada de la vista dejaban un transform activo en los
+   ancestros del drawer. En CSS eso convierte position:fixed en relativo al
+   contenedor y explicaba tanto la franja vacía superior como el final cortado. */
+.uso-mode-casos.fade-in,
+.uso-mode-casos .uso-axis-body.fade-in {
+  animation: none !important;
+  transform: none !important;
+}
+
+html.uso-case-drawer-open,
+body.uso-case-drawer-open {
+  height: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.uso-mode-casos .uso-work[data-case-drawer-open='true'] .uso-detail {
+  top: var(--uso-case-drawer-top, 60px) !important;
+  bottom: auto !important;
+  height: calc(100dvh - var(--uso-case-drawer-top, 60px)) !important;
+  max-height: none !important;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+.uso-mode-casos .uso-work[data-case-drawer-open='true'] .uso-management-close {
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+}
+
+/* ───────────────────────────────────────── encabezados visuales de la grilla
+   Se construyen sobre la primera fila para mantener el DOM intacto y alinear
+   exactamente cada título con las columnas reales de cada caso. */
+.uso-mode-casos .uso-list {
+  position: relative;
+  padding-top: 27px;
+}
+
+.uso-mode-casos .uso-list::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 27px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-panel-2) 96%, var(--bg-abyss));
+  pointer-events: none;
+}
+
+.uso-mode-casos .uso-row:first-child .uso-row-check,
+.uso-mode-casos .uso-row:first-child .uso-row-id,
+.uso-mode-casos .uso-row:first-child .uso-row-place,
+.uso-mode-casos .uso-row:first-child .uso-row-score,
+.uso-mode-casos .uso-row:first-child .uso-row-marks,
+.uso-mode-casos .uso-row:first-child .uso-row-work {
+  position: relative;
+}
+
+.uso-mode-casos .uso-row:first-child .uso-row-check::before,
+.uso-mode-casos .uso-row:first-child .uso-row-id::before,
+.uso-mode-casos .uso-row:first-child .uso-row-place::before,
+.uso-mode-casos .uso-row:first-child .uso-row-score::before,
+.uso-mode-casos .uso-row:first-child .uso-row-marks::before,
+.uso-mode-casos .uso-row:first-child .uso-row-work::before {
+  position: absolute;
+  top: -35px;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  height: 27px;
+  color: var(--ink-4);
+  font-family: var(--font);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.uso-mode-casos .uso-row:first-child .uso-row-check::before {
+  content: 'Lote';
+  left: 5px;
+}
+.uso-mode-casos .uso-row:first-child .uso-row-id::before { content: 'Entidad'; }
+.uso-mode-casos .uso-row:first-child .uso-row-place::before { content: 'Sector / territorio'; }
+.uso-mode-casos .uso-row:first-child .uso-row-score::before { content: 'Índice'; }
+.uso-mode-casos .uso-row:first-child .uso-row-marks::before { content: 'Señales'; }
+.uso-mode-casos .uso-row:first-child .uso-row-work::before { content: 'Gestión'; }
+
+/* ───────────────────────────────────────────── tipografía de cada caso
+   Una sola escala por nivel de información: principal 10.5, secundaria 9. Esto
+   evita saltos de tamaño entre razón social, sector, índice y estado. */
+.uso-mode-casos .uso-row-main {
+  font-family: var(--font);
+}
+
+.uso-mode-casos .uso-row-id b,
+.uso-mode-casos .uso-row-place span,
+.uso-mode-casos .uso-row-score b,
+.uso-mode-casos .uso-row-work > em:first-child {
+  font-size: 10.5px;
+  line-height: 1.28;
+  font-weight: 650;
+}
+
+.uso-mode-casos .uso-row-id em,
+.uso-mode-casos .uso-row-place em,
+.uso-mode-casos .uso-row-score em,
+.uso-mode-casos .uso-row-marks > em,
+.uso-mode-casos .uso-row-contact,
+.uso-mode-casos .uso-row-owner {
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.uso-mode-casos .uso-row-score {
+  align-items: flex-start;
+}
+
+/* ───────────────────────────────────────────── tipografía de la ficha
+   Registrar gestión fija la escala: títulos 11, apoyo 8.5 y contenido 10. La
+   identidad conserva un único nivel mayor para que el analista sepa qué caso
+   está atendiendo sin que cada bloque compita por jerarquía. */
+.uso-mode-casos .uso-detail,
+.uso-mode-casos .uso-detail button,
+.uso-mode-casos .uso-detail input,
+.uso-mode-casos .uso-detail textarea {
+  font-family: var(--font);
+}
+
+.uso-mode-casos .uso-case-id h3 {
+  margin: 3px 0 2px;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 680;
+}
+
+.uso-mode-casos .uso-case-id p,
+.uso-mode-casos .uso-case-assignment b,
+.uso-mode-casos .uso-case-summary > summary b,
+.uso-mode-casos .uso-open-rec-value > b,
+.uso-mode-casos .uso-case-resolution b,
+.uso-mode-casos .uso-contact-field input,
+.uso-mode-casos .uso-note-field textarea {
+  font-size: 10px;
+}
+
+.uso-mode-casos .uso-section-head h4,
+.uso-mode-casos .uso-open-head h4 {
+  margin-top: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 680;
+  letter-spacing: -.01em;
+}
+
+.uso-mode-casos .uso-section-head p,
+.uso-mode-casos .uso-open-head p,
+.uso-mode-casos .uso-case-assignment em,
+.uso-mode-casos .uso-case-summary > summary em,
+.uso-mode-casos .uso-open-rec-value > em,
+.uso-mode-casos .uso-case-resolution em,
+.uso-mode-casos .uso-note-foot em {
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+
+.uso-mode-casos .uso-pill,
+.uso-mode-casos .uso-copy,
+.uso-mode-casos .uso-case-jumpbar button,
+.uso-mode-casos .uso-case-jumpbar strong,
+.uso-mode-casos .uso-flow-compact button span,
+.uso-mode-casos .uso-priority,
+.uso-mode-casos .uso-readonly {
+  font-size: 8.5px;
+}
+
+.uso-mode-casos .uso-contact-field span,
+.uso-mode-casos .uso-priority > span,
+.uso-mode-casos .uso-note-field > span,
+.uso-mode-casos .uso-kicker {
+  font-size: 8px;
+  letter-spacing: .06em;
+}
+
+@media (max-width: 900px) {
+  .uso-mode-casos .uso-list {
+    padding-top: 0;
+  }
+
+  .uso-mode-casos .uso-list::before,
+  .uso-mode-casos .uso-row:first-child .uso-row-check::before,
+  .uso-mode-casos .uso-row:first-child .uso-row-id::before,
+  .uso-mode-casos .uso-row:first-child .uso-row-place::before,
+  .uso-mode-casos .uso-row:first-child .uso-row-score::before,
+  .uso-mode-casos .uso-row:first-child .uso-row-marks::before,
+  .uso-mode-casos .uso-row:first-child .uso-row-work::before {
+    display: none;
+  }
+}
