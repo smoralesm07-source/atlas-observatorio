@@ -290,9 +290,129 @@
   font-size: 11px;
 }
 
+/* Pulso V5: tres columnas en la franja inferior del panorama. Las dos
+   distribuciones históricas ceden ancho al feed operativo, que queda a la
+   derecha del Top 5 sin aumentar la altura de la página. */
+.pulse-v4 .pulse-briefing-bottom-three {
+  grid-template-columns: minmax(0, .84fr) minmax(0, .9fr) minmax(0, 1.26fr);
+  gap: 8px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three > .pulse-mini-panel,
+.pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact {
+  min-width: 0;
+  min-height: 202px;
+  height: 202px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-mini-panel {
+  min-height: 202px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-trend-svg {
+  height: 130px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-rank-row {
+  grid-template-columns: minmax(105px, .95fr) minmax(58px, .95fr) 40px;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-rank-name {
+  font-size: 9px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-rank-track {
+  height: 9px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-updates-shell {
+  height: 166px;
+  min-height: 166px;
+}
+
+.pulse-v4 .pulse-briefing-bottom-three .pulse-updates-list {
+  max-height: 136px;
+}
+
+/* Bloque inferior dividido: reportabilidad sectorial a la izquierda y las
+   lentes de profundización a la derecha. */
+.pulse-analysis-split {
+  display: grid;
+  grid-template-columns: minmax(0, .98fr) minmax(0, 1.02fr);
+  gap: 10px;
+  align-items: start;
+  margin-top: 2px;
+}
+
+.pulse-analysis-reporting,
+.pulse-analysis-depth {
+  min-width: 0;
+}
+
+.pulse-analysis-depth {
+  padding: 0 0 2px;
+}
+
+.pulse-analysis-depth .pulse-depth-head {
+  margin: 0;
+  min-height: 37px;
+  padding: 8px 2px 7px;
+  border-top: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pulse-analysis-depth .lensbar {
+  margin-top: 6px;
+}
+
+.pulse-analysis-depth .lens {
+  padding-top: 8px;
+}
+
+.pulse-analysis-reporting .rep-row {
+  grid-template-columns: minmax(0, 1fr) 92px;
+}
+
+.pulse-analysis-reporting .rep-row .rep-hide,
+.pulse-analysis-reporting .rep-row .rep-bar {
+  display: none;
+}
+
+.pulse-analysis-reporting .rep-name > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .pulse-v4 .pulse-briefing-bottom-three {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact {
+    grid-column: 1 / -1;
+    height: auto;
+    min-height: 210px;
+  }
+
+  .pulse-analysis-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 760px) {
   .pulse-updates-list { max-height: 390px; }
   .pulse-updates-shell { min-height: 260px; }
   .pulse-updates-compact .pulse-updates-shell { height: auto; min-height: 210px; }
   .pulse-updates-compact .pulse-updates-list { max-height: 260px; }
+
+  .pulse-v4 .pulse-briefing-bottom-three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact {
+    grid-column: auto;
+  }
 }
