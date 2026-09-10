@@ -1,0 +1,4 @@
+-- Historical migration marker.
+-- The live change introduced broad-universe fields into obs_territory_map().
+-- It was immediately superseded by 20260910214803, which contains the complete
+-- final function definition and is the canonical replay definition for fresh environments.
