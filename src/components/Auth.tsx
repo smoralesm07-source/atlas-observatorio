@@ -3,9 +3,11 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase, configError, redirectTo } from '../lib/supabase';
 import { Mark } from './Mark';
 
+export type AtlasRole = 'viewer' | 'analyst' | 'admin';
+
 type Access =
   | { state: 'checking' }
-  | { state: 'granted'; role: string }
+  | { state: 'granted'; role: AtlasRole }
   | { state: 'pending' }
   | { state: 'error'; message: string; transport: boolean };
 
@@ -17,6 +19,10 @@ function isTransportError(message: string) {
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+}
+
+function asAtlasRole(value: unknown): AtlasRole {
+  return value === 'admin' || value === 'analyst' || value === 'viewer' ? value : 'viewer';
 }
 
 async function signInWithMicrosoft() {
@@ -38,7 +44,7 @@ async function signInWithMicrosoft() {
 /** Microsoft Entra prueba identidad y aml_allowed_users decide autorización.
  *  La sesión se persiste en el navegador: recargar la página no debe volver a
  *  pedir una cuenta mientras esa sesión siga siendo válida. */
-export function AuthGate({ children }: { children: (session: Session) => ReactNode }) {
+export function AuthGate({ children }: { children: (session: Session, role: AtlasRole) => ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [access, setAccess] = useState<Access>({ state: 'checking' });
@@ -102,7 +108,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
 
           if (!error) {
             if (data?.enabled) {
-              setAccess({ state: 'granted', role: data.role ?? 'viewer' });
+              setAccess({ state: 'granted', role: asAtlasRole(data.role) });
             } else {
               setAccess({ state: 'pending' });
             }
@@ -201,7 +207,7 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
     );
   }
 
-  return <>{children(session)}</>;
+  return <>{children(session, access.role)}</>;
 }
 
 function SignIn() {

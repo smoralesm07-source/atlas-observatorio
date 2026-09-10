@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { AuthGate } from './components/Auth';
+import { AuthGate, type AtlasRole } from './components/Auth';
 import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
 import { useRoute } from './lib/router';
@@ -16,19 +16,20 @@ import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
 import { GastoPublico } from './views/GastoPublico';
 import { Metodologia } from './views/Metodologia';
+import { Administracion } from './views/Administracion';
 
 export default function App() {
-  return <AuthGate>{(session) => <Routed session={session} />}</AuthGate>;
+  return <AuthGate>{(session, role) => <Routed session={session} role={role} />}</AuthGate>;
 }
 
-function Routed({ session }: { session: Session }) {
+function Routed({ session, role }: { session: Session; role: AtlasRole }) {
   const [route] = useRoute();
   const go = useCallback((hash: string) => {
     window.location.hash = hash.startsWith('#') ? hash : `#${hash}`;
   }, []);
 
   return (
-    <Shell route={route} session={session}>
+    <Shell route={route} session={session} role={role}>
       {route.view === 'pulso' && <Pulso onNavigate={go} lente={route.lente} />}
       {route.view === 'universo' && (
         <UniversoSO onNavigate={go} initialMode={route.mode ?? 'padron'} initialQueue={route.cola} />
@@ -62,6 +63,23 @@ function Routed({ session }: { session: Session }) {
       )}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
+      {route.view === 'administracion' && (
+        role === 'admin'
+          ? <Administracion session={session} />
+          : <AdminDenied />
+      )}
     </Shell>
+  );
+}
+
+function AdminDenied() {
+  return (
+    <div className="panel panel-pad fade-in" style={{ maxWidth: 560, margin: '38px auto' }}>
+      <div className="section-title">Acceso restringido</div>
+      <h1 className="view-title" style={{ fontSize: 21 }}>Administración</h1>
+      <p className="view-lede">
+        Esta sección sólo está disponible para administradores habilitados de ATLAS Observatorio.
+      </p>
+    </div>
   );
 }
