@@ -105,7 +105,7 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
         </MiniPanel>
       </section>
 
-      <section className="p6-row-two">
+      <section className="p6-row-two" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         <MiniPanel title="Evolución publicada del padrón" action="Universo SO →" onAction={() => onNavigate(hrefFor({ view: 'universo' }))}>
           {trend.length > 1 ? <MiniLine points={trend} /> : <div className="p6-note">Sin serie histórica suficiente.</div>}
         </MiniPanel>
