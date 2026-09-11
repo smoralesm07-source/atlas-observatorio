@@ -9,6 +9,7 @@ export type { AtlasRole } from './Auth';
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
 const OTP_MIN_LENGTH = 6;
 const OTP_MAX_LENGTH = 10;
+const SESSION_BOOT_TIMEOUT_MS = 6000;
 
 function normalizedEmail(value: string) {
   return value.trim().toLowerCase();
@@ -42,16 +43,35 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
 
   useEffect(() => {
     let live = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (live) setSession(data.session);
-    });
+    const bootTimeout = window.setTimeout(() => {
+      if (!live) return;
+      // Nunca dejar la aplicación bloqueada indefinidamente en el splash si
+      // la restauración/renovación de una sesión persistida no responde. El
+      // usuario vuelve a la puerta de acceso y puede autenticarse de nuevo.
+      setSession(null);
+    }, SESSION_BOOT_TIMEOUT_MS);
+
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!live) return;
+        window.clearTimeout(bootTimeout);
+        setSession(data.session);
+      })
+      .catch(() => {
+        if (!live) return;
+        window.clearTimeout(bootTimeout);
+        setSession(null);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (live) setSession(nextSession);
+      if (!live) return;
+      window.clearTimeout(bootTimeout);
+      setSession(nextSession);
     });
 
     return () => {
       live = false;
+      window.clearTimeout(bootTimeout);
       listener.subscription.unsubscribe();
     };
   }, []);
