@@ -119,9 +119,9 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
           </div>
           <p className="p6-note">Selecciona un sector para filtrar el directorio.</p>
         </MiniPanel>
-
-        <NovedadesObservatorio compact />
       </section>
+
+      <NovedadesObservatorio />
 
       <section className="p6-crosscuts" aria-label="Cruces de caracterización">
         <Crosscut label="Antecedentes sancionatorios" detail={`${n(c?.antecedentes_sancion)} resoluciones observadas`} value={c?.sancionados_con_antecedente ?? 0} tone="var(--sig-critical)" onClick={() => setCohort({ cohort: 'SANCIONADO', title: 'Sujetos con antecedente sancionatorio' })} />
