@@ -22,6 +22,18 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
   const u = data.universe;
   const c = data.crosscuts;
   const scr = data.screening;
+  const pressExtra = c as unknown as {
+    prensa_confirmada?: number;
+    prensa_alta_confianza?: number;
+    prensa_alta_confianza_nueva?: number;
+  } | null;
+  const pressConfirmed = pressExtra?.prensa_confirmada ?? 0;
+  const pressHighConfidence = pressExtra?.prensa_alta_confianza ?? 0;
+  const pressHighConfidenceNew = pressExtra?.prensa_alta_confianza_nueva ?? 0;
+  const pressMode = directory.kind === 'registered' && directory.request.cohort === 'PRENSA'
+    ? (directory.request.value ?? 'TODAS')
+    : null;
+
   const trend = (data.reporting?.nacional?.entidades_reportantes_total?.puntos ?? [])
     .filter((point) => /^\d{4}$/.test(point.periodo) && point.valor != null)
     .map((point) => ({ label: point.periodo, value: Number(point.valor) }))
@@ -34,6 +46,13 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
   const setCohort = (request: CohortRequest, client?: Pick<Extract<DirectorySelection, { kind: 'registered' }>, 'clientSector' | 'clientRegion' | 'clientIndustry'>) => {
     setDirectory({ kind: 'registered', request, ...client });
     window.setTimeout(() => document.getElementById('pulso-directorio')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 20);
+  };
+
+  const setPressMode = (value: string | null, title: string, hint: string) => {
+    setDirectory({
+      kind: 'registered',
+      request: { cohort: 'PRENSA', value, title, hint },
+    });
   };
 
   const status = [
@@ -125,10 +144,65 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
 
       <section className="p6-crosscuts" aria-label="Cruces de caracterización">
         <Crosscut label="Antecedentes sancionatorios" detail={`${n(c?.antecedentes_sancion)} resoluciones observadas`} value={c?.sancionados_con_antecedente ?? 0} tone="var(--sig-critical)" onClick={() => setCohort({ cohort: 'SANCIONADO', title: 'Sujetos con antecedente sancionatorio' })} />
-        <Crosscut label="Figuran en prensa" detail={`${n(c?.antecedentes_prensa)} menciones asociadas`} value={c?.prensa ?? 0} tone="var(--sig-watch)" onClick={() => setCohort({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })} />
+        <Crosscut
+          label="Vínculo con prensa"
+          detail={`${n(pressConfirmed)} confirmadas · ${n(pressHighConfidenceNew)} nuevas ≥90%`}
+          value={c?.prensa ?? 0}
+          tone="var(--sig-watch)"
+          onClick={() => setCohort({
+            cohort: 'PRENSA',
+            title: 'Entidades con vínculo de prensa',
+            hint: 'Incluye asociaciones confirmadas y coincidencias de identidad ≥90% detectadas en los últimos 90 días',
+          })}
+        />
         <Crosscut label="Cruce con OSFL" detail={`${n1(percent(c?.osfl ?? 0, u.total))}% del padrón`} value={c?.osfl ?? 0} tone="var(--unknown)" onClick={() => setCohort({ cohort: 'OSFL', title: 'Sujetos obligados que además son OSFL' })} />
         <Crosscut label="Señales de patrón" detail={`${n(c?.senales_totales)} señales activas`} value={c?.con_senal ?? 0} tone="var(--sig-medium)" onClick={() => setCohort({ cohort: 'CON_SENAL', title: 'Sujetos con señales observadas' })} />
       </section>
+
+      {pressMode && (
+        <div
+          role="group"
+          aria-label="Tipo de vínculo con prensa"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px 12px',
+            padding: '8px 10px',
+            border: '1px solid var(--line)',
+            borderRadius: 8,
+            background: 'var(--bg-panel)',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <b style={{ display: 'block', fontSize: '10.4px', color: 'var(--ink-2)' }}>Consulta de prensa</b>
+            <span style={{ display: 'block', marginTop: 2, fontSize: '8.8px', color: 'var(--ink-4)' }}>
+              Las coincidencias ≥90% son vínculos de alta confianza para revisión; no equivalen por sí solas a una asociación confirmada.
+            </span>
+          </div>
+          <div className="seg seg-sm" aria-label="Filtrar vínculo de prensa">
+            <button
+              data-on={pressMode === 'TODAS'}
+              onClick={() => setPressMode(null, 'Entidades con vínculo de prensa', 'Confirmadas o coincidencias de identidad ≥90% en los últimos 90 días')}
+            >
+              Todas · {n(c?.prensa ?? 0)}
+            </button>
+            <button
+              data-on={pressMode === 'CONFIRMADA'}
+              onClick={() => setPressMode('CONFIRMADA', 'Prensa confirmada', 'Entidades con evidencia de prensa ya consolidada en Atlas')}
+            >
+              Confirmadas · {n(pressConfirmed)}
+            </button>
+            <button
+              data-on={pressMode === 'ALTA_CONFIANZA'}
+              onClick={() => setPressMode('ALTA_CONFIANZA', 'Coincidencias de prensa de alta confianza', 'Coincidencia de identidad ≥90% detectada durante los últimos 90 días')}
+            >
+              ≥90% · {n(pressHighConfidence)}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="p6-directory-anchor">
         <SubjectDirectory
