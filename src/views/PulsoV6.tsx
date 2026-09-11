@@ -105,7 +105,7 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
         </MiniPanel>
       </section>
 
-      <section className="p6-row-two" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+      <section className="p6-row-two">
         <MiniPanel title="Evolución publicada del padrón" action="Universo SO →" onAction={() => onNavigate(hrefFor({ view: 'universo' }))}>
           {trend.length > 1 ? <MiniLine points={trend} /> : <div className="p6-note">Sin serie histórica suficiente.</div>}
         </MiniPanel>
@@ -119,9 +119,9 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
           </div>
           <p className="p6-note">Selecciona un sector para filtrar el directorio.</p>
         </MiniPanel>
-      </section>
 
-      <NovedadesObservatorio />
+        <NovedadesObservatorio compact />
+      </section>
 
       <section className="p6-crosscuts" aria-label="Cruces de caracterización">
         <Crosscut label="Antecedentes sancionatorios" detail={`${n(c?.antecedentes_sancion)} resoluciones observadas`} value={c?.sancionados_con_antecedente ?? 0} tone="var(--sig-critical)" onClick={() => setCohort({ cohort: 'SANCIONADO', title: 'Sujetos con antecedente sancionatorio' })} />
