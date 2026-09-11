@@ -141,7 +141,6 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
 
           <div className="priority-compact-footer">
             <span>Prensa y sanciones · últimos {feed?.window_days ?? 90} días</span>
-            <span>{error && feed ? 'sincronización parcial' : feed?.generated_at ? `Act. ${formatGenerated(feed.generated_at)}` : 'Atlas'}</span>
           </div>
         </div>
       </Panel>
@@ -347,12 +346,6 @@ function formatEvent(value: string) {
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
   if (Number.isNaN(d.getTime())) return value?.slice(0, 16) || '—';
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
-}
-
-function formatGenerated(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'reciente';
-  return new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit' }).format(d);
 }
 
 function normalizeConfidence(value: number | null) {
