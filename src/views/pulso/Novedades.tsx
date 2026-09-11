@@ -138,10 +138,6 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
               ))}
             </div>
           )}
-
-          <div className="priority-compact-footer">
-            <span>Prensa y sanciones · últimos {feed?.window_days ?? 90} días</span>
-          </div>
         </div>
       </Panel>
 
