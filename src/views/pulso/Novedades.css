@@ -1,216 +1,511 @@
-.pulse-updates-actions {
+.pulse-priority-radar,
+.pulse-priority-radar > section {
+  min-width: 0;
+  width: 100%;
+}
+
+.priority-radar-actions {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
-.pulse-updates-live {
+.priority-radar-live,
+.priority-radar-window {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 9px;
+  gap: 6px;
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-panel-2) 78%, transparent);
   color: var(--ink-4);
-  text-transform: uppercase;
-  letter-spacing: .04em;
+  font-size: 9.2px;
+  line-height: 1;
+  letter-spacing: .02em;
+  white-space: nowrap;
 }
 
-.pulse-updates-live i {
-  width: 6px;
-  height: 6px;
+.priority-radar-live {
+  color: var(--present);
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.priority-radar-live i {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--present);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--present) 12%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--present) 12%, transparent);
 }
 
-.pulse-updates-refresh {
+.priority-radar-refresh {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg-panel-2);
   color: var(--ink-3);
   font: inherit;
-  font-size: 13px;
+  font-size: 15px;
   cursor: pointer;
+  transition: border-color .16s ease, color .16s ease, transform .16s ease;
 }
 
-.pulse-updates-refresh:hover:not(:disabled) {
+.priority-radar-refresh:hover:not(:disabled) {
   color: var(--accent);
   border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
 
-.pulse-updates-refresh:disabled {
+.priority-radar-refresh:disabled {
   opacity: .55;
   cursor: default;
 }
 
-.pulse-updates-shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 305px;
-}
-
-.pulse-updates-list {
-  flex: 1;
-  max-height: 330px;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-
-.pulse-update {
-  display: grid;
-  grid-template-columns: 17px minmax(0, 1fr);
+.priority-radar-shell {
   min-width: 0;
-  padding: 10px 13px 9px 9px;
-  border-bottom: 1px solid var(--line-soft);
+  background:
+    radial-gradient(720px 260px at 0 0, color-mix(in srgb, var(--sig-critical) 3%, transparent), transparent 72%),
+    var(--bg-panel);
 }
 
-.pulse-update:last-child { border-bottom: 0; }
-.pulse-update:hover { background: color-mix(in srgb, var(--accent) 2.6%, transparent); }
-
-.pulse-update-rail {
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-
-.pulse-update-rail::after {
-  content: '';
-  position: absolute;
-  top: 13px;
-  bottom: -10px;
-  width: 1px;
-  background: var(--line-soft);
-}
-
-.pulse-update:last-child .pulse-update-rail::after { display: none; }
-
-.pulse-update-rail i {
-  position: relative;
-  z-index: 1;
-  width: 7px;
-  height: 7px;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: var(--update-tone, var(--accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--update-tone, var(--accent)) 10%, var(--bg-panel));
-}
-
-.pulse-update[data-kind='CORTE'] { --update-tone: var(--accent); }
-.pulse-update[data-kind='PRENSA'] { --update-tone: var(--sig-watch); }
-.pulse-update[data-kind='FUENTE'] { --update-tone: var(--present); }
-.pulse-update[data-kind='SANCION'] { --update-tone: var(--sig-critical); }
-.pulse-update[data-kind='ESTADO'] { --update-tone: var(--sig-high); }
-
-.pulse-update-body { min-width: 0; }
-
-.pulse-update-topline,
-.pulse-update-foot {
+.priority-radar-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.pulse-update-kind {
-  display: inline-flex;
-  align-items: center;
-  min-height: 16px;
-  padding: 1px 5px;
-  border: 1px solid color-mix(in srgb, var(--update-tone, var(--accent)) 34%, var(--line));
+.priority-radar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+}
+
+.priority-radar-filters button {
+  min-height: 28px;
+  padding: 5px 11px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--update-tone, var(--accent)) 8%, transparent);
-  color: var(--update-tone, var(--accent));
-  font-size: 7.7px;
-  font-weight: 680;
-  letter-spacing: .055em;
+  background: color-mix(in srgb, var(--bg-panel-2) 92%, transparent);
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 590;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
 }
 
-.pulse-update time {
-  flex-shrink: 0;
+.priority-radar-filters button b {
+  margin-left: 3px;
+  color: var(--ink-2);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 9.4px;
+  font-weight: 650;
+}
+
+.priority-radar-filters button:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.priority-radar-filters button.is-active {
+  border-color: color-mix(in srgb, var(--sig-high) 72%, var(--sig-critical));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sig-high) 92%, #ff9f42), color-mix(in srgb, var(--sig-critical) 82%, #ff6848));
+  color: #fff;
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--sig-critical) 13%, transparent);
+}
+
+.priority-radar-filters button.is-active b { color: #fff; }
+
+.priority-radar-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: var(--ink-4);
+  font-size: 9px;
+}
+
+.priority-radar-sort select {
+  min-width: 118px;
+  height: 28px;
+  padding: 0 27px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-panel-2);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 9.4px;
+  cursor: pointer;
+}
+
+.priority-radar-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 485px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 24%, var(--line)) transparent;
+}
+
+.priority-radar-row {
+  --row-tone: var(--sig-watch);
+  position: relative;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) minmax(150px, auto);
+  gap: 14px;
+  align-items: center;
+  min-height: 100px;
+  padding: 13px 14px 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  transition: background .16s ease, border-color .16s ease;
+}
+
+.priority-radar-row:hover {
+  background: color-mix(in srgb, var(--row-tone) 3.5%, transparent);
+}
+
+.priority-radar-row:last-child { border-bottom: 0; }
+.priority-radar-row.is-sanction { --row-tone: var(--sig-high); }
+.priority-radar-row.is-new-match { --row-tone: color-mix(in srgb, var(--sig-high) 74%, var(--sig-critical)); }
+
+.priority-radar-row.is-critical {
+  --row-tone: var(--sig-critical);
+  margin: 8px 9px;
+  min-height: 118px;
+  padding-right: 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--sig-critical) 62%, var(--line));
+  border-radius: 10px;
+  background:
+    radial-gradient(620px 155px at 0 0, color-mix(in srgb, var(--sig-critical) 17%, transparent), transparent 72%),
+    linear-gradient(100deg, color-mix(in srgb, var(--sig-critical) 5%, var(--bg-panel)) 0%, var(--bg-panel) 66%, color-mix(in srgb, var(--sig-critical) 3%, var(--bg-panel)) 100%);
+  box-shadow:
+    inset 5px 0 0 var(--sig-critical),
+    0 10px 28px color-mix(in srgb, var(--sig-critical) 10%, transparent);
+}
+
+.priority-radar-rail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-height: 64px;
   color: var(--ink-4);
 }
 
-.pulse-update h4 {
-  margin: 5px 0 0;
-  font-size: 10.4px;
-  line-height: 1.28;
-  font-weight: 640;
-  color: var(--ink);
+.priority-radar-row:not(.is-critical) .priority-radar-rail::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 17px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--row-tone);
+  box-shadow: 0 0 13px color-mix(in srgb, var(--row-tone) 18%, transparent);
 }
 
-.pulse-update p {
-  margin: 3px 0 0;
-  font-size: 9px;
-  line-height: 1.38;
+.priority-radar-row:not(.is-critical) .priority-radar-rail span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--bg-panel-2);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.priority-radar-alert-icon {
+  width: 39px;
+  height: 39px;
+  margin-left: 10px;
+  overflow: visible;
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--sig-critical) 34%, transparent));
+}
+
+.priority-radar-alert-icon path:first-child {
+  fill: color-mix(in srgb, var(--sig-critical) 13%, transparent);
+  stroke: var(--sig-critical);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.priority-radar-alert-icon path:last-child {
+  fill: none;
+  stroke: var(--sig-critical);
+  stroke-width: 2.1;
+  stroke-linecap: round;
+}
+
+.priority-radar-main { min-width: 0; }
+
+.priority-radar-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 20px;
+}
+
+.priority-radar-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 19px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-panel-2) 86%, transparent);
+  color: var(--ink-3);
+  font-size: 8.2px;
+  font-weight: 720;
+  line-height: 1;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+
+.priority-radar-badge[data-tone='critical'] {
+  border-color: color-mix(in srgb, var(--sig-critical) 66%, var(--line));
+  background: var(--sig-critical);
+  color: #fff;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--sig-critical) 18%, transparent);
+}
+
+.priority-radar-badge[data-tone='press'] {
+  border-color: color-mix(in srgb, var(--sig-watch) 50%, var(--line));
+  color: var(--sig-watch);
+}
+
+.priority-radar-badge[data-tone='new'] {
+  border-color: color-mix(in srgb, var(--sig-high) 48%, var(--line));
+  color: var(--sig-high);
+}
+
+.priority-radar-badge[data-tone='sanction'] {
+  border-color: color-mix(in srgb, var(--sig-critical) 52%, var(--line));
+  background: color-mix(in srgb, var(--sig-critical) 7%, transparent);
+  color: var(--sig-critical);
+}
+
+.priority-radar-badge[data-tone='active'] {
+  border-color: color-mix(in srgb, var(--present) 52%, var(--line));
+  color: var(--present);
+}
+
+.priority-radar-badge[data-tone='gap'] {
+  border-color: color-mix(in srgb, var(--sig-critical) 50%, var(--line));
+  color: color-mix(in srgb, var(--sig-critical) 82%, #ffb4a6);
+}
+
+.priority-radar-badge[data-tone='confidence'] {
+  border-color: color-mix(in srgb, var(--present) 35%, var(--line));
   color: var(--ink-3);
 }
 
-.pulse-update-foot {
-  margin-top: 5px;
-  align-items: flex-end;
-  font-size: 8.1px;
-  color: var(--ink-4);
-}
-
-.pulse-update-foot > span:first-child {
-  min-width: 0;
+.priority-radar-row h4 {
+  margin: 6px 0 0;
   overflow: hidden;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 735;
+  line-height: 1.18;
+  letter-spacing: -.012em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pulse-update-links {
+.priority-radar-row.is-critical h4 {
+  font-size: 15.5px;
+  letter-spacing: -.018em;
+}
+
+.priority-radar-headline {
+  display: -webkit-box;
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 10.4px;
+  line-height: 1.36;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.priority-radar-row.is-critical .priority-radar-headline {
+  color: var(--ink-2);
+  font-size: 10.8px;
+  font-weight: 590;
+}
+
+.priority-radar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  margin-top: 7px;
+  color: var(--ink-4);
+  font-size: 8.8px;
+}
+
+.priority-radar-meta > span {
+  position: relative;
   display: inline-flex;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.priority-radar-meta > span + span::before {
+  content: '';
+  width: 1px;
+  height: 11px;
+  margin-right: 6px;
+  background: var(--line-strong);
+}
+
+.priority-radar-source { color: var(--ink-3); }
+.priority-radar-meta .is-signal { color: var(--sig-high); }
+.priority-radar-meta .is-sanction-detail { color: var(--sig-critical); font-weight: 650; }
+.priority-radar-mini-icon { color: var(--row-tone); font-size: 10px; }
+
+.priority-radar-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  align-self: stretch;
+  gap: 10px;
+  padding: 1px 0;
+}
+
+.priority-radar-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.priority-radar-time time {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 8.8px;
+  white-space: nowrap;
+}
+
+.priority-radar-time span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--row-tone) 10%, var(--bg-panel-2));
+  color: var(--row-tone);
+  font-size: 8.1px;
+  white-space: nowrap;
+}
+
+.priority-radar-links {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.pulse-update-links a {
-  color: var(--update-tone, var(--accent));
+.priority-radar-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 31px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--bg-panel-2);
+  color: var(--ink-2);
+  font-size: 9px;
+  font-weight: 650;
   text-decoration: none;
-  font-weight: 600;
+  white-space: nowrap;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
 }
 
-.pulse-update-links a:hover { text-decoration: underline; }
+.priority-radar-links a:hover {
+  border-color: color-mix(in srgb, var(--row-tone) 48%, var(--line));
+  color: var(--row-tone);
+  transform: translateY(-1px);
+}
 
-.pulse-updates-caption {
+.priority-radar-links a.is-primary {
+  border-color: color-mix(in srgb, var(--sig-critical) 66%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sig-high) 92%, #ff9f42), color-mix(in srgb, var(--sig-critical) 86%, #ff6048));
+  color: #fff;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--sig-critical) 14%, transparent);
+}
+
+.priority-radar-links a.is-primary:hover {
+  color: #fff;
+  filter: brightness(1.06);
+}
+
+.priority-radar-links a.is-source {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-4);
+  font-size: 8.4px;
+}
+
+.priority-radar-footer {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   padding: 7px 12px;
   border-top: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--bg-panel-2) 72%, transparent);
-  font-family: var(--mono);
-  font-size: 7.8px;
+  background: color-mix(in srgb, var(--bg-panel-2) 70%, transparent);
   color: var(--ink-4);
+  font-size: 8.8px;
 }
 
-.pulse-updates-caption em {
-  font-style: normal;
+.priority-radar-footer b {
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-weight: 650;
+}
+
+.priority-radar-footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.priority-radar-footer em {
   color: var(--sig-high);
+  font-style: normal;
 }
 
-.pulse-updates-state {
+.priority-radar-state {
   display: grid;
   place-items: center;
-  min-height: 270px;
-  padding: 20px;
+  min-height: 260px;
+  padding: 24px;
   color: var(--ink-4);
-  font-size: 10px;
+  font-size: 10.5px;
   text-align: center;
 }
 
-.pulse-updates-error { gap: 8px; }
-.pulse-updates-error b { color: var(--ink-2); }
-
-.pulse-updates-error button {
-  padding: 4px 8px;
+.priority-radar-state.is-error { gap: 8px; }
+.priority-radar-state.is-error b { color: var(--ink-2); }
+.priority-radar-state button {
+  padding: 5px 9px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--bg-panel-2);
@@ -219,200 +514,80 @@
   cursor: pointer;
 }
 
-/* Modo compacto: comparte altura con evolución del padrón y Top 5 sectores. */
-.pulse-updates-compact,
-.pulse-updates-compact > section {
-  min-width: 0;
-  height: 100%;
+.pulse-priority-radar.is-compact .priority-radar-toolbar {
+  padding: 7px 8px;
 }
 
-.pulse-updates-compact .pulse-updates-shell {
-  min-height: 176px;
-  height: 176px;
+.pulse-priority-radar.is-compact .priority-radar-filters button {
+  min-height: 24px;
+  padding: 3px 7px;
+  font-size: 8.4px;
 }
 
-.pulse-updates-compact .pulse-updates-list {
-  max-height: 142px;
+.pulse-priority-radar.is-compact .priority-radar-list { max-height: 310px; }
+.pulse-priority-radar.is-compact .priority-radar-row {
+  grid-template-columns: 54px minmax(0, 1fr) 118px;
+  min-height: 82px;
+  padding: 9px 9px 9px 0;
 }
+.pulse-priority-radar.is-compact .priority-radar-row.is-critical { min-height: 94px; }
+.pulse-priority-radar.is-compact .priority-radar-row h4 { font-size: 11px; }
+.pulse-priority-radar.is-compact .priority-radar-headline { font-size: 9px; -webkit-line-clamp: 1; }
+.pulse-priority-radar.is-compact .priority-radar-meta { font-size: 7.8px; }
+.pulse-priority-radar.is-compact .priority-radar-badge { font-size: 7.3px; padding: 1px 5px; }
+.pulse-priority-radar.is-compact .priority-radar-links a { min-height: 27px; padding: 4px 7px; font-size: 8px; }
 
-.pulse-updates-compact .pulse-update {
-  grid-template-columns: 13px minmax(0, 1fr);
-  padding: 6px 9px 5px 7px;
-}
-
-.pulse-updates-compact .pulse-update-rail i {
-  width: 6px;
-  height: 6px;
-  margin-top: 3px;
-}
-
-.pulse-updates-compact .pulse-update-rail::after {
-  top: 10px;
-  bottom: -6px;
-}
-
-.pulse-updates-compact .pulse-update-kind {
-  min-height: 14px;
-  padding: 0 4px;
-  font-size: 6.8px;
-}
-
-.pulse-updates-compact .pulse-update time { font-size: 7px; }
-.pulse-updates-compact .pulse-update h4 {
-  margin-top: 3px;
-  font-size: 8.9px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pulse-updates-compact .pulse-update-foot {
-  margin-top: 2px;
-  font-size: 7.1px;
-}
-
-.pulse-updates-compact .pulse-updates-caption {
-  padding: 5px 9px;
-  font-size: 6.8px;
-}
-
-.pulse-updates-compact .pulse-updates-state {
-  min-height: 142px;
-  padding: 10px;
-  font-size: 8.5px;
-}
-
-.pulse-updates-compact .pulse-updates-live { font-size: 7.5px; }
-.pulse-updates-compact .pulse-updates-refresh {
-  width: 21px;
-  height: 21px;
-  font-size: 11px;
-}
-
-/* Pulso V5: tres columnas en la franja inferior del panorama. Las dos
-   distribuciones históricas ceden ancho al feed operativo, que queda a la
-   derecha del Top 5 sin aumentar la altura de la página. */
-.pulse-v4 .pulse-briefing-bottom-three {
-  grid-template-columns: minmax(0, .84fr) minmax(0, .9fr) minmax(0, 1.26fr);
-  gap: 8px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three > .pulse-mini-panel,
-.pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact {
-  min-width: 0;
-  min-height: 202px;
-  height: 202px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-mini-panel {
-  min-height: 202px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-trend-svg {
-  height: 130px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-rank-row {
-  grid-template-columns: minmax(105px, .95fr) minmax(58px, .95fr) 40px;
-  gap: 6px;
-  padding: 3px 0;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-rank-name {
-  font-size: 9px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-rank-track {
-  height: 9px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-updates-shell {
-  height: 166px;
-  min-height: 166px;
-}
-
-.pulse-v4 .pulse-briefing-bottom-three .pulse-updates-list {
-  max-height: 136px;
-}
-
-/* Bloque inferior dividido: reportabilidad sectorial a la izquierda y las
-   lentes de profundización a la derecha. */
-.pulse-analysis-split {
-  display: grid;
-  grid-template-columns: minmax(0, .98fr) minmax(0, 1.02fr);
-  gap: 10px;
-  align-items: start;
-  margin-top: 2px;
-}
-
-.pulse-analysis-reporting,
-.pulse-analysis-depth {
-  min-width: 0;
-}
-
-.pulse-analysis-depth {
-  padding: 0 0 2px;
-}
-
-.pulse-analysis-depth .pulse-depth-head {
-  margin: 0;
-  min-height: 37px;
-  padding: 8px 2px 7px;
-  border-top: 0;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.pulse-analysis-depth .lensbar {
-  margin-top: 6px;
-}
-
-.pulse-analysis-depth .lens {
-  padding-top: 8px;
-}
-
-.pulse-analysis-reporting .rep-row {
-  grid-template-columns: minmax(0, 1fr) 92px;
-}
-
-.pulse-analysis-reporting .rep-row .rep-hide,
-.pulse-analysis-reporting .rep-row .rep-bar {
-  display: none;
-}
-
-.pulse-analysis-reporting .rep-name > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 1180px) {
-  .pulse-v4 .pulse-briefing-bottom-three {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+@media (max-width: 980px) {
+  .priority-radar-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact {
-    grid-column: 1 / -1;
-    height: auto;
-    min-height: 210px;
+  .priority-radar-sort { align-self: flex-end; }
+  .priority-radar-row {
+    grid-template-columns: 60px minmax(0, 1fr) 132px;
+    gap: 9px;
   }
-
-  .pulse-analysis-split {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .priority-radar-links { flex-direction: column; align-items: flex-end; }
 }
 
-@media (max-width: 760px) {
-  .pulse-updates-list { max-height: 390px; }
-  .pulse-updates-shell { min-height: 260px; }
-  .pulse-updates-compact .pulse-updates-shell { height: auto; min-height: 210px; }
-  .pulse-updates-compact .pulse-updates-list { max-height: 260px; }
-
-  .pulse-v4 .pulse-briefing-bottom-three {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 720px) {
+  .priority-radar-actions .priority-radar-window { display: none; }
+  .priority-radar-toolbar { padding: 8px; }
+  .priority-radar-filters { gap: 5px; }
+  .priority-radar-filters button { min-height: 26px; padding: 4px 8px; font-size: 8.8px; }
+  .priority-radar-sort { width: 100%; justify-content: flex-end; }
+  .priority-radar-list { max-height: none; }
+  .priority-radar-row,
+  .priority-radar-row.is-critical {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 7px;
+    margin: 0;
+    min-height: 0;
+    padding: 11px 9px 11px 0;
+    border-radius: 0;
   }
-
-  .pulse-v4 .pulse-briefing-bottom-three > .pulse-updates-compact {
-    grid-column: auto;
+  .priority-radar-row.is-critical { border-width: 1px 0; }
+  .priority-radar-row:not(.is-critical) .priority-radar-rail::before { left: 10px; width: 3px; }
+  .priority-radar-row:not(.is-critical) .priority-radar-rail span { width: 25px; height: 25px; margin-left: 9px; }
+  .priority-radar-alert-icon { width: 30px; height: 30px; margin-left: 6px; }
+  .priority-radar-row h4,
+  .priority-radar-row.is-critical h4 { white-space: normal; font-size: 12.2px; }
+  .priority-radar-headline { font-size: 9.7px; }
+  .priority-radar-side {
+    grid-column: 2;
+    align-items: flex-start;
+    flex-direction: row;
+    min-width: 0;
   }
+  .priority-radar-time { align-items: flex-start; }
+  .priority-radar-links { flex-direction: row; align-items: center; }
+  .priority-radar-links a.is-source { display: none; }
+  .priority-radar-footer { align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .priority-radar-refresh,
+  .priority-radar-row,
+  .priority-radar-links a { transition: none; }
 }
