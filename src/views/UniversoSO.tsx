@@ -91,6 +91,15 @@ export function UniversoSO({
     // Respuesta inmediata en pantalla; el contrato servidor manda al recargar.
     setCases((current) => applyPatch(current, row.kind, row.subject, change));
 
+    // Al tomar un pendiente deja la cola de origen y pasa a Gestión. Cambiamos
+    // la cola en la misma interacción para conservar la ficha de ESA entidad;
+    // de lo contrario CasosAxis elegiría el primer pendiente restante y parecería
+    // que "Tomar caso" abrió otra entidad (p. ej. Cautín tras Antofagasta).
+    if (claiming && change.state === 'GESTIONANDO') {
+      setQueue('cartera');
+      window.history.replaceState(null, '', hrefFor({ view: 'universo', mode: 'casos', cola: 'cartera' }));
+    }
+
     void supabase.rpc('aml_uaf_case_patch', {
       p_kind: row.kind,
       p_rut: row.subject.rut,
