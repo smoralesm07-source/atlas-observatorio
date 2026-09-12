@@ -5,8 +5,8 @@ import { hrefFor, type UniversoMode, type UniversoQueue } from '../lib/router';
 import type { UafPotential, UafPulse } from '../lib/contracts';
 import { ErrorBox, Loading, Semantics } from '../components/primitives';
 import {
-  applyPatch, caseKey, hydrate, isTracked,
-  type CaseContact, type CaseKind, type CaseMap, type CaseRecord, type CaseSubject,
+  applyPatch, caseKey, hydrate, isTracked, workflowPatchToContact,
+  type CaseKind, type CaseMap, type CasePatch, type CaseRecord, type CaseSubject,
 } from '../lib/casework';
 import { sharedRowsToCases, type SharedCaseRow } from '../lib/sharedCasework';
 import { CasosAxis, type Queue } from './universo/CasosAxis';
@@ -65,12 +65,37 @@ export function UniversoSOV2({
     goto('casos', queueForKind(focus.kind));
   }, [goto]);
 
-  const patch = useCallback((
-    row: CaseRow,
-    change: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> },
-  ) => {
-    const claiming = !isTracked(row.record);
+  const patch = useCallback((row: CaseRow, rawChange: CasePatch) => {
     setCaseError(null);
+
+    // SIN_TRABAJAR se reserva como comando de anulación. A diferencia de la
+    // versión anterior, no deja una fila DEVUELTO: la gestión desaparece y la
+    // entidad vuelve a la cola que le corresponde.
+    if (rawChange.state === 'SIN_TRABAJAR' && isTracked(row.record)) {
+      const key = caseKey(row.kind, row.subject.rut);
+      setCases((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+      void supabase.rpc('aml_uaf_case_cancel', {
+        p_kind: row.kind,
+        p_rut: row.subject.rut,
+      }).then(({ error }) => {
+        if (!error) return;
+        setCaseError(error.message);
+        management.reload();
+      });
+      return;
+    }
+
+    const claiming = !isTracked(row.record);
+    const hasContactValue = rawChange.contact && Object.entries(rawChange.contact)
+      .some(([key, value]) => key !== 'fuente' && typeof value === 'string' && value.trim().length > 0);
+    const change: CasePatch = hasContactValue && rawChange.noContact === undefined
+      ? { ...rawChange, noContact: false }
+      : rawChange;
+
     setCases((current) => {
       const next = applyPatch(current, row.kind, row.subject, change);
       if (!claiming) return next;
@@ -92,14 +117,13 @@ export function UniversoSOV2({
       p_state: change.state === 'SIN_TRABAJAR' ? null : (change.state ?? null),
       p_priority: change.priority ?? null,
       p_note: change.note ?? null,
-      p_contact: change.contact ?? null,
+      p_contact: workflowPatchToContact(change),
       p_claim: claiming,
     }).then(({ error }) => {
       if (!error) return;
       setCaseError(error.message);
-      // Sólo una falla obliga a reconciliar. En el flujo normal la edición se
-      // mantiene optimista para que ningún guardado reconstruya la ficha ni
-      // cambie la posición de lectura del analista.
+      // La edición es optimista para evitar saltos de scroll. Sólo una falla
+      // fuerza la reconciliación con el estado compartido.
       management.reload();
     });
   }, [management.reload]);

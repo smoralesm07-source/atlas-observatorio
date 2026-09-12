@@ -1,245 +1,249 @@
-/* Gestión SO · navegación continua y sin scroll anidado */
+/* Gestión SO · flujo operativo de dos pasos */
 
-/* La página completa es el único contenedor vertical. Esto evita el doble
-   scroll entre detalle, ficha y navegador, que hacía imposible llegar al cierre. */
-.uso .uso-detail {
-  position: static;
-  align-self: start;
-}
-
+.uso .uso-detail { position: static; align-self: start; }
 .uso .uso-case,
 .uso .uso-case-progressive {
   max-height: none;
   overflow: visible;
   overscroll-behavior: auto;
+  overflow-anchor: none;
+  margin-bottom: 24px;
+}
+.uso .uso-case-progressive .uso-case-body { overflow: visible; flex: 0 0 auto; }
+.uso-mode-casos > .semantics { display: none; }
+
+.uso .uso-case-two-step .uso-case-head {
+  position: sticky;
+  top: 54px;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  backdrop-filter: blur(12px);
 }
 
-.uso .uso-case-progressive .uso-case-body {
-  overflow: visible;
-  flex: 0 0 auto;
-}
-
-.uso .uso-case-snapshot { padding-bottom: 8px; }
-.uso .uso-case-snapshot .uso-case-motive { margin-bottom: 10px; }
-.uso .uso-case-snapshot-score { margin-bottom: 8px; padding-bottom: 8px; gap: 9px; }
-.uso .uso-case-snapshot-score .uso-score-main b { font-size: 27px; }
-.uso .uso-case-snapshot-score .uso-score-track { margin: 7px 0 5px; }
-.uso .uso-case-snapshot-score .uso-score-parts { gap: 5px; }
-.uso .uso-case-snapshot-score .uso-score-parts > div { min-height: 25px; align-items: center; }
-.uso .uso-case-snapshot-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; margin-top: 2px; }
-.uso .uso-case-snapshot-fields .uso-field > span { font-size: 8px; }
-.uso .uso-case-snapshot-fields .uso-field > b { margin-top: 1px; font-size: 10.5px; }
-.uso .uso-case-snapshot-chips { margin-top: 8px; }
-.uso .uso-case-snapshot-note { margin-top: 8px; }
-
-/* Una vez tomado el caso, la caracterización completa deja de ocupar la parte
-   más valiosa del recorrido. Sigue disponible a un clic para contraste. */
-.uso .uso-case-summary {
-  margin: 8px 9px 7px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg-panel-2);
-  overflow: hidden;
-}
-
-.uso .uso-case-summary > summary {
+.uso .uso-case-start {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  min-height: 45px;
-  padding: 7px 10px;
-  list-style: none;
-  cursor: pointer;
+  padding: 14px;
 }
+.uso .uso-case-start-copy { display: grid; gap: 4px; }
+.uso .uso-case-start-copy b { color: var(--ink); font-size: 14px; }
+.uso .uso-case-start-copy p { margin: 0; color: var(--ink-3); font-size: 10px; line-height: 1.45; }
+.uso .uso-case-start > .uso-flow-context { grid-column: 1 / -1; }
 
-.uso .uso-case-summary > summary::-webkit-details-marker { display: none; }
-.uso .uso-case-summary > summary > span { display: grid; gap: 2px; min-width: 0; }
-.uso .uso-case-summary > summary b { font-size: 10.5px; color: var(--ink); }
-.uso .uso-case-summary > summary em {
-  overflow: hidden;
-  color: var(--ink-3);
-  font-size: 8.5px;
-  font-style: normal;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.uso .uso-case-summary > summary strong { color: var(--accent); font-size: 11px; font-family: var(--mono); }
-.uso .uso-case-summary[open] > summary { border-bottom: 1px solid var(--line); }
-
-.uso .uso-case-progressive .uso-case-assignment { flex: 0 0 auto; margin-bottom: 8px; }
-
-.uso .uso-case-management {
+.uso .uso-case-progressive .uso-case-assignment {
   flex: 0 0 auto;
-  border-top: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
-  background: color-mix(in srgb, var(--accent) 1.5%, transparent);
+  margin: 8px 9px;
 }
 
-/* Navegación local: siempre permite saltar a la tarea deseada sin arrastrar un
-   panel interno. Sticky funciona respecto de la página, no de un scroll propio. */
-.uso .uso-case-jumpbar {
+.uso .uso-case-stepper {
   position: sticky;
-  top: 58px;
-  z-index: 8;
+  top: 116px;
+  z-index: 9;
   display: grid;
-  grid-template-columns: repeat(3, auto) minmax(0, 1fr);
-  gap: 5px;
-  align-items: center;
-  padding: 6px 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+  padding: 7px 9px;
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  backdrop-filter: blur(12px);
 }
-
-.uso .uso-case-jumpbar button {
-  display: inline-flex;
+.uso .uso-case-stepper > button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 7px;
   align-items: center;
-  gap: 5px;
-  min-height: 27px;
-  padding: 3px 7px;
+  min-height: 43px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 9px;
   background: var(--bg-panel-2);
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 8.5px;
+  color: var(--ink-3);
+  text-align: left;
   cursor: pointer;
 }
-.uso .uso-case-jumpbar button:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--ink); }
-.uso .uso-case-jumpbar button i {
+.uso .uso-case-stepper > button:disabled { opacity: .45; cursor: not-allowed; }
+.uso .uso-case-stepper > button[data-on='true'] {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-panel-2));
+  color: var(--ink);
+}
+.uso .uso-case-stepper > button[data-done='true'] i {
+  background: color-mix(in srgb, var(--present) 20%, var(--bg-raised));
+  color: var(--present);
+}
+.uso .uso-case-stepper i {
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-raised));
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg-raised));
   color: var(--accent);
-  font-size: 8px;
+  font: 700 9px var(--mono);
   font-style: normal;
 }
-.uso .uso-case-jumpbar strong { justify-self: end; color: var(--ink-3); font-size: 8.5px; font-weight: 650; }
+.uso .uso-case-stepper span { display: grid; gap: 1px; min-width: 0; }
+.uso .uso-case-stepper b { font-size: 9.5px; line-height: 1.2; }
+.uso .uso-case-stepper em { color: var(--ink-4); font-size: 8px; font-style: normal; }
+.uso .uso-case-stepper > strong {
+  align-self: center;
+  min-width: 112px;
+  padding: 7px 9px;
+  border-left: 2px solid var(--state-tone, var(--accent));
+  color: var(--ink-2);
+  font-size: 9px;
+  text-align: right;
+}
 
-.uso .uso-case-anchor { scroll-margin-top: 104px; }
-.uso .uso-case-management > .uso-case-body,
-.uso .uso-case-management > .uso-case-anchor > .uso-open-contact { border-bottom: 1px solid var(--line-soft); }
+.uso .uso-case-step { border-bottom: 1px solid var(--line); }
+.uso .uso-step-intro { padding-top: 12px; padding-bottom: 9px; }
 
-.uso .uso-management-state { padding-top: 8px; padding-bottom: 8px; }
-.uso .uso-flow-compact { gap: 4px; }
-.uso .uso-flow-compact button { min-height: 33px; }
+.uso .uso-flow-context {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-panel-2));
+}
+.uso .uso-flow-context b { color: var(--ink); font-size: 10.5px; line-height: 1.35; }
+.uso .uso-flow-context p { margin: 0; color: var(--ink-3); font-size: 8.5px; line-height: 1.45; }
+.uso .uso-potential-context .uso-fields { margin-top: 7px; }
+.uso .uso-potential-context-compact { margin: 0; }
 
-.uso .uso-management-capture { padding-top: 11px; }
-.uso .uso-management-capture .uso-contact-foot { margin: 8px 0 11px; }
-.uso .uso-management-meta { display: grid; gap: 9px; margin-top: 3px; }
-.uso .uso-management-meta .uso-priority { margin: 0; }
-.uso .uso-management-meta .uso-note-field textarea { min-height: 92px; resize: vertical; }
+.uso .uso-contact-manual-capture {
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+.uso .uso-contact-core {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+.uso .uso-contact-core .uso-contact-field:nth-child(1),
+.uso .uso-contact-core .uso-contact-field:nth-child(5),
+.uso .uso-contact-core .uso-contact-field:nth-child(6) { grid-column: 1 / -1; }
 
+.uso .uso-contact-foot-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+}
+.uso .uso-contact-foot-actions > span { color: var(--ink-3); font-size: 8.5px; }
+.uso .uso-contact-foot-actions > span b { color: var(--ink); font-family: var(--mono); }
+.uso .uso-contact-foot-actions > em { color: var(--sig-medium); font-size: 8px; font-style: normal; }
+.uso .uso-no-contact[data-on='true'] {
+  border-color: color-mix(in srgb, var(--present) 55%, var(--line));
+  background: color-mix(in srgb, var(--present) 9%, var(--bg-panel-2));
+  color: var(--present);
+}
+
+.uso .uso-step-actions,
+.uso .uso-step-outcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding-top: 11px;
+  padding-bottom: 14px;
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-panel-2) 74%, transparent);
+}
+.uso .uso-step-actions > div:first-child,
+.uso .uso-step-outcome > div:first-child { display: grid; gap: 3px; }
+.uso .uso-step-actions > div:first-child b,
+.uso .uso-step-outcome > div:first-child b { color: var(--ink); font-size: 10.5px; }
+.uso .uso-step-outcome p { margin: 0; max-width: 620px; color: var(--ink-3); font-size: 8.5px; line-height: 1.4; }
+.uso .uso-step-action-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.uso .uso-step-action-buttons .btn { min-height: 30px; margin: 0; white-space: nowrap; }
+
+.uso .uso-result-picker {
+  display: grid;
+  gap: 6px;
+  margin: 5px 0 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg-panel-2);
+}
+.uso .uso-result-picker > span { color: var(--ink-3); font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.uso .uso-result-picker > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.uso .uso-result-picker button {
+  min-height: 31px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+.uso .uso-result-picker button[data-on='true'] {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-raised));
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.uso .uso-result-picker button:disabled { opacity: .5; cursor: not-allowed; }
+.uso .uso-result-picker > em { color: var(--ink-4); font-size: 8px; font-style: normal; }
+
+.uso .uso-note-field textarea {
+  min-height: 96px;
+  max-height: 220px;
+  resize: vertical;
+}
 .uso .uso-note-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 29px;
   margin-top: 4px;
 }
 .uso .uso-note-foot em { color: var(--ink-4); font-size: 8px; font-style: normal; }
-.uso .uso-note-foot .btn { min-height: 25px; padding: 3px 7px; }
+.uso .uso-management-meta-compact { margin-top: 10px; }
 
-.uso .uso-management-close { padding-top: 11px; padding-bottom: 14px; }
-.uso .uso-management-close .uso-case-resolution { margin-top: 0; }
+.uso .uso-open-channel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.uso .uso-open-channel { min-height: 98px; }
+.uso .uso-open-channel .uso-open-value em {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-4);
+  font-size: 7.8px;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.uso .uso-case-snapshot-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px 10px;
+}
 
 @media (max-width: 1080px) {
   .uso .uso-detail { position: static; }
-  .uso .uso-case { max-height: none; }
+  .uso .uso-case-two-step .uso-case-head { position: static; }
+  .uso .uso-case-stepper { top: 54px; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 760px) {
+  .uso .uso-case-start { grid-template-columns: 1fr; }
+  .uso .uso-case-start > .btn { justify-self: stretch; }
+  .uso .uso-case-stepper { grid-template-columns: 1fr 1fr; }
+  .uso .uso-case-stepper > strong { grid-column: 1 / -1; min-width: 0; border-left: 0; border-top: 2px solid var(--state-tone, var(--accent)); text-align: left; }
+  .uso .uso-contact-core,
+  .uso .uso-open-channel-grid,
   .uso .uso-case-snapshot-fields { grid-template-columns: 1fr; }
-  .uso .uso-case-jumpbar { top: 54px; grid-template-columns: repeat(3, 1fr); }
-  .uso .uso-case-jumpbar strong { grid-column: 1 / -1; justify-self: start; padding-left: 2px; }
-  .uso .uso-case-jumpbar button { justify-content: center; }
-}
-
-/* ───────────────────────────────────────────── correcciones de cierre v2
-   La Gestión SO no necesita el banner metodológico global al pie: en una ficha
-   larga competía visualmente con las acciones y podía parecer superpuesto. */
-.uso-mode-casos > .semantics {
-  display: none;
-}
-
-/* Evita que el navegador intente recolocar la página cuando aparecen bloques
-   de evidencia o cambia el alto de la ficha. */
-.uso .uso-case-progressive {
-  overflow-anchor: none;
-  margin-bottom: 24px;
-}
-
-.uso .uso-case-management {
-  overflow: visible;
-  padding-bottom: 2px;
-}
-
-/* El título exterior duplicaba "Resultado del caso" y consumía altura justo
-   antes de las acciones. El cierre queda como una sola unidad operativa. */
-.uso .uso-management-close {
-  padding: 12px 10px 18px;
-  border-top: 1px solid var(--line-soft);
-  border-bottom: 0 !important;
-}
-
-.uso .uso-management-close > .uso-section-head {
-  display: none;
-}
-
-.uso .uso-management-close .uso-case-resolution {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 9px;
-  padding: 10px 11px;
-  margin: 0;
-}
-
-.uso .uso-case-resolution > div:first-child {
-  min-width: 0;
-}
-
-.uso .uso-case-resolution-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  width: 100%;
-  justify-content: stretch;
-}
-
-.uso .uso-case-resolution-actions .btn {
-  width: 100%;
-  min-width: 0;
-  min-height: 31px;
-  margin: 0;
-  justify-content: center;
-  white-space: normal;
-  line-height: 1.2;
-}
-
-.uso .uso-case-resolution-actions .uso-finalize {
-  grid-column: 1 / -1;
-}
-
-/* La nota mantiene una caja más contenida y una línea de estado legible; el
-   usuario puede ampliar verticalmente sólo cuando realmente lo necesita. */
-.uso .uso-management-meta .uso-note-field textarea {
-  min-height: 74px;
-  max-height: 180px;
-}
-
-.uso .uso-note-foot {
-  min-height: 28px;
-  padding-top: 2px;
-}
-
-@media (max-width: 520px) {
-  .uso .uso-case-resolution-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .uso .uso-case-resolution-actions .uso-finalize {
-    grid-column: auto;
-  }
+  .uso .uso-contact-core .uso-contact-field { grid-column: auto !important; }
+  .uso .uso-step-actions,
+  .uso .uso-step-outcome { grid-template-columns: 1fr; }
+  .uso .uso-step-action-buttons { justify-content: stretch; }
+  .uso .uso-step-action-buttons .btn { flex: 1 1 150px; }
 }
