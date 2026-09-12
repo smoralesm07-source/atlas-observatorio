@@ -1,4 +1,5 @@
 name: Construir y publicar
+# Publicación canónica de Atlas Observatorio.
 
 on:
   push:
