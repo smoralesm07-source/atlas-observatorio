@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  CONTACT_FIELDS, KIND_META, PRIORITIES, STATE_FLOW, STATE_META,
-  type CaseContact, type CasePriority, type CaseRecord,
+  CONTACT_FIELDS, KIND_META, PRIORITIES, RESULT_LABEL, STATE_META,
+  type CaseContact, type CasePatch, type CasePriority, type ManagementResult,
   caseSummaryText, contactFilled, isTracked,
 } from '../../lib/casework';
 import { rutForms } from '../../lib/osint';
@@ -13,45 +13,17 @@ import { OpenContactPanel } from './OpenContactPanel';
 import '../../styles/universo-case-flow.css';
 import '../../styles/universo-case-review.css';
 
-const REVIEW_LABEL: Record<string, string> = {
-  CANDIDATO_SELECCIONADO: 'Seleccionado como candidato',
-  DESCARTADO: 'Descartado en revisión',
-  EN_REVISION: 'En revisión',
-  PENDIENTE: 'Pendiente de revisión',
-};
-
-const TIER_LABEL: Record<string, string> = {
-  A_ALTA: 'Coincidencia de giro alta',
-  B_MEDIA: 'Coincidencia de giro media',
-  C_BAJA: 'Coincidencia de giro baja',
-  EVIDENCIA_3_MAS: '3 o más actividades coincidentes',
-  EVIDENCIA_2: '2 actividades coincidentes',
-  EVIDENCIA_1: '1 actividad coincidente',
-};
-
-// La raíz pública del flujo abre una consulta nueva. No enlazar directamente a
-// /consulta: esa ruta corresponde a la vista de resultado y el SII puede
-// reconstruir la consulta anterior de la sesión, mostrando otro contribuyente.
 const SII_THIRD_PARTY_URL = 'https://www2.sii.cl/stc/noauthz/';
+const compactRut = (value: string | null | undefined) => String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
 
-const compactRut = (value: string | null | undefined) =>
-  String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
-
-type EntitySearchHit = {
-  entity_id?: string | null;
-  rut?: string | null;
-  openable?: boolean;
-};
-
-type EntitySearchResponse = {
-  items?: EntitySearchHit[];
-};
+type EntitySearchHit = { entity_id?: string | null; rut?: string | null; openable?: boolean };
+type EntitySearchResponse = { items?: EntitySearchHit[] };
 
 export function CaseFile({
   row, onPatch, onEntity, onSector,
 }: {
   row: CaseRow;
-  onPatch: (patch: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> }) => void;
+  onPatch: (patch: CasePatch) => void;
   onEntity?: () => void;
   onSector?: (sector: string) => void;
 }) {
@@ -60,71 +32,112 @@ export function CaseFile({
   const state = STATE_META[record.state];
   const { dotted } = rutForms(row.subject.rut);
   const tracked = isTracked(record);
-  const released = record.state === 'DEVUELTO';
-  const finalized = record.state === 'FINALIZADO';
   const locked = tracked && record.isMine === false;
-  const canEdit = tracked && !locked && !finalized;
+  const canEdit = tracked && !locked;
   const owner = record.assignedName || record.assignedEmail || null;
+  const terminal = record.state === 'DAR_DE_BAJA' || record.state === 'CANDIDATO';
 
   const [contactDraft, setContactDraft] = useState<CaseContact>(() => ({ ...record.contact }));
   const [noteDraft, setNoteDraft] = useState(record.note);
+  const [viewStep, setViewStep] = useState<1 | 2>(record.workflowStep ?? 1);
   const [siiCopied, setSiiCopied] = useState(false);
   const [resolving360, setResolving360] = useState(false);
-  const locateRef = useRef<HTMLDivElement>(null);
-  const registerRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setContactDraft({ ...record.contact });
     setNoteDraft(record.note);
+    setViewStep(record.workflowStep ?? 1);
     setSiiCopied(false);
-    setResolving360(false);
-  }, [row.key, record.contact, record.note]);
+  }, [row.key]);
+
+  useEffect(() => setContactDraft({ ...record.contact }), [record.contact]);
+  useEffect(() => setNoteDraft(record.note), [record.note]);
 
   const filled = contactFilled(contactDraft);
+  const contactReady = filled > 0 || record.noContact;
   const noteDirty = noteDraft !== record.note;
-  const score = row.candidate?.ivo_score ?? row.termination?.ipf_score ?? null;
-  const scoreLabel = row.candidate ? 'IVO' : 'IPF';
-  const selectionRank = row.candidate?.selection_rank ?? null;
+  const step2Reached = record.workflowStep === 2 || terminal;
 
-  const jump = (ref: RefObject<HTMLDivElement>) => {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const saveContactField = (key: keyof CaseContact) => {
-    const value = contactDraft[key];
-    if (value !== record.contact[key]) onPatch({ contact: { [key]: value } });
+  const saveContact = () => {
+    onPatch({ contact: contactDraft, noContact: filled > 0 ? false : record.noContact });
   };
 
   const saveNote = () => {
-    if (noteDraft !== record.note) onPatch({ note: noteDraft });
+    if (noteDirty) onPatch({ note: noteDraft });
   };
 
-  const clearContact = () => {
-    const empty: CaseContact = { telefono: '', correo: '', sitio: '', direccion: '', persona: '', fuente: '' };
-    setContactDraft(empty);
-    onPatch({ contact: empty });
+  const setNoContact = () => {
+    if (filled > 0) return;
+    onPatch({ noContact: !record.noContact });
+  };
+
+  const advanceToRegister = () => {
+    if (!contactReady) return;
+    onPatch({
+      contact: contactDraft,
+      workflowStep: 2,
+      noContact: filled === 0,
+      state: terminal ? record.state : 'GESTIONANDO',
+    });
+    setViewStep(2);
+  };
+
+  const pause = () => {
+    saveNote();
+    onPatch({
+      contact: contactDraft,
+      workflowStep: viewStep,
+      noContact: filled === 0 ? record.noContact : false,
+      state: 'PENDIENTE_GESTION',
+    });
+  };
+
+  const cancel = () => {
+    const message = row.kind === 'TERMINO'
+      ? 'Se eliminará esta gestión y la entidad volverá a su estado original dentro de Término de giro. ¿Continuar?'
+      : 'Se eliminará esta gestión y la entidad volverá al universo de Potenciales SO. ¿Continuar?';
+    if (window.confirm(message)) onPatch({ state: 'SIN_TRABAJAR' });
+  };
+
+  const discardPotential = () => {
+    if (!window.confirm('La entidad quedará marcada como Descartado y saldrá del flujo activo de Potenciales SO. ¿Continuar?')) return;
+    onPatch({
+      contact: contactDraft,
+      workflowStep: 1,
+      noContact: filled === 0 ? record.noContact : false,
+      state: 'DESCARTADO',
+    });
+  };
+
+  const chooseResult = (result: ManagementResult) => {
+    onPatch({
+      workflowStep: 2,
+      managementResult: result,
+      state: terminal ? record.state : 'GESTIONANDO',
+    });
+  };
+
+  const finish = () => {
+    if (!record.managementResult) return;
+    saveNote();
+    onPatch({
+      workflowStep: 2,
+      managementResult: record.managementResult,
+      note: noteDraft,
+      state: row.kind === 'TERMINO' ? 'DAR_DE_BAJA' : 'CANDIDATO',
+    });
   };
 
   const resolveEntity360 = async (): Promise<string | null> => {
     const embedded = row.subject.entityId ?? row.candidate?.entity_id ?? row.termination?.entity_id ?? null;
     if (embedded) return embedded;
-
     const { data, error } = await supabase.rpc('atlas_v2_entity_search_cascade', {
       p_request: {
-        kind: 'results',
-        search: dotted,
-        limit: 10,
-        offset: 0,
-        region: '',
-        entity_type: '',
-        uaf: false,
-        sanctioned: false,
-        min_sources: 0,
+        kind: 'results', search: dotted, limit: 10, offset: 0,
+        region: '', entity_type: '', uaf: false, sanctioned: false, min_sources: 0,
       },
     });
     if (error) throw error;
-
     const items = ((data as EntitySearchResponse | null)?.items ?? []);
     const targetRut = compactRut(row.subject.rut);
     const exact = items.find((item) => item.entity_id && compactRut(item.rut) === targetRut)
@@ -136,12 +149,8 @@ export function CaseFile({
   const openAtlas360 = () => {
     if (resolving360) return;
     setResolving360(true);
-
-    // La pestaña se crea durante el gesto del usuario para que los navegadores
-    // corporativos no la bloqueen mientras Atlas resuelve el entity_id por RUT.
     const opened = window.open('about:blank', '_blank');
     if (opened) opened.opener = null;
-
     void resolveEntity360()
       .then((entityId) => {
         if (!entityId) {
@@ -150,15 +159,10 @@ export function CaseFile({
           else window.location.hash = fallback;
           return;
         }
-
         const target = `#/entidad/${encodeURIComponent(entityId)}`;
-        if (opened) {
-          opened.location.replace(`${window.location.origin}${window.location.pathname}${target}`);
-        } else if (row.subject.entityId && onEntity) {
-          onEntity();
-        } else {
-          window.location.hash = target;
-        }
+        if (opened) opened.location.replace(`${window.location.origin}${window.location.pathname}${target}`);
+        else if (row.subject.entityId && onEntity) onEntity();
+        else window.location.hash = target;
       })
       .catch(() => {
         const fallback = `#/entidades?q=${encodeURIComponent(dotted)}`;
@@ -169,10 +173,6 @@ export function CaseFile({
   };
 
   const openSiiThirdParty = () => {
-    // Siempre se entra por la raíz del trámite, no por la ruta de resultado.
-    // Así cada entidad de Atlas parte desde un formulario SII limpio aunque el
-    // analista haya consultado otro RUT inmediatamente antes. Abrir primero
-    // evita además que el navegador bloquee la pestaña por esperar clipboard.
     window.open(SII_THIRD_PARTY_URL, '_blank', 'noopener,noreferrer');
     if (!navigator.clipboard?.writeText) return;
     void navigator.clipboard.writeText(dotted).then(() => {
@@ -182,17 +182,13 @@ export function CaseFile({
   };
 
   return (
-    <section className="uso-case uso-case-progressive" aria-label={`Ficha de gestión de ${row.subject.name || dotted}`}>
+    <section className="uso-case uso-case-progressive uso-case-two-step" aria-label={`Ficha de gestión de ${row.subject.name || dotted}`}>
       <header className="uso-case-head">
         <div className="uso-case-id">
           <div className="uso-case-badges">
             <Pill tone={kind.tone}>{kind.short}</Pill>
             <Pill tone={state.tone}>{state.label}</Pill>
-            {record.priority !== 'MEDIA' && (
-              <Pill tone={PRIORITIES.find((p) => p.key === record.priority)?.tone}>
-                Prioridad {record.priority.toLowerCase()}
-              </Pill>
-            )}
+            {terminal && <Pill tone="var(--present)">Editable</Pill>}
           </div>
           <h3>{titleCase(row.subject.name) || dotted}</h3>
           <p>
@@ -209,66 +205,28 @@ export function CaseFile({
           </p>
         </div>
         <div className="uso-case-tools">
-          <CopyButton text={dotted} label="RUT" done="RUT copiado" small title="Copiar el RUT para pegarlo en un formulario" />
-          <CopyButton text={caseSummaryText(record)} label="Ficha" done="Ficha copiada" small title="Copiar la ficha de gestión en texto" />
-          <button className="btn btn-sm" onClick={openAtlas360} disabled={resolving360} title="Abrir directamente la Ficha 360 de esta entidad">
-            {resolving360 ? 'Abriendo 360…' : 'Entidad 360 ↗'}
-          </button>
+          <CopyButton text={dotted} label="RUT" done="RUT copiado" small />
+          <CopyButton text={caseSummaryText(record)} label="Ficha" done="Ficha copiada" small />
+          <button className="btn btn-sm" onClick={openAtlas360} disabled={resolving360}>{resolving360 ? 'Abriendo…' : 'Entidad 360 ↗'}</button>
+          <button className="btn btn-sm" onClick={openSiiThirdParty}>{siiCopied ? 'SII · RUT copiado' : 'Consulta SII ↗'}</button>
         </div>
       </header>
 
       {!tracked ? (
-        <div className="uso-case-body uso-case-snapshot">
-          <p className="uso-case-motive">{row.subject.motive}</p>
-          {row.candidate ? <PotentialSnapshot row={row} /> : <TerminationSnapshot row={row} />}
+        <div className="uso-case-body uso-case-start">
+          <div className="uso-case-start-copy">
+            <span className="uso-kicker">Disponible para gestión</span>
+            <b>{row.kind === 'TERMINO' ? 'Revisar término de giro' : 'Evaluar potencial sujeto obligado'}</b>
+            <p>{row.subject.motive}</p>
+          </div>
+          {row.kind === 'POTENCIAL' && <PotentialContext row={row} compact />}
+          <button className="btn btn-primary" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
+            Tomar caso
+          </button>
         </div>
       ) : (
-        <details className="uso-case-summary">
-          <summary>
-            <span>
-              <b>Resumen del caso</b>
-              <em>{row.subject.motive}</em>
-            </span>
-            {score != null
-              ? <strong>{scoreLabel} {n1(score)}</strong>
-              : selectionRank != null ? <strong>Muestra #{n(selectionRank)}</strong> : null}
-          </summary>
-          <div className="uso-case-body uso-case-snapshot">
-            {row.candidate ? <PotentialSnapshot row={row} /> : <TerminationSnapshot row={row} />}
-          </div>
-        </details>
-      )}
-
-      <div className="uso-case-review-actions uso-case-review-actions-only">
-        <button className="btn btn-sm uso-case-review-360" onClick={openAtlas360} disabled={resolving360}>
-          {resolving360 ? 'Abriendo Ficha 360…' : 'Abrir Ficha 360 ↗'}
-        </button>
-        <button
-          className="btn btn-sm uso-case-review-sii"
-          data-copied={siiCopied ? 'true' : undefined}
-          onClick={openSiiThirdParty}
-          title="Abrir Consulta situación tributaria de terceros del SII"
-        >
-          {siiCopied ? 'SII abierto · RUT copiado' : 'Consulta SII ↗'}
-        </button>
-      </div>
-
-      <div className="uso-case-assignment" data-mode={!tracked ? 'open' : locked ? 'other' : 'mine'}>
-        {!tracked ? (
-          <>
-            <div>
-              <span className="uso-kicker">{released ? 'Disponible nuevamente' : 'Disponible para gestión'}</span>
-              <b>{released ? 'Devuelto al universo sin gestión activa' : 'Nadie está atendiendo este caso'}</b>
-              <em>{released && owner
-                ? `Revisado antes por ${owner}${record.updatedAt ? ` · devuelto ${desde(record.updatedAt)}` : ''}. La traza se conserva.`
-                : 'Revisa primero la Ficha 360 y, si necesitas un contraste actualizado, la consulta del SII. Tómalo sólo cuando vayas a trabajarlo; quedará asignado a ti y saldrá de la cola pendiente.'}</em>
-            </div>
-            <button className="btn btn-sm btn-primary" onClick={() => onPatch({ state: 'EN_UBICACION' })}>
-              {released ? 'Retomar caso' : 'Tomar caso'}
-            </button>
-          </>
-        ) : (
-          <>
+        <>
+          <div className="uso-case-assignment" data-mode={locked ? 'other' : 'mine'}>
             <div className="uso-owner-avatar" aria-hidden>{(owner ?? '?').slice(0, 1).toUpperCase()}</div>
             <div>
               <span className="uso-kicker">{record.isMine ? 'Asignado a ti' : 'Caso en atención'}</span>
@@ -276,238 +234,181 @@ export function CaseFile({
               <em>{STATE_META[record.state].label}{record.assignedAt ? ` · tomado ${desde(record.assignedAt)}` : ''}</em>
             </div>
             {locked && <span className="uso-readonly">Sólo lectura</span>}
-          </>
-        )}
-      </div>
+          </div>
 
-      {tracked && (
-        <div className="uso-case-management" aria-live="polite">
-          <nav className="uso-case-jumpbar" aria-label="Navegación de la gestión">
-            <button onClick={() => jump(locateRef)}><i>1</i><span>Ubicar</span></button>
-            <button onClick={() => jump(registerRef)}><i>2</i><span>Registrar</span></button>
-            <button onClick={() => jump(closeRef)}><i>3</i><span>Cerrar</span></button>
-            <strong>{STATE_META[record.state].label}</strong>
+          <nav className="uso-case-stepper" aria-label="Flujo de gestión">
+            <button data-on={viewStep === 1} data-done={step2Reached ? 'true' : undefined} onClick={() => setViewStep(1)}>
+              <i>1</i><span><b>Ubicar entidad</b><em>Contacto y contexto</em></span>
+            </button>
+            <button data-on={viewStep === 2} disabled={!step2Reached} onClick={() => setViewStep(2)}>
+              <i>2</i><span><b>Registro de gestión</b><em>Resultado y cierre</em></span>
+            </button>
+            <strong style={{ ['--state-tone' as string]: state.tone }}>{state.label}</strong>
           </nav>
 
-          <div className="uso-case-body uso-management-state">
-            <div className="uso-flow uso-flow-compact" role="group" aria-label="Avance de la gestión">
-              {STATE_FLOW.map((key, index) => {
-                const meta = STATE_META[key];
-                const done = meta.step <= state.step && record.state !== 'DESCARTADO' && record.state !== 'SIN_UBICAR' && record.state !== 'DEVUELTO';
-                return (
-                  <button
-                    key={key}
-                    data-on={record.state === key}
-                    data-done={done ? 'true' : undefined}
-                    style={{ ['--flow-tone' as string]: meta.tone }}
-                    disabled={!canEdit || key === 'SIN_TRABAJAR'}
-                    onClick={() => onPatch({ state: key })}
-                  >
-                    <i>{index + 1}</i>
-                    <span>{meta.short}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {viewStep === 1 ? (
+            <div className="uso-case-step uso-case-step-locate">
+              <div className="uso-case-body uso-step-intro">
+                <SectionHead
+                  kicker="Paso 1 de 2"
+                  title="Ubicar entidad"
+                  hint="Busca un canal de contacto confiable, adopta sólo lo que te sirva o marca Sin contacto para continuar."
+                />
+                {row.kind === 'POTENCIAL' && <PotentialContext row={row} />}
+                {row.kind === 'TERMINO' && (
+                  <div className="uso-flow-context uso-flow-context-term">
+                    <span className="uso-kicker">Motivo de gestión</span>
+                    <b>{row.subject.motive}</b>
+                    <p>La señal tributaria motiva revisar el registro UAF; no concluye por sí sola el resultado de la gestión.</p>
+                  </div>
+                )}
+              </div>
 
-          <div ref={locateRef} className="uso-case-anchor">
-            <OpenContactPanel row={row} onPatch={onPatch} readOnly={!canEdit} />
-          </div>
+              <OpenContactPanel row={row} onPatch={onPatch} readOnly={!canEdit} />
 
-          <div ref={registerRef} className="uso-case-body uso-management-capture uso-case-anchor">
-            <SectionHead
-              title="Registrar gestión"
-              hint="Completa sólo lo útil para contactar o dejar traza. Los campos se guardan al salir de ellos."
-            />
-            <div className="uso-contact">
-              {CONTACT_FIELDS.map((field) => (
-                <label key={field.key} className="uso-contact-field">
-                  <span>{field.label}</span>
-                  <input
-                    type={field.type}
-                    value={contactDraft[field.key]}
-                    placeholder={field.placeholder}
-                    disabled={!canEdit}
-                    onChange={(e) => setContactDraft((current) => ({ ...current, [field.key]: e.target.value }))}
-                    onBlur={() => saveContactField(field.key)}
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="uso-contact-foot">
-              <span className="uso-contact-meter" aria-hidden><i style={{ width: `${(filled / CONTACT_FIELDS.length) * 100}%` }} /></span>
-              <em>{filled} de {CONTACT_FIELDS.length} campos con dato</em>
-              {filled > 0 && <button className="uso-linkish" disabled={!canEdit} onClick={clearContact}>Limpiar contacto</button>}
-            </div>
-
-            <div className="uso-management-meta">
-              <div className="uso-priority" role="group" aria-label="Prioridad del caso">
-                <span>Prioridad</span>
-                <div className="seg seg-sm">
-                  {PRIORITIES.map((p) => (
-                    <button
-                      key={p.key}
-                      data-on={record.priority === p.key}
-                      disabled={!canEdit}
-                      onClick={() => onPatch({ priority: p.key as CasePriority })}
-                    >
-                      {p.label}
-                    </button>
+              <div className="uso-case-body uso-contact-manual-capture">
+                <SectionHead title="Datos de contacto" hint="Puedes escribirlos manualmente o adoptar propuestas de la búsqueda anterior." />
+                <div className="uso-contact uso-contact-core">
+                  {CONTACT_FIELDS.map((field) => (
+                    <label key={field.key} className="uso-contact-field">
+                      <span>{field.label}</span>
+                      <input
+                        type={field.type}
+                        value={contactDraft[field.key]}
+                        placeholder={field.placeholder}
+                        disabled={!canEdit}
+                        onChange={(e) => setContactDraft((current) => ({ ...current, [field.key]: e.target.value }))}
+                        onBlur={saveContact}
+                      />
+                    </label>
                   ))}
                 </div>
-              </div>
-
-              <label className="uso-note-field uso-note-draft">
-                <span>Nota de gestión</span>
-                <textarea
-                  value={noteDraft}
-                  maxLength={600}
-                  disabled={!canEdit}
-                  placeholder="Qué se intentó, con quién se habló y qué falta."
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  onBlur={saveNote}
-                />
-                <div className="uso-note-foot">
-                  <em>{noteDraft.length}/600 · {noteDirty ? 'cambios sin guardar' : `guardado ${desde(record.updatedAt)}`}</em>
-                  <button className="btn btn-sm" disabled={!canEdit || !noteDirty} onClick={saveNote}>Guardar nota</button>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div ref={closeRef} className="uso-case-body uso-management-close uso-case-anchor">
-            <SectionHead title="Cerrar o devolver" hint="Resuelve la gestión cuando ya tengas un resultado suficiente." />
-            <div className="uso-case-resolution" data-finalized={finalized ? 'true' : undefined}>
-              <div>
-                <span className="uso-kicker">Resultado del caso</span>
-                <b>{finalized ? 'Gestión finalizada' : STATE_META[record.state].label}</b>
-                <em>{finalized
-                  ? `Contacto logrado${record.contactedAt ? ` · ${fecha(record.contactedAt)}` : ''}. El caso queda cerrado en Gestión SO.`
-                  : record.state === 'CONTACTADO'
-                    ? 'El contacto está registrado. Puedes finalizar la gestión.'
-                    : 'Si no corresponde continuar, puedes marcar no ubicable, descartar o devolver el caso.'}</em>
-              </div>
-              {!finalized && (
-                <div className="uso-case-resolution-actions">
-                  <button className="btn btn-sm btn-primary uso-finalize" disabled={!canEdit || record.state !== 'CONTACTADO'} onClick={() => onPatch({ state: 'FINALIZADO' })}>
-                    Finalizar gestión
-                  </button>
-                  <button className="btn btn-sm" disabled={!canEdit} onClick={() => onPatch({ state: 'SIN_UBICAR' })}>No ubicable</button>
-                  <button className="btn btn-sm" disabled={!canEdit} onClick={() => onPatch({ state: 'DESCARTADO' })}>Descartar</button>
+                <div className="uso-contact-foot uso-contact-foot-actions">
+                  <span><b>{filled}</b> campos con dato</span>
                   <button
-                    className="btn btn-sm uso-release"
-                    disabled={!canEdit}
-                    onClick={() => {
-                      if (window.confirm('El caso volverá al universo sin gestión activa. Se conservará la traza de esta revisión. ¿Continuar?')) onPatch({ state: 'DEVUELTO' });
-                    }}
+                    className="btn btn-sm uso-no-contact"
+                    data-on={record.noContact ? 'true' : undefined}
+                    disabled={!canEdit || filled > 0}
+                    onClick={setNoContact}
                   >
-                    Devolver al universo
+                    {record.noContact ? '✓ Sin contacto' : 'Marcar sin contacto'}
                   </button>
+                  {!contactReady && <em>Incorpora al menos un dato o marca Sin contacto para avanzar.</em>}
                 </div>
-              )}
+              </div>
+
+              <div className="uso-case-body uso-step-actions">
+                <div>
+                  <span className="uso-kicker">Decisión del paso</span>
+                  <b>{contactReady ? 'Puedes continuar al registro de gestión' : 'Falta resolver el contacto'}</b>
+                </div>
+                <div className="uso-step-action-buttons">
+                  <button className="btn btn-primary" disabled={!canEdit || !contactReady} onClick={advanceToRegister}>Registro de gestión</button>
+                  <button className="btn" disabled={!canEdit} onClick={pause}>Pendiente</button>
+                  {row.kind === 'TERMINO' ? (
+                    <button className="btn uso-release" disabled={!canEdit} onClick={cancel}>Anular gestión</button>
+                  ) : (
+                    <button className="btn uso-release" disabled={!canEdit} onClick={discardPotential}>Descartar</button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          ) : (
+            <div className="uso-case-step uso-case-step-register">
+              <div className="uso-case-body">
+                <SectionHead
+                  kicker="Paso 2 de 2"
+                  title="Registro de gestión"
+                  hint="Registra el resultado de ubicación, agrega el comentario útil y define el destino del caso."
+                />
+
+                <div className="uso-result-picker" role="group" aria-label="Resultado de la ubicación">
+                  <span>Resultado de ubicación</span>
+                  <div>
+                    <button data-on={record.managementResult === 'UBICABLE'} disabled={!canEdit} onClick={() => chooseResult('UBICABLE')}>Ubicable</button>
+                    <button data-on={record.managementResult === 'NO_UBICABLE'} disabled={!canEdit} onClick={() => chooseResult('NO_UBICABLE')}>No ubicable</button>
+                    {row.kind === 'TERMINO' && (
+                      <button data-on={record.managementResult === 'BAJA_OFICIO'} disabled={!canEdit} onClick={() => chooseResult('BAJA_OFICIO')}>Baja de oficio</button>
+                    )}
+                  </div>
+                  {record.managementResult && <em>Seleccionado: {RESULT_LABEL[record.managementResult]}</em>}
+                </div>
+
+                <label className="uso-note-field uso-note-draft">
+                  <span>Comentario de la gestión</span>
+                  <textarea
+                    value={noteDraft}
+                    maxLength={1200}
+                    disabled={!canEdit}
+                    placeholder="Resume qué se encontró, qué fuente se revisó, intentos de ubicación y cualquier antecedente útil para Fiscalización."
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    onBlur={saveNote}
+                  />
+                  <div className="uso-note-foot">
+                    <em>{noteDraft.length}/1200 · {noteDirty ? 'cambios sin guardar' : `guardado ${desde(record.updatedAt)}`}</em>
+                    <button className="btn btn-sm" disabled={!canEdit || !noteDirty} onClick={saveNote}>Guardar comentario</button>
+                  </div>
+                </label>
+
+                <div className="uso-management-meta uso-management-meta-compact">
+                  <div className="uso-priority" role="group" aria-label="Prioridad del caso">
+                    <span>Prioridad</span>
+                    <div className="seg seg-sm">
+                      {PRIORITIES.map((p) => (
+                        <button key={p.key} data-on={record.priority === p.key} disabled={!canEdit} onClick={() => onPatch({ priority: p.key as CasePriority })}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="uso-case-body uso-step-outcome">
+                <div>
+                  <span className="uso-kicker">Destino</span>
+                  <b>{row.kind === 'TERMINO' ? 'Fiscalización regularizará la baja fuera de Atlas' : 'Fiscalización tramitará el candidato fuera de Atlas'}</b>
+                  <p>
+                    {row.kind === 'TERMINO'
+                      ? 'Al finalizar, el estado quedará Dar de baja. Podrás volver a abrir la ficha y corregir datos o comentarios.'
+                      : 'Al marcar candidato, el flujo analítico termina y el estado quedará Candidato. La ficha seguirá editable.'}
+                  </p>
+                </div>
+                <div className="uso-step-action-buttons">
+                  <button className="btn btn-primary" disabled={!canEdit || !record.managementResult} onClick={finish}>
+                    {terminal ? 'Guardar modificaciones' : row.kind === 'TERMINO' ? 'Finalizar gestión' : 'Marcar como candidato'}
+                  </button>
+                  <button className="btn" disabled={!canEdit} onClick={pause}>Pendiente</button>
+                  <button className="btn uso-release" disabled={!canEdit} onClick={cancel}>Anular gestión</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
 }
 
-function PotentialSnapshot({ row }: { row: CaseRow }) {
+function PotentialContext({ row, compact = false }: { row: CaseRow; compact?: boolean }) {
   const c = row.candidate;
-  if (!c) return <p className="uso-note">El detalle del candidato no está cargado en esta sesión.</p>;
-
   return (
-    <>
-      <div className="uso-score uso-case-snapshot-score">
-        <div className="uso-score-main">
-          {c.ivo_score != null ? (
-            <>
-              <span className="uso-kicker">IVO · índice de verosimilitud de obligación</span>
-              <b className="num">{n1(c.ivo_score)}</b>
-              <em>
-                banda {titleCase(c.ivo_band ?? '—')}
-                {c.ivo_credibility_pct != null && ` · credibilidad ${n1(c.ivo_credibility_pct)}%`}
-              </em>
-              <span className="uso-score-track" aria-hidden><i style={{ width: `${Math.min(100, c.ivo_score)}%` }} /></span>
-              <p>Ordena revisión cuando existe evidencia suficiente para calcularlo. No acredita obligación ni riesgo LA/FT.</p>
-            </>
-          ) : (
-            <>
-              <span className="uso-kicker">Prioridad metodológica · muestra Gestión SO</span>
-              <b className="num">#{n(c.selection_rank)}</b>
-              <em>{c.selection_basis ? titleCase(c.selection_basis.replace(/_/g, ' ')) : 'selección estratificada'}</em>
-              <p>{c.selection_reason ?? 'Seleccionado por la regla reproducible de la muestra operativa.'}</p>
-              <p className="uso-note">No se muestra IVO porque esta entidad no cuenta con evidencia suficiente para calcularlo de forma independiente.</p>
-            </>
-          )}
-        </div>
+    <div className={`uso-flow-context uso-potential-context${compact ? ' uso-potential-context-compact' : ''}`}>
+      <div>
+        <span className="uso-kicker">Por qué aparece como Potencial SO</span>
+        <b>{row.subject.motive}</b>
+        <p>Es una señal para revisión registral, no una conclusión de obligación ni de incumplimiento.</p>
       </div>
-
-      <div className="uso-fields uso-case-snapshot-fields">
-        <Field label="Actividad coincidente" wide>{c.matched_activity ? titleCase(c.matched_activity) : '—'}</Field>
-        <Field label="Nivel de evidencia">{TIER_LABEL[c.detection_tier ?? ''] ?? (c.detection_tier ? titleCase(c.detection_tier.replace(/_/g, ' ')) : '—')}</Field>
-        <Field label="Estado SII">{c.sii_status === 'ACTIVE_AS_PUBLISHED' ? 'Activo' : titleCase((c.sii_status ?? '—').replace(/_/g, ' '))}</Field>
-        <Field label="Inicio de actividades">{c.sii_activity_start_date ? fecha(c.sii_activity_start_date) : '—'}</Field>
-        <Field label="Región">{c.region ? titleCase(c.region) : row.subject.region ? titleCase(row.subject.region) : '—'}</Field>
-        <Field label="N° trabajadores">{c.workers != null ? n(c.workers) : '—'}</Field>
-        <Field label="Ventas anuales (UF)">
-          {c.sales_band_uf ?? '—'}
-          {c.sales_band_size && <em className="uso-field-sub">{titleCase(c.sales_band_size)}</em>}
-        </Field>
-        <Field label="Materialidad">{c.materiality_score != null ? n1(c.materiality_score) : '—'}</Field>
-      </div>
-
-      <div className="uso-chips uso-case-snapshot-chips">
-        {c.res_available && <Pill tone="var(--class-official)">Constitución RES verificable</Pill>}
-        {c.uaf_sanction_events > 0 && <Pill tone="var(--sig-critical)">{n(c.uaf_sanction_events)} evento(s) sancionatorio(s)</Pill>}
-        {(c.flags ?? []).slice(0, 3).map((flag) => <Pill key={flag} tone="var(--ink-3)">{titleCase(flag.replace(/_/g, ' '))}</Pill>)}
-      </div>
-
-      {c.review_state && (
-        <p className="uso-note uso-case-snapshot-note">
-          Revisión registrada: <b>{REVIEW_LABEL[c.review_state] ?? titleCase(c.review_state.replace(/_/g, ' '))}</b>
-          {c.reviewed_at && ` · ${fecha(c.reviewed_at)}`}
-        </p>
-      )}
-    </>
-  );
-}
-
-function TerminationSnapshot({ row }: { row: CaseRow }) {
-  const s = row.termination;
-  if (!s) {
-    return <p className="uso-note">La fila del corte no está cargada en esta sesión. Abre la cola de término de giro para refrescar su caracterización.</p>;
-  }
-
-  return (
-    <>
-      <div className="uso-score uso-case-snapshot-score">
-        <div className="uso-score-main">
-          <span className="uso-kicker">IPF · prioridad fiscalizadora</span>
-          <b className="num">{n1(s.ipf_score)}</b>
-          <em>
-            {s.ipf_band ? `banda ${titleCase(s.ipf_band.replace(/_/g, ' '))}` : 'sin banda'}
-            {s.ipf_percentile != null && ` · percentil ${n1(s.ipf_percentile)} del padrón`}
-          </em>
-          <span className="uso-score-track" aria-hidden><i style={{ width: `${Math.min(100, s.ipf_score ?? 0)}%` }} /></span>
-          <p>Ordena esfuerzo de fiscalización. No es probabilidad de LA/FT.</p>
-        </div>
-        <div className="uso-score-parts uso-score-marks">
-          <div><span>Antecedentes de sanción</span><b className="num">{n(s.sanction_evidence_count)}</b><em>{s.sanction_last_date ? `último ${fecha(s.sanction_last_date)}` : 'sin fecha'}</em></div>
-          <div><span>Menciones en prensa</span><b className="num">{n(s.press_evidence_count)}</b><em>{s.has_press ? 'coincidencia por identidad' : 'sin coincidencia'}</em></div>
-          <div><span>Señales abiertas</span><b className="num">{n(s.alert_count)}</b><em>{n(s.evidence_count)} antecedentes en total</em></div>
-        </div>
-      </div>
-
-      {(s.is_osfl || s.is_state_supplier || s.sanction_count > 0) && (
-        <div className="uso-chips uso-case-snapshot-chips">
-          {s.is_osfl && <Pill tone="var(--unknown)">También OSFL</Pill>}
-          {s.is_state_supplier && <Pill tone="var(--class-official)">Proveedor del Estado</Pill>}
-          {s.sanction_count > 0 && <Pill tone="var(--sig-critical)">Sanción atribuida en padrón</Pill>}
+      {c && !compact && (
+        <div className="uso-fields uso-case-snapshot-fields">
+          <Field label="Actividad coincidente" wide>{c.matched_activity ? titleCase(c.matched_activity) : '—'}</Field>
+          <Field label="Sector sugerido">{c.implied_sector ? titleCase(c.implied_sector) : '—'}</Field>
+          <Field label="Estado SII">{c.sii_status === 'ACTIVE_AS_PUBLISHED' ? 'Activo' : titleCase((c.sii_status ?? '—').replace(/_/g, ' '))}</Field>
+          <Field label="Inicio de actividades">{c.sii_activity_start_date ? fecha(c.sii_activity_start_date) : '—'}</Field>
+          <Field label="IVO / prioridad">{c.ivo_score != null ? n1(c.ivo_score) : c.selection_rank != null ? `Muestra #${n(c.selection_rank)}` : '—'}</Field>
+          <Field label="Trabajadores">{c.workers != null ? n(c.workers) : '—'}</Field>
         </div>
       )}
-    </>
+    </div>
   );
 }
