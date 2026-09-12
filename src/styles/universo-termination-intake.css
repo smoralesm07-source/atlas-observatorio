@@ -1,0 +1,354 @@
+/* Gestión SO · primera vista de Término de giro */
+
+.uso .uso-case-termino .uso-case-head {
+  padding: 20px 24px 18px;
+  gap: 22px;
+  align-items: flex-start;
+}
+
+.uso .uso-case-termino .uso-case-id {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.uso .uso-case-termino .uso-case-id h3 {
+  margin: 2px 0 0;
+  max-width: 620px;
+  line-height: 1.13;
+}
+
+.uso .uso-case-termino .uso-case-id > p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.uso .uso-case-termino .uso-case-tools {
+  gap: 10px;
+  padding-top: 3px;
+}
+
+.uso .uso-case-termino .uso-case-tools .btn,
+.uso .uso-case-termino .uso-case-tools button {
+  min-height: 36px;
+}
+
+.uso .uso-termination-intake {
+  display: grid;
+  gap: 18px;
+  padding: 20px 22px 24px;
+  border-top: 1px solid var(--line);
+}
+
+.uso .uso-termination-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(270px, .72fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.uso .uso-termination-case-card,
+.uso .uso-termination-decision-box,
+.uso .uso-termination-news-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-panel-2);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 3%, transparent);
+}
+
+.uso .uso-termination-case-card {
+  display: grid;
+  gap: 15px;
+  padding: 18px;
+}
+
+.uso .uso-termination-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.uso .uso-termination-card-head > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.uso .uso-termination-card-head h4,
+.uso .uso-termination-news-head h5 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.uso .uso-termination-card-head h4 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.uso .uso-termination-card-head p,
+.uso .uso-termination-news-head p,
+.uso .uso-termination-decision-box p {
+  margin: 0;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.uso .uso-termination-card-head p {
+  font-size: 10px;
+}
+
+.uso .uso-termination-date {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-panel-2));
+  color: var(--accent);
+  font: 700 9px var(--mono);
+  white-space: nowrap;
+}
+
+.uso .uso-termination-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.uso .uso-termination-kpis > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--bg-raised);
+}
+
+.uso .uso-termination-kpis span,
+.uso .uso-termination-activity span,
+.uso .uso-termination-news-summary span,
+.uso .uso-termination-news-foot span {
+  color: var(--ink-4);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.uso .uso-termination-kpis b {
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.uso .uso-termination-activity {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 70%, var(--line));
+  border-radius: 0 9px 9px 0;
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-raised));
+}
+
+.uso .uso-termination-activity b {
+  color: var(--ink-2);
+  font-size: 9.5px;
+  line-height: 1.4;
+}
+
+.uso .uso-termination-decision-box {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  padding: 18px;
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-panel-2));
+}
+
+.uso .uso-termination-decision-box > b {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.uso .uso-termination-decision-box p {
+  font-size: 9px;
+}
+
+.uso .uso-termination-decision-box .btn {
+  min-height: 40px;
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.uso .uso-termination-decision-box small {
+  color: var(--ink-4);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.uso .uso-termination-news-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.uso .uso-termination-news-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.uso .uso-termination-news-head > div:first-child {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.uso .uso-termination-news-head h5 {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.uso .uso-termination-news-head p {
+  max-width: 720px;
+  font-size: 8.8px;
+}
+
+.uso .uso-termination-news-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.uso .uso-termination-news-actions .btn {
+  min-height: 32px;
+  margin: 0;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.uso .uso-termination-news-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 3%, var(--bg-raised));
+}
+
+.uso .uso-termination-news-summary[data-state='error'] {
+  border-color: color-mix(in srgb, var(--sig-medium) 38%, var(--line));
+}
+
+.uso .uso-termination-news-summary > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.uso .uso-termination-news-summary p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 9.3px;
+  line-height: 1.55;
+}
+
+.uso .uso-termination-news-summary button {
+  min-height: 32px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.uso .uso-termination-news-list {
+  display: grid;
+  gap: 8px;
+}
+
+.uso .uso-termination-news-list > article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 11px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: var(--bg-raised);
+}
+
+.uso .uso-termination-news-list > article > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.uso .uso-termination-news-list b {
+  color: var(--ink);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+.uso .uso-termination-news-list small {
+  color: var(--ink-4);
+  font-size: 7.8px;
+}
+
+.uso .uso-termination-news-list p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 8.2px;
+  line-height: 1.45;
+}
+
+.uso .uso-termination-news-list a {
+  color: var(--accent);
+  font-size: 8.2px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.uso .uso-termination-news-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  padding-top: 2px;
+}
+
+.uso .uso-termination-news-foot span {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1040px) {
+  .uso .uso-termination-hero { grid-template-columns: 1fr; }
+  .uso .uso-termination-decision-box { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .uso .uso-termination-decision-box .uso-kicker,
+  .uso .uso-termination-decision-box small { grid-column: 1 / -1; }
+  .uso .uso-termination-decision-box .btn { min-width: 190px; margin-top: 0; }
+}
+
+@media (max-width: 760px) {
+  .uso .uso-case-termino .uso-case-head { padding: 16px; gap: 14px; }
+  .uso .uso-termination-intake { padding: 15px; }
+  .uso .uso-termination-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uso .uso-termination-card-head,
+  .uso .uso-termination-news-head { flex-direction: column; }
+  .uso .uso-termination-news-actions { justify-content: flex-start; }
+  .uso .uso-termination-news-summary { grid-template-columns: 1fr; }
+  .uso .uso-termination-news-summary button { justify-self: start; }
+  .uso .uso-termination-decision-box { grid-template-columns: 1fr; }
+  .uso .uso-termination-decision-box .btn { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 520px) {
+  .uso .uso-termination-kpis { grid-template-columns: 1fr; }
+  .uso .uso-termination-news-list > article { grid-template-columns: 1fr; }
+}

@@ -11,6 +11,7 @@ import { CopyButton, Field, Pill, SectionHead } from './bits';
 import type { CaseRow } from './model';
 import { OpenContactPanel } from './OpenContactPanel';
 import { PotentialIntakePreview } from './PotentialIntakePreview';
+import { TerminationIntakePreview } from './TerminationIntakePreview';
 import '../../styles/universo-case-flow.css';
 import '../../styles/universo-case-review.css';
 import '../../styles/universo-potential-intake.css';
@@ -184,7 +185,7 @@ export function CaseFile({
   };
 
   return (
-    <section className="uso-case uso-case-progressive uso-case-two-step" aria-label={`Ficha de gestión de ${row.subject.name || dotted}`}>
+    <section className={`uso-case uso-case-progressive uso-case-two-step uso-case-${row.kind.toLowerCase()}`} aria-label={`Ficha de gestión de ${row.subject.name || dotted}`}>
       <header className="uso-case-head">
         <div className="uso-case-id">
           <div className="uso-case-badges">
@@ -221,16 +222,10 @@ export function CaseFile({
             onTake={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}
           />
         ) : (
-          <div className="uso-case-body uso-case-start">
-            <div className="uso-case-start-copy">
-              <span className="uso-kicker">Disponible para gestión</span>
-              <b>Revisar término de giro</b>
-              <p>{row.subject.motive}</p>
-            </div>
-            <button className="btn btn-primary" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
-              Tomar caso
-            </button>
-          </div>
+          <TerminationIntakePreview
+            row={row}
+            onTake={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}
+          />
         )
       ) : (
         <>
