@@ -95,7 +95,10 @@ export function CaseFile({
     const target = row.subject.entityId
       ? `#/entidad/${encodeURIComponent(row.subject.entityId)}`
       : `#/entidades?q=${encodeURIComponent(dotted)}`;
-    window.open(target, '_blank', 'noopener,noreferrer');
+    const opened = window.open(target, '_blank', 'noopener,noreferrer');
+    // Algunos navegadores corporativos bloquean nuevas pestañas. En ese caso se
+    // conserva la navegación histórica de Atlas cuando ya existe entity_id.
+    if (!opened && row.subject.entityId && onEntity) onEntity();
   };
 
   const openSiiThirdParty = () => {
