@@ -1,111 +1,83 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { EntityDetail } from '../../lib/contracts';
 import { fecha, n, titleCase } from '../../lib/format';
-import { normalizePressText, searchPress, type PressMatch } from '../../lib/press';
 import { useRpc } from '../../lib/rpc';
+import { supabase } from '../../lib/supabase';
 import { CopyButton } from './bits';
 import type { CaseRow } from './model';
 import '../../styles/universo-termination-intake.css';
 
-type PressState = {
-  status: 'idle' | 'loading' | 'done' | 'error';
-  matches: PressMatch[];
+type ContextEvidence = {
+  title: string;
+  url: string;
+  domain: string;
+  official: boolean;
+  snippet: string;
 };
 
-const compactRut = (value: string | null | undefined) => String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
+type ContextResult = {
+  visible: boolean;
+  status: string;
+  confidence: number;
+  signal?: string;
+  signal_label?: string;
+  successor?: string | null;
+  effective_date?: string | null;
+  summary?: string;
+  evidence?: ContextEvidence[];
+  independent_domains?: number;
+  official_support?: boolean;
+};
 
-function strictPress(rut: string, matches: PressMatch[]): PressMatch[] {
-  const target = compactRut(rut);
-  if (target) {
-    const exact = matches.filter((match) => match.ruts.some((candidate) => compactRut(candidate) === target));
-    if (exact.length) return exact;
-  }
-  return matches.filter((match) => match.match_score >= 0.94 && !match.requires_validation);
-}
+type ContextState = {
+  status: 'idle' | 'loading' | 'done' | 'error';
+  data: ContextResult | null;
+};
 
-function trimText(value: string | null | undefined, max = 230): string {
+function trimText(value: string | null | undefined, max = 270): string {
   const clean = String(value ?? '').replace(/\s+/g, ' ').trim();
   if (!clean) return '';
   return clean.length > max ? `${clean.slice(0, max - 1).trimEnd()}…` : clean;
 }
 
-const EXIT_PATTERNS = [
-  { label: 'cierre o cese de operaciones', rx: /\b(cierre|cerrad|cese|ceso|dejo de operar|dejar de operar)\b/ },
-  { label: 'liquidación, quiebra o insolvencia', rx: /\b(liquidacion|quiebra|insolvencia|reorganizacion)\b/ },
-  { label: 'disolución, fusión o absorción', rx: /\b(disolucion|fusion|absorcion|absorbida|extincion)\b/ },
-  { label: 'cambio o reemplazo institucional', rx: /\b(reemplaz|suprim|delegacion presidencial|reforma|transformacion|reestructuracion)\b/ },
-];
-
-function pressSignals(matches: PressMatch[]): string[] {
-  const text = normalizePressText(matches
-    .flatMap((match) => match.articles)
-    .flatMap((article) => [article.title, article.summary])
-    .filter(Boolean)
-    .join(' '));
-  return EXIT_PATTERNS.filter((item) => item.rx.test(text)).map((item) => item.label);
-}
-
 export function TerminationIntakePreview({ row, onTake }: { row: CaseRow; onTake: () => void }) {
   const entityId = row.subject.entityId ?? row.termination?.entity_id ?? null;
   const detail = useRpc<EntityDetail | null>('obs_entity_detail', { p_entity_id: entityId }, { skip: !entityId });
-  const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
+  const [context, setContext] = useState<ContextState>({ status: 'idle', data: null });
 
-  const runPressSearch = () => {
+  useEffect(() => {
     let cancelled = false;
-    setPress({ status: 'loading', matches: [] });
-    const run = async () => {
-      try {
-        let matches = strictPress(row.subject.rut, await searchPress(row.subject.rut || row.subject.name, 12));
-        if (!matches.length) matches = strictPress(row.subject.rut, await searchPress(row.subject.name, 12));
-        if (!cancelled) setPress({ status: 'done', matches });
-      } catch {
-        if (!cancelled) setPress({ status: 'error', matches: [] });
+    setContext({ status: 'loading', data: null });
+    void supabase.functions.invoke('atlas-termination-openweb', {
+      body: {
+        name: row.subject.name,
+        rut: row.subject.rut,
+        region: row.subject.region,
+        commune: row.subject.commune,
+        termination_date: row.date,
+      },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setContext({ status: 'error', data: null });
+        return;
       }
-    };
-    void run();
+      setContext({ status: 'done', data: data as ContextResult });
+    }).catch(() => {
+      if (!cancelled) setContext({ status: 'error', data: null });
+    });
     return () => { cancelled = true; };
-  };
+  }, [row.key, row.subject.name, row.subject.rut, row.subject.region, row.subject.commune, row.date]);
 
-  useEffect(() => runPressSearch(), [row.key, row.subject.name, row.subject.rut]);
-
-  const articles = useMemo(() => {
-    const seen = new Set<string>();
-    return press.matches
-      .flatMap((match) => match.articles)
-      .filter((article) => {
-        if (seen.has(article.id)) return false;
-        seen.add(article.id);
-        return true;
-      })
-      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
-  }, [press.matches]);
-
-  const signals = useMemo(() => pressSignals(press.matches), [press.matches]);
-  const latest = articles[0] ?? null;
   const terminationDate = row.date ?? detail.data?.entity.tax_termination ?? null;
   const activityStart = detail.data?.entity.tax_activity_start ?? null;
   const workers = row.workers ?? detail.data?.entity.tax_workers ?? null;
   const sales = row.size ?? detail.data?.entity.tax_sales_band_uf ?? detail.data?.entity.tax_size ?? null;
   const activity = row.termination?.main_activity ?? detail.data?.entity.tax_activity ?? null;
   const sanctions = detail.data?.sanctions?.length ?? row.marks.sanction;
-  const pressCount = articles.length;
-
-  const summary = useMemo(() => {
-    const name = titleCase(row.subject.name) || row.subject.name;
-    if (press.status === 'loading') return `Atlas está consultando Radar Prensa para ${name}.`;
-    if (press.status === 'error') return `No fue posible consultar Radar Prensa para ${name}. Conviene complementar con una búsqueda web manual antes de concluir sobre la causa del término de giro.`;
-    if (!articles.length) return `Radar Prensa no registra coincidencias de alta confianza para ${name}. La ausencia de resultados no descarta antecedentes disponibles en otras fuentes abiertas.`;
-    const latestLine = latest
-      ? `La referencia más reciente es de ${latest.media || 'fuente abierta'}${latest.date ? ` (${fecha(latest.date)})` : ''}: “${trimText(latest.title, 145)}”.`
-      : '';
-    const signalLine = signals.length
-      ? `En los textos recuperados aparecen referencias compatibles con ${signals.join(', ')}.`
-      : 'Los resúmenes recuperados no muestran una explicación explícita del término de giro.';
-    return `Radar Prensa registra ${n(articles.length)} noticia${articles.length === 1 ? '' : 's'} coincidente${articles.length === 1 ? '' : 's'} de alta confianza para ${name}. ${latestLine} ${signalLine} Este resumen orienta la revisión y debe contrastarse con la fuente antes de usarlo como antecedente.`;
-  }, [articles.length, latest, press.status, row.subject.name, signals]);
-
-  const webQuery = `"${row.subject.name}" ${row.subject.rut} cierre "término de giro" liquidación quiebra disolución fusión`; 
-  const webSearchUrl = `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(webQuery)}`;
+  const openContext = context.status === 'done' && context.data?.visible && context.data.summary
+    ? context.data
+    : null;
 
   return (
     <div className="uso-termination-intake">
@@ -140,56 +112,58 @@ export function TerminationIntakePreview({ row, onTake }: { row: CaseRow; onTake
         <aside className="uso-termination-decision-box">
           <span className="uso-kicker">Decisión analítica</span>
           <b>¿Conviene iniciar gestión?</b>
-          <p>Usa el contexto registral y la revisión de prensa para decidir si vale la pena abrir el caso.</p>
+          <p>Usa el contexto registral y, cuando exista evidencia suficiente, la explicación recuperada desde fuentes abiertas.</p>
           <button className="btn btn-primary" onClick={onTake}>Tomar caso</button>
           <small>Al tomarlo, Atlas abre el flujo de ubicación y registro de gestión.</small>
         </aside>
       </section>
 
-      <section className="uso-termination-news-card">
-        <div className="uso-termination-news-head">
-          <div>
-            <span className="uso-kicker">Fuentes abiertas</span>
-            <h5>Noticias que pueden explicar el término de giro</h5>
-            <p>Radar Prensa busca coincidencias de alta confianza; la búsqueda web amplía la revisión cuando el índice no basta.</p>
+      {openContext && (
+        <section className="uso-termination-context-card">
+          <div className="uso-termination-context-head">
+            <div>
+              <span className="uso-kicker">Contexto abierto concluyente</span>
+              <h5>Qué puede explicar el término de giro</h5>
+              <p>Atlas sólo muestra este bloque cuando reúne evidencia consistente por identidad y fuente. Si no alcanza ese umbral, la ficha no presenta una conclusión.</p>
+            </div>
+            <span className="uso-termination-confidence" data-official={openContext.official_support ? 'true' : undefined}>
+              {openContext.official_support ? 'Fuente oficial' : 'Fuentes concordantes'} · {n(openContext.confidence)}%
+            </span>
           </div>
-          <div className="uso-termination-news-actions">
-            <button className="btn btn-sm" onClick={runPressSearch} disabled={press.status === 'loading'}>
-              {press.status === 'loading' ? 'Buscando…' : 'Actualizar noticias'}
-            </button>
-            <a className="btn btn-sm" href={webSearchUrl} target="_blank" rel="noreferrer">Buscar en Google Noticias ↗</a>
-          </div>
-        </div>
 
-        <div className="uso-termination-news-summary" data-state={press.status}>
-          <div>
-            <span>Resumen para observación</span>
-            <p>{summary}</p>
+          <div className="uso-termination-context-summary">
+            <div>
+              <span>{openContext.signal_label || 'Contexto explicativo'}</span>
+              <p>{openContext.summary}</p>
+            </div>
+            <CopyButton text={openContext.summary || ''} label="Copiar resumen" done="Resumen copiado" small />
           </div>
-          <CopyButton text={summary} label="Copiar resumen" done="Resumen copiado" small />
-        </div>
 
-        {press.status === 'done' && articles.length > 0 && (
-          <div className="uso-termination-news-list">
-            {articles.slice(0, 3).map((article) => (
-              <article key={article.id}>
-                <div>
-                  <b>{article.title}</b>
-                  <small>{[article.media, article.date ? fecha(article.date) : null].filter(Boolean).join(' · ')}</small>
-                  {article.summary && <p>{trimText(article.summary)}</p>}
-                </div>
-                {article.url && <a href={article.url} target="_blank" rel="noreferrer">Abrir ↗</a>}
-              </article>
-            ))}
+          {Array.isArray(openContext.evidence) && openContext.evidence.length > 0 && (
+            <div className="uso-termination-context-evidence">
+              {openContext.evidence.slice(0, 3).map((item) => (
+                <article key={item.url}>
+                  <div>
+                    <div className="uso-termination-evidence-title">
+                      <b>{item.title || item.domain}</b>
+                      {item.official && <span>Oficial</span>}
+                    </div>
+                    <small>{item.domain}</small>
+                    {item.snippet && <p>{trimText(item.snippet)}</p>}
+                  </div>
+                  <a href={item.url} target="_blank" rel="noreferrer">Fuente ↗</a>
+                </article>
+              ))}
+            </div>
+          )}
+
+          <div className="uso-termination-context-foot">
+            <span>{openContext.independent_domains ? `${n(openContext.independent_domains)} fuente${openContext.independent_domains === 1 ? '' : 's'} independiente${openContext.independent_domains === 1 ? '' : 's'}` : 'Evidencia contrastada'}</span>
+            {openContext.successor && <span>Continuidad detectada: {openContext.successor}</span>}
+            {openContext.effective_date && <span>Fecha referencial: {openContext.effective_date}</span>}
           </div>
-        )}
-
-        <div className="uso-termination-news-foot">
-          <span>{press.status === 'loading' ? 'Consultando…' : `${n(pressCount)} coincidencia${pressCount === 1 ? '' : 's'} visible${pressCount === 1 ? '' : 's'}`}</span>
-          {signals.length > 0 && <span>Señales: {signals.join(' · ')}</span>}
-          {detail.loading && <span>Completando antecedentes de Entidad 360…</span>}
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
