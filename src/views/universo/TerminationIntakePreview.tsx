@@ -78,6 +78,8 @@ export function TerminationIntakePreview({ row, onTake }: { row: CaseRow; onTake
   const openContext = context.status === 'done' && context.data?.visible && context.data.summary
     ? context.data
     : null;
+  const contextPending = context.status === 'idle' || context.status === 'loading';
+  const contextEmpty = context.status === 'done' && !openContext;
 
   return (
     <div className="uso-termination-intake">
@@ -117,6 +119,39 @@ export function TerminationIntakePreview({ row, onTake }: { row: CaseRow; onTake
           <small>Al tomarlo, Atlas abre el flujo de ubicación y registro de gestión.</small>
         </aside>
       </section>
+
+      {contextPending && (
+        <section className="uso-termination-context-status" data-state="loading" aria-live="polite">
+          <span className="uso-termination-context-spinner" aria-hidden="true" />
+          <div>
+            <span className="uso-kicker">Contexto abierto</span>
+            <b>Buscando información de contexto…</b>
+            <p>Atlas está contrastando fuentes abiertas antes de mostrar una conclusión.</p>
+          </div>
+        </section>
+      )}
+
+      {contextEmpty && (
+        <section className="uso-termination-context-status" data-state="empty" aria-live="polite">
+          <span className="uso-termination-context-empty-icon" aria-hidden="true">—</span>
+          <div>
+            <span className="uso-kicker">Contexto abierto</span>
+            <b>Sin información de contexto</b>
+            <p>No se encontró evidencia suficientemente consistente para presentar una explicación del término de giro.</p>
+          </div>
+        </section>
+      )}
+
+      {context.status === 'error' && (
+        <section className="uso-termination-context-status" data-state="error" role="status">
+          <span className="uso-termination-context-empty-icon" aria-hidden="true">!</span>
+          <div>
+            <span className="uso-kicker">Contexto abierto</span>
+            <b>Contexto no disponible</b>
+            <p>La consulta no pudo completarse en este momento. La ausencia de respuesta no se interpreta como ausencia de antecedentes.</p>
+          </div>
+        </section>
+      )}
 
       {openContext && (
         <section className="uso-termination-context-card">
