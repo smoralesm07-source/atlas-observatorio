@@ -17,26 +17,42 @@ type EntityUafStatus = {
   refreshed_at?: string;
 };
 
+const rutKey = (value: string | null | undefined) =>
+  String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
+
 /**
  * Añade al renglón principal de Entidad 360 dos estados regulatorios compactos
  * sin duplicar el contrato pesado del expediente. El portal permite mantener
  * este indicador desacoplado de la ficha analítica y consultar un RPC liviano
  * por entity_id/RUT.
+ *
+ * La clave de consulta se toma del RUT que está efectivamente visible en la
+ * ficha. Así el botón Gestionar nunca hereda un RUT de otra resolución de
+ * identidad o de una navegación anterior.
  */
 export function Entity360StatusMarks({ entityId, role }: { entityId: string; role: AtlasRole }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  const [lookupKey, setLookupKey] = useState('');
   const { data, loading, error } = useRpc<EntityUafStatus>(
     'obs_entity_uaf_status',
-    { p_entity_id: entityId },
+    { p_entity_id: lookupKey },
+    { skip: !lookupKey },
   );
-  const [target, setTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setTarget(null);
+    setLookupKey('');
 
     const locate = () => {
-      const node = document.querySelector<HTMLElement>('.entity360-titleline');
-      if (node) setTarget(node);
-      return Boolean(node);
+      const root = document.querySelector<HTMLElement>('.entity360');
+      const node = root?.querySelector<HTMLElement>('.entity360-titleline') ?? null;
+      if (!root || !node) return false;
+
+      const visibleRut = root.querySelector<HTMLElement>('.entity360-meta .mono')?.textContent?.trim() ?? '';
+      const nextLookup = visibleRut && !/^sin rut$/i.test(visibleRut) ? visibleRut : entityId;
+      setLookupKey(nextLookup);
+      setTarget(node);
+      return true;
     };
 
     if (locate()) return;
@@ -50,7 +66,14 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
 
   // Si esta lectura secundaria falla, no mostramos una ausencia falsa. El
   // expediente principal sigue operativo y el analista puede continuar.
-  if (!target || loading || error || !data) return null;
+  if (!target || !lookupKey || loading || error || !data) return null;
+
+  // Defensa adicional: si el RPC devolviera por cualquier razón un RUT distinto
+  // del que la ficha principal está mostrando, no renderizamos marcas ni una
+  // acción de gestión sobre una identidad cruzada.
+  const visibleRutKey = rutKey(lookupKey);
+  const returnedRutKey = rutKey(data.rut);
+  if (visibleRutKey && returnedRutKey && visibleRutKey !== returnedRutKey) return null;
 
   const registered = data.is_uaf_registered === true;
   const potential = !registered && data.is_potential_screening === true;
@@ -62,6 +85,7 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
   const manageableQueue = role !== 'viewer'
     ? (potential ? 'potenciales' : registered && terminated ? 'termino' : null)
     : null;
+  const navigationRut = data.rut ?? lookupKey;
 
   return createPortal(
     <>
@@ -77,7 +101,9 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
         <button
           className="entity360-manage-case"
           aria-label="Gestionar entidad en la mesa de casos"
-          onClick={() => { window.location.hash = `#/universo-so?vista=casos&cola=${manageableQueue}&q=${encodeURIComponent(data.rut ?? entityId)}`; }}
+          onClick={() => {
+            window.location.hash = `#/universo-so?vista=casos&cola=${manageableQueue}&q=${encodeURIComponent(navigationRut)}`;
+          }}
           title={manageableQueue === 'termino' ? 'Abrir este universo en la mesa de casos' : 'Abrir potenciales SO en la mesa de casos'}
         >
           Gestionar
