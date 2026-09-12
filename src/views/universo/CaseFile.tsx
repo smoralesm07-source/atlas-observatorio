@@ -31,7 +31,7 @@ const TIER_LABEL: Record<string, string> = {
 
 // Consulta pública oficial del SII. Se abre fuera de Atlas porque el formulario
 // exige interacción humana; Atlas sólo facilita el salto y copia el RUT.
-const SII_THIRD_PARTY_URL = 'https://zeus.sii.cl/cvc/stc/stc.html';
+const SII_THIRD_PARTY_URL = 'https://www2.sii.cl/stc/noauthz/consulta';
 
 const compactRut = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
@@ -236,27 +236,18 @@ export function CaseFile({
         </details>
       )}
 
-      <div className="uso-case-review" data-mode={!tracked ? 'preclaim' : 'active'}>
-        <div className="uso-case-review-copy">
-          <span className="uso-kicker">{tracked ? 'Revisión complementaria' : 'Antes de tomar el caso'}</span>
-          <b>Revisa la Ficha 360 y contrasta el estado tributario actual antes de gestionar.</b>
-          <em>
-            Atlas resuelve automáticamente la entidad 360 por RUT cuando todavía no viene vinculada. La consulta SII se abre en el sitio oficial y copia el RUT para pegarlo allí.
-          </em>
-        </div>
-        <div className="uso-case-review-actions">
-          <button className="btn btn-sm uso-case-review-360" onClick={openAtlas360} disabled={resolving360}>
-            {resolving360 ? 'Abriendo Ficha 360…' : 'Abrir Ficha 360 ↗'}
-          </button>
-          <button
-            className="btn btn-sm uso-case-review-sii"
-            data-copied={siiCopied ? 'true' : undefined}
-            onClick={openSiiThirdParty}
-            title="Abrir Consulta situación tributaria de terceros del SII"
-          >
-            {siiCopied ? 'SII abierto · RUT copiado' : 'Consulta SII ↗'}
-          </button>
-        </div>
+      <div className="uso-case-review-actions uso-case-review-actions-only">
+        <button className="btn btn-sm uso-case-review-360" onClick={openAtlas360} disabled={resolving360}>
+          {resolving360 ? 'Abriendo Ficha 360…' : 'Abrir Ficha 360 ↗'}
+        </button>
+        <button
+          className="btn btn-sm uso-case-review-sii"
+          data-copied={siiCopied ? 'true' : undefined}
+          onClick={openSiiThirdParty}
+          title="Abrir Consulta situación tributaria de terceros del SII"
+        >
+          {siiCopied ? 'SII abierto · RUT copiado' : 'Consulta SII ↗'}
+        </button>
       </div>
 
       <div className="uso-case-assignment" data-mode={!tracked ? 'open' : locked ? 'other' : 'mine'}>

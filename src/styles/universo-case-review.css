@@ -1,43 +1,4 @@
-/* Gestión SO · revisión previa antes de tomar un caso
-   La ficha 360 y el contraste en SII deben estar disponibles mientras el caso
-   todavía está libre. El bloque permanece luego como herramienta de revisión
-   complementaria, sin confundirse con el flujo de gestión. */
-
-.uso-case-review {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  margin: 0 18px 14px;
-  padding: 13px 14px;
-  border: 1px solid color-mix(in srgb, var(--unknown) 30%, var(--line));
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--unknown) 5%, var(--bg-panel));
-}
-
-.uso-case-review[data-mode='preclaim'] {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--unknown) 78%, transparent);
-}
-
-.uso-case-review-copy {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.uso-case-review-copy > b {
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.uso-case-review-copy > em {
-  color: var(--ink-3);
-  font-size: 12px;
-  font-style: normal;
-  line-height: 1.45;
-}
+/* Gestión SO · accesos rápidos previos y complementarios. */
 
 .uso-case-review-actions {
   display: flex;
@@ -45,6 +6,10 @@
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.uso-case-review-actions-only {
+  margin: 0 18px 14px;
 }
 
 .uso-case-review-360 {
@@ -60,12 +25,8 @@
 }
 
 @media (max-width: 760px) {
-  .uso-case-review {
-    grid-template-columns: 1fr;
+  .uso-case-review-actions-only {
     margin-inline: 12px;
-  }
-
-  .uso-case-review-actions {
     justify-content: flex-start;
   }
 }

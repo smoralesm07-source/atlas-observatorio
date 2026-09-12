@@ -134,7 +134,7 @@ export function locateGroups(target: LocateTarget): LocateGroup[] {
           id: 'registro-sii',
           label: 'SII · situación tributaria',
           hint: 'Estado del contribuyente y actividades vigentes. Pide el RUT en su formulario.',
-          url: 'https://www2.sii.cl/stc/noauthz',
+          url: 'https://www2.sii.cl/stc/noauthz/consulta',
           kind: 'registro',
           manual: true,
         },
