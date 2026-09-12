@@ -29,9 +29,10 @@ const TIER_LABEL: Record<string, string> = {
   EVIDENCIA_1: '1 actividad coincidente',
 };
 
-// Consulta pública oficial del SII. Se abre fuera de Atlas porque el formulario
-// exige interacción humana; Atlas sólo facilita el salto y copia el RUT.
-const SII_THIRD_PARTY_URL = 'https://www2.sii.cl/stc/noauthz/consulta';
+// La raíz pública del flujo abre una consulta nueva. No enlazar directamente a
+// /consulta: esa ruta corresponde a la vista de resultado y el SII puede
+// reconstruir la consulta anterior de la sesión, mostrando otro contribuyente.
+const SII_THIRD_PARTY_URL = 'https://www2.sii.cl/stc/noauthz/';
 
 const compactRut = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
@@ -168,8 +169,10 @@ export function CaseFile({
   };
 
   const openSiiThirdParty = () => {
-    // Abrir primero evita que el navegador bloquee la pestaña por esperar una
-    // promesa del portapapeles. El analista pega el RUT y completa el CAPTCHA.
+    // Siempre se entra por la raíz del trámite, no por la ruta de resultado.
+    // Así cada entidad de Atlas parte desde un formulario SII limpio aunque el
+    // analista haya consultado otro RUT inmediatamente antes. Abrir primero
+    // evita además que el navegador bloquee la pestaña por esperar clipboard.
     window.open(SII_THIRD_PARTY_URL, '_blank', 'noopener,noreferrer');
     if (!navigator.clipboard?.writeText) return;
     void navigator.clipboard.writeText(dotted).then(() => {
