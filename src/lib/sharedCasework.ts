@@ -1,6 +1,6 @@
 import {
-  EMPTY_CONTACT, caseKey,
-  type CaseContact, type CaseKind, type CaseMap, type CasePriority, type CaseState,
+  asContact, caseKey, workflowFromContact,
+  type CaseKind, type CaseMap, type CasePriority, type CaseState,
 } from './casework';
 
 export interface SharedCaseRow {
@@ -17,7 +17,7 @@ export interface SharedCaseRow {
   state: Exclude<CaseState, 'SIN_TRABAJAR'>;
   priority: CasePriority;
   note: string | null;
-  contact: Partial<CaseContact> | null;
+  contact: Record<string, unknown> | null;
   assigned_to: string;
   assigned_email: string;
   assigned_name: string | null;
@@ -42,6 +42,7 @@ export function sharedRowsToCases(rows: SharedCaseRow[]): CaseMap {
       entityId: row.entity_id,
       motive: row.motive ?? '',
     };
+    const workflow = workflowFromContact(row.contact);
     out[caseKey(kind, row.rut)] = {
       kind,
       rut: row.rut,
@@ -49,7 +50,10 @@ export function sharedRowsToCases(rows: SharedCaseRow[]): CaseMap {
       state: row.state,
       priority: row.priority,
       note: row.note ?? '',
-      contact: { ...EMPTY_CONTACT, ...(row.contact ?? {}) },
+      contact: asContact(row.contact),
+      workflowStep: workflow.workflowStep,
+      managementResult: workflow.managementResult,
+      noContact: workflow.noContact,
       updatedAt: row.updated_at,
       caseId: row.case_id,
       assignedTo: row.assigned_to,
