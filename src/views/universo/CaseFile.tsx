@@ -10,6 +10,7 @@ import { CopyButton, Field, Pill, SectionHead } from './bits';
 import type { CaseRow } from './model';
 import { OpenContactPanel } from './OpenContactPanel';
 import '../../styles/universo-case-flow.css';
+import '../../styles/universo-case-review.css';
 
 const REVIEW_LABEL: Record<string, string> = {
   CANDIDATO_SELECCIONADO: 'Seleccionado como candidato',
@@ -26,6 +27,10 @@ const TIER_LABEL: Record<string, string> = {
   EVIDENCIA_2: '2 actividades coincidentes',
   EVIDENCIA_1: '1 actividad coincidente',
 };
+
+// Consulta pública oficial del SII. Se abre fuera de Atlas porque el formulario
+// exige interacción humana; Atlas sólo facilita el salto y copia el RUT.
+const SII_THIRD_PARTY_URL = 'https://zeus.sii.cl/cvc/stc/stc.html';
 
 export function CaseFile({
   row, onPatch, onEntity, onSector,
@@ -48,6 +53,7 @@ export function CaseFile({
 
   const [contactDraft, setContactDraft] = useState<CaseContact>(() => ({ ...record.contact }));
   const [noteDraft, setNoteDraft] = useState(record.note);
+  const [siiCopied, setSiiCopied] = useState(false);
   const locateRef = useRef<HTMLDivElement>(null);
   const registerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLDivElement>(null);
@@ -55,6 +61,7 @@ export function CaseFile({
   useEffect(() => {
     setContactDraft({ ...record.contact });
     setNoteDraft(record.note);
+    setSiiCopied(false);
   }, [row.key, record.contact, record.note]);
 
   const filled = contactFilled(contactDraft);
@@ -80,6 +87,26 @@ export function CaseFile({
     const empty: CaseContact = { telefono: '', correo: '', sitio: '', direccion: '', persona: '', fuente: '' };
     setContactDraft(empty);
     onPatch({ contact: empty });
+  };
+
+  const openAtlas360 = () => {
+    // Si la cola ya trae entity_id, abre directamente el expediente 360. Si no,
+    // la búsqueda federada por RUT resuelve primero la identidad canónica.
+    const target = row.subject.entityId
+      ? `#/entidad/${encodeURIComponent(row.subject.entityId)}`
+      : `#/entidades?q=${encodeURIComponent(dotted)}`;
+    window.open(target, '_blank', 'noopener,noreferrer');
+  };
+
+  const openSiiThirdParty = () => {
+    // Abrir primero evita que el navegador bloquee la pestaña por esperar una
+    // promesa del portapapeles. El analista pega el RUT y completa el CAPTCHA.
+    window.open(SII_THIRD_PARTY_URL, '_blank', 'noopener,noreferrer');
+    if (!navigator.clipboard?.writeText) return;
+    void navigator.clipboard.writeText(dotted).then(() => {
+      setSiiCopied(true);
+      window.setTimeout(() => setSiiCopied(false), 2600);
+    }).catch(() => undefined);
   };
 
   return (
@@ -112,7 +139,9 @@ export function CaseFile({
         <div className="uso-case-tools">
           <CopyButton text={dotted} label="RUT" done="RUT copiado" small title="Copiar el RUT para pegarlo en un formulario" />
           <CopyButton text={caseSummaryText(record)} label="Ficha" done="Ficha copiada" small title="Copiar la ficha de gestión en texto" />
-          {onEntity && <button className="btn btn-sm" onClick={onEntity}>Entidad 360 ↗</button>}
+          <button className="btn btn-sm" onClick={openAtlas360} title={row.subject.entityId ? 'Abrir Ficha 360 en una pestaña nueva' : 'Resolver la entidad por RUT y abrir su Ficha 360'}>
+            {row.subject.entityId ? 'Entidad 360 ↗' : 'Buscar 360 ↗'}
+          </button>
         </div>
       </header>
 
@@ -138,6 +167,33 @@ export function CaseFile({
         </details>
       )}
 
+      <div className="uso-case-review" data-mode={!tracked ? 'preclaim' : 'active'}>
+        <div className="uso-case-review-copy">
+          <span className="uso-kicker">{tracked ? 'Revisión complementaria' : 'Antes de tomar el caso'}</span>
+          <b>
+            {row.subject.entityId
+              ? 'Revisa la Ficha 360 y contrasta el estado tributario actual.'
+              : 'Resuelve la entidad por RUT y revisa su contexto antes de asignártela.'}
+          </b>
+          <em>
+            La consulta SII se abre en el sitio oficial. Atlas copia el RUT para pegarlo allí; la validación del formulario se completa manualmente.
+          </em>
+        </div>
+        <div className="uso-case-review-actions">
+          <button className="btn btn-sm uso-case-review-360" onClick={openAtlas360}>
+            {row.subject.entityId ? 'Abrir Ficha 360 ↗' : 'Buscar Ficha 360 ↗'}
+          </button>
+          <button
+            className="btn btn-sm uso-case-review-sii"
+            data-copied={siiCopied ? 'true' : undefined}
+            onClick={openSiiThirdParty}
+            title="Abrir Consulta situación tributaria de terceros del SII"
+          >
+            {siiCopied ? 'SII abierto · RUT copiado' : 'Consulta SII ↗'}
+          </button>
+        </div>
+      </div>
+
       <div className="uso-case-assignment" data-mode={!tracked ? 'open' : locked ? 'other' : 'mine'}>
         {!tracked ? (
           <>
@@ -146,7 +202,7 @@ export function CaseFile({
               <b>{released ? 'Devuelto al universo sin gestión activa' : 'Nadie está atendiendo este caso'}</b>
               <em>{released && owner
                 ? `Revisado antes por ${owner}${record.updatedAt ? ` · devuelto ${desde(record.updatedAt)}` : ''}. La traza se conserva.`
-                : 'Tómalo sólo cuando vayas a trabajarlo. Quedará asignado a ti y saldrá de la cola pendiente.'}</em>
+                : 'Revisa primero la Ficha 360 y, si necesitas un contraste actualizado, la consulta del SII. Tómalo sólo cuando vayas a trabajarlo; quedará asignado a ti y saldrá de la cola pendiente.'}</em>
             </div>
             <button className="btn btn-sm btn-primary" onClick={() => onPatch({ state: 'EN_UBICACION' })}>
               {released ? 'Retomar caso' : 'Tomar caso'}
