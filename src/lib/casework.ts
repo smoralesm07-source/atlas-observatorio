@@ -1,19 +1,3 @@
-/* La mesa de casos del fiscalizador
-   ─────────────────────────────────
-   Atlas detecta y ubica; la tramitación ocurre fuera. Entre las dos cosas hay
-   un trabajo que hoy se hace en una planilla suelta: marcar qué caso está en
-   qué estado, anotar el contacto que se encontró y armar el lote que se lleva
-   al proceso institucional. Eso es lo que guarda este módulo.
-
-   LÍMITES DECLARADOS:
-    * Vive en el navegador de quien trabaja (localStorage). No es un registro
-      institucional, no se comparte entre personas y una sesión privada o un
-      equipo distinto empieza en blanco. El CSV es la salida que sí viaja.
-    * El estado describe el avance de la ubicación, no una decisión sobre la
-      obligación de inscribirse ni sobre el término de giro.
-    * El contacto lo escribe el fiscalizador desde fuentes abiertas: es una
-      propuesta verificable, no un dato acreditado. */
-
 import type { UafSubjectRow, UafPotentialCandidate } from './contracts';
 import { fecha, rutFormat, titleCase } from './format';
 
@@ -21,15 +5,15 @@ export type CaseKind = 'POTENCIAL' | 'TERMINO';
 
 export type CaseState =
   | 'SIN_TRABAJAR'
-  | 'EN_UBICACION'
-  | 'CONTACTO_OBTENIDO'
-  | 'CONTACTADO'
-  | 'FINALIZADO'
-  | 'DEVUELTO'
-  | 'SIN_UBICAR'
+  | 'GESTIONANDO'
+  | 'PENDIENTE_GESTION'
+  | 'DAR_DE_BAJA'
+  | 'CANDIDATO'
   | 'DESCARTADO';
 
 export type CasePriority = 'ALTA' | 'MEDIA' | 'BAJA';
+export type CaseWorkflowStep = 1 | 2;
+export type ManagementResult = 'UBICABLE' | 'NO_UBICABLE' | 'BAJA_OFICIO';
 
 export interface CaseContact {
   telefono: string;
@@ -40,8 +24,6 @@ export interface CaseContact {
   fuente: string;
 }
 
-/** Lo mínimo para que un caso siga siendo legible en la cartera aunque su cola
- *  no esté cargada: quién es, dónde está y por qué entró. */
 export interface CaseSubject {
   rut: string;
   name: string;
@@ -60,6 +42,9 @@ export interface CaseRecord {
   priority: CasePriority;
   note: string;
   contact: CaseContact;
+  workflowStep: CaseWorkflowStep;
+  managementResult: ManagementResult | null;
+  noContact: boolean;
   updatedAt: string;
   caseId?: string | null;
   assignedTo?: string | null;
@@ -71,36 +56,34 @@ export interface CaseRecord {
   isMine?: boolean;
 }
 
+export type CasePatch = Partial<Pick<
+  CaseRecord,
+  'state' | 'priority' | 'note' | 'workflowStep' | 'managementResult' | 'noContact'
+>> & { contact?: Partial<CaseContact> };
+
 export type CaseMap = Record<string, CaseRecord>;
 
-const KEY = 'atlas-observatorio-universo-so-casework-v1';
-/** Claves de las dos iteraciones anteriores de la mesa. Sólo guardaban el
- *  estado, así que se recuperan los estados y la identidad se rehidrata cuando
- *  la cola vuelve a cargar al sujeto. Perder las marcas de alguien porque la
- *  pantalla cambió no es una opción. */
+const KEY = 'atlas-observatorio-universo-so-casework-v2';
 const LEGACY_KEYS = [
+  'atlas-observatorio-universo-so-casework-v1',
   'atlas-observatorio-universo-so-management-v1',
   'atlas-universo-so-case-status-v3',
 ];
 
 export const STATES: { key: CaseState; label: string; short: string; tone: string; step: number }[] = [
   { key: 'SIN_TRABAJAR', label: 'Sin trabajar', short: 'Sin trabajar', tone: 'var(--ink-4)', step: 0 },
-  { key: 'EN_UBICACION', label: 'En ubicación', short: 'Ubicando', tone: 'var(--sig-watch)', step: 1 },
-  { key: 'CONTACTO_OBTENIDO', label: 'Contacto obtenido', short: 'Con contacto', tone: 'var(--unknown)', step: 2 },
-  { key: 'CONTACTADO', label: 'Contactado', short: 'Contactado', tone: 'var(--present)', step: 3 },
-  { key: 'FINALIZADO', label: 'Finalizado', short: 'Finalizado', tone: 'var(--present)', step: 4 },
-  { key: 'DEVUELTO', label: 'Devuelto al universo', short: 'Revisado antes', tone: 'var(--ink-3)', step: 0 },
-  { key: 'SIN_UBICAR', label: 'No se pudo ubicar', short: 'No ubicable', tone: 'var(--sig-high)', step: 3 },
-  { key: 'DESCARTADO', label: 'Descartado en revisión', short: 'Descartado', tone: 'var(--sig-none)', step: 3 },
+  { key: 'GESTIONANDO', label: 'Gestionando', short: 'Gestionando', tone: 'var(--sig-watch)', step: 1 },
+  { key: 'PENDIENTE_GESTION', label: 'Pendiente de gestión', short: 'Pendiente', tone: 'var(--sig-medium)', step: 2 },
+  { key: 'DAR_DE_BAJA', label: 'Dar de baja', short: 'Dar de baja', tone: 'var(--sig-high)', step: 3 },
+  { key: 'CANDIDATO', label: 'Candidato', short: 'Candidato', tone: 'var(--present)', step: 3 },
+  { key: 'DESCARTADO', label: 'Descartado', short: 'Descartado', tone: 'var(--sig-none)', step: 3 },
 ];
 
 export const STATE_META: Record<CaseState, { label: string; short: string; tone: string; step: number }> =
   Object.fromEntries(STATES.map((s) => [s.key, s])) as Record<CaseState, typeof STATES[number]>;
 
-/** Los tres pasos que sí son una secuencia. Los dos cierres alternativos
- *  —no ubicable y descartado— no son un paso más adelante y no entran al
- *  recorrido: se eligen aparte. */
-export const STATE_FLOW: CaseState[] = ['SIN_TRABAJAR', 'EN_UBICACION', 'CONTACTO_OBTENIDO', 'CONTACTADO'];
+/** Se conserva para consumidores antiguos. La ficha nueva usa dos pasos explícitos. */
+export const STATE_FLOW: CaseState[] = ['GESTIONANDO', 'PENDIENTE_GESTION'];
 
 export const PRIORITIES: { key: CasePriority; label: string; tone: string }[] = [
   { key: 'ALTA', label: 'Alta', tone: 'var(--sig-critical)' },
@@ -115,15 +98,21 @@ export const KIND_META: Record<CaseKind, { label: string; short: string; action:
   POTENCIAL: {
     label: 'Potencial sujeto obligado',
     short: 'Potencial SO',
-    action: 'Revisar inscripción',
+    action: 'Evaluar candidatura de inscripción',
     tone: 'var(--unknown)',
   },
   TERMINO: {
     label: 'Sujeto obligado con término de giro',
     short: 'Término de giro',
-    action: 'Revisar desinscripción',
+    action: 'Preparar regularización de baja',
     tone: 'var(--sig-high)',
   },
+};
+
+export const RESULT_LABEL: Record<ManagementResult, string> = {
+  UBICABLE: 'Ubicable',
+  NO_UBICABLE: 'No ubicable',
+  BAJA_OFICIO: 'Baja de oficio',
 };
 
 export const EMPTY_CONTACT: CaseContact = {
@@ -132,7 +121,7 @@ export const EMPTY_CONTACT: CaseContact = {
 
 export const caseKey = (kind: CaseKind, rut: string) => `${kind}|${rut}`;
 
-const asContact = (raw: unknown): CaseContact => {
+export const asContact = (raw: unknown): CaseContact => {
   const c = (raw ?? {}) as Partial<CaseContact>;
   return {
     telefono: typeof c.telefono === 'string' ? c.telefono : '',
@@ -144,48 +133,94 @@ const asContact = (raw: unknown): CaseContact => {
   };
 };
 
-const LEGACY_STATE: Record<string, CaseState> = {
-  PENDIENTE: 'SIN_TRABAJAR',
-  CONTACTO_REVISADO: 'EN_UBICACION',
-  LISTO_SOLICITUD: 'CONTACTADO',
-  REVISADO: 'EN_UBICACION',
-  LISTO: 'CONTACTADO',
-};
+export function workflowFromContact(raw: unknown): Pick<CaseRecord, 'workflowStep' | 'managementResult' | 'noContact'> {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const rawResult = data._management_result;
+  const managementResult: ManagementResult | null =
+    rawResult === 'UBICABLE' || rawResult === 'NO_UBICABLE' || rawResult === 'BAJA_OFICIO'
+      ? rawResult
+      : null;
+  return {
+    workflowStep: Number(data._workflow_step) === 2 ? 2 : 1,
+    managementResult,
+    noContact: data._no_contact === true || data._no_contact === 'true',
+  };
+}
 
-const LEGACY_KIND: Record<string, CaseKind> = {
-  DESINSCRIPCION: 'TERMINO',
-  INSCRIPCION: 'POTENCIAL',
-  termino: 'TERMINO',
-  potenciales: 'POTENCIAL',
-};
+export function workflowPatchToContact(patch: CasePatch): Record<string, unknown> | null {
+  const meta: Record<string, unknown> = {};
+  if (patch.workflowStep != null) meta._workflow_step = patch.workflowStep;
+  if (patch.managementResult !== undefined) meta._management_result = patch.managementResult;
+  if (patch.noContact !== undefined) meta._no_contact = patch.noContact;
+  const contact = patch.contact ? { ...patch.contact } : {};
+  const combined = { ...contact, ...meta };
+  return Object.keys(combined).length ? combined : null;
+}
+
+function normalizeLegacyState(kind: CaseKind, value: unknown): CaseState {
+  switch (value) {
+    case 'GESTIONANDO':
+    case 'PENDIENTE_GESTION':
+    case 'DAR_DE_BAJA':
+    case 'CANDIDATO':
+    case 'DESCARTADO':
+      return value;
+    case 'FINALIZADO':
+      return kind === 'TERMINO' ? 'DAR_DE_BAJA' : 'CANDIDATO';
+    case 'SIN_UBICAR':
+      return 'PENDIENTE_GESTION';
+    case 'EN_UBICACION':
+    case 'CONTACTO_OBTENIDO':
+    case 'CONTACTADO':
+      return 'GESTIONANDO';
+    default:
+      return 'SIN_TRABAJAR';
+  }
+}
 
 function migrateLegacy(): CaseMap {
-  const out: CaseMap = {};
   for (const key of LEGACY_KEYS) {
     let raw: string | null = null;
-    try { raw = localStorage.getItem(key); } catch { return out; }
+    try { raw = localStorage.getItem(key); } catch { return {}; }
     if (!raw) continue;
-    let parsed: Record<string, string>;
-    try { parsed = JSON.parse(raw) as Record<string, string>; } catch { continue; }
-    for (const [legacyKey, legacyState] of Object.entries(parsed)) {
-      const [legacyKind, rut] = legacyKey.split('|');
-      const kind = LEGACY_KIND[legacyKind];
-      const state = LEGACY_STATE[legacyState];
-      if (!kind || !rut || !state || state === 'SIN_TRABAJAR') continue;
-      out[caseKey(kind, rut)] = {
-        kind,
-        rut,
-        // La identidad se rehidrata en cuanto la cola vuelve a traer el sujeto.
-        subject: { rut, name: '', sector: null, region: null, commune: null, entityId: null, motive: '' },
-        state,
-        priority: 'MEDIA',
-        note: '',
-        contact: { ...EMPTY_CONTACT },
-        updatedAt: new Date().toISOString(),
-      };
-    }
+    try {
+      const parsed = JSON.parse(raw) as Record<string, Partial<CaseRecord>>;
+      const out: CaseMap = {};
+      for (const [storageKey, value] of Object.entries(parsed)) {
+        if (!value || typeof value !== 'object') continue;
+        const kind = value.kind === 'POTENCIAL' || value.kind === 'TERMINO'
+          ? value.kind
+          : storageKey.toLowerCase().includes('termino') ? 'TERMINO' : 'POTENCIAL';
+        const rut = typeof value.rut === 'string' ? value.rut : storageKey.split('|').pop() ?? '';
+        if (!rut) continue;
+        const subject = (value.subject ?? {}) as Partial<CaseSubject>;
+        const workflow = workflowFromContact(value.contact);
+        out[caseKey(kind, rut)] = {
+          kind,
+          rut,
+          subject: {
+            rut,
+            name: typeof subject.name === 'string' ? subject.name : '',
+            sector: subject.sector ?? null,
+            region: subject.region ?? null,
+            commune: subject.commune ?? null,
+            entityId: subject.entityId ?? null,
+            motive: typeof subject.motive === 'string' ? subject.motive : '',
+          },
+          state: normalizeLegacyState(kind, value.state),
+          priority: PRIORITY_META[value.priority as CasePriority] ? (value.priority as CasePriority) : 'MEDIA',
+          note: typeof value.note === 'string' ? value.note : '',
+          contact: asContact(value.contact),
+          workflowStep: value.workflowStep === 2 ? 2 : workflow.workflowStep,
+          managementResult: value.managementResult ?? workflow.managementResult,
+          noContact: value.noContact ?? workflow.noContact,
+          updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : new Date().toISOString(),
+        };
+      }
+      if (Object.keys(out).length) return out;
+    } catch { /* probar la siguiente clave */ }
   }
-  return out;
+  return {};
 }
 
 export function loadCases(): CaseMap {
@@ -213,25 +248,26 @@ export function loadCases(): CaseMap {
           entityId: subject.entityId ?? null,
           motive: typeof subject.motive === 'string' ? subject.motive : '',
         },
-        state: STATE_META[value.state as CaseState] ? (value.state as CaseState) : 'SIN_TRABAJAR',
+        state: normalizeLegacyState(kind, value.state),
         priority: PRIORITY_META[value.priority as CasePriority] ? (value.priority as CasePriority) : 'MEDIA',
         note: typeof value.note === 'string' ? value.note : '',
         contact: asContact(value.contact),
+        workflowStep: value.workflowStep === 2 ? 2 : 1,
+        managementResult: value.managementResult ?? null,
+        noContact: value.noContact ?? false,
         updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : new Date().toISOString(),
       };
     }
     return out;
   } catch {
-    return {};
+    return migrateLegacy();
   }
 }
 
 export function saveCases(map: CaseMap): void {
-  try { localStorage.setItem(KEY, JSON.stringify(map)); } catch { /* sesión privada o cuota */ }
+  try { localStorage.setItem(KEY, JSON.stringify(map)); } catch { /* cuota o sesión privada */ }
 }
 
-/** Un caso existe en la mesa desde que alguien lo toca. Antes de eso se muestra
- *  con los valores por defecto sin ocupar espacio en el almacenamiento. */
 export function defaultRecord(kind: CaseKind, subject: CaseSubject): CaseRecord {
   return {
     kind,
@@ -241,24 +277,19 @@ export function defaultRecord(kind: CaseKind, subject: CaseSubject): CaseRecord 
     priority: 'MEDIA',
     note: '',
     contact: { ...EMPTY_CONTACT },
+    workflowStep: 1,
+    managementResult: null,
+    noContact: false,
     updatedAt: new Date().toISOString(),
   };
 }
 
 export function recordFor(map: CaseMap, kind: CaseKind, subject: CaseSubject): CaseRecord {
   const stored = map[caseKey(kind, subject.rut)];
-  if (!stored) return defaultRecord(kind, subject);
-  // La identidad viva del corte manda sobre la copia guardada: un sector que
-  // cambió en el padrón no debe quedar congelado en la mesa.
-  return { ...stored, subject: { ...subject } };
+  return stored ? { ...stored, subject: { ...subject } } : defaultRecord(kind, subject);
 }
 
-export function applyPatch(
-  map: CaseMap,
-  kind: CaseKind,
-  subject: CaseSubject,
-  patch: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> },
-): CaseMap {
+export function applyPatch(map: CaseMap, kind: CaseKind, subject: CaseSubject, patch: CasePatch): CaseMap {
   const key = caseKey(kind, subject.rut);
   const base = map[key] ?? defaultRecord(kind, subject);
   const next: CaseRecord = {
@@ -268,13 +299,14 @@ export function applyPatch(
     priority: patch.priority ?? base.priority,
     note: patch.note ?? base.note,
     contact: patch.contact ? { ...base.contact, ...patch.contact } : base.contact,
+    workflowStep: patch.workflowStep ?? base.workflowStep,
+    managementResult: patch.managementResult === undefined ? base.managementResult : patch.managementResult,
+    noContact: patch.noContact ?? base.noContact,
     updatedAt: new Date().toISOString(),
   };
   return { ...map, [key]: next };
 }
 
-/** Rehidrata la identidad de los casos ya guardados con lo que trae el corte.
- *  Recupera además los que llegaron de una versión anterior sin razón social. */
 export function hydrate(map: CaseMap, kind: CaseKind, subjects: CaseSubject[]): CaseMap {
   let changed = false;
   const out = { ...map };
@@ -296,57 +328,64 @@ export function hydrate(map: CaseMap, kind: CaseKind, subjects: CaseSubject[]): 
 }
 
 export const isTracked = (record: CaseRecord) =>
-  record.state !== 'DEVUELTO' && (
-    record.state !== 'SIN_TRABAJAR'
-    || record.note.trim().length > 0
-    || contactFilled(record.contact) > 0
-  );
+  record.state !== 'SIN_TRABAJAR'
+  || record.note.trim().length > 0
+  || contactFilled(record.contact) > 0;
 
 export const contactFilled = (contact: CaseContact) =>
   (Object.keys(EMPTY_CONTACT) as (keyof CaseContact)[])
     .filter((field) => contact[field].trim().length > 0).length;
 
 export const CONTACT_FIELDS: { key: keyof CaseContact; label: string; placeholder: string; type: string }[] = [
-  { key: 'telefono', label: 'Teléfono', placeholder: '+56 2 2345 6789', type: 'tel' },
-  { key: 'correo', label: 'Correo', placeholder: 'contacto@entidad.cl', type: 'email' },
+  { key: 'direccion', label: 'Dirección', placeholder: 'Calle 123, comuna', type: 'text' },
+  { key: 'correo', label: 'Correo electrónico', placeholder: 'contacto@entidad.cl', type: 'email' },
   { key: 'sitio', label: 'Sitio web', placeholder: 'https://', type: 'url' },
-  { key: 'direccion', label: 'Domicilio observado', placeholder: 'Calle 123, comuna', type: 'text' },
-  { key: 'persona', label: 'Persona de contacto', placeholder: 'Nombre y cargo', type: 'text' },
-  { key: 'fuente', label: 'Fuente del dato', placeholder: 'Dónde se encontró', type: 'text' },
+  { key: 'telefono', label: 'Teléfono', placeholder: '+56 2 2345 6789', type: 'tel' },
+  { key: 'persona', label: 'Persona de contacto', placeholder: 'Nombre y cargo (opcional)', type: 'text' },
+  { key: 'fuente', label: 'Fuente / referencia', placeholder: 'Dónde se verificó el dato', type: 'text' },
 ];
 
-/* ─────────────────────────────────────────────────────── salidas del trabajo */
-
-const csvCell = (value: string | number | null | undefined) =>
+const csvCell = (value: string | number | boolean | null | undefined) =>
   `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+function nextAction(record: CaseRecord): string {
+  if (record.state === 'DAR_DE_BAJA') return 'Fiscalización: regularizar baja del registro';
+  if (record.state === 'CANDIDATO') return 'Fiscalización: contactar y tramitar inscripción';
+  if (record.state === 'PENDIENTE_GESTION') return 'Analista: continuar gestión';
+  if (record.state === 'DESCARTADO') return 'Sin trámite posterior';
+  return 'Analista: gestión en curso';
+}
 
 export function casesToCsv(records: CaseRecord[]): string {
   const head = [
-    'cola', 'accion_sugerida', 'rut', 'razon_social', 'sector', 'region', 'comuna',
-    'motivo', 'estado_gestion', 'prioridad', 'telefono', 'correo', 'sitio_web',
-    'domicilio', 'persona_contacto', 'fuente_contacto', 'responsable', 'correo_responsable', 'asignado_el', 'contactado_el', 'nota', 'actualizado',
+    'cola', 'estado_gestion', 'accion_siguiente', 'rut', 'razon_social', 'sector', 'region', 'comuna',
+    'motivo', 'paso_flujo', 'resultado_ubicacion', 'sin_contacto', 'prioridad',
+    'direccion', 'correo', 'sitio_web', 'telefono', 'persona_contacto', 'fuente_contacto',
+    'responsable', 'correo_responsable', 'asignado_el', 'nota_gestion', 'actualizado',
   ];
   const rows = records.map((r) => [
     KIND_META[r.kind].short,
-    KIND_META[r.kind].action,
+    STATE_META[r.state].label,
+    nextAction(r),
     rutFormat(r.rut),
     r.subject.name,
     r.subject.sector ?? '',
     r.subject.region ?? '',
     r.subject.commune ?? '',
     r.subject.motive,
-    STATE_META[r.state].label,
+    r.workflowStep,
+    r.managementResult ? RESULT_LABEL[r.managementResult] : '',
+    r.noContact ? 'Sí' : 'No',
     PRIORITY_META[r.priority].label,
-    r.contact.telefono,
+    r.contact.direccion,
     r.contact.correo,
     r.contact.sitio,
-    r.contact.direccion,
+    r.contact.telefono,
     r.contact.persona,
     r.contact.fuente,
     r.assignedName ?? '',
     r.assignedEmail ?? '',
     r.assignedAt ?? '',
-    r.contactedAt ?? '',
     r.note.replace(/\s+/g, ' ').trim(),
     r.updatedAt,
   ]);
@@ -362,37 +401,30 @@ export function downloadCsv(csv: string, name: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** La ficha en texto plano: lo que un fiscalizador pega en un correo o en el
- *  sistema donde sí se tramita. */
 export function caseSummaryText(record: CaseRecord): string {
   const c = record.contact;
   const lines = [
     `${titleCase(record.subject.name) || rutFormat(record.rut)} · ${rutFormat(record.rut)}`,
-    `${KIND_META[record.kind].label} — ${KIND_META[record.kind].action}`,
+    `${KIND_META[record.kind].label}`,
+    `Estado: ${STATE_META[record.state].label}`,
+    record.managementResult ? `Resultado de ubicación: ${RESULT_LABEL[record.managementResult]}` : null,
     record.subject.sector ? `Sector: ${titleCase(record.subject.sector)}` : null,
-    [record.subject.commune, record.subject.region].filter(Boolean).length
-      ? `Territorio: ${titleCase([record.subject.commune, record.subject.region].filter(Boolean).join(', '))}`
-      : null,
     record.subject.motive ? `Motivo: ${record.subject.motive}` : null,
-    `Estado de gestión: ${STATE_META[record.state].label} · prioridad ${PRIORITY_META[record.priority].label.toLowerCase()}`,
     '',
-    'Contacto propuesto por fuentes abiertas (por verificar):',
-    c.telefono ? `  Teléfono: ${c.telefono}` : null,
+    'Contacto:',
+    c.direccion ? `  Dirección: ${c.direccion}` : null,
     c.correo ? `  Correo: ${c.correo}` : null,
-    c.sitio ? `  Sitio: ${c.sitio}` : null,
-    c.direccion ? `  Domicilio: ${c.direccion}` : null,
+    c.sitio ? `  Web: ${c.sitio}` : null,
+    c.telefono ? `  Teléfono: ${c.telefono}` : null,
     c.persona ? `  Persona: ${c.persona}` : null,
     c.fuente ? `  Fuente: ${c.fuente}` : null,
-    contactFilled(c) === 0 ? '  Sin datos capturados todavía.' : null,
+    record.noContact ? '  Marcado sin contacto.' : null,
+    contactFilled(c) === 0 && !record.noContact ? '  Sin datos capturados.' : null,
     record.note.trim() ? '' : null,
-    record.note.trim() ? `Nota: ${record.note.trim()}` : null,
-    '',
-    `Actualizado ${fecha(record.updatedAt)} · preparado en ATLAS Observatorio. El dato de contacto proviene de fuentes abiertas y no está acreditado.`,
+    record.note.trim() ? `Comentario: ${record.note.trim()}` : null,
   ];
   return lines.filter((line) => line != null).join('\n');
 }
-
-/* ──────────────────────────────────────────── de la fila del corte a un caso */
 
 export function subjectFromTermination(row: UafSubjectRow): CaseSubject {
   return {
