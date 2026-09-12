@@ -48,6 +48,19 @@ const isReliable = (contact: OpenContact) =>
     && Number(contact.confidence_pct ?? 0) >= 85
     && Number(contact.evidence_count ?? 0) >= 2);
 
+/**
+ * Algunos buscadores exponen direcciones técnicas propias dentro del HTML o de
+ * fragmentos indexados. No son canales de contacto de la entidad y, al repetirse
+ * transversalmente, contaminan toda la cola de Gestión SO. Las descartamos antes
+ * de ordenar o calcular el mejor hallazgo para que tampoco puedan aparecer como
+ * alternativa ni ser adoptadas por el analista.
+ */
+function isSuppressedContact(contact: OpenContact): boolean {
+  if (contact.contact_type !== 'EMAIL') return false;
+  const value = contact.contact_value.trim().toLowerCase();
+  return value.endsWith('@duckduckgo.com');
+}
+
 function host(url: string | null): string {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -79,11 +92,14 @@ export function OpenContactPanel({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const items = useMemo(
-    () => (contacts.data ?? []).slice().sort((a, b) => {
-      const status = statusRank(b.verification_status) - statusRank(a.verification_status);
-      if (status) return status;
-      return Number(b.confidence_pct ?? 0) - Number(a.confidence_pct ?? 0);
-    }),
+    () => (contacts.data ?? [])
+      .filter((contact) => !isSuppressedContact(contact))
+      .slice()
+      .sort((a, b) => {
+        const status = statusRank(b.verification_status) - statusRank(a.verification_status);
+        if (status) return status;
+        return Number(b.confidence_pct ?? 0) - Number(a.confidence_pct ?? 0);
+      }),
     [contacts.data],
   );
 
