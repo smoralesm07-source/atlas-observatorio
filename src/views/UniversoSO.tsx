@@ -91,8 +91,7 @@ export function UniversoSO({
     setCaseError(null);
 
     // Respuesta inmediata en pantalla; si se acaba de tomar el caso, lo ponemos
-    // primero en la cartera optimista. Al remount de la cola Gestión esa misma
-    // entidad será la ficha activa y no el primer pendiente vecino.
+    // primero en la cartera optimista mientras el servidor confirma la asignación.
     setCases((current) => {
       const next = applyPatch(current, row.kind, row.subject, change);
       if (!taking) return next;
@@ -102,11 +101,14 @@ export function UniversoSO({
     });
 
     // Un caso tomado deja la cola de origen y pasa inmediatamente a Gestión.
-    // El cambio de cola evita que el componente intente reemplazar la ficha por
-    // otro pendiente mientras se sincroniza el registro compartido.
+    // Al remount, CasosAxis inicializa su buscador desde `q`: fijar el RUT exacto
+    // evita que el orden de la cartera abra otro caso (p. ej. Cautín) mientras
+    // sincroniza la escritura. El analista puede limpiar el buscador para volver
+    // a ver toda la cartera sin perder la gestión recién tomada.
     if (taking) {
       setQueue('cartera');
-      window.history.replaceState(null, '', hrefFor({ view: 'universo', mode: 'casos', cola: 'cartera' }));
+      const target = hrefFor({ view: 'universo', mode: 'casos', cola: 'cartera' });
+      window.history.replaceState(null, '', `${target}&q=${encodeURIComponent(row.subject.rut)}`);
     }
 
     void supabase.rpc('aml_uaf_case_patch', {
