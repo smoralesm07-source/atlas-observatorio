@@ -88,6 +88,7 @@ export function CasosAxis({
   const [onlyContact, setOnlyContact] = useState(false);
   const [sort, setSort] = useState<SortField>('score');
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(true);
   const [lote, setLote] = useState<Set<string>>(() => new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
@@ -213,22 +214,30 @@ export function CasosAxis({
     });
   }, [queueRows, query, sector, region, gestion, prioridad, banda, year, onlyMarks, onlyRes, onlyContact, sort, contactByRut]);
 
-  // El caso abierto sigue a la lista: si el filtro lo deja fuera, se abre el
-  // primero de lo que quedó en pantalla en vez de mostrar una ficha huérfana.
-  const active = useMemo(
-    () => rows.find((row) => row.key === activeKey) ?? rows[0] ?? null,
-    [rows, activeKey],
-  );
+  // Nunca sustituimos silenciosamente una entidad abierta por otra. Si una
+  // gestión acaba de ser tomada, puede desaparecer un render de su cola de
+  // origen antes de aparecer en Gestión; durante ese tránsito la ficha queda
+  // vacía unos milisegundos, pero conserva su key y vuelve a la misma entidad.
+  const active = useMemo(() => {
+    if (!detailOpen) return null;
+    if (activeKey) return rows.find((row) => row.key === activeKey) ?? null;
+    return rows[0] ?? null;
+  }, [rows, activeKey, detailOpen]);
 
   useEffect(() => {
-    if (active && active.key !== activeKey) setActiveKey(active.key);
-  }, [active, activeKey]);
+    if (!detailOpen || activeKey || !active) return;
+    setActiveKey(active.key);
+  }, [active, activeKey, detailOpen]);
 
   const loteRows = useMemo(() => queueRows.filter((row) => lote.has(row.key)), [queueRows, lote]);
   const tracked = useMemo(() => Object.values(cases).filter(isTracked), [cases]);
 
-  const changeQueue = (next: Queue) => {
+  const changeQueue = (next: Queue, preserveActive = false) => {
     setQueue(next);
+    if (!preserveActive) {
+      setActiveKey(null);
+      setDetailOpen(true);
+    }
     setBanda('');
     setYear('');
     setOnlyRes(false);
@@ -241,6 +250,7 @@ export function CasosAxis({
      llevar la vista hasta ella parecería no hacer nada. */
   const openCase = (key: string) => {
     setActiveKey(key);
+    setDetailOpen(true);
     if (window.innerWidth <= 1080) {
       window.requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     }
@@ -271,7 +281,10 @@ export function CasosAxis({
     const step = event.key === 'ArrowDown' ? 1 : -1;
     const next = buttons[Math.max(0, Math.min(buttons.length - 1, (current < 0 ? 0 : current + step)))];
     next?.focus();
-    if (next?.dataset.caserow) setActiveKey(next.dataset.caserow);
+    if (next?.dataset.caserow) {
+      setActiveKey(next.dataset.caserow);
+      setDetailOpen(true);
+    }
   };
 
   const exportRows = (records: CaseRecord[], name: string) => {
@@ -597,15 +610,28 @@ export function CasosAxis({
               row={active}
               onPatch={(patch) => {
                 const claim = !isTracked(active.record) && patch.state != null && patch.state !== 'SIN_TRABAJAR';
+                const closesFlow = patch.state === 'SIN_TRABAJAR'
+                  || (
+                    !['DAR_DE_BAJA', 'CANDIDATO', 'DESCARTADO'].includes(active.record.state)
+                    && ['DAR_DE_BAJA', 'CANDIDATO', 'DESCARTADO'].includes(String(patch.state ?? ''))
+                  );
+                if (claim) {
+                  setActiveKey(active.key);
+                  setDetailOpen(true);
+                }
                 onPatch(active, patch);
-                if (patch.state === 'DEVUELTO') {
+                if (closesFlow) {
+                  setDetailOpen(false);
+                  setActiveKey(null);
+                  window.requestAnimationFrame(backToList);
+                } else if (patch.state === 'DEVUELTO') {
                   window.requestAnimationFrame(() => changeQueue(active.kind === 'TERMINO' ? 'termino' : 'potenciales'));
                 } else if (claim) {
-                  window.requestAnimationFrame(() => changeQueue('cartera'));
+                  window.requestAnimationFrame(() => changeQueue('cartera', true));
                 }
               }}
               onEntity={active.subject.entityId ? () => onEntity(active.subject.entityId as string) : undefined}
-              onSector={(value) => { setSector(value); setActiveKey(active.key); }}
+              onSector={(value) => { setSector(value); setActiveKey(active.key); setDetailOpen(true); }}
             />
           ) : (
             <div className="uso-detail-empty">
