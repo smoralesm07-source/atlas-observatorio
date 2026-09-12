@@ -1,0 +1,15 @@
+/* Entidades · señal regulatoria compacta de potencial SO. */
+.entity-mini-tag.potential-so {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-panel-2));
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: .025em;
+}
+
+.entity-candidate-card:hover .entity-mini-tag.potential-so {
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg-panel-2));
+}

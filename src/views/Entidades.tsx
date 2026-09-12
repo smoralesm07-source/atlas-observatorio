@@ -12,6 +12,7 @@ import { IdentidadDigital } from '../components/IdentidadDigital';
 import { PressMatches } from '../components/PressMatches';
 import { normalizePressText, searchPress, type PressMatch } from '../lib/press';
 import { n } from '../lib/format';
+import '../styles/entities-potential-so.css';
 
 const PAGE = 20;
 
@@ -69,6 +70,13 @@ interface EntitySearchItem {
   openable?: boolean;
   is_uaf_observed?: boolean;
   is_sanctioned?: boolean;
+  is_uaf_registered?: boolean;
+  is_potential_screening?: boolean;
+  uaf_universe_status?: string | null;
+  management_bucket?: string | null;
+  potential_uaf_sector?: string | null;
+  uaf_status_basis?: string | null;
+  uaf_status_refreshed_at?: string | null;
   match_source?: string;
   match_type?: string;
   match_score?: number | null;
@@ -760,6 +768,16 @@ function EntityCandidateCard({
             <div className="entity-candidate-title-row">
               <h3>{item.name || item.matched_label || 'Entidad sin nombre'}</h3>
               {item.is_uaf_observed && <span className="entity-mini-tag uaf">UAF</span>}
+              {item.is_potential_screening && item.is_uaf_registered !== true && item.is_uaf_observed !== true && (
+                <span
+                  className="entity-mini-tag potential-so"
+                  title={item.potential_uaf_sector
+                    ? `Potencial SO · sector sugerido: ${item.potential_uaf_sector}`
+                    : item.uaf_status_basis ?? 'Potencial SO según screening SII ↔ UAF'}
+                >
+                  Potencial SO
+                </span>
+              )}
               {item.is_sanctioned && <span className="entity-mini-tag sanction">sanción</span>}
             </div>
             <div className="entity-candidate-meta">
