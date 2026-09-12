@@ -168,8 +168,10 @@ export function CasosAxis({
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const qRut = contactRutKey(query);
     const filtered = queueRows.filter((row) => {
-      if (q && !row.haystack.includes(q)) return false;
+      const rutMatch = qRut.length >= 7 && contactRutKey(row.subject.rut).includes(qRut);
+      if (q && !row.haystack.includes(q) && !rutMatch) return false;
       if (sector && row.subject.sector !== sector) return false;
       if (region && (row.subject.region ?? 'Sin territorio observado') !== region) return false;
       if (gestion === 'MINE' && !row.record.isMine) return false;
