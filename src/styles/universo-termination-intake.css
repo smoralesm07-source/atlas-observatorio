@@ -49,7 +49,8 @@
 
 .uso .uso-termination-case-card,
 .uso .uso-termination-decision-box,
-.uso .uso-termination-context-card {
+.uso .uso-termination-context-card,
+.uso .uso-termination-context-status {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--bg-panel-2);
@@ -183,6 +184,80 @@
   color: var(--ink-4);
   font-size: 8px;
   line-height: 1.45;
+}
+
+.uso .uso-termination-context-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  padding: 13px 16px;
+  border-radius: 13px;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--bg-raised) 72%, var(--bg-panel-2));
+}
+
+.uso .uso-termination-context-status > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.uso .uso-termination-context-status b {
+  color: var(--ink-2);
+  font-size: 10.2px;
+  line-height: 1.35;
+}
+
+.uso .uso-termination-context-status p {
+  margin: 0;
+  color: var(--ink-4);
+  font-size: 8.3px;
+  line-height: 1.45;
+}
+
+.uso .uso-termination-context-status[data-state='loading'] {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+.uso .uso-termination-context-status[data-state='empty'] {
+  border-color: var(--line-soft);
+  opacity: .9;
+}
+
+.uso .uso-termination-context-status[data-state='error'] {
+  border-color: color-mix(in srgb, var(--sig-medium) 30%, var(--line));
+}
+
+.uso .uso-termination-context-spinner,
+.uso .uso-termination-context-empty-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 999px;
+}
+
+.uso .uso-termination-context-spinner {
+  border: 2px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-top-color: var(--accent);
+  animation: uso-context-spin .78s linear infinite;
+}
+
+.uso .uso-termination-context-empty-icon {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-panel-2);
+  color: var(--ink-4);
+  font: 800 10px var(--mono);
+}
+
+@keyframes uso-context-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uso .uso-termination-context-spinner { animation-duration: 1.8s; }
 }
 
 .uso .uso-termination-context-card {
