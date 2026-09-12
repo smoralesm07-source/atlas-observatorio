@@ -7,7 +7,7 @@ import { CohortDrawer, type CohortRequest } from '../components/CohortDrawer';
 import { ErrorBox, Loading, Semantics } from '../components/primitives';
 import { fecha, n } from '../lib/format';
 import {
-  applyPatch, hydrate, isTracked,
+  applyPatch, caseKey, hydrate, isTracked,
   type CaseContact, type CaseKind, type CaseMap, type CaseRecord, type CaseSubject,
 } from '../lib/casework';
 import { sharedRowsToCases, type SharedCaseRow } from '../lib/sharedCasework';
@@ -87,15 +87,24 @@ export function UniversoSO({
     change: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> },
   ) => {
     const claiming = !isTracked(row.record);
+    const taking = claiming && change.state === 'GESTIONANDO';
     setCaseError(null);
-    // Respuesta inmediata en pantalla; el contrato servidor manda al recargar.
-    setCases((current) => applyPatch(current, row.kind, row.subject, change));
 
-    // Al tomar un pendiente deja la cola de origen y pasa a Gestión. Cambiamos
-    // la cola en la misma interacción para conservar la ficha de ESA entidad;
-    // de lo contrario CasosAxis elegiría el primer pendiente restante y parecería
-    // que "Tomar caso" abrió otra entidad (p. ej. Cautín tras Antofagasta).
-    if (claiming && change.state === 'GESTIONANDO') {
+    // Respuesta inmediata en pantalla; si se acaba de tomar el caso, lo ponemos
+    // primero en la cartera optimista. Al remount de la cola Gestión esa misma
+    // entidad será la ficha activa y no el primer pendiente vecino.
+    setCases((current) => {
+      const next = applyPatch(current, row.kind, row.subject, change);
+      if (!taking) return next;
+      const key = caseKey(row.kind, row.subject.rut);
+      const claimed = next[key];
+      return claimed ? { [key]: claimed, ...next } : next;
+    });
+
+    // Un caso tomado deja la cola de origen y pasa inmediatamente a Gestión.
+    // El cambio de cola evita que el componente intente reemplazar la ficha por
+    // otro pendiente mientras se sincroniza el registro compartido.
+    if (taking) {
       setQueue('cartera');
       window.history.replaceState(null, '', hrefFor({ view: 'universo', mode: 'casos', cola: 'cartera' }));
     }
@@ -220,6 +229,7 @@ export function UniversoSO({
         <ErrorBox error={management.error} onRetry={management.reload} />
       ) : (
         <CasosAxis
+          key={`casos-${queue}`}
           pulse={pulse.data}
           potential={potential.data}
           potentialLoading={potential.loading}
