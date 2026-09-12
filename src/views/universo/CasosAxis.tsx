@@ -682,13 +682,15 @@ function QueueDistributionChart({
   total: number;
   onPick: (value: string) => void;
 }) {
-  const selectedItem = selected ? items.find((item) => item.value === selected) : undefined;
-  const leading = items.slice(0, 5);
-  const visible = selectedItem && !leading.some((item) => item.value === selectedItem.value)
-    ? [selectedItem, ...leading.slice(0, 4)]
-    : leading;
-  const peak = Math.max(1, ...visible.map((item) => item.count));
+  const visible = items;
+  const peak = Math.max(1, ...items.map((item) => item.count));
   const denominator = Math.max(1, total);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    activeRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
 
   return (
     <section className="uso-nav-chart" data-kind={kind} aria-label={`Distribución por ${title.toLowerCase()}`}>
@@ -705,7 +707,12 @@ function QueueDistributionChart({
       </header>
 
       {visible.length ? (
-        <div className="uso-nav-chart-bars">
+        <div
+          className="uso-nav-chart-bars"
+          data-scrollable={items.length > 5 ? 'true' : undefined}
+          tabIndex={items.length > 5 ? 0 : undefined}
+          aria-label={`${title}: ${n(items.length)} categorías. Desplázate para verlas todas.`}
+        >
           {visible.map((item) => {
             const rank = Math.max(1, items.findIndex((candidate) => candidate.value === item.value) + 1);
             const share = Math.round((item.count / denominator) * 100);
@@ -716,6 +723,7 @@ function QueueDistributionChart({
                 key={item.value}
                 className="uso-nav-chart-row"
                 data-on={active}
+                ref={active ? activeRef : undefined}
                 aria-pressed={active}
                 title={`${item.label}: ${n(item.count)} casos`}
                 onClick={() => onPick(active ? '' : item.value)}
@@ -740,7 +748,7 @@ function QueueDistributionChart({
       )}
 
       <footer className="uso-nav-chart-foot">
-        <span><b>{n(items.length)}</b> categorías disponibles</span>
+        <span><b>{n(items.length)}</b> categorías disponibles · desplázate para ver todas</span>
         <span>Selecciona una barra para filtrar la tabla</span>
       </footer>
     </section>

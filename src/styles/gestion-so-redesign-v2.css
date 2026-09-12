@@ -177,6 +177,36 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: 151px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 3px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-4) 45%, transparent) transparent;
+}
+
+.uso-mode-casos .uso-nav-chart-bars[data-scrollable='true'] {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+}
+
+.uso-mode-casos .uso-nav-chart-bars:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 48%, transparent);
+  outline-offset: 2px;
+  border-radius: 7px;
+}
+
+.uso-mode-casos .uso-nav-chart-bars::-webkit-scrollbar {
+  width: 6px;
+}
+
+.uso-mode-casos .uso-nav-chart-bars::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-4) 42%, transparent);
+}
+
+.uso-mode-casos .uso-nav-chart-bars::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .uso-mode-casos .uso-nav-chart-row {
