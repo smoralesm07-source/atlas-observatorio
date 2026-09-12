@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useRpc } from '../../lib/rpc';
 import { supabase } from '../../lib/supabase';
-import type { CaseContact, CaseRecord } from '../../lib/casework';
+import type { CaseContact, CasePatch } from '../../lib/casework';
 import { LOCATE_LIMIT, locateGroups, locateQueriesText } from '../../lib/osint';
 import { n, n1 } from '../../lib/format';
 import { CopyButton } from './bits';
@@ -24,33 +24,22 @@ type OpenContact = {
   analyst_note: string | null;
 };
 
-type EnrichmentResult = {
-  job_id?: string;
-  engine_version?: string;
-  sources_scanned?: number;
-  discovery_queries?: number;
-  discovered_urls?: number;
-  findings?: unknown[];
-};
-
-type ContactPreview = { title: string | null; excerpt: string; source_url: string | null; fetched: boolean };
+type EnrichmentResult = { findings?: unknown[] };
 type ContactField = keyof Pick<CaseContact, 'telefono' | 'correo' | 'sitio' | 'direccion'>;
 
-const FIELD_BY_TYPE: Record<string, ContactField | undefined> = {
-  TELEFONO: 'telefono', EMAIL: 'correo', WEB: 'sitio', DIRECCION: 'direccion',
+type Channel = {
+  type: string;
+  field: ContactField;
+  label: string;
+  glyph: string;
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  TELEFONO: 'Teléfono', EMAIL: 'Correo', WEB: 'Sitio web', DIRECCION: 'Domicilio',
-};
-
-const TYPE_GLYPH: Record<string, string> = {
-  TELEFONO: 'T', EMAIL: '@', WEB: 'W', DIRECCION: 'D',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  VERIFICADO: 'Verificado', PROBABLE: 'Probable', NO_VERIFICADO: 'No verificado',
-};
+const CHANNELS: Channel[] = [
+  { type: 'DIRECCION', field: 'direccion', label: 'Dirección', glyph: 'D' },
+  { type: 'EMAIL', field: 'correo', label: 'Correo electrónico', glyph: '@' },
+  { type: 'WEB', field: 'sitio', label: 'Sitio web', glyph: 'W' },
+  { type: 'TELEFONO', field: 'telefono', label: 'Teléfono', glyph: 'T' },
+];
 
 const statusRank = (status: string | null) => status === 'VERIFICADO' ? 3 : status === 'PROBABLE' ? 2 : 1;
 const isReliable = (contact: OpenContact) =>
@@ -62,13 +51,6 @@ const isReliable = (contact: OpenContact) =>
 function host(url: string | null): string {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
-}
-
-function dateLabel(value: string | null): string {
-  if (!value) return 'sin fecha';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'sin fecha';
-  return d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function directHref(contact: OpenContact): string | null {
@@ -84,7 +66,7 @@ export function OpenContactPanel({
   readOnly = false,
 }: {
   row: CaseRow;
-  onPatch: (patch: Partial<Pick<CaseRecord, 'state' | 'priority' | 'note'>> & { contact?: Partial<CaseContact> }) => void;
+  onPatch: (patch: CasePatch) => void;
   readOnly?: boolean;
 }) {
   const contacts = useRpc<OpenContact[]>('obs_uaf_contact_osint', {
@@ -95,7 +77,6 @@ export function OpenContactPanel({
   const [actionId, setActionId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [previews, setPreviews] = useState<Record<string, ContactPreview | 'loading'>>({});
 
   const items = useMemo(
     () => (contacts.data ?? []).slice().sort((a, b) => {
@@ -106,12 +87,12 @@ export function OpenContactPanel({
     [contacts.data],
   );
 
-  const channels = new Set(items.map((item) => item.contact_type)).size;
-  const verified = items.filter((item) => item.verification_status === 'VERIFICADO').length;
-  const recommended = items.find((item) => isReliable(item) && ['TELEFONO', 'EMAIL', 'DIRECCION'].includes(item.contact_type))
-    ?? items.find(isReliable)
-    ?? null;
-  const alternatives = recommended ? items.filter((item) => item.contact_id !== recommended.contact_id) : items;
+  const bestByChannel = useMemo(() => CHANNELS.map((channel) => ({
+    channel,
+    best: items.find((item) => item.contact_type === channel.type && isReliable(item)) ?? null,
+    alternatives: items.filter((item) => item.contact_type === channel.type),
+  })), [items]);
+
   const target = {
     rut: row.subject.rut,
     name: row.subject.name,
@@ -139,65 +120,33 @@ export function OpenContactPanel({
     }
     const result = data as EnrichmentResult | null;
     const found = Array.isArray(result?.findings) ? result.findings.length : 0;
-    setMessage(found > 0
+    setMessage(found
       ? `Búsqueda actualizada · ${n(found)} hallazgo${found === 1 ? '' : 's'} recuperado${found === 1 ? '' : 's'}.`
-      : 'Búsqueda actualizada. No aparecieron nuevos medios de contacto con evidencia suficiente.');
+      : 'Búsqueda actualizada. No aparecieron nuevos datos con evidencia suficiente.');
     contacts.reload();
   }
 
-  function adopt(contact: OpenContact) {
-    const field = FIELD_BY_TYPE[contact.contact_type];
-    if (!field) return;
+  function adopt(contact: OpenContact, field: ContactField) {
     if (!isReliable(contact)) {
-      setMessage('Valida este hallazgo antes de incorporarlo como medio de contacto.');
+      setMessage('Este dato todavía requiere validación antes de poder incorporarlo.');
       return;
     }
     const source = [contact.source_label, contact.source_url].filter(Boolean).join(' · ');
     const currentSource = row.record.contact.fuente.trim();
     const patch: Partial<CaseContact> = { [field]: contact.contact_value };
-    if (source && !currentSource.includes(source)) patch.fuente = currentSource ? `${currentSource} | ${source}` : source;
-    const nextState = row.record.state === 'SIN_TRABAJAR' || row.record.state === 'EN_UBICACION'
-      ? 'CONTACTO_OBTENIDO'
-      : row.record.state;
-    onPatch({ contact: patch, state: nextState });
-    setMessage(`${TYPE_LABEL[contact.contact_type] ?? 'Dato'} incorporado a la gestión.`);
+    if (source && !currentSource.includes(source)) {
+      patch.fuente = currentSource ? `${currentSource} | ${source}` : source;
+    }
+    onPatch({ contact: patch, noContact: false });
+    setMessage('Dato incorporado al campo correspondiente. El estado del caso no cambia hasta que decidas avanzar.');
   }
 
-  async function loadPreview(contact: OpenContact) {
-    const current = previews[contact.contact_id];
-    if (current && current !== 'loading') {
-      setPreviews((all) => {
-        const next = { ...all };
-        delete next[contact.contact_id];
-        return next;
-      });
-      return;
-    }
-    setPreviews((all) => ({ ...all, [contact.contact_id]: 'loading' }));
-    const { data, error } = await supabase.functions.invoke<ContactPreview>('atlas-contact-preview', {
-      body: { contact_id: contact.contact_id },
-    });
-    if (error || !data) {
-      setPreviews((all) => ({
-        ...all,
-        [contact.contact_id]: {
-          title: contact.source_label,
-          excerpt: contact.evidence_note || 'No fue posible leer una muestra de la fuente en este momento.',
-          source_url: contact.source_url,
-          fetched: false,
-        },
-      }));
-      return;
-    }
-    setPreviews((all) => ({ ...all, [contact.contact_id]: data }));
-  }
-
-  async function setStatus(contact: OpenContact, status: 'VERIFICADO' | 'DESCARTADO') {
+  async function validate(contact: OpenContact) {
     setActionId(contact.contact_id);
     setLocalError(null);
     const { error } = await supabase.rpc('aml_candidate_contact_set_status', {
       p_contact_id: contact.contact_id,
-      p_status: status,
+      p_status: 'VERIFICADO',
       p_note: null,
     });
     setActionId(null);
@@ -205,54 +154,20 @@ export function OpenContactPanel({
       setLocalError(error.message);
       return;
     }
-    setMessage(status === 'VERIFICADO' ? 'Hallazgo marcado como verificado.' : 'Hallazgo descartado de esta entidad.');
+    setMessage('Hallazgo marcado como verificado. Ya puede incorporarse a la gestión.');
     contacts.reload();
   }
-
-  const renderActions = (contact: OpenContact, compact = false) => {
-    const field = FIELD_BY_TYPE[contact.contact_type];
-    const href = directHref(contact);
-    const reliable = isReliable(contact);
-    const selected = Boolean(field && row.record.contact[field] === contact.contact_value);
-    const preview = previews[contact.contact_id];
-    return (
-      <>
-        <div className={compact ? 'uso-open-actions uso-open-actions-primary' : 'uso-open-actions'}>
-          <CopyButton text={contact.contact_value} label="Copiar" done="Copiado" small />
-          {field && !readOnly && (
-            <button className="uso-open-use" data-reliable={reliable ? 'true' : undefined} disabled={!reliable || selected} onClick={() => adopt(contact)}>
-              {selected ? 'Seleccionado' : 'Usar contacto'}
-            </button>
-          )}
-          {href && <a href={href} target={contact.contact_type === 'WEB' ? '_blank' : undefined} rel="noreferrer">Abrir</a>}
-          {contact.source_url && <a href={contact.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>}
-          <button onClick={() => void loadPreview(contact)}>{preview ? (preview === 'loading' ? 'Leyendo…' : 'Ocultar evidencia') : 'Ver evidencia'}</button>
-          {contact.verification_status !== 'VERIFICADO' && (
-            <button disabled={actionId === contact.contact_id} onClick={() => void setStatus(contact, 'VERIFICADO')}>Validar</button>
-          )}
-          <button className="uso-open-discard" disabled={actionId === contact.contact_id} onClick={() => void setStatus(contact, 'DESCARTADO')}>Descartar</button>
-        </div>
-        {preview && preview !== 'loading' && (
-          <div className="uso-open-preview-body">
-            {preview.title && <b>{preview.title}</b>}
-            <p>{preview.excerpt}</p>
-            <small>{preview.fetched ? 'Texto leído desde la fuente' : 'Muestra disponible en Atlas / fuente no legible automáticamente'}</small>
-          </div>
-        )}
-      </>
-    );
-  };
 
   return (
     <div className="uso-case-body uso-open-contact">
       <div className="uso-open-head uso-open-head-compact">
         <div>
-          <span className="uso-kicker">1 · Ubicar</span>
-          <h4>Fuentes abiertas</h4>
-          <p>Atlas prioriza el mejor medio observado y deja el resto como evidencia secundaria para no sobrecargar la ficha.</p>
+          <span className="uso-kicker">Precarga opcional</span>
+          <h4>Búsqueda de contacto en red abierta</h4>
+          <p>Atlas propone sólo datos con evidencia suficiente. El analista decide qué incorporar.</p>
         </div>
-        <button className="btn btn-sm btn-primary" onClick={() => void enrich()} disabled={busy}>
-          {busy ? 'Buscando…' : items.length ? 'Actualizar búsqueda' : 'Buscar contacto'}
+        <button className="btn btn-sm btn-primary" onClick={() => void enrich()} disabled={busy || readOnly}>
+          {busy ? 'Buscando…' : items.length ? 'Actualizar búsqueda' : 'Buscar en red abierta'}
         </button>
       </div>
 
@@ -266,67 +181,80 @@ export function OpenContactPanel({
 
       {contacts.loading && !contacts.data ? (
         <div className="uso-open-empty">Leyendo fuentes abiertas…</div>
-      ) : recommended ? (
-        <>
-          <article className="uso-open-recommendation">
-            <div className="uso-open-rec-top">
-              <span className="uso-open-primary-glyph" aria-hidden>{TYPE_GLYPH[recommended.contact_type] ?? '·'}</span>
-              <div className="uso-open-rec-value">
-                <span>Medio recomendado</span>
-                <b>{recommended.contact_value}</b>
-                <em>{TYPE_LABEL[recommended.contact_type] ?? recommended.contact_type} · {recommended.source_label || host(recommended.source_url) || 'fuente abierta'}</em>
-              </div>
-              <div className="uso-open-rec-quality">
-                <b>{recommended.confidence_pct == null ? '—' : `${n1(Number(recommended.confidence_pct))}%`}</b>
-                <span>{STATUS_LABEL[recommended.verification_status ?? 'NO_VERIFICADO'] ?? 'No verificado'}</span>
-              </div>
-            </div>
-            {recommended.evidence_note && <p className="uso-open-rec-note">{recommended.evidence_note}</p>}
-            {renderActions(recommended, true)}
-          </article>
-
-          <div className="uso-open-stats uso-open-stats-inline" aria-label="Cobertura de contacto observado">
-            <span><b>{n(items.length)}</b> hallazgos</span>
-            <span><b>{n(channels)}</b> canales</span>
-            <span><b>{n(verified)}</b> verificados</span>
-            {recommended.last_observed_at && <span>última observación {dateLabel(recommended.last_observed_at)}</span>}
-          </div>
-        </>
-      ) : items.length ? (
-        <div className="uso-open-empty uso-open-empty-review">
-          <b>{n(items.length)} hallazgo{items.length === 1 ? '' : 's'} requieren validación.</b>
-          <span>No se propone un medio principal hasta contar con evidencia suficiente.</span>
-        </div>
       ) : (
-        <div className="uso-open-empty">
-          <b>Sin contacto observado para este RUT.</b>
-          <span>Ejecuta la búsqueda cuando vayas a gestionar el caso. Atlas no rastrea entidades en segundo plano.</span>
+        <div className="uso-open-grid uso-open-channel-grid">
+          {bestByChannel.map(({ channel, best, alternatives }) => {
+            const selected = best && row.record.contact[channel.field] === best.contact_value;
+            return (
+              <article className="uso-open-item uso-open-channel" key={channel.type} data-status={best?.verification_status ?? 'NO_VERIFICADO'}>
+                <span className="uso-open-kind" aria-hidden>{channel.glyph}</span>
+                <div className="uso-open-value">
+                  <span>{channel.label}</span>
+                  {best ? (
+                    <>
+                      <b>{best.contact_value}</b>
+                      <small>
+                        {best.source_label || host(best.source_url) || 'fuente abierta'} · {n1(Number(best.confidence_pct ?? 0))}% confianza
+                      </small>
+                      {best.evidence_note && <em>{best.evidence_note}</em>}
+                    </>
+                  ) : (
+                    <>
+                      <b>Sin propuesta de alta confianza</b>
+                      <small>{alternatives.length ? `${n(alternatives.length)} hallazgo(s) requieren validación` : 'Sin hallazgos observados'}</small>
+                    </>
+                  )}
+                </div>
+                <div className="uso-open-row-actions">
+                  {best && (
+                    <>
+                      <CopyButton text={best.contact_value} label="Copiar" done="Copiado" small />
+                      {!readOnly && (
+                        <button className="uso-open-use" disabled={Boolean(selected)} onClick={() => adopt(best, channel.field)}>
+                          {selected ? 'Seleccionado' : `Usar ${channel.label.toLowerCase()}`}
+                        </button>
+                      )}
+                      {directHref(best) && <a href={directHref(best) as string} target="_blank" rel="noreferrer">Abrir</a>}
+                      {best.source_url && <a href={best.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>}
+                    </>
+                  )}
+                  {!best && alternatives[0] && !readOnly && (
+                    <button disabled={actionId === alternatives[0].contact_id} onClick={() => void validate(alternatives[0])}>
+                      Validar mejor hallazgo
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 
-      {alternatives.length > 0 && (
+      {items.length > 0 && (
         <details className="uso-open-more">
-          <summary>
-            <span>Otros hallazgos y evidencia</span>
-            <b>{n(alternatives.length)}</b>
-          </summary>
+          <summary><span>Todos los hallazgos y evidencia</span><b>{n(items.length)}</b></summary>
           <div className="uso-open-grid">
-            {alternatives.map((contact) => {
-              const confidence = Number(contact.confidence_pct ?? 0);
-              const domain = host(contact.source_url);
+            {items.map((contact) => {
+              const channel = CHANNELS.find((item) => item.type === contact.contact_type);
+              const reliable = isReliable(contact);
               return (
                 <article className="uso-open-item" key={contact.contact_id} data-status={contact.verification_status ?? 'NO_VERIFICADO'}>
-                  <span className="uso-open-kind" aria-hidden>{TYPE_GLYPH[contact.contact_type] ?? '·'}</span>
+                  <span className="uso-open-kind" aria-hidden>{channel?.glyph ?? '·'}</span>
                   <div className="uso-open-value">
-                    <span>{TYPE_LABEL[contact.contact_type] ?? contact.contact_type}</span>
+                    <span>{channel?.label ?? contact.contact_type}</span>
                     <b>{contact.contact_value}</b>
-                    <small>{contact.source_label || domain || 'fuente abierta'} · {dateLabel(contact.last_observed_at ?? contact.updated_at)}</small>
+                    <small>{contact.source_label || host(contact.source_url) || 'fuente abierta'} · {n1(Number(contact.confidence_pct ?? 0))}%</small>
+                    {contact.evidence_note && <em>{contact.evidence_note}</em>}
                   </div>
-                  <div className="uso-open-quality">
-                    <b>{confidence ? `${n1(confidence)}%` : '—'}</b>
-                    <span>{STATUS_LABEL[contact.verification_status ?? 'NO_VERIFICADO'] ?? 'No verificado'}</span>
+                  <div className="uso-open-row-actions">
+                    {reliable && channel && !readOnly && (
+                      <button className="uso-open-use" onClick={() => adopt(contact, channel.field)}>Usar dato</button>
+                    )}
+                    {!reliable && !readOnly && (
+                      <button disabled={actionId === contact.contact_id} onClick={() => void validate(contact)}>Validar</button>
+                    )}
+                    {contact.source_url && <a href={contact.source_url} target="_blank" rel="noreferrer">Fuente ↗</a>}
                   </div>
-                  <div className="uso-open-row-actions">{renderActions(contact)}</div>
                 </article>
               );
             })}
@@ -337,7 +265,7 @@ export function OpenContactPanel({
       <details className="uso-open-manual">
         <summary>Búsqueda manual y fuentes de contraste</summary>
         <div className="uso-open-manual-tools">
-          <p>Úsala sólo si el barrido automático no entrega un medio suficiente.</p>
+          <p>Úsala cuando el barrido automático no entregue un dato suficiente o quieras contrastarlo.</p>
           <CopyButton text={locateQueriesText(target)} label="Copiar consultas" done="Consultas copiadas" small />
         </div>
         <div className="uso-open-manual-groups">
@@ -354,7 +282,7 @@ export function OpenContactPanel({
         <p className="uso-note">{LOCATE_LIMIT}</p>
       </details>
 
-      <p className="uso-open-limit">Los datos provienen de fuentes públicas y deben validarse antes de utilizarlos como canal formal.</p>
+      <p className="uso-open-limit">Los datos provienen de fuentes públicas. Atlas prioriza evidencia, pero la decisión de incorporarlos siempre corresponde al analista.</p>
     </div>
   );
 }
