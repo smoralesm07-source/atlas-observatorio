@@ -1,6 +1,7 @@
 name: Construir y publicar
 # Publicación canónica de Atlas Observatorio.
 # Incluye navegación completa de categorías en Gestión SO.
+# Publica la corrección de identidad entre Entidad 360 y Gestión SO.
 
 on:
   push:
