@@ -9,7 +9,8 @@ export type CaseState =
   | 'PENDIENTE_GESTION'
   | 'DAR_DE_BAJA'
   | 'CANDIDATO'
-  | 'DESCARTADO';
+  | 'DESCARTADO'
+  | 'DEVUELTO'; // compatibilidad transitoria con registros de la versión anterior
 
 export type CasePriority = 'ALTA' | 'MEDIA' | 'BAJA';
 export type CaseWorkflowStep = 1 | 2;
@@ -79,8 +80,10 @@ export const STATES: { key: CaseState; label: string; short: string; tone: strin
   { key: 'DESCARTADO', label: 'Descartado', short: 'Descartado', tone: 'var(--sig-none)', step: 3 },
 ];
 
-export const STATE_META: Record<CaseState, { label: string; short: string; tone: string; step: number }> =
-  Object.fromEntries(STATES.map((s) => [s.key, s])) as Record<CaseState, typeof STATES[number]>;
+export const STATE_META: Record<CaseState, { label: string; short: string; tone: string; step: number }> = {
+  ...(Object.fromEntries(STATES.map((s) => [s.key, s])) as Record<Exclude<CaseState, 'DEVUELTO'>, typeof STATES[number]>),
+  DEVUELTO: { label: 'Devuelto al universo', short: 'Revisado antes', tone: 'var(--ink-3)', step: 0 },
+};
 
 /** Se conserva para consumidores antiguos. La ficha nueva usa dos pasos explícitos. */
 export const STATE_FLOW: CaseState[] = ['GESTIONANDO', 'PENDIENTE_GESTION'];
@@ -329,6 +332,7 @@ export function hydrate(map: CaseMap, kind: CaseKind, subjects: CaseSubject[]): 
 
 export const isTracked = (record: CaseRecord) =>
   record.state !== 'SIN_TRABAJAR'
+  && record.state !== 'DEVUELTO'
   || record.note.trim().length > 0
   || contactFilled(record.contact) > 0;
 
