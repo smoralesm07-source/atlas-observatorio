@@ -34,6 +34,7 @@ import './styles/entity360-light-contrast-v2.css';
 import './styles/typography-floor.css';
 import './styles/gestion-so-table-head.css';
 import './styles/gestion-so-search-focus-fix.css';
+import './styles/gestion-so-redesign-v2.css';
 
 const initialTheme = (() => {
   try {

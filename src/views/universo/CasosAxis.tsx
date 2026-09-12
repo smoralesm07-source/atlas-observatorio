@@ -368,6 +368,27 @@ export function CasosAxis({
         </button>
       </section>
 
+      <section className="uso-navigation-layer" aria-label="Navegación visual de la cola">
+        <QueueDistributionChart
+          kind="sector"
+          eyebrow="Composición de la cola"
+          title="Sector económico"
+          items={options.sectors}
+          selected={sector}
+          total={queueRows.length}
+          onPick={setSector}
+        />
+        <QueueDistributionChart
+          kind="region"
+          eyebrow="Distribución territorial"
+          title="Región"
+          items={options.regions}
+          selected={region}
+          total={queueRows.length}
+          onPick={setRegion}
+        />
+      </section>
+
       {queue === 'potenciales' && potential?.disponible && (
         <ContextPanel
           title="Del universo detectado a la muestra de gestión"
@@ -640,6 +661,89 @@ export function CasosAxis({
         <button className="uso-linkish" onClick={() => onNavigate('#/metodologia')}>Ver la metodología →</button>
       </p>
     </div>
+  );
+}
+
+
+type DistributionItem = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+function QueueDistributionChart({
+  kind, eyebrow, title, items, selected, total, onPick,
+}: {
+  kind: 'sector' | 'region';
+  eyebrow: string;
+  title: string;
+  items: DistributionItem[];
+  selected: string;
+  total: number;
+  onPick: (value: string) => void;
+}) {
+  const selectedItem = selected ? items.find((item) => item.value === selected) : undefined;
+  const leading = items.slice(0, 5);
+  const visible = selectedItem && !leading.some((item) => item.value === selectedItem.value)
+    ? [selectedItem, ...leading.slice(0, 4)]
+    : leading;
+  const peak = Math.max(1, ...visible.map((item) => item.count));
+  const denominator = Math.max(1, total);
+
+  return (
+    <section className="uso-nav-chart" data-kind={kind} aria-label={`Distribución por ${title.toLowerCase()}`}>
+      <header className="uso-nav-chart-head">
+        <div className="uso-nav-chart-title">
+          <span>{eyebrow}</span>
+          <h3>{title}</h3>
+        </div>
+        {selected && (
+          <button className="uso-nav-chart-clear" onClick={() => onPick('')}>
+            Limpiar filtro
+          </button>
+        )}
+      </header>
+
+      {visible.length ? (
+        <div className="uso-nav-chart-bars">
+          {visible.map((item) => {
+            const rank = Math.max(1, items.findIndex((candidate) => candidate.value === item.value) + 1);
+            const share = Math.round((item.count / denominator) * 100);
+            const width = Math.max(item.count > 0 ? 4 : 0, (item.count / peak) * 100);
+            const active = selected === item.value;
+            return (
+              <button
+                key={item.value}
+                className="uso-nav-chart-row"
+                data-on={active}
+                aria-pressed={active}
+                title={`${item.label}: ${n(item.count)} casos`}
+                onClick={() => onPick(active ? '' : item.value)}
+              >
+                <span className="uso-nav-chart-rank">{String(rank).padStart(2, '0')}</span>
+                <span className="uso-nav-chart-main">
+                  <strong>{item.label}</strong>
+                  <i className="uso-nav-chart-track" aria-hidden>
+                    <i style={{ width: `${width}%` }} />
+                  </i>
+                </span>
+                <span className="uso-nav-chart-value">
+                  <b className="num">{n(item.count)}</b>
+                  <em>{share}%</em>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="uso-nav-chart-empty">Sin datos disponibles en esta cola.</div>
+      )}
+
+      <footer className="uso-nav-chart-foot">
+        <span><b>{n(items.length)}</b> categorías disponibles</span>
+        <span>Selecciona una barra para filtrar la tabla</span>
+      </footer>
+    </section>
   );
 }
 
