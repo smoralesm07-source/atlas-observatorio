@@ -1,6 +1,6 @@
 import {
   asContact, caseKey, workflowFromContact,
-  type CaseKind, type CaseMap, type CasePriority, type CaseState,
+  type CaseKind, type CaseMap, type CasePriority, type CaseState, type ManagementResult,
 } from './casework';
 
 export interface SharedCaseRow {
@@ -14,7 +14,7 @@ export interface SharedCaseRow {
   region: string | null;
   commune: string | null;
   motive: string | null;
-  state: Exclude<CaseState, 'SIN_TRABAJAR'>;
+  state: string;
   priority: CasePriority;
   note: string | null;
   contact: Record<string, unknown> | null;
@@ -27,6 +27,38 @@ export interface SharedCaseRow {
   contacted_at: string | null;
   updated_at: string;
   is_mine: boolean;
+}
+
+function normalizeState(kind: CaseKind, state: string): CaseState {
+  switch (state) {
+    case 'GESTIONANDO':
+    case 'PENDIENTE_GESTION':
+    case 'DAR_DE_BAJA':
+    case 'CANDIDATO':
+    case 'DESCARTADO':
+    case 'DEVUELTO':
+      return state;
+    case 'FINALIZADO':
+      return kind === 'TERMINO' ? 'DAR_DE_BAJA' : 'CANDIDATO';
+    case 'SIN_UBICAR':
+      return 'PENDIENTE_GESTION';
+    case 'EN_UBICACION':
+    case 'CONTACTO_OBTENIDO':
+    case 'CONTACTADO':
+      return 'GESTIONANDO';
+    default:
+      return 'SIN_TRABAJAR';
+  }
+}
+
+function legacyWorkflow(state: string): { workflowStep: 1 | 2; managementResult: ManagementResult | null } {
+  if (state === 'CONTACTADO' || state === 'FINALIZADO') {
+    return { workflowStep: 2, managementResult: 'UBICABLE' };
+  }
+  if (state === 'SIN_UBICAR') {
+    return { workflowStep: 2, managementResult: 'NO_UBICABLE' };
+  }
+  return { workflowStep: 1, managementResult: null };
 }
 
 export function sharedRowsToCases(rows: SharedCaseRow[]): CaseMap {
@@ -43,16 +75,19 @@ export function sharedRowsToCases(rows: SharedCaseRow[]): CaseMap {
       motive: row.motive ?? '',
     };
     const workflow = workflowFromContact(row.contact);
+    const legacy = legacyWorkflow(row.state);
+    const hasWorkflowMeta = Boolean(row.contact && Object.prototype.hasOwnProperty.call(row.contact, '_workflow_step'));
+    const state = normalizeState(kind, row.state);
     out[caseKey(kind, row.rut)] = {
       kind,
       rut: row.rut,
       subject,
-      state: row.state,
+      state,
       priority: row.priority,
       note: row.note ?? '',
       contact: asContact(row.contact),
-      workflowStep: workflow.workflowStep,
-      managementResult: workflow.managementResult,
+      workflowStep: hasWorkflowMeta ? workflow.workflowStep : legacy.workflowStep,
+      managementResult: workflow.managementResult ?? legacy.managementResult,
       noContact: workflow.noContact,
       updatedAt: row.updated_at,
       caseId: row.case_id,
