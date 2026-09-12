@@ -1,0 +1,87 @@
+name: Patch Potential SO intake preview
+
+on:
+  push:
+    branches: [feat/potential-intake-preview-20260912]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/potential-intake-preview-20260912
+      - name: Wire preview into CaseFile
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/views/universo/CaseFile.tsx')
+          s = p.read_text()
+
+          old_import = """import { OpenContactPanel } from './OpenContactPanel';
+          import '../../styles/universo-case-flow.css';
+          import '../../styles/universo-case-review.css';"""
+          new_import = """import { OpenContactPanel } from './OpenContactPanel';
+          import { PotentialIntakePreview } from './PotentialIntakePreview';
+          import '../../styles/universo-case-flow.css';
+          import '../../styles/universo-case-review.css';
+          import '../../styles/universo-potential-intake.css';"""
+
+          old_block = """      {!tracked ? (
+                <div className=\"uso-case-body uso-case-start\">
+                  <div className=\"uso-case-start-copy\">
+                    <span className=\"uso-kicker\">Disponible para gestión</span>
+                    <b>{row.kind === 'TERMINO' ? 'Revisar término de giro' : 'Evaluar potencial sujeto obligado'}</b>
+                    <p>{row.subject.motive}</p>
+                  </div>
+                  {row.kind === 'POTENCIAL' && <PotentialContext row={row} compact />}
+                  <button className=\"btn btn-primary\" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
+                    Tomar caso
+                  </button>
+                </div>
+              ) : ("""
+          new_block = """      {!tracked ? (
+                row.kind === 'POTENCIAL' ? (
+                  <PotentialIntakePreview
+                    row={row}
+                    onTake={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}
+                  />
+                ) : (
+                  <div className=\"uso-case-body uso-case-start\">
+                    <div className=\"uso-case-start-copy\">
+                      <span className=\"uso-kicker\">Disponible para gestión</span>
+                      <b>Revisar término de giro</b>
+                      <p>{row.subject.motive}</p>
+                    </div>
+                    <button className=\"btn btn-primary\" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
+                      Tomar caso
+                    </button>
+                  </div>
+                )
+              ) : ("""
+
+          if new_import not in s:
+              if old_import not in s:
+                  raise SystemExit('Import anchor not found')
+              s = s.replace(old_import, new_import)
+
+          if new_block not in s:
+              if old_block not in s:
+                  raise SystemExit('Untracked-case anchor not found')
+              s = s.replace(old_block, new_block)
+
+          p.write_text(s)
+          PY
+      - name: Commit patch when needed
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/views/universo/CaseFile.tsx
+          git commit -m "Wire decision preview into Potential SO cases"
+          git push origin HEAD:feat/potential-intake-preview-20260912
