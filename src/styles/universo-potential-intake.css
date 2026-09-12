@@ -1,0 +1,372 @@
+/* Potencial SO · primera vista orientada a decisión */
+
+.uso .uso-case-two-step > .uso-case-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.uso .uso-case-two-step > .uso-case-head .uso-case-id {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.uso .uso-case-two-step > .uso-case-head .uso-case-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.uso .uso-case-two-step > .uso-case-head .uso-case-id h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+.uso .uso-case-two-step > .uso-case-head .uso-case-id > p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.uso .uso-case-two-step > .uso-case-head .uso-case-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 470px;
+}
+.uso .uso-case-two-step > .uso-case-head .uso-case-tools .btn,
+.uso .uso-case-two-step > .uso-case-head .uso-case-tools .copy-btn {
+  min-height: 34px;
+  margin: 0;
+}
+
+.uso .uso-potential-intake {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px 24px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 52%, transparent), transparent 220px);
+}
+
+.uso .uso-potential-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.uso .uso-potential-sector,
+.uso .uso-potential-decision-box,
+.uso .uso-potential-card,
+.uso .uso-potential-reason,
+.uso .uso-potential-review {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--bg-panel-2);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.uso .uso-potential-sector {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--bg-panel-2)), var(--bg-panel-2) 56%);
+}
+.uso .uso-potential-sector::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+}
+.uso .uso-potential-sector h4 {
+  margin: 6px 0 6px;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+.uso .uso-potential-sector > p {
+  max-width: 74ch;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 10px;
+  line-height: 1.55;
+}
+.uso .uso-potential-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.uso .uso-potential-tags > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--ink-3);
+  font-size: 8px;
+  font-weight: 700;
+}
+.uso .uso-potential-tags > span[data-tone='positive'] {
+  border-color: color-mix(in srgb, var(--present) 36%, var(--line));
+  color: var(--present);
+}
+.uso .uso-potential-tags > span[data-tone='attention'] {
+  border-color: color-mix(in srgb, var(--sig-medium) 42%, var(--line));
+  color: var(--sig-medium);
+}
+
+.uso .uso-potential-decision-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding: 18px;
+}
+.uso .uso-potential-decision-box > b {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.uso .uso-potential-decision-box > p {
+  margin: 0 0 4px;
+  color: var(--ink-3);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.uso .uso-potential-decision-box > .btn {
+  width: 100%;
+  min-height: 38px;
+  margin: 4px 0 0;
+}
+.uso .uso-potential-decision-box > small {
+  color: var(--ink-4);
+  font-size: 7.8px;
+  line-height: 1.4;
+}
+
+.uso .uso-potential-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr);
+  gap: 16px;
+}
+.uso .uso-potential-card {
+  padding: 16px;
+}
+.uso .uso-potential-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+.uso .uso-potential-card-head h5 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 12px;
+}
+.uso .uso-potential-card-status {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--present) 36%, var(--line));
+  border-radius: 999px;
+  color: var(--present);
+  font-size: 8px;
+  font-weight: 750;
+}
+.uso .uso-potential-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.uso .uso-potential-kpis > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg-raised) 76%, transparent);
+}
+.uso .uso-potential-kpis span,
+.uso .uso-potential-activity > span,
+.uso .uso-potential-signal span {
+  display: block;
+  color: var(--ink-4);
+  font-size: 7.6px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.uso .uso-potential-kpis b {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+.uso .uso-potential-activity {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+.uso .uso-potential-activity > b {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-2);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.uso .uso-potential-signal-list {
+  display: grid;
+  gap: 8px;
+}
+.uso .uso-potential-signal {
+  display: grid;
+  gap: 7px;
+  padding: 10px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg-raised) 72%, transparent);
+}
+.uso .uso-potential-signal[data-active='true'] {
+  border-color: color-mix(in srgb, var(--sig-medium) 32%, var(--line));
+}
+.uso .uso-potential-signal > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.uso .uso-potential-signal > div:first-child > span { display: inline; }
+.uso .uso-potential-signal > div:first-child > b {
+  color: var(--ink);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+.uso .uso-potential-signal > small,
+.uso .uso-potential-signal-detail small {
+  color: var(--ink-4);
+  font-size: 7.8px;
+  line-height: 1.4;
+}
+.uso .uso-potential-signal-detail {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.uso .uso-potential-signal-detail strong {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 9px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uso .uso-potential-signal-detail a {
+  width: max-content;
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.uso .uso-potential-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr);
+  gap: 16px;
+}
+.uso .uso-potential-reason,
+.uso .uso-potential-review {
+  padding: 15px 16px;
+}
+.uso .uso-potential-reason > b {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.uso .uso-potential-reason > p {
+  margin: 5px 0 0;
+  color: var(--ink-3);
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+.uso .uso-potential-evidence-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.uso .uso-potential-evidence-strip > span {
+  color: var(--ink-4);
+  font-size: 8px;
+}
+.uso .uso-potential-evidence-strip b {
+  color: var(--ink-2);
+  font: 750 9px var(--mono);
+}
+.uso .uso-potential-review ul {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.uso .uso-potential-review li {
+  position: relative;
+  padding-left: 15px;
+  color: var(--ink-3);
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+.uso .uso-potential-review li::before {
+  content: '·';
+  position: absolute;
+  left: 2px;
+  color: var(--ink-4);
+  font-weight: 900;
+}
+.uso .uso-potential-review li[data-ok='true']::before { color: var(--present); }
+.uso .uso-potential-review li b { color: var(--ink-2); }
+.uso .uso-potential-review > small {
+  display: block;
+  margin-top: 9px;
+  color: var(--ink-4);
+  font-size: 7.7px;
+  line-height: 1.4;
+}
+
+@media (max-width: 1050px) {
+  .uso .uso-case-two-step > .uso-case-head { grid-template-columns: 1fr; gap: 14px; }
+  .uso .uso-case-two-step > .uso-case-head .uso-case-tools { justify-content: flex-start; max-width: none; }
+  .uso .uso-potential-hero,
+  .uso .uso-potential-grid,
+  .uso .uso-potential-context-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .uso .uso-case-two-step > .uso-case-head { padding: 16px 14px; }
+  .uso .uso-case-two-step > .uso-case-head .uso-case-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uso .uso-potential-intake { padding: 14px; gap: 12px; }
+  .uso .uso-potential-sector,
+  .uso .uso-potential-decision-box,
+  .uso .uso-potential-card,
+  .uso .uso-potential-reason,
+  .uso .uso-potential-review { border-radius: 10px; }
+  .uso .uso-potential-sector { padding: 15px; }
+  .uso .uso-potential-sector h4 { font-size: 18px; }
+  .uso .uso-potential-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

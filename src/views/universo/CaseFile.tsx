@@ -10,8 +10,10 @@ import { desde, fecha, n, n1, titleCase } from '../../lib/format';
 import { CopyButton, Field, Pill, SectionHead } from './bits';
 import type { CaseRow } from './model';
 import { OpenContactPanel } from './OpenContactPanel';
+import { PotentialIntakePreview } from './PotentialIntakePreview';
 import '../../styles/universo-case-flow.css';
 import '../../styles/universo-case-review.css';
+import '../../styles/universo-potential-intake.css';
 
 const SII_THIRD_PARTY_URL = 'https://www2.sii.cl/stc/noauthz/';
 const compactRut = (value: string | null | undefined) => String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
@@ -213,17 +215,23 @@ export function CaseFile({
       </header>
 
       {!tracked ? (
-        <div className="uso-case-body uso-case-start">
-          <div className="uso-case-start-copy">
-            <span className="uso-kicker">Disponible para gestión</span>
-            <b>{row.kind === 'TERMINO' ? 'Revisar término de giro' : 'Evaluar potencial sujeto obligado'}</b>
-            <p>{row.subject.motive}</p>
+        row.kind === 'POTENCIAL' ? (
+          <PotentialIntakePreview
+            row={row}
+            onTake={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}
+          />
+        ) : (
+          <div className="uso-case-body uso-case-start">
+            <div className="uso-case-start-copy">
+              <span className="uso-kicker">Disponible para gestión</span>
+              <b>Revisar término de giro</b>
+              <p>{row.subject.motive}</p>
+            </div>
+            <button className="btn btn-primary" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
+              Tomar caso
+            </button>
           </div>
-          {row.kind === 'POTENCIAL' && <PotentialContext row={row} compact />}
-          <button className="btn btn-primary" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
-            Tomar caso
-          </button>
-        </div>
+        )
       ) : (
         <>
           <div className="uso-case-assignment" data-mode={locked ? 'other' : 'mine'}>
