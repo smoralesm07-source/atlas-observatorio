@@ -18,60 +18,32 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           p = Path('src/views/universo/CaseFile.tsx')
           s = p.read_text()
 
-          old_import = """import { OpenContactPanel } from './OpenContactPanel';
-          import '../../styles/universo-case-flow.css';
-          import '../../styles/universo-case-review.css';"""
-          new_import = """import { OpenContactPanel } from './OpenContactPanel';
-          import { PotentialIntakePreview } from './PotentialIntakePreview';
-          import '../../styles/universo-case-flow.css';
-          import '../../styles/universo-case-review.css';
-          import '../../styles/universo-potential-intake.css';"""
+          if "import { PotentialIntakePreview } from './PotentialIntakePreview';" not in s:
+              anchor = "import { OpenContactPanel } from './OpenContactPanel';\n"
+              if anchor not in s:
+                  raise SystemExit('OpenContactPanel import anchor not found')
+              s = s.replace(anchor, anchor + "import { PotentialIntakePreview } from './PotentialIntakePreview';\n", 1)
 
-          old_block = """      {!tracked ? (
-                <div className=\"uso-case-body uso-case-start\">
-                  <div className=\"uso-case-start-copy\">
-                    <span className=\"uso-kicker\">Disponible para gestión</span>
-                    <b>{row.kind === 'TERMINO' ? 'Revisar término de giro' : 'Evaluar potencial sujeto obligado'}</b>
-                    <p>{row.subject.motive}</p>
-                  </div>
-                  {row.kind === 'POTENCIAL' && <PotentialContext row={row} compact />}
-                  <button className=\"btn btn-primary\" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
-                    Tomar caso
-                  </button>
-                </div>
-              ) : ("""
-          new_block = """      {!tracked ? (
-                row.kind === 'POTENCIAL' ? (
-                  <PotentialIntakePreview
-                    row={row}
-                    onTake={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}
-                  />
-                ) : (
-                  <div className=\"uso-case-body uso-case-start\">
-                    <div className=\"uso-case-start-copy\">
-                      <span className=\"uso-kicker\">Disponible para gestión</span>
-                      <b>Revisar término de giro</b>
-                      <p>{row.subject.motive}</p>
-                    </div>
-                    <button className=\"btn btn-primary\" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>
-                      Tomar caso
-                    </button>
-                  </div>
-                )
-              ) : ("""
+          if "import '../../styles/universo-potential-intake.css';" not in s:
+              anchor = "import '../../styles/universo-case-review.css';\n"
+              if anchor not in s:
+                  raise SystemExit('Case review CSS anchor not found')
+              s = s.replace(anchor, anchor + "import '../../styles/universo-potential-intake.css';\n", 1)
 
-          if new_import not in s:
-              if old_import not in s:
-                  raise SystemExit('Import anchor not found')
-              s = s.replace(old_import, new_import)
-
-          if new_block not in s:
-              if old_block not in s:
-                  raise SystemExit('Untracked-case anchor not found')
-              s = s.replace(old_block, new_block)
+          if '<PotentialIntakePreview' not in s:
+              pattern = re.compile(
+                  r'''      \{!tracked \? \(\n        <div className="uso-case-body uso-case-start">.*?        </div>\n      \) : \(''',
+                  re.S,
+              )
+              replacement = '''      {!tracked ? (\n        row.kind === 'POTENCIAL' ? (\n          <PotentialIntakePreview\n            row={row}\n            onTake={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}\n          />\n        ) : (\n          <div className="uso-case-body uso-case-start">\n            <div className="uso-case-start-copy">\n              <span className="uso-kicker">Disponible para gestión</span>\n              <b>Revisar término de giro</b>\n              <p>{row.subject.motive}</p>\n            </div>\n            <button className="btn btn-primary" onClick={() => onPatch({ state: 'GESTIONANDO', workflowStep: 1, managementResult: null, noContact: false })}>\n              Tomar caso\n            </button>\n          </div>\n        )\n      ) : ('''
+              s, count = pattern.subn(replacement, s, count=1)
+              if count != 1:
+                  raise SystemExit(f'Untracked Potential SO block not found: {count}')
 
           p.write_text(s)
           PY
