@@ -5,6 +5,7 @@ import {
   caseSummaryText, contactFilled, isTracked,
 } from '../../lib/casework';
 import { rutForms } from '../../lib/osint';
+import { supabase } from '../../lib/supabase';
 import { desde, fecha, n, n1, titleCase } from '../../lib/format';
 import { CopyButton, Field, Pill, SectionHead } from './bits';
 import type { CaseRow } from './model';
@@ -32,6 +33,19 @@ const TIER_LABEL: Record<string, string> = {
 // exige interacción humana; Atlas sólo facilita el salto y copia el RUT.
 const SII_THIRD_PARTY_URL = 'https://zeus.sii.cl/cvc/stc/stc.html';
 
+const compactRut = (value: string | null | undefined) =>
+  String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
+
+type EntitySearchHit = {
+  entity_id?: string | null;
+  rut?: string | null;
+  openable?: boolean;
+};
+
+type EntitySearchResponse = {
+  items?: EntitySearchHit[];
+};
+
 export function CaseFile({
   row, onPatch, onEntity, onSector,
 }: {
@@ -54,6 +68,7 @@ export function CaseFile({
   const [contactDraft, setContactDraft] = useState<CaseContact>(() => ({ ...record.contact }));
   const [noteDraft, setNoteDraft] = useState(record.note);
   const [siiCopied, setSiiCopied] = useState(false);
+  const [resolving360, setResolving360] = useState(false);
   const locateRef = useRef<HTMLDivElement>(null);
   const registerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLDivElement>(null);
@@ -62,6 +77,7 @@ export function CaseFile({
     setContactDraft({ ...record.contact });
     setNoteDraft(record.note);
     setSiiCopied(false);
+    setResolving360(false);
   }, [row.key, record.contact, record.note]);
 
   const filled = contactFilled(contactDraft);
@@ -89,16 +105,66 @@ export function CaseFile({
     onPatch({ contact: empty });
   };
 
+  const resolveEntity360 = async (): Promise<string | null> => {
+    const embedded = row.subject.entityId ?? row.candidate?.entity_id ?? row.termination?.entity_id ?? null;
+    if (embedded) return embedded;
+
+    const { data, error } = await supabase.rpc('atlas_v2_entity_search_cascade', {
+      p_request: {
+        kind: 'results',
+        search: dotted,
+        limit: 10,
+        offset: 0,
+        region: '',
+        entity_type: '',
+        uaf: false,
+        sanctioned: false,
+        min_sources: 0,
+      },
+    });
+    if (error) throw error;
+
+    const items = ((data as EntitySearchResponse | null)?.items ?? []);
+    const targetRut = compactRut(row.subject.rut);
+    const exact = items.find((item) => item.entity_id && compactRut(item.rut) === targetRut)
+      ?? items.find((item) => item.entity_id && item.openable !== false)
+      ?? items.find((item) => item.entity_id);
+    return exact?.entity_id ?? null;
+  };
+
   const openAtlas360 = () => {
-    // Si la cola ya trae entity_id, abre directamente el expediente 360. Si no,
-    // la búsqueda federada por RUT resuelve primero la identidad canónica.
-    const target = row.subject.entityId
-      ? `#/entidad/${encodeURIComponent(row.subject.entityId)}`
-      : `#/entidades?q=${encodeURIComponent(dotted)}`;
-    const opened = window.open(target, '_blank', 'noopener,noreferrer');
-    // Algunos navegadores corporativos bloquean nuevas pestañas. En ese caso se
-    // conserva la navegación histórica de Atlas cuando ya existe entity_id.
-    if (!opened && row.subject.entityId && onEntity) onEntity();
+    if (resolving360) return;
+    setResolving360(true);
+
+    // La pestaña se crea durante el gesto del usuario para que los navegadores
+    // corporativos no la bloqueen mientras Atlas resuelve el entity_id por RUT.
+    const opened = window.open('about:blank', '_blank');
+    if (opened) opened.opener = null;
+
+    void resolveEntity360()
+      .then((entityId) => {
+        if (!entityId) {
+          const fallback = `#/entidades?q=${encodeURIComponent(dotted)}`;
+          if (opened) opened.location.replace(`${window.location.origin}${window.location.pathname}${fallback}`);
+          else window.location.hash = fallback;
+          return;
+        }
+
+        const target = `#/entidad/${encodeURIComponent(entityId)}`;
+        if (opened) {
+          opened.location.replace(`${window.location.origin}${window.location.pathname}${target}`);
+        } else if (row.subject.entityId && onEntity) {
+          onEntity();
+        } else {
+          window.location.hash = target;
+        }
+      })
+      .catch(() => {
+        const fallback = `#/entidades?q=${encodeURIComponent(dotted)}`;
+        if (opened) opened.location.replace(`${window.location.origin}${window.location.pathname}${fallback}`);
+        else window.location.hash = fallback;
+      })
+      .finally(() => setResolving360(false));
   };
 
   const openSiiThirdParty = () => {
@@ -142,8 +208,8 @@ export function CaseFile({
         <div className="uso-case-tools">
           <CopyButton text={dotted} label="RUT" done="RUT copiado" small title="Copiar el RUT para pegarlo en un formulario" />
           <CopyButton text={caseSummaryText(record)} label="Ficha" done="Ficha copiada" small title="Copiar la ficha de gestión en texto" />
-          <button className="btn btn-sm" onClick={openAtlas360} title={row.subject.entityId ? 'Abrir Ficha 360 en una pestaña nueva' : 'Resolver la entidad por RUT y abrir su Ficha 360'}>
-            {row.subject.entityId ? 'Entidad 360 ↗' : 'Buscar 360 ↗'}
+          <button className="btn btn-sm" onClick={openAtlas360} disabled={resolving360} title="Abrir directamente la Ficha 360 de esta entidad">
+            {resolving360 ? 'Abriendo 360…' : 'Entidad 360 ↗'}
           </button>
         </div>
       </header>
@@ -173,18 +239,14 @@ export function CaseFile({
       <div className="uso-case-review" data-mode={!tracked ? 'preclaim' : 'active'}>
         <div className="uso-case-review-copy">
           <span className="uso-kicker">{tracked ? 'Revisión complementaria' : 'Antes de tomar el caso'}</span>
-          <b>
-            {row.subject.entityId
-              ? 'Revisa la Ficha 360 y contrasta el estado tributario actual.'
-              : 'Resuelve la entidad por RUT y revisa su contexto antes de asignártela.'}
-          </b>
+          <b>Revisa la Ficha 360 y contrasta el estado tributario actual antes de gestionar.</b>
           <em>
-            La consulta SII se abre en el sitio oficial. Atlas copia el RUT para pegarlo allí; la validación del formulario se completa manualmente.
+            Atlas resuelve automáticamente la entidad 360 por RUT cuando todavía no viene vinculada. La consulta SII se abre en el sitio oficial y copia el RUT para pegarlo allí.
           </em>
         </div>
         <div className="uso-case-review-actions">
-          <button className="btn btn-sm uso-case-review-360" onClick={openAtlas360}>
-            {row.subject.entityId ? 'Abrir Ficha 360 ↗' : 'Buscar Ficha 360 ↗'}
+          <button className="btn btn-sm uso-case-review-360" onClick={openAtlas360} disabled={resolving360}>
+            {resolving360 ? 'Abriendo Ficha 360…' : 'Abrir Ficha 360 ↗'}
           </button>
           <button
             className="btn btn-sm uso-case-review-sii"
@@ -392,9 +454,15 @@ function PotentialSnapshot({ row }: { row: CaseRow }) {
       <div className="uso-fields uso-case-snapshot-fields">
         <Field label="Actividad coincidente" wide>{c.matched_activity ? titleCase(c.matched_activity) : '—'}</Field>
         <Field label="Nivel de evidencia">{TIER_LABEL[c.detection_tier ?? ''] ?? (c.detection_tier ? titleCase(c.detection_tier.replace(/_/g, ' ')) : '—')}</Field>
-        <Field label="Materialidad">{n1(c.materiality_score)}</Field>
         <Field label="Estado SII">{c.sii_status === 'ACTIVE_AS_PUBLISHED' ? 'Activo' : titleCase((c.sii_status ?? '—').replace(/_/g, ' '))}</Field>
-        <Field label="Tamaño">{c.sales_band_uf ?? '—'}{c.workers != null && <em className="uso-field-sub">{n(c.workers)} trabajadores</em>}</Field>
+        <Field label="Inicio de actividades">{c.sii_activity_start_date ? fecha(c.sii_activity_start_date) : '—'}</Field>
+        <Field label="Región">{c.region ? titleCase(c.region) : row.subject.region ? titleCase(row.subject.region) : '—'}</Field>
+        <Field label="N° trabajadores">{c.workers != null ? n(c.workers) : '—'}</Field>
+        <Field label="Ventas anuales (UF)">
+          {c.sales_band_uf ?? '—'}
+          {c.sales_band_size && <em className="uso-field-sub">{titleCase(c.sales_band_size)}</em>}
+        </Field>
+        <Field label="Materialidad">{c.materiality_score != null ? n1(c.materiality_score) : '—'}</Field>
       </div>
 
       <div className="uso-chips uso-case-snapshot-chips">
