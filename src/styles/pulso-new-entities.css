@@ -1,5 +1,6 @@
 .pulse-v6 .p6-new-entities-panel {
   position: relative;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -7,6 +8,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   padding: 9px 11px 8px;
   background:
     radial-gradient(360px 130px at 0 0, color-mix(in srgb, var(--accent) 7%, transparent), transparent 72%),
@@ -35,6 +37,7 @@
 .p6-new-refresh {
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
   width: 22px;
   height: 22px;
   padding: 0;
@@ -58,21 +61,10 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: end;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-.p6-new-main > strong {
-  font-family: var(--mono);
-  font-size: 28px;
-  font-weight: 720;
-  line-height: .95;
-  letter-spacing: -.04em;
-  color: var(--accent);
-}
-
-.p6-new-copy {
-  min-width: 0;
-}
+.p6-new-copy { min-width: 0; }
 
 .p6-new-copy > b {
   display: block;
@@ -96,7 +88,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 7px;
 }
 
 .p6-new-metric {
@@ -131,7 +123,8 @@
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  margin-top: 5px;
+  margin-top: auto;
+  padding-top: 5px;
 }
 
 .p6-new-latest {
@@ -158,6 +151,7 @@
   flex: 1;
   align-items: center;
   justify-content: center;
+  min-height: 0;
   color: var(--ink-4);
   font-size: 9px;
   text-align: center;
@@ -165,99 +159,6 @@
 
 .p6-new-state.is-error { color: var(--sig-high); }
 
-/* Novedades prioritarias sube a la franja breve de actualización. */
-.pulse-v6 .p6-row-one > .pulse-updates-compact,
-.pulse-v6 .p6-row-one > .pulse-updates-compact > section {
-  min-height: 156px;
-  height: 156px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-shell {
-  min-height: 0;
-  height: 122px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-item {
-  grid-template-columns: 27px minmax(0, 1fr) 34px;
-  gap: 5px;
-  padding: 3px 6px 3px 5px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-icon {
-  width: 23px;
-  height: 23px;
-  border-radius: 6px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-kicker {
-  margin-bottom: 1px;
-  font-size: 6.5px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-copy strong {
-  font-size: 9.2px;
-  line-height: 1.12;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-copy small {
-  margin-top: 1px;
-  font-size: 7.3px;
-  line-height: 1.1;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-side {
-  gap: 2px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-side time {
-  font-size: 6.7px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-side b {
-  width: 16px;
-  height: 16px;
-  font-size: 13px;
-}
-
-.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-live {
-  display: none;
-}
-
-@media (max-width: 1180px) {
-  .pulse-v6 .p6-row-one > .pulse-updates-compact,
-  .pulse-v6 .p6-row-one > .pulse-updates-compact > section {
-    min-height: 190px;
-    height: 190px;
-  }
-
-  .pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-shell {
-    height: 156px;
-  }
-
-  .pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-item {
-    grid-template-columns: 31px minmax(0, 1fr) 38px;
-    padding: 5px 7px 5px 6px;
-  }
-
-  .pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-icon {
-    width: 27px;
-    height: 27px;
-  }
-}
-
-@media (max-width: 760px) {
-  .p6-new-main > strong { font-size: 25px; }
-  .p6-new-metrics { grid-template-columns: 1fr; }
-  .p6-new-metric { padding: 3px 5px; }
-}
-
-
-/* Directorio operativo de altas */
 .p6-new-count {
   align-self: end;
   padding: 0;
@@ -302,6 +203,165 @@
   font-weight: 680;
 }
 
+/*
+ * Retícula 3 x 2 de Pulso.
+ * Las seis tarjetas principales comparten exactamente el mismo ancho en
+ * escritorio. La primera fila tiene altura propia suficiente para las tres
+ * novedades prioritarias, y todo su contenido queda contenido dentro de la
+ * tarjeta: nunca invade la fila inferior.
+ */
+.pulse-v6 .p6-row-one,
+.pulse-v6 .p6-row-two {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  align-items: stretch;
+}
+
+.pulse-v6 .p6-row-one {
+  grid-auto-rows: 190px;
+}
+
+.pulse-v6 .p6-row-one > .p6-panel,
+.pulse-v6 .p6-row-one > .pulse-updates-compact,
+.pulse-v6 .p6-row-one > .pulse-updates-compact > section {
+  width: 100%;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 190px;
+  box-sizing: border-box;
+}
+
+.pulse-v6 .p6-row-one > .pulse-updates-compact,
+.pulse-v6 .p6-row-one > .pulse-updates-compact > section {
+  overflow: hidden;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-shell {
+  height: calc(100% - 34px) !important;
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-list {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-item {
+  grid-template-columns: 27px minmax(0, 1fr) 38px;
+  gap: 6px;
+  min-height: 0;
+  padding: 4px 7px 4px 6px;
+  overflow: hidden;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-icon {
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-kicker {
+  margin-bottom: 1px;
+  font-size: 7px;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-copy strong {
+  font-size: 9.5px;
+  line-height: 1.12;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-copy small {
+  margin-top: 1px;
+  font-size: 7.6px;
+  line-height: 1.1;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-side {
+  gap: 2px;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-side time {
+  font-size: 6.9px;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-side b {
+  width: 16px;
+  height: 16px;
+  font-size: 13px;
+}
+
+.pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-live {
+  display: none;
+}
+
+.pulse-v6 .p6-row-two {
+  grid-auto-rows: 252px;
+}
+
+.pulse-v6 .p6-row-two > .p6-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100% !important;
+  box-sizing: border-box;
+}
+
+.pulse-v6 .p6-row-two .p6-panel-body {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .pulse-v6 .p6-row-one,
+  .pulse-v6 .p6-row-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+  }
+
+  .pulse-v6 .p6-row-one > .p6-panel,
+  .pulse-v6 .p6-row-one > .pulse-updates-compact,
+  .pulse-v6 .p6-row-one > .pulse-updates-compact > section,
+  .pulse-v6 .p6-row-two > .p6-panel {
+    height: auto !important;
+    min-height: 190px !important;
+    max-height: none;
+  }
+
+  .pulse-v6 .p6-row-one > .pulse-updates-compact {
+    grid-column: 1 / -1;
+    min-height: 210px !important;
+  }
+
+  .pulse-v6 .p6-row-one > .pulse-updates-compact > section {
+    min-height: 210px !important;
+  }
+
+  .pulse-v6 .p6-row-one .pulse-updates-compact .priority-compact-shell {
+    height: 174px !important;
+  }
+}
+
 @media (max-width: 760px) {
+  .pulse-v6 .p6-row-one,
+  .pulse-v6 .p6-row-two {
+    grid-template-columns: 1fr;
+  }
+
+  .pulse-v6 .p6-row-one > .pulse-updates-compact {
+    grid-column: auto;
+  }
+
   .p6-new-count strong { font-size: 25px; }
+  .p6-new-metrics { grid-template-columns: 1fr; }
+  .p6-new-metric { padding: 3px 5px; }
 }
