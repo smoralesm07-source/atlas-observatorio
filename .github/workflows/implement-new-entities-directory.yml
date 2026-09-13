@@ -1,0 +1,38 @@
+name: Implementar directorio de altas recientes
+
+on:
+  push:
+    paths:
+      - '.github/trigger-new-entities-directory.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Integrar directorio en Pulso
+        run: python3 scripts/patch_new_entities_directory.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos y build
+        run: npm run build
+      - name: Confirmar cambio verificado
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/PulsoV6.tsx src/styles/pulso-new-entities.css
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: habilita directorio filtrable de nuevas entidades"
+            git push origin HEAD:main
+          fi
