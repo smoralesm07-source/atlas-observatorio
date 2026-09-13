@@ -286,21 +286,30 @@ function SignalIcon({ kind, critical }: { kind: RadarKind; critical: boolean }) 
 }
 
 function selectHighlights(items: RadarItem[]) {
-  const unique = new Map(items.map((item) => [item.id, item]));
-  const all = Array.from(unique.values()).sort(comparePriority);
-  const press = all.filter((item) => item.kind === 'PRENSA');
-  const sanctions = all.filter((item) => item.kind === 'SANCION').sort(compareRecent);
+  const unique = Array.from(new Map(items.map((item) => [item.id, item])).values());
+  const press = unique.filter((item) => item.kind === 'PRENSA').sort(comparePriority);
+  const sanctions = unique.filter((item) => item.kind === 'SANCION').sort(comparePriority);
   const picked: RadarItem[] = [];
 
-  for (const item of press.slice(0, 2)) picked.push(item);
-  if (sanctions[0]) picked.push(sanctions[0]);
-
-  for (const item of all) {
-    if (picked.length >= 3) break;
+  const pushUnique = (item: RadarItem) => {
     if (!picked.some((current) => current.id === item.id)) picked.push(item);
+  };
+
+  // Primera columna: prensa. Segunda columna: sanciones y, si falta cupo,
+  // las novedades restantes con mayor frescura.
+  for (const item of press.slice(0, 3)) pushUnique(item);
+  for (const item of sanctions.slice(0, 2)) pushUnique(item);
+
+  const remaining = unique
+    .filter((item) => !picked.some((current) => current.id === item.id))
+    .sort(compareFreshness);
+
+  for (const item of remaining) {
+    if (picked.length >= 6) break;
+    pushUnique(item);
   }
 
-  return picked.slice(0, 3);
+  return picked.slice(0, 6);
 }
 
 function comparePriority(a: RadarItem, b: RadarItem) {
@@ -316,8 +325,9 @@ function comparePriority(a: RadarItem, b: RadarItem) {
     || sortableDate(b.event_at) - sortableDate(a.event_at);
 }
 
-function compareRecent(a: RadarItem, b: RadarItem) {
-  return sortableDate(b.event_at) - sortableDate(a.event_at);
+function compareFreshness(a: RadarItem, b: RadarItem) {
+  return sortableDate(b.event_at) - sortableDate(a.event_at)
+    || Number(b.urgency_score ?? 0) - Number(a.urgency_score ?? 0);
 }
 
 function defaultSummary(item: RadarItem) {
