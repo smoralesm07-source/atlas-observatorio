@@ -18,6 +18,7 @@ import '../styles/universo-so-v2.css';
 import '../styles/universo-so-management.css';
 
 const queueForKind = (kind: CaseKind): Queue => (kind === 'TERMINO' ? 'termino' : 'potenciales');
+const rutKey = (value: string | null | undefined) => String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
 
 export function UniversoSOV2({
   onNavigate,
@@ -43,6 +44,36 @@ export function UniversoSOV2({
   useEffect(() => {
     if (management.data) setCases(sharedRowsToCases(management.data));
   }, [management.data]);
+
+  /*
+   * Un enlace «Gestionar» desde Pulso siempre nace desde la condición registral
+   * (p. ej. Término de giro). Si ese RUT ya fue tomado por un analista, dejó de
+   * pertenecer a la cola de pendientes y vive en Gestión. Antes Atlas mantenía
+   * la cola `termino` y luego aplicaba el filtro por RUT: el resultado correcto
+   * era cero filas, aunque el caso sí existía. Resolvemos esa transición aquí,
+   * una vez sincronizada la cartera compartida, preservando el RUT del enlace.
+   */
+  useEffect(() => {
+    if (axis !== 'casos' || queue !== 'termino') return;
+
+    const raw = window.location.hash.split('?')[1] ?? '';
+    const params = new URLSearchParams(raw);
+    const query = params.get('q')?.trim() ?? '';
+    const targetRut = rutKey(query);
+    if (targetRut.length < 7) return;
+
+    const tracked = Object.values(cases).find((record) =>
+      record.kind === 'TERMINO'
+      && isTracked(record)
+      && rutKey(record.rut) === targetRut,
+    );
+    if (!tracked) return;
+
+    setQueue('cartera');
+    const base = hrefFor({ view: 'universo', mode: 'casos', cola: 'cartera' });
+    const separator = base.includes('?') ? '&' : '?';
+    window.history.replaceState(null, '', `${base}${separator}q=${encodeURIComponent(query || tracked.rut)}`);
+  }, [axis, queue, cases]);
 
   const goto = useCallback((mode: UniversoMode, cola?: Queue) => {
     setAxis(mode);
