@@ -8,11 +8,46 @@ import { NovedadesObservatorio } from './pulso/Novedades';
 import { fecha, n, n1, titleCase } from '../lib/format';
 import { hrefFor } from '../lib/router';
 import '../styles/pulso-v6.css';
+import '../styles/pulso-new-entities.css';
 
 const ALL: CohortRequest = { cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' };
 
+interface NewEntitiesDigest {
+  contract: 'ATLAS_OBS_NEW_ENTITIES_V1';
+  window_days: number;
+  reference_date: string | null;
+  staleness_days: number | null;
+  counts: {
+    detected_total: number;
+    res_constitutions: number;
+    sii_activity_starts: number;
+    source_overlap: number;
+    visible_in_atlas: number;
+    outside_visible: number;
+  };
+  sources: {
+    res: { latest_event_date: string | null; cutoff_date: string | null };
+    sii: { latest_event_date: string | null };
+  };
+  latest: {
+    rut: string;
+    name: string;
+    event_date: string;
+    sources: string[];
+    entity_id: string | null;
+    visible_in_atlas: boolean;
+  }[];
+  semantics: string;
+}
+
 export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const { data, error, loading, reload } = useRpc<UafPulse>('obs_uaf_pulse', {});
+  const {
+    data: newEntities,
+    error: newEntitiesError,
+    loading: newEntitiesLoading,
+    reload: reloadNewEntities,
+  } = useRpc<NewEntitiesDigest>('obs_new_entities_digest', {});
   const [directory, setDirectory] = useState<DirectorySelection>({ kind: 'registered', request: ALL });
 
   if (loading && !data) return <Loading label="Leyendo el padrón de sujetos obligados…" />;
@@ -21,7 +56,6 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
 
   const u = data.universe;
   const c = data.crosscuts;
-  const scr = data.screening;
   const pressExtra = c as unknown as {
     prensa_confirmada?: number;
     prensa_alta_confianza?: number;
@@ -88,16 +122,13 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
       </section>
 
       <section className="p6-row-one">
-        <div className="p6-panel">
-          <div className="p6-insight">
-            <strong>{n(scr?.corte?.universo_declarado)}</strong>
-            <b>Universo observable fuera del padrón</b>
-            <p>
-              Equivale a {n1((scr?.corte?.universo_declarado ?? 0) / Math.max(1, u.total))} veces el padrón. La coincidencia por giro orienta conciliación y no prueba obligación de inscripción.
-            </p>
-            <button onClick={() => onNavigate(hrefFor({ view: 'universo', mode: 'casos', cola: 'potenciales' }))}>Abrir potenciales SO →</button>
-          </div>
-        </div>
+        <NewEntitiesInsight
+          data={newEntities}
+          loading={newEntitiesLoading}
+          error={newEntitiesError}
+          onReload={reloadNewEntities}
+          onSources={() => onNavigate(hrefFor({ view: 'fuentes' }))}
+        />
 
         <MiniPanel title="Distribución por estado" action="Universo SO →" onAction={() => onNavigate(hrefFor({ view: 'universo' }))}>
           <div className="p6-status-total">{n(u.total)}</div>
@@ -113,15 +144,7 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
           </div>
         </MiniPanel>
 
-        <MiniPanel title="Distribución territorial" action="Territorio →" onAction={() => onNavigate(hrefFor({ view: 'territorio' }))}>
-          <div className="p6-ranks">
-            {topRegions.map((row) => (
-              <RankRow key={row.region} label={titleCase(row.region)} value={row.sujetos} max={maxRegion}
-                onClick={() => setCohort({ cohort: 'REGION', value: row.region, title: `Sujetos obligados en ${titleCase(row.region)}` })} />
-            ))}
-          </div>
-          <p className="p6-note">{n(u.con_territorio)} sujetos con territorio observado.</p>
-        </MiniPanel>
+        <NovedadesObservatorio compact />
       </section>
 
       <section className="p6-row-two">
@@ -139,7 +162,15 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
           <p className="p6-note">Selecciona un sector para filtrar el directorio.</p>
         </MiniPanel>
 
-        <NovedadesObservatorio compact />
+        <MiniPanel title="Distribución territorial" action="Territorio →" onAction={() => onNavigate(hrefFor({ view: 'territorio' }))}>
+          <div className="p6-ranks">
+            {topRegions.map((row) => (
+              <RankRow key={row.region} label={titleCase(row.region)} value={row.sujetos} max={maxRegion}
+                onClick={() => setCohort({ cohort: 'REGION', value: row.region, title: `Sujetos obligados en ${titleCase(row.region)}` })} />
+            ))}
+          </div>
+          <p className="p6-note">{n(u.con_territorio)} sujetos con territorio observado.</p>
+        </MiniPanel>
       </section>
 
       <section className="p6-crosscuts" aria-label="Cruces de caracterización">
@@ -218,6 +249,93 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
       </Semantics>
     </div>
   );
+}
+
+
+function NewEntitiesInsight({
+  data,
+  loading,
+  error,
+  onReload,
+  onSources,
+}: {
+  data: NewEntitiesDigest | null;
+  loading: boolean;
+  error: string | null;
+  onReload: () => void;
+  onSources: () => void;
+}) {
+  if (loading && !data) {
+    return (
+      <section className="p6-panel p6-new-entities-panel">
+        <div className="p6-new-entities">
+          <div className="p6-new-top"><span>Altas de fuente · 30 días disponibles</span></div>
+          <div className="p6-new-state">Leyendo constituciones RES e inicios SII…</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <section className="p6-panel p6-new-entities-panel">
+        <div className="p6-new-entities">
+          <div className="p6-new-top">
+            <span>Altas de fuente</span>
+            <button className="p6-new-refresh" onClick={onReload} aria-label="Reintentar lectura de nuevas entidades">↻</button>
+          </div>
+          <div className="p6-new-state is-error">No fue posible leer las altas recientes.</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!data) return null;
+
+  const latest = data.latest?.[0] ?? null;
+  const latestText = latest
+    ? `Entre las últimas: ${latest.name} · ${latest.sources.join(' + ')} · ${compactDate(latest.event_date)}`
+    : 'Sin ejemplos recientes disponibles.';
+
+  return (
+    <section className="p6-panel p6-new-entities-panel">
+      <div className="p6-new-entities">
+        <div className="p6-new-top">
+          <span>Altas de fuente · {data.window_days} días disponibles · cobertura {compactDate(data.reference_date)}</span>
+          <button className="p6-new-refresh" onClick={onReload} disabled={loading} aria-label="Actualizar nuevas entidades" title="Actualizar ahora">
+            {loading ? '…' : '↻'}
+          </button>
+        </div>
+
+        <div className="p6-new-main">
+          <strong>{n(data.counts.detected_total)}</strong>
+          <div className="p6-new-copy">
+            <b>Nuevas entidades detectadas</b>
+            <p>Constituciones RES o inicios SII en los 30 días más recientes cubiertos. SII puede corresponder a una empresa ya constituida.</p>
+          </div>
+        </div>
+
+        <div className="p6-new-metrics" aria-label="Composición de altas recientes">
+          <div className="p6-new-metric"><span>Constituidas RES</span><b>{n(data.counts.res_constitutions)}</b></div>
+          <div className="p6-new-metric"><span>Inicio SII</span><b>{n(data.counts.sii_activity_starts)}</b></div>
+          <div className="p6-new-metric"><span>Ya en Atlas</span><b>{n(data.counts.visible_in_atlas)}</b></div>
+        </div>
+
+        <div className="p6-new-foot">
+          <span className="p6-new-latest" title={latestText}>{latestText}</span>
+          <button onClick={onSources}>Fuentes →</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function compactDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
 function Kpi({ label, value, share, foot, tone, onClick }: { label: string; value: number; share: string; foot: string; tone: string; onClick: () => void }) {
