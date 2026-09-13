@@ -98,7 +98,7 @@ export function NewEntitiesDirectory({
   }, [open, onClose]);
 
   const args = useMemo(() => ({
-    p_q: deferredQ || null,
+    p_q: normalizeDirectoryQuery(deferredQ) || null,
     p_source: source,
     p_visibility: visibility,
     p_region: region || null,
@@ -287,6 +287,16 @@ export function NewEntitiesDirectory({
     </div>,
     document.body,
   );
+}
+
+
+function normalizeDirectoryQuery(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (!/^[0-9.kK\-]+$/.test(trimmed)) return trimmed;
+  const cleaned = trimmed.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (cleaned.length < 2) return cleaned;
+  return `${cleaned.slice(0, -1)}-${cleaned.slice(-1)}`;
 }
 
 function displayDate(value: string | null | undefined) {
