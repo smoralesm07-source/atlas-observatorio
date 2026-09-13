@@ -255,3 +255,53 @@
   .p6-new-metrics { grid-template-columns: 1fr; }
   .p6-new-metric { padding: 3px 5px; }
 }
+
+
+/* Directorio operativo de altas */
+.p6-new-count {
+  align-self: end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.p6-new-count strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 720;
+  line-height: .95;
+  letter-spacing: -.04em;
+  color: var(--accent);
+  transition: transform .14s ease, color .14s ease;
+}
+
+.p6-new-count:hover strong,
+.p6-new-count:focus-visible strong {
+  color: color-mix(in srgb, var(--accent) 80%, white);
+  transform: translateY(-1px);
+}
+
+.p6-new-count:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.p6-new-foot-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.p6-new-foot-actions button.is-primary {
+  color: var(--accent);
+  font-weight: 680;
+}
+
+@media (max-width: 760px) {
+  .p6-new-count strong { font-size: 25px; }
+}

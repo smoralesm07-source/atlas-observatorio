@@ -5,6 +5,7 @@ import type { CohortRequest } from '../components/CohortDrawer';
 import { SubjectDirectory, type DirectorySelection } from '../components/SubjectDirectory';
 import { Empty, ErrorBox, Loading, Semantics } from '../components/primitives';
 import { NovedadesObservatorio } from './pulso/Novedades';
+import { NewEntitiesDirectory } from './pulso/NewEntitiesDirectory';
 import { fecha, n, n1, titleCase } from '../lib/format';
 import { hrefFor } from '../lib/router';
 import '../styles/pulso-v6.css';
@@ -49,6 +50,7 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
     reload: reloadNewEntities,
   } = useRpc<NewEntitiesDigest>('obs_new_entities_digest', {});
   const [directory, setDirectory] = useState<DirectorySelection>({ kind: 'registered', request: ALL });
+  const [newEntitiesDirectoryOpen, setNewEntitiesDirectoryOpen] = useState(false);
 
   if (loading && !data) return <Loading label="Leyendo el padrón de sujetos obligados…" />;
   if (error) return <ErrorBox error={error} onRetry={reload} />;
@@ -128,6 +130,7 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
           error={newEntitiesError}
           onReload={reloadNewEntities}
           onSources={() => onNavigate(hrefFor({ view: 'fuentes' }))}
+          onOpenDirectory={() => setNewEntitiesDirectoryOpen(true)}
         />
 
         <MiniPanel title="Distribución por estado" action="Universo SO →" onAction={() => onNavigate(hrefFor({ view: 'universo' }))}>
@@ -247,6 +250,12 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
         <strong>Lectura de Pulso.</strong> Esta pantalla queda deliberadamente como síntesis y puerta de entrada. La reportabilidad sectorial,
         los motivos de revisión, los cambios del stock y los bordes registrales se analizan en Universo SO. Las marcas ordenan revisión y no concluyen incumplimiento ni riesgo LA/FT.
       </Semantics>
+
+      <NewEntitiesDirectory
+        open={newEntitiesDirectoryOpen}
+        onClose={() => setNewEntitiesDirectoryOpen(false)}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }
@@ -258,12 +267,14 @@ function NewEntitiesInsight({
   error,
   onReload,
   onSources,
+  onOpenDirectory,
 }: {
   data: NewEntitiesDigest | null;
   loading: boolean;
   error: string | null;
   onReload: () => void;
   onSources: () => void;
+  onOpenDirectory: () => void;
 }) {
   if (loading && !data) {
     return (
@@ -308,7 +319,14 @@ function NewEntitiesInsight({
         </div>
 
         <div className="p6-new-main">
-          <strong>{n(data.counts.detected_total)}</strong>
+          <button
+            type="button"
+            className="p6-new-count"
+            onClick={onOpenDirectory}
+            aria-label={`Abrir directorio de ${n(data.counts.detected_total)} nuevas entidades detectadas`}
+          >
+            <strong>{n(data.counts.detected_total)}</strong>
+          </button>
           <div className="p6-new-copy">
             <b>Nuevas entidades detectadas</b>
             <p>Constituciones RES o inicios SII en los 30 días más recientes cubiertos. SII puede corresponder a una empresa ya constituida.</p>
@@ -323,7 +341,10 @@ function NewEntitiesInsight({
 
         <div className="p6-new-foot">
           <span className="p6-new-latest" title={latestText}>{latestText}</span>
-          <button onClick={onSources}>Fuentes →</button>
+          <div className="p6-new-foot-actions">
+            <button className="is-primary" onClick={onOpenDirectory}>Abrir directorio →</button>
+            <button onClick={onSources}>Fuentes</button>
+          </div>
         </div>
       </div>
     </section>
