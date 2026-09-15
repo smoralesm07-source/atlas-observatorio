@@ -229,7 +229,13 @@ function scoreArticle(queryText: string, article: PressArticle): number {
   const fields = [article.title, article.summary, ...(article.search_terms ?? [])]
     .map(normalizePressText)
     .filter(Boolean);
-  let best = 0;
+  const required = distinctiveTokens(queryText);
+  const articleTokens = new Set(fields.flatMap((field) => nameTokens(field)));
+  const safeDistinctiveMatch = required.length > 0
+    && required.every((token) => articleTokens.has(token))
+    && (required.length > 1 || (required[0].length >= 5 && !UNSAFE_GROUP_KEYS.has(required[0])));
+
+  let best = safeDistinctiveMatch ? 0.96 : 0;
   fields.forEach((field) => {
     if (field === queryText) best = Math.max(best, 1);
     else if (field.includes(queryText)) best = Math.max(best, 0.98);
