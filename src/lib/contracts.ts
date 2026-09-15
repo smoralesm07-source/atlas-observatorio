@@ -822,6 +822,9 @@ export interface UafPulse {
     sancionados_con_antecedente: number;
     sancionados_5y: number;
     prensa: number;
+    prensa_confirmada?: number;
+    prensa_alta_confianza?: number;
+    prensa_alta_confianza_nueva?: number;
     con_senal: number;
     senales_totales: number;
     antecedentes_sancion: number;

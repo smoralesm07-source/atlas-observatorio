@@ -175,7 +175,7 @@ export function PadronAxisV2({
           <div className="uso2-mark-grid">
             <Mark label="También OSFL" value={cross?.osfl ?? 0} tone="var(--unknown)" hint={`${n1(percent(cross?.osfl ?? 0, u.total))}% del padrón`} onClick={() => selectRegistered({ cohort: 'OSFL', title: 'Sujetos obligados que además son OSFL' })} />
             <Mark label="Con sanción" value={cross?.sancionados_con_antecedente ?? 0} tone="var(--sig-critical)" hint={`${n(cross?.antecedentes_sancion)} antecedentes`} onClick={() => selectRegistered({ cohort: 'SANCIONADO', title: 'Sujetos con antecedente sancionatorio' })} />
-            <Mark label="Con prensa" value={cross?.prensa ?? 0} tone="var(--sig-watch)" hint={`${n(cross?.antecedentes_prensa)} menciones`} onClick={() => selectRegistered({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })} />
+            <Mark label="Vínculo con prensa" value={cross?.prensa ?? 0} tone="var(--sig-watch)" hint={`${n(cross?.prensa_confirmada ?? cross?.prensa ?? 0)} confirmadas · ${n(cross?.prensa_alta_confianza_nueva ?? 0)} nuevas ≥90%`} onClick={() => selectRegistered({ cohort: 'PRENSA', title: 'SO con vínculo de prensa', hint: 'Confirmadas más coincidencias nuevas de alta confianza' })} />
             <Mark label="Sin territorio" value={Math.max(0, u.total - u.con_territorio)} tone="var(--ink-3)" hint="requieren completar ubicación" onClick={() => selectRegistered({ cohort: 'SIN_TERRITORIO', title: 'Sujetos sin territorio observado' })} />
           </div>
           <div className="uso2-questions">

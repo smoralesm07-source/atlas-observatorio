@@ -72,7 +72,7 @@ export function SubjectDirectory({
 
   useEffect(() => setPage(0), [selectionKey]);
 
-  const registered = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v2', {
+  const registered = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v3', {
     p_cohort: request.cohort,
     p_value: request.value ?? null,
     p_q: debouncedQuery.trim() || null,

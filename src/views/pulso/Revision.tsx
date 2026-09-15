@@ -202,10 +202,10 @@ export function LenteRevision({
             onClick={() => onCohort({ cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' })}
           />
           <CrossCard
-            label="Figuran en prensa"
+            label="Vínculo con prensa"
             value={c?.prensa ?? 0}
-            sub={`${n(c?.antecedentes_prensa ?? 0)} menciones · sin enlace en origen`}
-            onClick={() => onCohort({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })}
+            sub={`${n(c?.prensa_confirmada ?? c?.prensa ?? 0)} confirmadas · ${n(c?.prensa_alta_confianza_nueva ?? 0)} nuevas ≥90%`}
+            onClick={() => onCohort({ cohort: 'PRENSA', title: 'SO con vínculo de prensa', hint: 'Confirmadas más coincidencias nuevas de alta confianza' })}
           />
           <CrossCard
             label="Organizaciones sin fines de lucro"
