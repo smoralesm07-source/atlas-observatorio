@@ -126,14 +126,9 @@ Deno.serve(async (req) => {
       }));
 
       users.sort((a: any, b: any) => {
-        const rank = (u: any) => {
-          if (u.request?.status === 'pending' && !u.authorization) return 0;
-          if (u.request?.status === 'rejected' && !u.authorization) return 1;
-          if (u.authorization && !u.authorization.enabled) return 2;
-          if (u.authorization?.enabled) return 3;
-          return 4;
-        };
-        return rank(a) - rank(b) || String(a.email).localeCompare(String(b.email));
+        const aLastAccess = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
+        const bLastAccess = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
+        return bLastAccess - aLastAccess || String(a.email).localeCompare(String(b.email));
       });
 
       return {
