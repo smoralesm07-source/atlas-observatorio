@@ -36,6 +36,8 @@ import './styles/gestion-so-table-head.css';
 import './styles/gestion-so-search-focus-fix.css';
 // Gestión SO visual v2 se carga al final para preservar su jerarquía de diseño.
 import './styles/gestion-so-redesign-v2.css';
+// Corrección final de contención para la ficha de sanciones en paneles angostos/móvil.
+import './styles/sanciones-detail-fit.css';
 
 const initialTheme = (() => {
   try {
