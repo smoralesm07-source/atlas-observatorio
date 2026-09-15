@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { AuthGate, type AtlasRole } from './components/OpenAuthGate';
 import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
+import { useAtlasActivity } from './lib/activity';
 import { useRoute } from './lib/router';
 import { PulsoV6 } from './views/PulsoV6';
 import { UniversoSOV2 } from './views/UniversoSOV2';
@@ -24,6 +25,8 @@ export default function App() {
 
 function Routed({ session, role }: { session: Session; role: AtlasRole }) {
   const [route] = useRoute();
+  useAtlasActivity(session, route);
+
   const go = useCallback((hash: string) => {
     window.location.hash = hash.startsWith('#') ? hash : `#${hash}`;
   }, []);
