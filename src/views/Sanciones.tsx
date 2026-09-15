@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/sanciones.css';
+import '../styles/sanciones-detail-fit.css';
 
 type Filters = {
   q: string;
@@ -36,11 +37,14 @@ type Dashboard = {
 
 type EventItem = {
   event_id: string;
+  representative_event_id?: string | null;
   event_date?: string | null;
   event_year?: number | null;
   regulator?: string | null;
   event_class?: string | null;
   event_kind?: string | null;
+  event_classes?: string[] | null;
+  event_kinds?: string[] | null;
   entity_id?: string | null;
   entity_key?: string | null;
   rut?: string | null;
@@ -52,6 +56,7 @@ type EventItem = {
   amount_clp?: number | string | null;
   amount_uf?: number | string | null;
   reason?: string | null;
+  reasons?: string[] | null;
   resolution_ref?: string | null;
   document_url?: string | null;
   document_quality?: string | null;
@@ -59,9 +64,14 @@ type EventItem = {
   cgr_stage?: string | null;
   cgr_risk_family?: string | null;
   cgr_severity?: string | null;
+  cgr_stages?: string[] | null;
+  cgr_risk_families?: string[] | null;
+  cgr_severities?: string[] | null;
   in_uaf_registry?: boolean | null;
   in_sii_registry?: boolean | null;
   in_osfl_registry?: boolean | null;
+  component_count?: number | string | null;
+  finding_count?: number | string | null;
   priority_score?: number | string | null;
 };
 
@@ -70,13 +80,27 @@ type EventsResponse = {
   items?: EventItem[];
 };
 
-type DetailResponse = { event?: EventItem; related_events?: EventItem[] };
+type DetailResponse = { event?: EventItem; components?: EventItem[]; related_events?: EventItem[] };
+
+type Finding = {
+  key: string;
+  reason: string;
+  kinds: string[];
+  amount_clp: number;
+  amount_uf: number;
+};
 
 const EMPTY: Filters = { q: '', universe: '', regulator: '', region: '', event_kind: '', year: '', amount_band: '' };
 const TYPE_COLORS = ['#ff8a1f', '#19c6df', '#7b78ff', '#f0618f', '#79d59c', '#8fa3b5', '#e3b341'];
 const PAGE_SIZE = 12;
 const NF = new Intl.NumberFormat('es-CL');
 const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+const EVENT_KIND_LABELS: Record<string, string> = {
+  DISCIPLINARY: 'Procedimiento disciplinario',
+  CRIMINAL_REFERRAL: 'Remisión al Ministerio Público',
+  CDE_REFERRAL: 'Remisión al CDE',
+  REPARO: 'Reparo',
+};
 
 function n(v: unknown) { const x = Number(v); return Number.isFinite(x) ? x : 0; }
 function count(v: unknown) { return NF.format(n(v)); }
@@ -89,7 +113,9 @@ function amountCLP(v: unknown, compact = false) {
 function amountUF(v: unknown) { const x = n(v); return x > 0 ? `${x.toLocaleString('es-CL', { maximumFractionDigits: 1 })} UF` : '—'; }
 function formatDate(v?: string | null, long = false) {
   if (!v) return 'Sin fecha';
-  const d = new Date(v); if (Number.isNaN(d.getTime())) return String(v);
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const d = new Date(dateOnly ? `${v}T12:00:00` : v);
+  if (Number.isNaN(d.getTime())) return String(v);
   if (long) return d.toLocaleDateString('es-CL', { year: 'numeric', month: 'short', day: '2-digit' }).replace(/\./g, '');
   return d.toLocaleDateString('es-CL');
 }
@@ -102,6 +128,36 @@ function universeLabel(e: EventItem) {
 }
 function priority(v: unknown): [string, string] {
   const x = n(v); if (x >= 70) return ['Alta', 'high']; if (x >= 45) return ['Media', 'medium']; return ['Contextual', 'low'];
+}
+function eventKindLabel(kind?: string | null) {
+  if (!kind) return 'Sin clasificación';
+  return EVENT_KIND_LABELS[kind] ?? kind.replaceAll('_', ' ');
+}
+function eventKindsOf(e: EventItem) {
+  const values = (e.event_kinds?.length ? e.event_kinds : [e.event_kind]).filter((v): v is string => Boolean(v));
+  return [...new Set(values)];
+}
+function buildFindings(components: EventItem[], fallback: EventItem): Finding[] {
+  const source = components.length ? components : [fallback];
+  const byEvidence = new Map<string, Finding>();
+
+  for (const item of source) {
+    const reason = item.reason || item.document_excerpt || '';
+    if (!reason) continue;
+    const amountClp = n(item.amount_clp);
+    const amountUf = n(item.amount_uf);
+    const key = `${reason}::${amountClp}::${amountUf}`;
+    const kind = item.event_kind || item.event_class || '';
+
+    const existing = byEvidence.get(key);
+    if (existing) {
+      if (kind && !existing.kinds.includes(kind)) existing.kinds.push(kind);
+      continue;
+    }
+    byEvidence.set(key, { key, reason, kinds: kind ? [kind] : [], amount_clp: amountClp, amount_uf: amountUf });
+  }
+
+  return [...byEvidence.values()];
 }
 async function sanctionsRpc<T>(request: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc('atlas_v2_sanctions_query', { p_request: request });
@@ -141,7 +197,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
     if (!selected?.event_id) { setDetail(null); return; }
     sanctionsRpc<DetailResponse>({ kind: 'detail', event_id: selected.event_id })
       .then((d) => { if (!cancelled) setDetail(d); })
-      .catch(() => { if (!cancelled) setDetail({ event: selected, related_events: [] }); });
+      .catch(() => { if (!cancelled) setDetail({ event: selected, components: [], related_events: [] }); });
     return () => { cancelled = true; };
   }, [selected]);
 
@@ -174,7 +230,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
   return <div className="atlas-v2-sanctions san-command-center fade-in" data-sanctions-command-center="v2">
     <header className="san-command-head">
       <div><div className="atlas-v2-eyebrow">RADAR SANCIONATORIO · V2</div><h1>Sanciones</h1><p>Monitoreo consolidado de sanciones sobre universos UAF, SII y OSFL.</p></div>
-      <div className="san-freshness"><span>Última actualización</span><strong>{formatDate(dashboard?.snapshot_id, true)}</strong><small>{count(metrics.document_count)} eventos con documento público</small></div>
+      <div className="san-freshness"><span>Última actualización</span><strong>{formatDate(dashboard?.snapshot_id, true)}</strong><small>{count(metrics.document_count)} sanciones con documento público</small></div>
     </header>
 
     <section className="san-filterbar">
@@ -191,8 +247,8 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
     <div className="san-kpis">
       <Kpi label="Entidades evaluadas" value={count(metrics.unified_universe_count)} detail="Universo SII + UAF + OSFL deduplicado" glyph="▤" tone="cyan" />
       <Kpi label="Entidades sancionadas" value={count(metrics.entity_count)} detail={n(metrics.unified_universe_count) ? `${pct(n(metrics.entity_count) / n(metrics.unified_universe_count) * 100)} del universo` : 'Identidad resuelta'} glyph="◎" tone="orange" />
-      <Kpi label="Eventos sancionatorios" value={count(metrics.event_count)} detail={`${count(metrics.regulatory_event_count)} regulatorios · ${count(metrics.cgr_event_count)} CGR`} glyph="⚖" tone="cyan" />
-      <Kpi label="Monto total multas" value={totalAmounts} detail="UF y CLP se mantienen separados" glyph="◉" tone="orange" />
+      <Kpi label="Sanciones únicas" value={count(metrics.event_count)} detail={`${count(metrics.regulatory_event_count)} regulatorias · ${count(metrics.cgr_event_count)} CGR`} glyph="⚖" tone="cyan" />
+      <Kpi label="Monto total informado" value={totalAmounts} detail="Sin duplicar el mismo monto por medidas de una resolución" glyph="◉" tone="orange" />
       <Kpi label="Supervisores activos" value={count(metrics.supervisor_count)} detail="CMF · UAF · SCJ · CGR" glyph="✦" tone="cyan" />
     </div>
 
@@ -211,7 +267,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
       </section>
 
       <section className="san-panel san-supervisors">
-        <PanelHead title="Sanciones por supervisor" subtitle="Naranja: sanción regulatoria · Cian: acciones CGR / enforcement" />
+        <PanelHead title="Sanciones por supervisor" subtitle="Cada barra cuenta sanciones únicas; una resolución con varias medidas cuenta una vez." />
         <div className="san-supervisor-chart">{supervisors.map((r) => {
           const max = Math.max(1, ...supervisors.map((x) => n(x.event_count))); const total = n(r.event_count); const reg = n(r.regulatory_event_count); const cgr = n(r.cgr_event_count); const regShare = total ? reg / total * 100 : 0;
           return <button key={r.regulator} className={`san-supervisor-column ${filters.regulator === r.regulator ? 'active' : ''}`} onClick={() => patch({ regulator: filters.regulator === r.regulator ? '' : r.regulator })}>
@@ -223,18 +279,18 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
 
     <div className="san-analytics-grid">
       <RegionPanel rows={regions} selected={filters.region} onSelect={(region) => patch({ region: filters.region === region ? '' : region })} />
-      <section className="san-panel san-types"><PanelHead title="Sanciones por tipo" subtitle="Tipología observada en las fuentes públicas." /><div className="san-type-layout">
-        <div className="san-donut" style={{ background: `conic-gradient(${donut.gradient})` }}><span><strong>{count(donut.total)}</strong><small>eventos</small></span></div>
-        <div className="san-type-legend">{typeTop.map((r, i) => <button key={r.event_kind} className={filters.event_kind === r.event_kind ? 'active' : ''} onClick={() => patch({ event_kind: filters.event_kind === r.event_kind ? '' : r.event_kind })}><i style={{ background: TYPE_COLORS[i % TYPE_COLORS.length] }} /><span>{r.event_kind}</span><strong>{count(r.event_count)}</strong></button>)}</div>
+      <section className="san-panel san-types"><PanelHead title="Sanciones por tipo" subtitle="Una sanción puede aportar a más de una tipología si la resolución contiene varias medidas." /><div className="san-type-layout">
+        <div className="san-donut" style={{ background: `conic-gradient(${donut.gradient})` }}><span><strong>{count(donut.total)}</strong><small>clasificaciones</small></span></div>
+        <div className="san-type-legend">{typeTop.map((r, i) => <button key={r.event_kind} className={filters.event_kind === r.event_kind ? 'active' : ''} onClick={() => patch({ event_kind: filters.event_kind === r.event_kind ? '' : r.event_kind })}><i style={{ background: TYPE_COLORS[i % TYPE_COLORS.length] }} /><span title={r.event_kind}>{eventKindLabel(r.event_kind)}</span><strong>{count(r.event_count)}</strong></button>)}</div>
       </div></section>
       <EvolutionPanel rows={years} selected={filters.year} onSelect={(year) => patch({ year: filters.year === String(year) ? '' : String(year) })} />
     </div>
 
     <div className="san-workspace">
       <section className="san-panel san-events">
-        <PanelHead title={`Casos prioritarios · ${count(page.total)}`} subtitle="Orden explicable para revisión: recurrencia, condición UAF/OSFL, monto, evidencia e identidad." />
+        <PanelHead title={`Casos prioritarios · ${count(page.total)}`} subtitle="Una fila por sanción/resolución y entidad. Las medidas asociadas se consolidan en la ficha." />
         <div className="san-table-head"><span>Entidad / RUT</span><span>Universo</span><span>Supervisor</span><span>Región</span><span>Tipo de sanción</span><span>Monto</span><span>Fecha</span><span>Prioridad</span><span /></div>
-        <div className="san-event-rows">{items.length ? items.map((item) => <EventRow key={item.event_id} item={item} onClick={() => setSelected(item)} active={selected?.event_id === item.event_id} />) : <div className="san-empty">Sin eventos para los filtros seleccionados.</div>}</div>
+        <div className="san-event-rows">{items.length ? items.map((item) => <EventRow key={item.event_id} item={item} onClick={() => setSelected(item)} active={selected?.event_id === item.event_id} />) : <div className="san-empty">Sin sanciones para los filtros seleccionados.</div>}</div>
         <div className="san-pager"><span>{n(page.total) ? `${count(n(page.offset) + 1)}–${count(Math.min(n(page.total), n(page.offset) + n(page.limit || PAGE_SIZE)))} de ${count(page.total)}` : '0 resultados'}</span><div><button disabled={n(page.offset) <= 0} onClick={() => setOffset(Math.max(0, n(page.offset) - n(page.limit || PAGE_SIZE)))}>← Anterior</button><button disabled={n(page.offset) + n(page.limit || PAGE_SIZE) >= n(page.total)} onClick={() => setOffset(n(page.offset) + n(page.limit || PAGE_SIZE))}>Siguiente →</button></div></div>
       </section>
       <DetailCard detail={detail} fallback={selected} onNavigate={onNavigate} />
@@ -245,7 +301,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
 }
 
 function Select({ label, value, options, onChange, all = 'Todos' }: { label: string; value: string; options: Array<string | { value: string; label: string }>; onChange: (v: string) => void; all?: string }) {
-  return <label className="san-filter"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}><option value="">{all}</option>{options.map((o) => typeof o === 'string' ? <option key={o} value={o}>{o}</option> : <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
+  return <label className="san-filter"><span>{label}</span><select value={value} onChange={(e) => onChange(e.target.value)}><option value="">{all}</option>{options.map((o) => typeof o === 'string' ? <option key={o} value={o}>{eventKindLabel(o) === o.replaceAll('_', ' ') ? o : eventKindLabel(o)}</option> : <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
 }
 function Kpi({ label, value, detail, glyph, tone }: { label: string; value: string; detail: string; glyph: string; tone: string }) {
   return <article className="san-kpi"><span className={`san-icon ${tone}`}>{glyph}</span><div><small>{label}</small><strong title={value}>{value}</strong><span>{detail}</span></div></article>;
@@ -255,9 +311,9 @@ function PanelHead({ title, subtitle }: { title: string; subtitle: string }) { r
 function RegionPanel({ rows, selected, onSelect }: { rows: Dashboard['regions']; selected: string; onSelect: (r: string) => void }) {
   const all = rows ?? []; const top = all.slice(0, 10); const total = all.reduce((s, r) => s + n(r.event_count), 0) || 1; const max = Math.max(1, ...top.map((r) => n(r.event_count)));
   const sum = (limit: number) => all.slice(0, limit).reduce((s, r) => s + n(r.event_count), 0); const leader = all[0];
-  return <section className="san-panel san-regions"><PanelHead title="Sanciones por región" subtitle="Ranking interactivo y concentración territorial sobre eventos con región informada." /><div className="san-region-layout">
+  return <section className="san-panel san-regions"><PanelHead title="Sanciones por región" subtitle="Ranking sobre sanciones únicas con región informada." /><div className="san-region-layout">
     <div className="san-region-list">{top.map((r, i) => <button key={r.region} className={selected === r.region ? 'active' : ''} onClick={() => onSelect(r.region)}><b>{i + 1}</b><span>{r.region}</span><i><em style={{ width: `${Math.max(2, n(r.event_count) / max * 100)}%` }} /></i><strong>{count(r.event_count)}</strong><span className="san-region-share">{pct(n(r.event_count) / total * 100)}</span></button>)}</div>
-    <aside className="san-region-metrics"><RegionMetric label="Región líder" value={leader ? pct(n(leader.event_count) / total * 100) : '—'} detail={leader?.region ?? 'Sin datos'} orange /><RegionMetric label="Concentración Top 3" value={pct(sum(3) / total * 100)} detail={`${count(sum(3))} eventos`} /><RegionMetric label="Concentración Top 5" value={pct(sum(5) / total * 100)} detail={`${count(sum(5))} eventos`} /><RegionMetric label="Cobertura territorial" value={count(all.length)} detail="regiones con eventos informados" /></aside>
+    <aside className="san-region-metrics"><RegionMetric label="Región líder" value={leader ? pct(n(leader.event_count) / total * 100) : '—'} detail={leader?.region ?? 'Sin datos'} orange /><RegionMetric label="Concentración Top 3" value={pct(sum(3) / total * 100)} detail={`${count(sum(3))} sanciones`} /><RegionMetric label="Concentración Top 5" value={pct(sum(5) / total * 100)} detail={`${count(sum(5))} sanciones`} /><RegionMetric label="Cobertura territorial" value={count(all.length)} detail="regiones con sanciones informadas" /></aside>
   </div></section>;
 }
 function RegionMetric({ label, value, detail, orange = false }: { label: string; value: string; detail: string; orange?: boolean }) { return <article className={`san-region-metric ${orange ? 'orange' : ''}`}><small>{label}</small><strong>{value}</strong><span>{detail}</span></article>; }
@@ -265,28 +321,50 @@ function RegionMetric({ label, value, detail, orange = false }: { label: string;
 function EvolutionPanel({ rows, selected, onSelect }: { rows: Dashboard['years']; selected: string; onSelect: (y: string | number) => void }) {
   const data = rows ?? []; const width = 520, height = 210, pad = 28, innerW = width - pad * 2, innerH = height - 54; const max = Math.max(1, ...data.map((r) => n(r.event_count)));
   const points = data.map((r, i) => { const x = pad + (data.length <= 1 ? innerW / 2 : i * innerW / (data.length - 1)); const y = 12 + innerH - n(r.entity_count) / max * innerH; return { x, y }; });
-  return <section className="san-panel san-evolution"><PanelHead title="Evolución de sanciones" subtitle="Barras: eventos · línea: entidades identificadas" /><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolución anual de sanciones">
+  return <section className="san-panel san-evolution"><PanelHead title="Evolución de sanciones" subtitle="Barras: sanciones únicas · línea: entidades identificadas" /><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolución anual de sanciones">
     {data.map((r, i) => { const x = pad + (data.length <= 1 ? innerW / 2 : i * innerW / (data.length - 1)); const barW = Math.max(8, innerW / Math.max(12, data.length) * .58); const y = 12 + innerH - n(r.event_count) / max * innerH; return <g key={String(r.event_year)} onClick={() => onSelect(r.event_year)} className={selected === String(r.event_year) ? 'active' : ''}><rect x={x - barW / 2} y={y} width={barW} height={12 + innerH - y} rx="3" className="san-year-bar" /><text x={x} y={height - 13} textAnchor="middle" className="san-chart-label">{r.event_year}</text></g>; })}
     {points.length > 1 && <polyline points={points.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" className="san-year-line" />}{points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" className="san-year-point" />)}
   </svg></section>;
 }
 
 function EventRow({ item, onClick, active }: { item: EventItem; onClick: () => void; active: boolean }) {
-  const [label, cls] = priority(item.priority_score); const amount = n(item.amount_clp) > 0 ? amountCLP(item.amount_clp, true) : n(item.amount_uf) > 0 ? amountUF(item.amount_uf) : '—';
-  return <button className={`san-event ${active ? 'active' : ''}`} onClick={onClick}><span className="san-cell entity"><strong>{item.canonical_name || item.source_entity_name || 'Entidad no resuelta'}</strong><small>{item.rut || item.identity_status || 'Sin RUT'}</small></span><span className="san-cell">{universeLabel(item)}</span><span className="san-cell">{item.regulator || '—'}</span><span className="san-cell">{item.region || 'Sin región'}</span><span className="san-cell type">{item.event_kind || item.event_class || 'Sin clasificación'}</span><span className="san-cell">{amount}</span><span className="san-cell">{formatDate(item.event_date)}</span><span className={`san-priority ${cls}`}><i /><b>{label} {count(item.priority_score)}</b></span><span className="san-row-arrow">›</span></button>;
+  const [label, cls] = priority(item.priority_score);
+  const amount = n(item.amount_clp) > 0 ? amountCLP(item.amount_clp, true) : n(item.amount_uf) > 0 ? amountUF(item.amount_uf) : '—';
+  const kinds = eventKindsOf(item);
+  const typeText = kinds.length > 1 ? `${eventKindLabel(kinds[0])} +${kinds.length - 1}` : eventKindLabel(kinds[0]);
+  const typeTitle = kinds.map(eventKindLabel).join(' · ');
+  return <button className={`san-event ${active ? 'active' : ''}`} onClick={onClick}><span className="san-cell entity"><strong>{item.canonical_name || item.source_entity_name || 'Entidad no resuelta'}</strong><small>{item.rut || item.identity_status || 'Sin RUT'}</small></span><span className="san-cell">{universeLabel(item)}</span><span className="san-cell">{item.regulator || '—'}</span><span className="san-cell">{item.region || 'Sin región'}</span><span className="san-cell type" title={typeTitle}>{typeText}</span><span className="san-cell">{amount}</span><span className="san-cell">{formatDate(item.event_date)}</span><span className={`san-priority ${cls}`}><i /><b>{label} {count(item.priority_score)}</b></span><span className="san-row-arrow">›</span></button>;
 }
 
 function DetailCard({ detail, fallback, onNavigate }: { detail: DetailResponse | null; fallback: EventItem | null; onNavigate: (hash: string) => void }) {
-  const e = detail?.event ?? fallback; if (!e) return <aside className="san-detail san-detail-empty"><span className="san-icon cyan">⚖</span><h2>Ficha de sanción</h2><p>Selecciona un evento de la tabla para revisar identidad, resolución, motivo, recurrencia y documento público.</p></aside>;
-  const related = detail?.related_events ?? []; const [label, cls] = priority(e.priority_score);
+  const e = detail?.event ?? fallback; if (!e) return <aside className="san-detail san-detail-empty"><span className="san-icon cyan">⚖</span><h2>Ficha de sanción</h2><p>Selecciona una sanción de la tabla para revisar identidad, resolución, medidas, monto, evidencia y documento público.</p></aside>;
+  const related = detail?.related_events ?? [];
+  const components = detail?.components ?? [];
+  const kinds = eventKindsOf(e);
+  const findings = buildFindings(components, e);
+  const [label, cls] = priority(e.priority_score);
   const entityRoute = e.entity_id ? `#/entidad/${encodeURIComponent(e.entity_id)}` : e.rut ? `#/entidades?q=${encodeURIComponent(e.rut)}` : '';
-  return <aside className="san-detail"><div className="san-detail-head"><div><small>{e.event_id || 'EVENTO'}</small><h2>Ficha de sanción</h2></div><span className={`san-priority ${cls}`}><i /><b>{label} · prioridad analítica</b></span></div>
+  const cgrMeta = [...new Set([...(e.cgr_stages ?? []), ...(e.cgr_risk_families ?? []), ...(e.cgr_severities ?? []), e.cgr_stage, e.cgr_risk_family, e.cgr_severity].filter((v): v is string => Boolean(v)))];
+
+  return <aside className="san-detail"><div className="san-detail-head"><div><small>{e.event_id || 'SANCIÓN'}</small><h2>Ficha de sanción</h2></div><span className={`san-priority ${cls}`}><i /><b>{label} · prioridad analítica</b></span></div>
     <div className="san-detail-entity"><span className="san-icon cyan">▦</span><div><strong>{e.canonical_name || e.source_entity_name || 'Entidad no resuelta'}</strong><span>{e.rut || e.identity_status || 'Sin RUT resuelto'}</span></div></div>
-    <div className="san-detail-grid"><DetailField label="Universo" value={universeLabel(e)} /><DetailField label="Supervisor" value={e.regulator} /><DetailField label="Región" value={e.region} /><DetailField label="Fecha" value={formatDate(e.event_date, true)} /><DetailField label="Tipo" value={e.event_kind || e.event_class} /><DetailField label="Resolución" value={e.resolution_ref} /></div>
-    <section className="san-detail-block"><h3>Monto informado</h3><div className="san-amount-pair"><strong>{amountCLP(e.amount_clp)}</strong><span>CLP</span><strong>{amountUF(e.amount_uf)}</strong><span>UF</span></div><small>Las monedas permanecen separadas; Atlas no realiza conversión implícita.</small></section>
-    <section className="san-detail-block"><h3>Motivo / evidencia actual</h3><p>{e.reason || e.document_excerpt || 'La fuente no publica un resumen textual adicional.'}</p></section>
-    {e.event_class === 'CGR_ENFORCEMENT_ACTION' && <div className="san-cgr-note"><strong>CGR · enforcement</strong><span>{[e.cgr_stage, e.cgr_risk_family, e.cgr_severity].filter(Boolean).join(' · ') || 'Acción administrativa contextual'}</span><small>No se interpreta automáticamente como sanción regulatoria firme.</small></div>}
-    <section className="san-detail-block"><h3>Recurrencia observada · {count(related.length)} eventos</h3><div className="san-timeline">{related.slice(0, 6).map((r) => <div key={r.event_id}><i /><time>{formatDate(r.event_date)}</time><span>{r.regulator || ''} · {r.event_kind || r.event_class || ''}</span></div>)}</div></section>
+    <div className="san-detail-grid"><DetailField label="Universo" value={universeLabel(e)} /><DetailField label="Supervisor" value={e.regulator} /><DetailField label="Región" value={e.region} /><DetailField label="Fecha" value={formatDate(e.event_date, true)} /><DetailField label="Medidas" value={kinds.length ? `${count(kinds.length)} ${kinds.length === 1 ? 'tipo' : 'tipos'}` : 'Sin clasificación'} /><DetailField label="Resolución" value={e.resolution_ref} /></div>
+
+    <section className="san-detail-block"><h3>Tipos / medidas comprendidas</h3><div className="san-kind-chips">{kinds.length ? kinds.map((kind) => <span className="san-kind-chip" key={kind}>{eventKindLabel(kind)}</span>) : <span className="san-kind-chip muted">Sin clasificación</span>}</div></section>
+
+    <section className="san-detail-block"><h3>Monto total del caso</h3><div className="san-amount-pair"><strong>{amountCLP(e.amount_clp)}</strong><span>CLP</span><strong>{amountUF(e.amount_uf)}</strong><span>UF</span></div><small>Se totalizan hechos monetarios distintos. Si el mismo monto aparece repetido por varias medidas de una resolución, se contabiliza una sola vez. UF y CLP permanecen separados.</small></section>
+
+    <section className="san-detail-block"><h3>Hechos / evidencia · {count(findings.length)}</h3>
+      {findings.length ? <div className="san-finding-list">{findings.map((finding, i) => {
+        const findingAmount = [finding.amount_clp > 0 ? amountCLP(finding.amount_clp) : '', finding.amount_uf > 0 ? amountUF(finding.amount_uf) : ''].filter(Boolean).join(' · ');
+        return <details key={finding.key} open={i === 0}><summary><span><b>Hallazgo {i + 1}</b><small>{finding.kinds.length ? finding.kinds.map(eventKindLabel).join(' · ') : 'Evidencia de la resolución'}</small></span>{findingAmount && <strong>{findingAmount}</strong>}</summary><p>{finding.reason}</p></details>;
+      })}</div> : <p>{e.reason || e.document_excerpt || 'La fuente no publica un resumen textual adicional.'}</p>}
+    </section>
+
+    {e.event_classes?.includes('CGR_ENFORCEMENT_ACTION') || e.event_class === 'CGR_ENFORCEMENT_ACTION' ? <div className="san-cgr-note"><strong>CGR · enforcement</strong><span>{cgrMeta.join(' · ') || 'Acción administrativa contextual'}</span><small>No se interpreta automáticamente como sanción regulatoria firme.</small></div> : null}
+
+    <section className="san-detail-block"><h3>Historial observado · {count(related.length)} sanciones</h3><div className="san-timeline">{related.slice(0, 6).map((r) => <div key={r.event_id}><i /><time>{formatDate(r.event_date)}</time><span>{r.regulator || ''} · {eventKindsOf(r).map(eventKindLabel).join(' · ') || eventKindLabel(r.event_class)}</span></div>)}</div></section>
+
     <section className="san-document"><h3>Documento de la sanción</h3>{e.document_url ? <a href={e.document_url} target="_blank" rel="noopener noreferrer"><span className="san-icon orange">↗</span><div><strong>{e.resolution_ref || 'Documento público'}</strong><span>{e.document_quality || 'Evidencia pública registrada'}</span></div></a> : <p>Sin enlace documental publicado.</p>}</section>
     {entityRoute && <button className="san-detail-cta" onClick={() => onNavigate(entityRoute)}>Abrir detalle en Entidad 360 →</button>}
     <small className="san-guardrail">Prioridad analítica ≠ probabilidad LA/FT. Una sanción administrativa no equivale por sí sola a evidencia LA/FT.</small>
