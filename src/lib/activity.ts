@@ -170,13 +170,18 @@ export async function markAtlasOffline(session: Session) {
   if (!email) return;
 
   const now = new Date().toISOString();
-  await supabase.from('atlas_user_presence').upsert({
-    user_id: session.user.id,
-    email,
-    current_route: 'offline',
-    current_section: 'Sesión cerrada',
-    last_seen_at: now,
-    is_online: false,
-    signed_out_at: now,
-  }, { onConflict: 'user_id' });
+  await supabase
+    .from('atlas_user_presence')
+    .update({
+      last_seen_at: now,
+      is_online: false,
+      signed_out_at: now,
+    })
+    .eq('user_id', session.user.id);
+
+  try {
+    sessionStorage.removeItem(sessionStartKey(session.user.id));
+  } catch {
+    // La próxima sesión seguirá funcionando aunque sessionStorage no esté disponible.
+  }
 }
