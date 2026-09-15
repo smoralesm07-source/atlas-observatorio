@@ -118,8 +118,10 @@
 .entity360-bars { position: relative; height: 174px; padding: 10px 6px 0; }
 .entity360-bars-grid { position: absolute; inset: 10px 7px 27px; background: repeating-linear-gradient(to top, rgba(76, 118, 153, .11) 0 1px, transparent 1px 34px); border-bottom: 1px solid rgba(77, 132, 179, .25); }
 .entity360-bars-items { position: relative; z-index: 1; display: flex; align-items: end; gap: 12px; height: 100%; }
-.entity360-bar-col { flex: 1 1 0; display: grid; grid-template-rows: 15px minmax(0, 1fr) 20px; align-self: stretch; min-width: 24px; text-align: center; }
-.entity360-bar-value { color: var(--ink-4); font-family: var(--mono); font-size: 8.5px; }
+.entity360-bar-col { flex: 1 1 0; display: grid; grid-template-rows: 31px minmax(0, 1fr) 20px; align-self: stretch; min-width: 24px; text-align: center; }
+.entity360-bar-value { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: flex-end; padding: 0 2px 3px; color: var(--ink-3); font-family: var(--mono); font-size: 8.5px; line-height: 1.05; }
+.entity360-bar-value > span { display: block; max-width: 100%; white-space: nowrap; }
+.entity360-bar-value > small { display: block; margin-top: 1px; color: var(--ink-4); font-family: var(--font); font-size: 7px; font-weight: 700; letter-spacing: .06em; line-height: 1; }
 .entity360-bar-wrap { display: flex; align-items: end; justify-content: center; height: 100%; }
 .entity360-bar-wrap i { display: block; width: min(32px, 74%); min-height: 7px; border-radius: 3px 3px 1px 1px; background: linear-gradient(to top, #127de3, #45aaff); box-shadow: 0 -3px 12px rgba(33, 150, 255, .10); }
 .entity360-bar-year { padding-top: 4px; color: var(--ink-3); font-size: 9px; }
