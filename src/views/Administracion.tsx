@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { ATLAS_ONLINE_WINDOW_MS } from '../lib/activity';
 import { supabase } from '../lib/supabase';
 import '../styles/administracion.css';
 
@@ -45,11 +46,35 @@ type AuditEntry = {
   created_at: string;
 };
 
+type PresenceEntry = {
+  user_id: string;
+  email: string;
+  current_route: string;
+  current_section: string;
+  last_seen_at: string;
+  first_seen_at: string;
+  is_online: boolean;
+  signed_out_at: string | null;
+};
+
+type ActivityEntry = {
+  id: string;
+  user_id: string;
+  email: string;
+  route: string;
+  section: string;
+  operation: 'session_start' | 'page_view';
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 type Snapshot = {
   ok: true;
   actor: { id: string; email: string; role: 'admin' };
   users: AdminUser[];
   audit: AuditEntry[];
+  presence: PresenceEntry[];
+  activity: ActivityEntry[];
 };
 
 type ApiFailure = { ok: false; error?: { code?: string; message?: string } };
@@ -77,6 +102,32 @@ function formatDate(value: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+}
+
+function relativeTime(value: string | null, now = Date.now()) {
+  if (!value) return 'sin registro';
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return 'sin registro';
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+  if (seconds < 45) return 'ahora';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} d`;
+}
+
+function presenceIsOnline(presence: PresenceEntry | undefined, now: number) {
+  if (!presence?.is_online) return false;
+  const lastSeen = new Date(presence.last_seen_at).getTime();
+  return Number.isFinite(lastSeen) && now - lastSeen <= ATLAS_ONLINE_WINDOW_MS;
+}
+
+function disconnectedSince(presence: PresenceEntry) {
+  return !presence.is_online && presence.signed_out_at
+    ? presence.signed_out_at
+    : presence.last_seen_at;
 }
 
 function providerLabel(provider: string | null) {
@@ -116,12 +167,14 @@ export function Administracion({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [pendingRoles, setPendingRoles] = useState<Record<string, Role>>({});
+  const [now, setNow] = useState(Date.now());
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
       setSnapshot(await invokeAdmin({ action: 'list' }));
+      setNow(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -133,7 +186,21 @@ export function Administracion({ session }: { session: Session }) {
     void load();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+      void invokeAdmin({ action: 'list' })
+        .then((next) => setSnapshot(next))
+        .catch(() => {
+          // Conserva el último estado válido; el botón Actualizar permite reintentar con error visible.
+        });
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const users = snapshot?.users ?? [];
+  const presence = snapshot?.presence ?? [];
+  const activity = snapshot?.activity ?? [];
   const pending = users.filter((user) => !user.authorization && user.request?.status === 'pending');
   const rejected = users.filter((user) => !user.authorization && user.request?.status === 'rejected');
   const enabled = users.filter((user) => user.authorization?.enabled);
@@ -146,12 +213,46 @@ export function Administracion({ session }: { session: Session }) {
     return users.filter((user) => user.email.toLocaleLowerCase('es-CL').includes(q));
   }, [query, users]);
 
+  const presenceByUser = useMemo(
+    () => new Map(presence.map((entry) => [entry.user_id, entry])),
+    [presence],
+  );
+
+  const recentSectionsByUser = useMemo(() => {
+    const result = new Map<string, string[]>();
+    for (const entry of activity) {
+      if (entry.operation !== 'page_view') continue;
+      const current = result.get(entry.user_id) ?? [];
+      if (!current.includes(entry.section) && current.length < 4) {
+        current.push(entry.section);
+        result.set(entry.user_id, current);
+      }
+    }
+    return result;
+  }, [activity]);
+
+  const activityUsers = useMemo(() => {
+    return [...enabled].sort((left, right) => {
+      const leftPresence = presenceByUser.get(left.id);
+      const rightPresence = presenceByUser.get(right.id);
+      const onlineDiff = Number(presenceIsOnline(rightPresence, now)) - Number(presenceIsOnline(leftPresence, now));
+      if (onlineDiff !== 0) return onlineDiff;
+      const leftTime = leftPresence ? new Date(leftPresence.last_seen_at).getTime() : 0;
+      const rightTime = rightPresence ? new Date(rightPresence.last_seen_at).getTime() : 0;
+      return rightTime - leftTime || left.email.localeCompare(right.email);
+    });
+  }, [enabled, presenceByUser, now]);
+
+  const connectedCount = presence.filter((entry) => presenceIsOnline(entry, now)).length;
+  const disconnectedCount = presence.filter((entry) => !presenceIsOnline(entry, now)).length;
+
   async function mutate(user: AdminUser, body: Record<string, unknown>, confirmMessage?: string) {
     if (confirmMessage && !window.confirm(confirmMessage)) return;
     setBusyId(user.id);
     setError(null);
     try {
       setSnapshot(await invokeAdmin({ ...body, target_user_id: user.id }));
+      setNow(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -192,6 +293,96 @@ export function Administracion({ session }: { session: Session }) {
         <Metric label="Pendientes" value={pending.length} foot="Verificados, aún sin habilitar" emphasis={pending.length > 0} />
         <Metric label="Administradores" value={admins.length} foot="Con facultad para gestionar accesos" />
       </div>
+
+      <section className="admin-section admin-activity-section" aria-labelledby="activity-title">
+        <div className="admin-section-head admin-activity-head">
+          <div>
+            <h2 id="activity-title">Actividad de usuarios</h2>
+            <p>Presencia del piloto y recorrido reciente por secciones. “Conectado” exige una señal recibida durante los últimos 3 minutos.</p>
+          </div>
+          <div className="admin-presence-summary" aria-label="Resumen de presencia">
+            <span><strong>{connectedCount}</strong> conectados</span>
+            <span><strong>{disconnectedCount}</strong> desconectados</span>
+            <span><strong>{presence.length}</strong> con seguimiento</span>
+          </div>
+        </div>
+
+        <div className="admin-table-wrap">
+          <table className="admin-table admin-activity-table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Presencia</th>
+                <th>Sección actual / última</th>
+                <th>Última señal</th>
+                <th>Recorrido reciente</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activityUsers.map((user) => {
+                const userPresence = presenceByUser.get(user.id);
+                const isOnline = presenceIsOnline(userPresence, now);
+                const recentSections = recentSectionsByUser.get(user.id) ?? [];
+                return (
+                  <tr key={`activity-${user.id}`}>
+                    <td>
+                      <div className="admin-user-cell">
+                        <div className="admin-user-avatar admin-user-avatar-small">{user.email.slice(0, 1).toUpperCase()}</div>
+                        <div>
+                          <strong>{user.email || 'Cuenta sin correo'}</strong>
+                          <span className="admin-activity-role">{user.authorization ? ROLE_LABEL[user.authorization.role] : 'Sin rol'}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {userPresence ? (
+                        isOnline ? (
+                          <span className="admin-status admin-status-active"><i /> Conectado</span>
+                        ) : (
+                          <span className="admin-status admin-status-off"><i /> Desconectado · {relativeTime(disconnectedSince(userPresence), now)}</span>
+                        )
+                      ) : (
+                        <span className="admin-status admin-status-off"><i /> Sin actividad registrada</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="admin-current-section">
+                        <strong>{userPresence?.current_section ?? 'Sin registro'}</strong>
+                        {userPresence && <span>{isOnline ? 'En esta sección ahora' : 'Última sección observada'}</span>}
+                      </div>
+                    </td>
+                    <td>
+                      {userPresence ? (
+                        <time className="admin-last-signal" title={formatDate(userPresence.last_seen_at)}>
+                          {relativeTime(userPresence.last_seen_at, now)}
+                        </time>
+                      ) : (
+                        <span className="admin-muted">Sin señal</span>
+                      )}
+                    </td>
+                    <td>
+                      {recentSections.length > 0 ? (
+                        <div className="admin-route-chips">
+                          {recentSections.map((section) => <span key={`${user.id}-${section}`}>{section}</span>)}
+                        </div>
+                      ) : (
+                        <span className="admin-muted">Sin recorrido registrado</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {!loading && activityUsers.length === 0 && (
+                <tr><td colSpan={5} className="admin-table-empty">La actividad comenzará a aparecer cuando los usuarios vuelvan a navegar por ATLAS.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="admin-table-foot">
+          <span>La vista se actualiza automáticamente cada minuto.</span>
+          <span>No se registran búsquedas, RUT ni entidades consultadas.</span>
+        </div>
+      </section>
 
       <section className="admin-section" aria-labelledby="pending-title">
         <div className="admin-section-head">
