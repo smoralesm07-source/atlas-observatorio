@@ -104,7 +104,7 @@ function OpenSignIn() {
   async function sendCode() {
     const value = normalizedEmail(email);
     if (!validInstitutionalEmail(value)) {
-      setError(`El acceso por correo está habilitado únicamente para cuentas @${EMAIL_FALLBACK_DOMAIN}.`);
+      setError('El acceso por correo está habilitado únicamente para cuentas institucionales autorizadas.');
       return;
     }
     if (resendCooldown > 0) return;
@@ -164,13 +164,13 @@ function OpenSignIn() {
   return (
     <Card title="ATLAS Observatorio" eyebrow="Monitor de fuentes abiertas">
       <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-        Ingresa con tu correo institucional UAF. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
+        Ingresa con tu correo institucional. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
       </p>
 
       {error && <div className="note note-warn" role="alert">{error}</div>}
 
       <div style={{ display: 'grid', gap: 9 }}>
-        <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Correo institucional UAF</label>
+        <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Correo institucional</label>
         <input
           type="email"
           value={email}
@@ -179,7 +179,7 @@ function OpenSignIn() {
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !locked && !codeSent && resendCooldown === 0) void sendCode();
           }}
-          placeholder={`nombre@${EMAIL_FALLBACK_DOMAIN}`}
+          placeholder="nombre@institucion.cl"
           autoComplete="email"
           style={inputStyle}
         />
