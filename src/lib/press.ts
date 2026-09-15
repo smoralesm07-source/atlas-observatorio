@@ -103,6 +103,10 @@ const GENERIC_ENTITY_TOKENS = new Set([
   'administradora', 'administracion', 'gestion', 'asesoria', 'asesorias',
   'consultora', 'consultores', 'fundacion', 'corporacion', 'asociacion',
   'organizacion', 'instituto',
+  // Descriptores de actividad frecuentes que no individualizan por sí solos
+  // una razón social. Evita atribuir noticias sólo porque el texto habla de
+  // "proyectos inmobiliarios" u otros conceptos sectoriales genéricos.
+  'proyecto', 'proyectos', 'inmobiliario', 'inmobiliaria', 'inmobiliarios', 'inmobiliarias',
 ]);
 
 const GROUP_DESCRIPTOR_TOKENS = new Set([
@@ -149,9 +153,10 @@ function nameTokens(value: string): string[] {
 
 function distinctiveTokens(value: string): string[] {
   const tokens = nameTokens(value);
-  const distinctive = tokens.filter((token) => token.length >= 3 && !GENERIC_ENTITY_TOKENS.has(token));
-  if (distinctive.length) return distinctive;
-  return tokens.filter((token) => token.length >= 4);
+  // Si una razón social está compuesta sólo por descriptores genéricos, no
+  // inventamos un token distintivo. En ese caso la evidencia automática debe
+  // venir de RUT, alias curado o de la frase societaria contigua en el artículo.
+  return tokens.filter((token) => token.length >= 3 && !GENERIC_ENTITY_TOKENS.has(token));
 }
 
 function containsAllTokens(candidate: string, required: string[]): boolean {
@@ -163,6 +168,28 @@ function containsAllTokens(candidate: string, required: string[]): boolean {
 function hasLegalForm(queryText: string): boolean {
   return /(^| )(spa|ltda|limitada|eirl)( |$)/.test(queryText)
     || /(^| )s a( |$)/.test(queryText);
+}
+
+function corporateCoreName(queryText: string): string {
+  return queryText
+    .replace(/\s+(spa|ltda|limitada|eirl|sa|s a)$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function articleIdentityFields(article: PressArticle): string[] {
+  // search_terms sirve para descubrir una noticia, no para demostrar que la
+  // entidad fue mencionada. La identidad se acredita sólo con texto publicado.
+  return [article.title, article.summary]
+    .map(normalizePressText)
+    .filter(Boolean);
+}
+
+function articleHasIdentityPhrase(queryText: string, article: PressArticle): boolean {
+  const fields = articleIdentityFields(article);
+  const core = corporateCoreName(queryText);
+  if (!core || core.length < 6) return fields.some((field) => field.includes(queryText));
+  return fields.some((field) => field.includes(queryText) || field.includes(core));
 }
 
 function articleHasCorporateContext(article: PressArticle): boolean {
@@ -245,36 +272,35 @@ function tokenPrefixMatch(query: string, candidate: string): boolean {
 }
 
 function scoreArticle(queryText: string, article: PressArticle): number {
-  const fields = [article.title, article.summary, ...(article.search_terms ?? [])]
-    .map(normalizePressText)
-    .filter(Boolean);
+  const fields = articleIdentityFields(article);
   const required = distinctiveTokens(queryText);
   const titleTokens = new Set(nameTokens(normalizePressText(article.title)));
+  const exactIdentityPhrase = articleHasIdentityPhrase(queryText, article);
   const safeDistinctiveMatch = hasLegalForm(queryText)
     && required.length > 0
     && required.every((token) => titleTokens.has(token))
     && articleHasCorporateContext(article);
 
-  let best = safeDistinctiveMatch ? 0.96 : 0;
+  // Una razón social puramente descriptiva (p. ej. "Administradora de
+  // Proyectos Inmobiliarios S.A.") sólo puede entrar por frase societaria
+  // contigua. Nunca por suma de palabras dispersas ni por search_terms.
+  let best = exactIdentityPhrase ? 0.99 : safeDistinctiveMatch ? 0.96 : 0;
   fields.forEach((field) => {
     if (field === queryText) best = Math.max(best, 1);
-    else if (field.includes(queryText)) best = Math.max(best, 0.98);
-    else if (tokenPrefixMatch(queryText, field)) best = Math.max(best, 0.90);
+    else if (field.includes(queryText)) best = Math.max(best, 0.99);
+    else if (required.length > 0 && tokenPrefixMatch(queryText, field)) best = Math.max(best, 0.90);
   });
   return best;
 }
 
 function articleSupportsIdentity(queryText: string, article: PressArticle): boolean {
-  const fields = [article.title, article.summary, ...(article.search_terms ?? [])]
-    .map(normalizePressText)
-    .filter(Boolean);
+  const fields = articleIdentityFields(article);
   if (!fields.length) return false;
-  if (fields.some((field) => field.includes(queryText))) return true;
+  if (articleHasIdentityPhrase(queryText, article)) return true;
 
   const required = distinctiveTokens(queryText);
   if (!required.length) return false;
-  const articleTokens = new Set(fields.flatMap((field) => nameTokens(field)));
-  return required.every((token) => articleTokens.has(token));
+  return fields.some((field) => containsAllTokens(field, required));
 }
 
 function articleHasExactToken(token: string, article: PressArticle): boolean {
@@ -345,7 +371,11 @@ function indexedMatch(
   articleLimit = 6,
 ): PressMatch {
   const mentions = mentionsByEntity.get(entity.press_entity_id) ?? [];
-  const strongEntityIdentity = kind === 'RUT' || kind === 'EXACTA';
+  // Un nombre exacto pero completamente descriptivo no puede saltarse la
+  // evidencia textual del artículo. RUT sí es autoritativo; un nombre exacto
+  // sólo recibe ese privilegio si conserva al menos un token distintivo.
+  const strongEntityIdentity = kind === 'RUT'
+    || (kind === 'EXACTA' && distinctiveTokens(queryText).length > 0);
   const articles = mentions
     .reduce<PressArticleMatch[]>((rows, mention) => {
       const article = articleById.get(mention.article_id);
@@ -357,8 +387,9 @@ function indexedMatch(
 
       // Segunda barrera: una coincidencia parcial de nombre sólo puede aportar
       // noticias que vuelvan a mostrar evidencia textual de la identidad. Para
-      // RUT/nombre exacto se permite además una mención ya gobernada por Radar
-      // Prensa, evitando perder artículos cuyo resumen no repite la razón social.
+      // RUT/nombre exacto distintivo se permite además una mención ya gobernada
+      // por Radar Prensa, evitando perder artículos cuyo resumen no repite la
+      // razón social.
       if (!textualEvidence && !(strongEntityIdentity && governedMention)) return rows;
 
       rows.push({
