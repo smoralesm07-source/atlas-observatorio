@@ -100,6 +100,19 @@ Deno.serve(async (req) => {
         .limit(50);
       if (auditError) throw new AppError('LIST_AUDIT_FAILED', auditError.message, 500);
 
+      const { data: presence, error: presenceError } = await admin
+        .from('atlas_user_presence')
+        .select('user_id, email, current_route, current_section, last_seen_at, first_seen_at, is_online, signed_out_at')
+        .order('last_seen_at', { ascending: false });
+      if (presenceError) throw new AppError('LIST_PRESENCE_FAILED', presenceError.message, 500);
+
+      const { data: activity, error: activityError } = await admin
+        .from('atlas_user_activity')
+        .select('id, user_id, email, route, section, operation, metadata, created_at')
+        .order('created_at', { ascending: false })
+        .limit(250);
+      if (activityError) throw new AppError('LIST_ACTIVITY_FAILED', activityError.message, 500);
+
       const byId = new Map((allowed ?? []).map((row: any) => [row.user_id, row]));
       const requestById = new Map((requests ?? []).map((row: any) => [row.user_id, row]));
       const users = authUsers.map((user: any) => ({
@@ -128,6 +141,8 @@ Deno.serve(async (req) => {
         actor: { id: actor.id, email: actor.email ?? actorAccess.email, role: actorAccess.role },
         users,
         audit: audit ?? [],
+        presence: presence ?? [],
+        activity: activity ?? [],
       };
     }
 
