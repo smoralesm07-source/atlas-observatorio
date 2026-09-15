@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase, configError, redirectTo } from '../lib/supabase';
+import { supabase, configError } from '../lib/supabase';
 import { Mark } from './Mark';
 
 export type AtlasRole = 'viewer' | 'analyst' | 'admin';
@@ -68,19 +68,6 @@ function identityLabel(session: Session) {
   return primary === 'azure' || providers.includes('azure')
     ? 'Microsoft Entra'
     : 'Correo institucional verificado';
-}
-
-async function signInWithMicrosoft() {
-  return (
-    await supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        scopes: 'email',
-        redirectTo,
-        queryParams: { prompt: 'select_account' },
-      },
-    })
-  ).error;
 }
 
 export function AuthGate({ children }: { children: (session: Session, role: AtlasRole) => ReactNode }) {
@@ -383,7 +370,6 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
 }
 
 function SignIn() {
-  const [microsoftBusy, setMicrosoftBusy] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [email, setEmail] = useState('');
@@ -399,16 +385,6 @@ function SignIn() {
     }, 1000);
     return () => window.clearTimeout(timer);
   }, [resendCooldown]);
-
-  async function signInMicrosoft() {
-    setMicrosoftBusy(true);
-    setError(null);
-    const err = await signInWithMicrosoft();
-    if (err) {
-      setError(err.message);
-      setMicrosoftBusy(false);
-    }
-  }
 
   async function sendCode() {
     const value = normalizedEmail(email);
@@ -474,26 +450,15 @@ function SignIn() {
     setVerifyBusy(false);
   }
 
-  const locked = microsoftBusy || emailBusy || verifyBusy;
+  const locked = emailBusy || verifyBusy;
 
   return (
     <Card title="ATLAS Observatorio" eyebrow="Monitor de fuentes abiertas">
       <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-        Autentica tu identidad. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
+        Ingresa con tu correo institucional UAF. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
       </p>
 
       {error && <div className="note note-warn" role="alert">{error}</div>}
-
-      <button className="btn btn-primary" style={{ width: '100%' }} onClick={signInMicrosoft} disabled={locked}>
-        <MicrosoftLogo />
-        {microsoftBusy ? 'Redirigiendo…' : 'Ingresar con Microsoft'}
-      </button>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0', color: 'var(--ink-3)', fontSize: 11 }}>
-        <span style={{ height: 1, background: 'var(--line)', flex: 1 }} />
-        <span>o</span>
-        <span style={{ height: 1, background: 'var(--line)', flex: 1 }} />
-      </div>
 
       <div style={{ display: 'grid', gap: 9 }}>
         <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Correo institucional UAF</label>
@@ -579,7 +544,7 @@ function SignIn() {
       </div>
 
       <div className="note" style={{ marginTop: 12 }}>
-        Microsoft y el correo institucional solo acreditan identidad. El acceso a los datos sigue sujeto a la autorización de ATLAS.
+        El correo institucional acredita tu identidad. El acceso a los datos sigue sujeto a la autorización de ATLAS.
       </div>
     </Card>
   );
@@ -631,13 +596,3 @@ function Card({ title, eyebrow, children }: { title: string; eyebrow?: string; c
   );
 }
 
-function MicrosoftLogo() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 23 23" aria-hidden style={{ flexShrink: 0 }}>
-      <path fill="#f25022" d="M1 1h10v10H1z" />
-      <path fill="#7fba00" d="M12 1h10v10H12z" />
-      <path fill="#00a4ef" d="M1 12h10v10H1z" />
-      <path fill="#ffb900" d="M12 12h10v10H12z" />
-    </svg>
-  );
-}
