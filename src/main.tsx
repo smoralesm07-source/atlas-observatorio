@@ -4,6 +4,7 @@ import App from './App';
 import './lib/caseDrawerEnhancer';
 import './lib/territoryDirectoryEnhancer';
 import './lib/typographyFloorEnhancer';
+import './lib/sectorContextEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
@@ -39,6 +40,8 @@ import './styles/gestion-so-search-focus-fix.css';
 import './styles/gestion-so-redesign-v2.css';
 // Corrección final de contención para la ficha de sanciones en paneles angostos/móvil.
 import './styles/sanciones-detail-fit.css';
+// Capa sectorial descriptiva: se carga al final para armonizar con Entidad 360 y Universo SO.
+import './styles/sector-context.css';
 
 const initialTheme = (() => {
   try {
