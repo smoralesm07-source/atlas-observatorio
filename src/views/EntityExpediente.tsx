@@ -3,10 +3,11 @@ import { useRpc } from '../lib/rpc';
 import { hrefFor } from '../lib/router';
 import type { CoverageRow, EntityDetail } from '../lib/contracts';
 import { Badge, Empty, ErrorBox, Loading } from '../components/primitives';
+import { EntityPressDossier } from '../components/EntityPressDossier';
 import { bandLabel, fecha, n, n1, rutFormat, titleCase } from '../lib/format';
-import { searchPress, type PressMatch } from '../lib/press';
+import { searchPressDossier, type PressMatch } from '../lib/press';
 
-type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'registros' | 'historico' | 'fuentes';
+type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'prensa' | 'registros' | 'historico' | 'fuentes';
 type GlyphName = 'sales' | 'people' | 'activity' | 'public' | 'sanction' | 'uaf' | 'osfl' | 'res' | 'press' | 'sii' | 'alert' | 'copy' | 'external';
 type TimelineKind = 'tax' | 'sanction' | 'press' | 'event';
 
@@ -37,6 +38,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'tributario', label: 'Tributario' },
   { id: 'uaf', label: 'UAF' },
   { id: 'sanciones', label: 'Sanciones' },
+  { id: 'prensa', label: 'Prensa' },
   { id: 'registros', label: 'OSFL / RES' },
   { id: 'historico', label: 'Histórico' },
   { id: 'fuentes', label: 'Fuentes' },
@@ -148,11 +150,11 @@ function pressArticles(matches: PressMatch[]) {
 
 function strictPressMatches(entity: EntityDetail['entity'], matches: PressMatch[]): PressMatch[] {
   const rut = compactRut(entity.rut);
-  if (rut) {
-    const byRut = matches.filter((match) => match.ruts.some((candidate) => compactRut(candidate) === rut));
-    if (byRut.length) return byRut;
-  }
-  return matches.filter((match) => match.match_score >= 0.94);
+  const strongName = matches.filter((match) => match.match_score >= 0.94);
+  if (!rut) return strongName;
+  const byRut = matches.filter((match) => match.ruts.some((candidate) => compactRut(candidate) === rut));
+  const seen = new Set(byRut.map((match) => match.press_entity_id));
+  return [...byRut, ...strongName.filter((match) => !seen.has(match.press_entity_id))];
 }
 
 function timelineFor(data: EntityDetail, press: PressMatch[]): TimelineRow[] {
@@ -253,9 +255,8 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     setPress({ status: 'loading', matches: [] });
     const run = async () => {
       try {
-        let matches = await searchPress(entity.rut ?? entity.name, 10);
-        matches = strictPressMatches(entity, matches);
-        if (!matches.length && entity.rut) matches = strictPressMatches(entity, await searchPress(entity.name, 10));
+        let matches = strictPressMatches(entity, await searchPressDossier(entity.name, 10));
+        if (!matches.length && entity.rut) matches = strictPressMatches(entity, await searchPressDossier(entity.rut, 10));
         if (!cancelled) setPress({ status: 'done', matches });
       } catch (e) {
         if (!cancelled) setPress({ status: 'error', matches: [], error: (e as Error).message });
@@ -298,6 +299,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     tributario: siiCoverage?.status === 'PRESENT' || hasRecordData(tax) || activities.length > 0 || history.length > 0,
     uaf: uafCoverage?.status === 'PRESENT' || hasRecordData(uaf),
     sanciones: sanctionCoverage?.status === 'PRESENT' || data.sanctions.length > 0,
+    prensa: articles.length > 0 || pressCoverage?.status === 'PRESENT',
     registros: osflCoverage?.status === 'PRESENT' || resCoverage?.status === 'PRESENT' || hasRecordData(osfl) || hasRecordData(res),
     historico: timeline.length > 0,
     fuentes: data.coverage.some((row) => row.status === 'PRESENT'),
@@ -364,6 +366,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
       {tab === 'tributario' && <TributarioTab data={data} activities={activities} history={history} />}
       {tab === 'uaf' && <UafTab data={data} uaf={uaf} coverage={uafCoverage} />}
       {tab === 'sanciones' && <SancionesTab data={data} />}
+      {tab === 'prensa' && <EntityPressDossier entityName={entity.name} status={press.status} matches={press.matches} error={press.error} />}
       {tab === 'registros' && <RegistrosTab data={data} osfl={osfl} res={res} osflCoverage={osflCoverage} resCoverage={resCoverage} />}
       {tab === 'historico' && <HistoricoTab rows={timeline} />}
       {tab === 'fuentes' && <FuentesTab coverage={data.coverage} />}

@@ -342,6 +342,7 @@ function indexedMatch(
   mentionsByEntity: Map<string, PressMention[]>,
   articleById: Map<string, PressArticle>,
   generatedAt: string | null,
+  articleLimit = 6,
 ): PressMatch {
   const mentions = mentionsByEntity.get(entity.press_entity_id) ?? [];
   const strongEntityIdentity = kind === 'RUT' || kind === 'EXACTA';
@@ -369,7 +370,7 @@ function indexedMatch(
       return rows;
     }, [])
     .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
-    .slice(0, 6);
+    .slice(0, articleLimit);
 
   return {
     press_entity_id: entity.press_entity_id,
@@ -400,10 +401,11 @@ function articleFallbackMatch(
   queryText: string,
   articles: Array<{ article: PressArticle; score: number }>,
   generatedAt: string | null,
+  articleLimit = 6,
 ): PressMatch {
   const sorted = articles
     .sort((a, b) => String(b.article.date ?? '').localeCompare(String(a.article.date ?? '')))
-    .slice(0, 6);
+    .slice(0, articleLimit);
   const dates = sorted.map(({ article }) => String(article.date ?? '').slice(0, 10)).filter(Boolean);
   const media = Array.from(new Set(sorted.map(({ article }) => article.media).filter((value): value is string => Boolean(value))));
   const bestScore = sorted.reduce((best, row) => Math.max(best, row.score), 0);
@@ -442,6 +444,7 @@ function groupContextMatch(
   sourceArticles: PressArticle[],
   excludedArticleIds: Set<string>,
   generatedAt: string | null,
+  articleLimit = 6,
 ): PressMatch | null {
   const brand = groupBrandKey(queryText);
   if (!brand) return null;
@@ -452,7 +455,7 @@ function groupContextMatch(
 
   if (!allHits.length) return null;
 
-  const articles = allHits.slice(0, 6).map<PressArticleMatch>((article) => {
+  const articles = allHits.slice(0, articleLimit).map<PressArticleMatch>((article) => {
     const contextNote = `Contexto de grupo/marca vinculado por la mención «${brand}». No implica que el hecho corresponda a esta razón social.`;
     return {
       ...article,
@@ -491,13 +494,14 @@ function groupContextMatch(
   };
 }
 
-export async function searchPress(query: string, limit = 12): Promise<PressMatch[]> {
+export async function searchPress(query: string, limit = 12, articleLimit = 6): Promise<PressMatch[]> {
   const queryText = normalizePressText(query);
   const queryRut = normalizeRut(query);
   if (queryText.length < 3 && queryRut.length < 4) return [];
 
   const { bridge, articleById, mentionsByEntity } = await loadBridge();
   const maxResults = Math.max(1, Math.min(limit, 30));
+  const maxArticles = Math.max(1, Math.min(articleLimit, 250));
   const indexed = (bridge.entities ?? [])
     .map((entity) => ({ entity, ...bestEntityScore(entity, queryText, queryRut) }))
     .filter((row) => row.score >= 0.74)
@@ -517,6 +521,7 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
       mentionsByEntity,
       articleById,
       bridge.generated_at ?? null,
+      maxArticles,
     ));
 
   if (queryRut.length >= 4) return indexed;
@@ -527,7 +532,7 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
     .filter((row) => row.score >= 0.90 && !indexedArticleIds.has(row.article.id));
 
   const baseMatches = directArticleHits.length
-    ? [articleFallbackMatch(query, queryText, directArticleHits, bridge.generated_at ?? null), ...indexed]
+    ? [articleFallbackMatch(query, queryText, directArticleHits, bridge.generated_at ?? null, maxArticles), ...indexed]
     : [...indexed];
 
   const coveredArticleIds = new Set(baseMatches.flatMap((match) => match.articles.map((article) => article.id)));
@@ -536,11 +541,16 @@ export async function searchPress(query: string, limit = 12): Promise<PressMatch
     bridge.articles ?? [],
     coveredArticleIds,
     bridge.generated_at ?? null,
+    maxArticles,
   );
 
   return groupContext
     ? [...baseMatches, groupContext].slice(0, maxResults)
     : baseMatches.slice(0, maxResults);
+}
+
+export async function searchPressDossier(query: string, limit = 12): Promise<PressMatch[]> {
+  return searchPress(query, limit, 120);
 }
 
 
