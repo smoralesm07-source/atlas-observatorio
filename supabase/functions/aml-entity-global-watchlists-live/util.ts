@@ -1,0 +1,11 @@
+export const DIRECT=['UN_SANCTIONS','OFAC','EU_SANCTIONS','UK_SANCTIONS','IDB_SANCTIONS','WORLD_BANK'];
+export const A=(v:any):any[]=>Array.isArray(v)?v:(v==null?[]:[v]);
+export const U=(xs:any[])=>[...new Set(xs.filter(Boolean))];
+export const N=(v:any)=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+const T=(v:string)=>U(N(v).split(' ').filter((x:string)=>x.length>2)) as string[];
+export function score(q:string,c:string){const a=N(q),b=N(c);if(!a||!b)return 0;if(a===b)return .99;const qt=T(a),ct=T(b);if(!qt.length||!ct.length)return 0;const hit=qt.filter(x=>ct.includes(x)).length;if(!hit||qt.length>=2&&hit<2)return 0;const r=hit/qt.length,p=hit/ct.length;if(r===1)return p===1?.99:p>=.5?.90:.82;if(r>=.66&&p>=.5)return .82;if(r>=.5&&p>=.5)return .72;return 0;}
+export function csv(s:string,sep=','){const o:string[]=[];let cur='',quoted=false;for(let i=0;i<s.length;i++){const ch=s[i];if(ch==='"'){if(quoted&&s[i+1]==='"'){cur+='"';i++;}else quoted=!quoted;}else if(ch===sep&&!quoted){o.push(cur);cur='';}else cur+=ch;}o.push(cur);return o;}
+export async function text(url:string,t=16000){const r=await fetch(url,{headers:{'user-agent':'ATLAS-AML/0.55','accept':'text/plain,text/csv,application/xml,text/xml,*/*'},signal:AbortSignal.timeout(t)});const x=await r.text();if(!r.ok)throw new Error(`HTTP_${r.status}:${x.slice(0,100)}`);return x;}
+export async function json(url:string,init:RequestInit,t=14000){const r=await fetch(url,{...init,signal:AbortSignal.timeout(t)}),x=await r.text();if(!r.ok)throw new Error(`HTTP_${r.status}:${x.slice(0,120)}`);return JSON.parse(x);}
+export const rec=(code:string,id:string,name:string,s:number,method:string,url:string,summary:string,e:any={})=>({source_code:code,source_record_id:id,signal_type:'international_watchlist_candidate',signal_status:'possible_match',match_method:method,match_confidence:s,title:'Posible coincidencia en fuente internacional oficial',summary,related_entity_name:name,relationship_type:'POSIBLE_COINCIDENCIA_LISTA_INTERNACIONAL',event_date:null,source_url:url,evidence:{...e,identity_guardrail:'candidate_requires_analyst_review'}});
+export const bad=(source:string,e:any)=>({status:'degraded',source,records:[],checked_at:new Date().toISOString(),error:String(e)});
