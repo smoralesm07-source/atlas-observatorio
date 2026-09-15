@@ -293,6 +293,23 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const score = entity.ipa3_score;
   const scoreBand = bandLabel(entity.ipa3_band ?? data.priority?.priority_band_shadow);
   const scorePct = Math.max(0, Math.min(100, Number(score ?? 0)));
+  const priority = record(data.priority);
+  const ipaBaseScore = numberValue(priority.ipa3_base_score);
+  const ipaPressScore = numberValue(priority.press_group_score) ?? 0;
+  const ipaPressConfidence = numberValue(priority.press_confidence_pct);
+  const ipaPressDate = text(priority.press_event_at);
+  const ipaPressSource = text(priority.press_latest_source);
+  const ipaPressTitle = text(priority.press_latest_title);
+  const ipaCoverage = numberValue(priority.coverage_index_pct);
+  const ipaGroups = [
+    { key: 'REGISTRY', label: 'Registro', score: numberValue(priority.registry_group_score) ?? 0 },
+    { key: 'ECONOMIC_TRAJECTORY', label: 'Trayectoria económica', score: numberValue(priority.economic_group_score) ?? 0 },
+    { key: 'SANCTIONS', label: 'Sanciones', score: numberValue(priority.sanctions_group_score) ?? 0 },
+    { key: 'PRESS', label: 'Prensa adversa', score: ipaPressScore },
+  ].filter((group) => group.score > 0).sort((a, b) => b.score - a.score);
+  const ipaMarks = data.marks
+    .filter((mark) => mark.included_in_score && Number(mark.contribution ?? 0) > 0)
+    .sort((a, b) => Number(b.contribution ?? 0) - Number(a.contribution ?? 0));
 
   const tabHasData: Record<Tab, boolean> = {
     resumen: false,
@@ -331,7 +348,79 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
         </div>
 
         <div className="entity360-score" data-has-score={score != null && score > 0}>
-          <div className="entity360-score-label">IPA3 · prioridad analítica</div>
+          <div className="entity360-score-label">
+            <span>IPA3 · prioridad analítica</span>
+            <details className="entity360-ipa-help">
+              <summary aria-label="Ayuda metodológica del IPA3" title="Cómo se calcula e interpreta el IPA3">i</summary>
+              <div className="entity360-ipa-help-popover" role="note">
+                <header>
+                  <div>
+                    <span>Ayuda metodológica</span>
+                    <h3>IPA3 · Índice de Prioridad Analítica</h3>
+                  </div>
+                  <em>{text(priority.adjusted_score_version) ?? text(priority.score_version) ?? 'IPA3'}</em>
+                </header>
+
+                <p className="entity360-ipa-help-lede">
+                  <strong>{score == null ? '—' : n1(score)}/100</strong> ordena la revisión analítica de la entidad. <b>No es una probabilidad de LA/FT</b>, ni acredita delito o incumplimiento.
+                </p>
+
+                <div className="entity360-ipa-formula" aria-label="Fórmula de agregación IPA3">
+                  <span>Agregación</span>
+                  <code>IPA3 = G1 + 0,25·G2 + 0,10·G3</code>
+                  <small>G1, G2 y G3 son los tres grupos independientes con mayor aporte. El resultado se acota a 100.</small>
+                </div>
+
+                <div className="entity360-ipa-groups">
+                  {ipaGroups.length ? ipaGroups.map((group, index) => (
+                    <div key={group.key} data-rank={index + 1}>
+                      <span>{group.label}</span>
+                      <strong>{n1(group.score)}</strong>
+                      <small>{index === 0 ? 'conductor' : index === 1 ? '25% en agregación' : index === 2 ? '10% en agregación' : 'visible · no adicional'}</small>
+                    </div>
+                  )) : <div className="entity360-ipa-empty">Sin grupos puntuables en el corte vigente.</div>}
+                </div>
+
+                {ipaMarks.length > 0 && (
+                  <div className="entity360-ipa-marks">
+                    <span>Marcas que aportan</span>
+                    {ipaMarks.slice(0, 4).map((mark) => (
+                      <div key={mark.mark_id}>
+                        <strong>{mark.mark_name ?? mark.mark_id}</strong>
+                        <em>{n1(Number(mark.contribution ?? 0))} pts</em>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <section className="entity360-ipa-press" data-active={ipaPressScore > 0}>
+                  <div className="entity360-ipa-section-title">
+                    <strong>Prensa adversa</strong>
+                    <span>{ipaPressScore > 0 ? `P01 · ${n1(ipaPressScore)}/35` : 'Sin aporte'}</span>
+                  </div>
+                  <p>
+                    La <strong>mera figuración en prensa suma 0</strong>. P01 sólo se activa con identidad y mención de alta confianza, la entidad sostenida por el propio titular y contenido reciente materialmente adverso relacionado con LA/FT o delitos base. Repeticiones del mismo hecho no se suman como noticias independientes y la señal pierde intensidad con el tiempo.
+                  </p>
+                  {ipaPressScore > 0 && (
+                    <div className="entity360-ipa-press-evidence">
+                      {ipaPressConfidence != null && <span>Confianza {n1(ipaPressConfidence)}%</span>}
+                      {ipaPressDate && <span>Última señal {fecha(ipaPressDate)}</span>}
+                      {ipaPressSource && <span>{ipaPressSource}</span>}
+                      {ipaPressTitle && <small>{ipaPressTitle}</small>}
+                    </div>
+                  )}
+                </section>
+
+                <footer>
+                  {ipaPressScore > 0 && ipaBaseScore != null && Number(score ?? 0) !== ipaBaseScore
+                    ? <>IPA3 base sin prensa: <strong>{n1(ipaBaseScore)}/100</strong> · </>
+                    : null}
+                  {ipaCoverage != null ? <>Cobertura del modelo base: <strong>{n1(ipaCoverage)}%</strong> · </> : null}
+                  La cobertura y la confianza se informan aparte y no elevan por sí solas el score.
+                </footer>
+              </div>
+            </details>
+          </div>
           <div className="entity360-score-value">{score == null ? '—' : n1(score)}<small>/100</small></div>
           <div className="entity360-score-track"><i style={{ width: `${scorePct}%` }} /></div>
           <div className="entity360-score-foot">{scoreBand || 'Sin banda materializada'}</div>
