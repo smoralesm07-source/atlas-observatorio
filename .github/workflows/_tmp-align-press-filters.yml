@@ -1,0 +1,112 @@
+name: TMP Alinear filtros de prensa
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/_tmp-align-press-filters.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-align-press-filters
+  cancel-in-progress: false
+
+jobs:
+  implementar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Descargar Atlas
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Alinear consumidores del Radar Prensa Entidades
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str, label: str):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: se esperaba 1 coincidencia y hay {count}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # El directorio interactivo debe usar el contrato enriquecido que
+          # incorpora candidatos de prensa >=90%, no sólo evidencia histórica.
+          replace_once(
+              'src/components/SubjectDirectory.tsx',
+              "'obs_uaf_subject_directory_v2'",
+              "'obs_uaf_subject_directory_v3'",
+              'RPC directorio v3',
+          )
+
+          # Expone los componentes que ya publica obs_uaf_pulse para explicar
+          # el total sin mezclar confirmadas con coincidencias nuevas.
+          p = Path('src/lib/contracts.ts')
+          text = p.read_text(encoding='utf-8')
+          old = "    prensa: number;\n    con_senal: number;"
+          new = "    prensa: number;\n    prensa_confirmada?: number;\n    prensa_alta_confianza?: number;\n    prensa_alta_confianza_nueva?: number;\n    con_senal: number;"
+          count = text.count(old)
+          if count < 1:
+              raise SystemExit('contrato crosscuts: no se encontró patrón')
+          p.write_text(text.replace(old, new), encoding='utf-8')
+
+          replace_once(
+              'src/views/universo/PadronAxisV2.tsx',
+              '<Mark label="Con prensa" value={cross?.prensa ?? 0} tone="var(--sig-watch)" hint={`${n(cross?.antecedentes_prensa)} menciones`} onClick={() => selectRegistered({ cohort: \'PRENSA\', title: \'Sujetos que figuran en prensa\' })} />',
+              '<Mark label="Vínculo con prensa" value={cross?.prensa ?? 0} tone="var(--sig-watch)" hint={`${n(cross?.prensa_confirmada ?? cross?.prensa ?? 0)} confirmadas · ${n(cross?.prensa_alta_confianza_nueva ?? 0)} nuevas ≥90%`} onClick={() => selectRegistered({ cohort: \'PRENSA\', title: \'SO con vínculo de prensa\', hint: \'Confirmadas más coincidencias nuevas de alta confianza\' })} />',
+              'marca de prensa Universo SO',
+          )
+
+          replace_once(
+              'src/views/pulso/Revision.tsx',
+              '''          <CrossCard
+            label="Figuran en prensa"
+            value={c?.prensa ?? 0}
+            sub={`${n(c?.antecedentes_prensa ?? 0)} menciones · sin enlace en origen`}
+            onClick={() => onCohort({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })}
+          />''',
+              '''          <CrossCard
+            label="Vínculo con prensa"
+            value={c?.prensa ?? 0}
+            sub={`${n(c?.prensa_confirmada ?? c?.prensa ?? 0)} confirmadas · ${n(c?.prensa_alta_confianza_nueva ?? 0)} nuevas ≥90%`}
+            onClick={() => onCohort({ cohort: 'PRENSA', title: 'SO con vínculo de prensa', hint: 'Confirmadas más coincidencias nuevas de alta confianza' })}
+          />''',
+              'tarjeta de prensa Revisión',
+          )
+          PY
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Validar TypeScript y build
+        run: npm run build
+
+      - name: Publicar cambio
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "atlas-coherence[bot]"
+          git config user.email "atlas-coherence@users.noreply.github.com"
+          git add src/components/SubjectDirectory.tsx src/lib/contracts.ts src/views/universo/PadronAxisV2.tsx src/views/pulso/Revision.tsx
+          if git diff --cached --quiet; then
+            echo "Sin cambios pendientes"
+            exit 0
+          fi
+          git commit -m "feat: alinear filtros de prensa con Radar Entidades"
+          git push origin HEAD:main
