@@ -1,0 +1,48 @@
+name: Implementar rechazo de solicitudes de acceso
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_admin_request_rejection.py'
+      - '.github/workflows/implement-admin-request-rejection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar rechazo y reapertura de solicitudes
+        run: python3 scripts/patch_admin_request_rejection.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
+        run: npm run build
+      - name: Guardar cambio verificado
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/Administracion.tsx src/styles/administracion.css src/components/Auth.tsx
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: administrador puede rechazar solicitudes de acceso"
+            git push origin HEAD:main
+          fi
