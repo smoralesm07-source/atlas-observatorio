@@ -26,11 +26,20 @@ export function WatchlistResults({
     src: result.sources[code],
   })).filter((x) => x.src);
 
+  const officialDirectActive = result.routing.direct_sources.some((code) =>
+    String(result.sources[code]?.coverage?.mode ?? '').startsWith('official_'),
+  );
+  const coverageMeta = officialDirectActive
+    ? result.routing.opensanctions_status === 'fresh'
+      ? 'fuentes oficiales directas + OpenSanctions'
+      : 'fuentes oficiales directas'
+    : 'vía agregador';
+
   return (
     <div className="grid" style={{ gap: 14 }}>
       <Panel
         title="Cobertura de la consulta"
-        meta={result.routing.fallback_used ? 'vía fuentes oficiales directas' : 'vía agregador'}
+        meta={coverageMeta}
       >
         <div className="grid grid-4" style={{ gap: 8 }}>
           {consulted.map(({ code, src }) => {
@@ -65,7 +74,7 @@ export function WatchlistResults({
         {result.routing.fallback_used && (
           <div className="note" style={{ marginTop: 12 }}>
             OpenSanctions no estuvo disponible ({SOURCE_STATE_LABEL[result.routing.fallback_reason ?? ''] ??
-              result.routing.fallback_reason}). Se consultaron directamente las fuentes oficiales:{' '}
+              result.routing.fallback_reason}). La consulta oficial directa se mantuvo activa en:{' '}
             {result.routing.direct_sources.map((c) => WATCHLIST_LABEL[c] ?? c).join(', ')}.
           </div>
         )}
