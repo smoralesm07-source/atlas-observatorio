@@ -151,6 +151,105 @@
   overflow-wrap: anywhere;
 }
 
+/* Consolidación de una sanción con múltiples medidas. */
+.atlas-v2-sanctions .san-kind-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-kind-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 7px;
+  border: 1px solid rgba(24, 211, 223, .25);
+  border-radius: 999px;
+  background: rgba(24, 211, 223, .065);
+  color: #d9f5f7;
+  font-size: 8px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.atlas-v2-sanctions .san-kind-chip.muted {
+  border-color: rgba(142, 168, 177, .2);
+  background: rgba(142, 168, 177, .05);
+  color: var(--san-muted);
+}
+
+.atlas-v2-sanctions .san-finding-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-finding-list details {
+  min-width: 0;
+  border: 1px solid rgba(82, 151, 174, .2);
+  border-radius: 8px;
+  background: rgba(9, 27, 34, .72);
+  overflow: hidden;
+}
+
+.atlas-v2-sanctions .san-finding-list summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.atlas-v2-sanctions .san-finding-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.atlas-v2-sanctions .san-finding-list summary > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-finding-list summary b {
+  color: #e6f3f5;
+  font-size: 8.5px;
+}
+
+.atlas-v2-sanctions .san-finding-list summary small {
+  min-width: 0;
+  color: #7fa4ae;
+  font-size: 7.5px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-v2-sanctions .san-finding-list summary strong {
+  color: #f3c45d;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.atlas-v2-sanctions .san-finding-list details[open] summary {
+  border-bottom: 1px solid rgba(82, 151, 174, .16);
+  background: rgba(24, 211, 223, .035);
+}
+
+.atlas-v2-sanctions .san-finding-list details > p {
+  margin: 0;
+  padding: 9px;
+  color: #a8bec5;
+  font-size: 8.2px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 520px) {
   .atlas-v2-sanctions .san-detail {
     padding: 12px;
@@ -179,6 +278,14 @@
   .atlas-v2-sanctions .san-timeline > div {
     grid-template-columns: 8px 66px minmax(0, 1fr);
     gap: 5px;
+  }
+
+  .atlas-v2-sanctions .san-finding-list summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .atlas-v2-sanctions .san-finding-list summary strong {
+    white-space: normal;
   }
 }
 
