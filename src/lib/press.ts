@@ -121,6 +121,14 @@ const UNSAFE_GROUP_KEYS = new Set([
   'norte', 'sur',
 ]);
 
+const CORPORATE_PRESS_CUES = new Set([
+  'empresa', 'empresas', 'sociedad', 'sociedades', 'compania', 'firma', 'startup',
+  'fintech', 'exchange', 'plataforma', 'clientes', 'cliente', 'fondos', 'operaciones',
+  'operacion', 'cofundador', 'cofundadores', 'fundador', 'fundadores', 'ceo', 'gerente',
+  'directorio', 'accionista', 'accionistas', 'caso', 'querella', 'denuncia', 'investiga',
+  'investigacion', 'fiscalia', 'cierra', 'cierre', 'quiebra', 'insolvencia', 'fraude',
+]);
+
 export function normalizePressText(value: unknown): string {
   return String(value ?? '')
     .normalize('NFKD')
@@ -150,6 +158,17 @@ function containsAllTokens(candidate: string, required: string[]): boolean {
   if (!required.length) return false;
   const candidateTokens = new Set(nameTokens(candidate));
   return required.every((token) => candidateTokens.has(token));
+}
+
+function hasLegalForm(queryText: string): boolean {
+  return /(^| )(spa|ltda|limitada|eirl)( |$)/.test(queryText)
+    || /(^| )s a( |$)/.test(queryText);
+}
+
+function articleHasCorporateContext(article: PressArticle): boolean {
+  const context = normalizePressText(`${article.title ?? ''} ${article.summary ?? ''}`);
+  const tokens = new Set(nameTokens(context));
+  return Array.from(CORPORATE_PRESS_CUES).some((cue) => tokens.has(cue));
 }
 
 function groupBrandKey(queryText: string): string | null {
@@ -230,10 +249,11 @@ function scoreArticle(queryText: string, article: PressArticle): number {
     .map(normalizePressText)
     .filter(Boolean);
   const required = distinctiveTokens(queryText);
-  const articleTokens = new Set(fields.flatMap((field) => nameTokens(field)));
-  const safeDistinctiveMatch = required.length > 0
-    && required.every((token) => articleTokens.has(token))
-    && (required.length > 1 || (required[0].length >= 5 && !UNSAFE_GROUP_KEYS.has(required[0])));
+  const titleTokens = new Set(nameTokens(normalizePressText(article.title)));
+  const safeDistinctiveMatch = hasLegalForm(queryText)
+    && required.length > 0
+    && required.every((token) => titleTokens.has(token))
+    && articleHasCorporateContext(article);
 
   let best = safeDistinctiveMatch ? 0.96 : 0;
   fields.forEach((field) => {
