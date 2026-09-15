@@ -15,6 +15,7 @@ type Access =
 type RequestState =
   | { state: 'saving' }
   | { state: 'saved' }
+  | { state: 'rejected' }
   | { state: 'error'; message: string };
 
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
@@ -270,7 +271,7 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
       setRequest({ state: 'saving' });
       const { data, error } = await supabase.functions.invoke<{
         ok?: boolean;
-        state?: 'pending' | 'granted' | 'disabled';
+        state?: 'pending' | 'granted' | 'disabled' | 'rejected';
         message?: string;
         error?: string;
       }>('atlas-access-request', { body: {} });
@@ -297,6 +298,11 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
         return;
       }
 
+      if (data?.ok && data.state === 'rejected') {
+        setRequest({ state: 'rejected' });
+        return;
+      }
+
       if (data?.ok && data.state === 'pending') {
         setRequest({ state: 'saved' });
         return;
@@ -310,6 +316,24 @@ function PendingAccess({ session, onRecheck }: { session: Session; onRecheck: ()
       live = false;
     };
   }, [session.user.id, retryKey]);
+
+  if (request.state === 'rejected') {
+    return (
+      <Card title="Solicitud de acceso rechazada">
+        <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6 }}>
+          Tu identidad fue verificada, pero la solicitud de acceso a ATLAS Observatorio fue rechazada por Administración.
+        </p>
+        <div className="note note-warn">
+          <strong style={{ display: 'block', marginBottom: 5, color: 'var(--ink-1)' }}>{identity}</strong>
+          {session.user.email ?? 'Correo no informado'}
+        </div>
+        <p style={{ color: 'var(--ink-3)', fontSize: 12, lineHeight: 1.55, marginBottom: 0 }}>
+          Si corresponde revisar esta decisión, contacta a un administrador. Solo Administración puede reabrir una solicitud rechazada.
+        </p>
+        <SignOutButton marginTop={18} />
+      </Card>
+    );
+  }
 
   const saved = request.state === 'saved';
 

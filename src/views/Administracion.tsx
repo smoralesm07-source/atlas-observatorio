@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import '../styles/administracion.css';
 
 type Role = 'viewer' | 'analyst' | 'admin';
+type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 type Authorization = {
   user_id: string;
@@ -21,6 +22,13 @@ type AdminUser = {
   last_sign_in_at: string | null;
   provider: string | null;
   authorization: Authorization | null;
+  request: {
+    user_id: string;
+    status: RequestStatus;
+    requested_at: string;
+    last_seen_at: string;
+    resolved_at: string | null;
+  } | null;
 };
 
 type AuditEntry = {
@@ -29,7 +37,7 @@ type AuditEntry = {
   actor_email: string | null;
   target_user_id: string;
   target_email: string;
-  action: 'grant' | 'role_change' | 'enable' | 'disable';
+  action: 'grant' | 'role_change' | 'enable' | 'disable' | 'reject' | 'reopen';
   old_role: Role | null;
   new_role: Role;
   old_enabled: boolean | null;
@@ -126,7 +134,8 @@ export function Administracion({ session }: { session: Session }) {
   }, []);
 
   const users = snapshot?.users ?? [];
-  const pending = users.filter((user) => !user.authorization);
+  const pending = users.filter((user) => !user.authorization && user.request?.status === 'pending');
+  const rejected = users.filter((user) => !user.authorization && user.request?.status === 'rejected');
   const enabled = users.filter((user) => user.authorization?.enabled);
   const disabled = users.filter((user) => user.authorization && !user.authorization.enabled);
   const admins = enabled.filter((user) => user.authorization?.role === 'admin');
@@ -221,6 +230,18 @@ export function Administracion({ session }: { session: Session }) {
                     <option value="admin">Admin</option>
                   </select>
                   <button
+                    className="btn admin-danger-btn"
+                    type="button"
+                    disabled={busyId === user.id}
+                    onClick={() => void mutate(
+                      user,
+                      { action: 'reject' },
+                      `¿Rechazar la solicitud de ${user.email}? El usuario no podrá reabrirla por sí mismo; un administrador deberá hacerlo.`,
+                    )}
+                  >
+                    Rechazar
+                  </button>
+                  <button
                     className="btn btn-primary"
                     type="button"
                     disabled={busyId === user.id}
@@ -284,7 +305,13 @@ export function Administracion({ session }: { session: Session }) {
                     </td>
                     <td>
                       {!access ? (
-                        <span className="admin-status admin-status-pending"><i /> Pendiente</span>
+                        user.request?.status === 'rejected' ? (
+                          <span className="admin-status admin-status-rejected"><i /> Rechazado</span>
+                        ) : user.request?.status === 'pending' ? (
+                          <span className="admin-status admin-status-pending"><i /> Pendiente</span>
+                        ) : (
+                          <span className="admin-status admin-status-off"><i /> Sin solicitud</span>
+                        )
                       ) : access.enabled ? (
                         <span className="admin-status admin-status-active"><i /> Activo</span>
                       ) : (
@@ -323,9 +350,20 @@ export function Administracion({ session }: { session: Session }) {
                     <td><span className="admin-provider">{providerLabel(user.provider)}</span></td>
                     <td className="admin-action-col">
                       {!access ? (
-                        <button className="btn btn-primary admin-inline-btn" type="button" onClick={() => void mutate(user, { action: 'grant', role: 'viewer' })} disabled={isBusy}>
-                          Habilitar
-                        </button>
+                        user.request?.status === 'rejected' ? (
+                          <button
+                            className="btn admin-inline-btn"
+                            type="button"
+                            onClick={() => void mutate(user, { action: 'reopen' }, `¿Reabrir la solicitud de ${user.email}?`)}
+                            disabled={isBusy}
+                          >
+                            {isBusy ? 'Guardando…' : 'Reabrir'}
+                          </button>
+                        ) : (
+                          <button className="btn btn-primary admin-inline-btn" type="button" onClick={() => void mutate(user, { action: 'grant', role: 'viewer' })} disabled={isBusy}>
+                            Habilitar
+                          </button>
+                        )
                       ) : (
                         <button
                           className={`btn admin-inline-btn ${access.enabled ? 'admin-danger-btn' : ''}`}
@@ -351,7 +389,7 @@ export function Administracion({ session }: { session: Session }) {
           </table>
         </div>
         <div className="admin-table-foot">
-          <span>{enabled.length} habilitados · {disabled.length} deshabilitados · {pending.length} pendientes</span>
+          <span>{enabled.length} habilitados · {disabled.length} deshabilitados · {pending.length} pendientes · {rejected.length} rechazados</span>
           <span>No se eliminan identidades desde Observatorio.</span>
         </div>
       </section>
@@ -398,6 +436,8 @@ function Metric({ label, value, foot, emphasis = false }: { label: string; value
 }
 
 function auditLabel(entry: AuditEntry) {
+  if (entry.action === 'reject') return 'Solicitud rechazada';
+  if (entry.action === 'reopen') return 'Solicitud reabierta';
   if (entry.action === 'grant') return `Acceso habilitado · ${ROLE_LABEL[entry.new_role]}`;
   if (entry.action === 'enable') return `Acceso reactivado · ${ROLE_LABEL[entry.new_role]}`;
   if (entry.action === 'disable') return 'Acceso deshabilitado';
