@@ -1,4 +1,4 @@
-.admin-view { max-width: 1380px; margin: 0 auto; }
+.admin-view { max-width: 1380px; margin: 0 auto; display: flex; flex-direction: column; }
 .admin-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
 .admin-kicker { margin-bottom: 5px; color: var(--accent); font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 .admin-refresh { flex: 0 0 auto; min-width: 104px; }
@@ -20,7 +20,10 @@
 .admin-metric-value { margin-top: 8px; color: var(--ink); font-size: 28px; font-weight: 720; line-height: 1; }
 .admin-metric-foot { margin-top: 8px; color: var(--ink-3); font-size: 11px; }
 
-.admin-section { margin-top: 15px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg-panel); box-shadow: var(--shadow-panel); overflow: hidden; }
+.admin-section { order: 3; margin-top: 15px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg-panel); box-shadow: var(--shadow-panel); overflow: hidden; }
+.admin-view > .admin-section[aria-labelledby="pending-title"] { order: 1; }
+.admin-view > .admin-activity-section { order: 2; }
+.admin-view > .admin-section[aria-labelledby="audit-title"] { order: 4; }
 .admin-section-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 68px; padding: 13px 18px; border-bottom: 1px solid var(--line-soft); }
 .admin-section-head h2 { margin: 0; color: var(--ink); font-size: 13.5px; font-weight: 680; letter-spacing: -.01em; }
 .admin-section-head p { margin: 3px 0 0; color: var(--ink-3); font-size: 11.5px; }
