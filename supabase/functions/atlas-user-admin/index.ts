@@ -7,7 +7,7 @@ const CORS = {
 };
 
 type Role = 'viewer' | 'analyst' | 'admin';
-type Action = 'list' | 'grant' | 'set_role' | 'set_enabled';
+type Action = 'list' | 'grant' | 'set_role' | 'set_enabled' | 'reject' | 'reopen';
 
 class AppError extends Error {
   constructor(public code: string, message: string, public status = 400) {
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     }
 
     const action = body.action as Action;
-    if (!['list', 'grant', 'set_role', 'set_enabled'].includes(action)) {
+    if (!['list', 'grant', 'set_role', 'set_enabled', 'reject', 'reopen'].includes(action)) {
       throw new AppError('INVALID_ACTION', 'La acción solicitada no es válida.');
     }
 
@@ -88,6 +88,11 @@ Deno.serve(async (req) => {
         .select('user_id, email, role, enabled, created_at, updated_at');
       if (allowedError) throw new AppError('LIST_ACCESS_FAILED', allowedError.message, 500);
 
+      const { data: requests, error: requestsError } = await admin
+        .from('atlas_access_requests')
+        .select('user_id, status, requested_at, last_seen_at, resolved_at');
+      if (requestsError) throw new AppError('LIST_REQUESTS_FAILED', requestsError.message, 500);
+
       const { data: audit, error: auditError } = await admin
         .from('atlas_user_access_audit')
         .select('id, actor_user_id, actor_email, target_user_id, target_email, action, old_role, new_role, old_enabled, new_enabled, created_at')
@@ -96,6 +101,7 @@ Deno.serve(async (req) => {
       if (auditError) throw new AppError('LIST_AUDIT_FAILED', auditError.message, 500);
 
       const byId = new Map((allowed ?? []).map((row: any) => [row.user_id, row]));
+      const requestById = new Map((requests ?? []).map((row: any) => [row.user_id, row]));
       const users = authUsers.map((user: any) => ({
         id: user.id,
         email: user.email ?? byId.get(user.id)?.email ?? '',
@@ -103,10 +109,17 @@ Deno.serve(async (req) => {
         last_sign_in_at: user.last_sign_in_at ?? null,
         provider: user.app_metadata?.provider ?? null,
         authorization: byId.get(user.id) ?? null,
+        request: requestById.get(user.id) ?? null,
       }));
 
       users.sort((a: any, b: any) => {
-        const rank = (u: any) => !u.authorization ? 0 : !u.authorization.enabled ? 1 : 2;
+        const rank = (u: any) => {
+          if (u.request?.status === 'pending' && !u.authorization) return 0;
+          if (u.request?.status === 'rejected' && !u.authorization) return 1;
+          if (u.authorization && !u.authorization.enabled) return 2;
+          if (u.authorization?.enabled) return 3;
+          return 4;
+        };
         return rank(a) - rank(b) || String(a.email).localeCompare(String(b.email));
       });
 
@@ -133,6 +146,29 @@ Deno.serve(async (req) => {
       .eq('user_id', target.id)
       .maybeSingle();
     if (currentError) throw new AppError('TARGET_ACCESS_FAILED', currentError.message, 500);
+
+    if (action === 'reject' || action === 'reopen') {
+      if (current) {
+        throw new AppError('REQUEST_ALREADY_AUTHORIZED', 'La solicitud ya tiene un registro de autorización. Gestiona su estado desde Usuarios y permisos.');
+      }
+
+      const { error: requestMutationError } = await admin.rpc('atlas_admin_set_request_status', {
+        p_actor_user_id: actor.id,
+        p_actor_email: actor.email ?? actorAccess.email ?? '',
+        p_target_user_id: target.id,
+        p_target_email: target.email,
+        p_status: action === 'reject' ? 'rejected' : 'pending',
+      });
+
+      if (requestMutationError) {
+        if (requestMutationError.message.includes('ATLAS_ACCESS_REQUEST_NOT_FOUND')) {
+          throw new AppError('REQUEST_NOT_FOUND', 'No existe una solicitud de acceso para este usuario.', 404);
+        }
+        throw new AppError('REQUEST_CHANGE_FAILED', requestMutationError.message, 500);
+      }
+
+      return json(await snapshot());
+    }
 
     let role: Role;
     let enabled: boolean;
