@@ -46,6 +46,9 @@ function message(e: unknown, fn?: string): string {
   if (fn === 'obs_entity_detail' && isTransientRpcError(err)) {
     return 'Atlas no recibió una respuesta estable de la base de datos después de varios intentos automáticos. La entidad sigue seleccionada; puedes reintentar sin volver a buscarla.';
   }
+  if ((fn === 'atlas_v2_entity_search' || fn === 'atlas_v2_entity_search_cascade') && isTransientRpcError(err)) {
+    return 'Atlas no pudo completar esta consulta después de dos intentos automáticos. Puedes reintentar; si persiste, combina filtros para acotar el universo.';
+  }
   if (isStatementTimeout(err)) {
     return 'La consulta excedió el tiempo máximo. Atlas detuvo ese intento para proteger el servicio; reintenta o completa más caracteres del nombre.';
   }
@@ -89,7 +92,9 @@ export function useRpc<T>(
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const parsedArgs = JSON.parse(argKey) as Record<string, unknown>;
     const resilientEntityDetail = fn === 'obs_entity_detail';
-    const maxAttempts = resilientEntityDetail ? 3 : 1;
+    const resilientEntitySearch = fn === 'atlas_v2_entity_search' || fn === 'atlas_v2_entity_search_cascade';
+    const retryEnabled = resilientEntityDetail || resilientEntitySearch;
+    const maxAttempts = resilientEntityDetail ? 3 : resilientEntitySearch ? 2 : 1;
     // El primer reintento deja pasar un microcorte; el segundo cubre una
     // recuperación algo más larga sin martillar la base de datos.
     const retryDelays = [1400, 3600];
@@ -102,7 +107,7 @@ export function useRpc<T>(
     setLoading(true);
 
     const scheduleRetry = (attempt: number, cause: unknown): boolean => {
-      if (!resilientEntityDetail || !isTransientRpcError(cause) || attempt + 1 >= maxAttempts) {
+      if (!retryEnabled || !isTransientRpcError(cause) || attempt + 1 >= maxAttempts) {
         return false;
       }
 
