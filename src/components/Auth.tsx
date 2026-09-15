@@ -20,6 +20,7 @@ type RequestState =
 const RETRY_DELAYS_MS = [0, 450, 1200] as const;
 const EMAIL_FALLBACK_DOMAIN = 'uaf.gob.cl';
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
+const OTP_CODE_LENGTH = 8;
 
 function isTransportError(message: string) {
   return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(message);
@@ -420,14 +421,14 @@ function SignIn() {
 
   async function verifyCode() {
     const value = normalizedEmail(email);
-    const token = code.replace(/\D/g, '').slice(0, 6);
+    const token = code.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH);
 
     if (!validInstitutionalEmail(value)) {
       setError('El correo institucional no es válido.');
       return;
     }
-    if (token.length !== 6) {
-      setError('Ingresa el código de 6 dígitos enviado a tu correo.');
+    if (token.length !== OTP_CODE_LENGTH) {
+      setError(`Ingresa el código de ${OTP_CODE_LENGTH} dígitos enviado a tu correo.`);
       return;
     }
 
@@ -494,7 +495,7 @@ function SignIn() {
               ? 'Enviando…'
               : resendCooldown > 0
                 ? `Intentar nuevamente en ${resendCooldown}s`
-                : 'Enviar código de 6 dígitos'}
+                : `Enviar código de ${OTP_CODE_LENGTH} dígitos`}
           </button>
         ) : (
           <>
@@ -505,23 +506,23 @@ function SignIn() {
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={6}
+              maxLength={OTP_CODE_LENGTH}
               autoFocus
               autoComplete="one-time-code"
               value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH))}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !locked) void verifyCode();
               }}
-              placeholder="000000"
-              aria-label="Código de verificación de 6 dígitos"
+              placeholder="00000000"
+              aria-label="Código de verificación de 8 dígitos"
               style={{ ...inputStyle, letterSpacing: '0.28em', textAlign: 'center', fontWeight: 700, fontSize: 18 }}
             />
             <button
               className="btn btn-primary"
               style={{ width: '100%' }}
               onClick={() => void verifyCode()}
-              disabled={locked || code.length !== 6}
+              disabled={locked || code.length !== OTP_CODE_LENGTH}
             >
               {verifyBusy ? 'Verificando…' : 'Verificar e ingresar'}
             </button>
@@ -547,7 +548,7 @@ function SignIn() {
               </button>
             </div>
             <div className="note">
-              Enviamos un código de 6 dígitos a <strong>{normalizedEmail(email)}</strong>. Escríbelo aquí; no necesitas abrir ATLAS desde el correo.
+              Enviamos un código de 8 dígitos a <strong>{normalizedEmail(email)}</strong>. Escríbelo aquí; no necesitas abrir ATLAS desde el correo.
             </div>
           </>
         )}
