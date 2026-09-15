@@ -8,17 +8,15 @@ export type { AtlasRole } from './Auth';
 
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
 const OTP_CODE_LENGTH = 8;
-const EMAIL_FALLBACK_DOMAIN = 'uaf.gob.cl';
 const SESSION_BOOT_TIMEOUT_MS = 6000;
 
 function normalizedEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
-function validInstitutionalEmail(value: string) {
+function validEmail(value: string) {
   const email = normalizedEmail(value);
-  const [local, domain, extra] = email.split('@');
-  return Boolean(local && domain === EMAIL_FALLBACK_DOMAIN && !extra);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function isRateLimitError(error: { code?: string; message?: string } | null | undefined) {
@@ -46,9 +44,6 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
     let live = true;
     const bootTimeout = window.setTimeout(() => {
       if (!live) return;
-      // Nunca dejar la aplicación bloqueada indefinidamente en el splash si
-      // la restauración/renovación de una sesión persistida no responde. El
-      // usuario vuelve a la puerta de acceso y puede autenticarse de nuevo.
       setSession(null);
     }, SESSION_BOOT_TIMEOUT_MS);
 
@@ -103,8 +98,8 @@ function OpenSignIn() {
 
   async function sendCode() {
     const value = normalizedEmail(email);
-    if (!validInstitutionalEmail(value)) {
-      setError('El acceso por correo está habilitado únicamente para cuentas institucionales autorizadas.');
+    if (!validEmail(value)) {
+      setError('Ingresa una dirección de correo válida.');
       return;
     }
     if (resendCooldown > 0) return;
@@ -134,8 +129,8 @@ function OpenSignIn() {
   async function verifyCode() {
     const value = normalizedEmail(email);
     const token = code.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH);
-    if (!validInstitutionalEmail(value)) {
-      setError('El correo institucional no es válido.');
+    if (!validEmail(value)) {
+      setError('El correo no es válido.');
       return;
     }
     if (token.length !== OTP_CODE_LENGTH) {
@@ -164,13 +159,13 @@ function OpenSignIn() {
   return (
     <Card title="ATLAS Observatorio" eyebrow="Monitor de fuentes abiertas">
       <p style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.6, marginTop: 0 }}>
-        Ingresa con tu correo institucional. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
+        Ingresa con tu correo electrónico. Si tu cuenta ya fue autorizada, entrarás directamente; si es nueva, ATLAS registrará una solicitud para revisión.
       </p>
 
       {error && <div className="note note-warn" role="alert">{error}</div>}
 
       <div style={{ display: 'grid', gap: 9 }}>
-        <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Correo institucional</label>
+        <label style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Correo electrónico</label>
         <input
           type="email"
           value={email}
@@ -179,7 +174,7 @@ function OpenSignIn() {
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !locked && !codeSent && resendCooldown === 0) void sendCode();
           }}
-          placeholder="nombre@institucion.cl"
+          placeholder="nombre@correo.com"
           autoComplete="email"
           style={inputStyle}
         />
@@ -228,7 +223,7 @@ function OpenSignIn() {
       </div>
 
       <div className="note" style={{ marginTop: 12 }}>
-        El correo institucional verifica tu identidad. El acceso a los datos sigue sujeto a la autorización de ATLAS.
+        El correo verificado confirma que controlas esa casilla. El acceso a los datos sigue sujeto a la autorización de ATLAS.
       </div>
     </Card>
   );
