@@ -1,0 +1,198 @@
+/* Sanciones · ficha lateral: contener toda la información dentro de la tarjeta.
+   Este override se carga al final para proteger el layout tanto en escritorio
+   (columna lateral angosta) como en vistas móviles. */
+.atlas-v2-sanctions .san-workspace,
+.atlas-v2-sanctions .san-workspace > *,
+.atlas-v2-sanctions .san-detail,
+.atlas-v2-sanctions .san-detail > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.atlas-v2-sanctions .san-detail {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.atlas-v2-sanctions .san-detail-head {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-detail-head > div {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-detail-head > div > small {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.atlas-v2-sanctions .san-detail-head > .san-priority {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-detail-head > .san-priority b {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atlas-v2-sanctions .san-detail-entity,
+.atlas-v2-sanctions .san-detail-entity > div,
+.atlas-v2-sanctions .san-detail-block,
+.atlas-v2-sanctions .san-document,
+.atlas-v2-sanctions .san-document a,
+.atlas-v2-sanctions .san-document a > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.atlas-v2-sanctions .san-detail-entity {
+  width: 100%;
+  overflow: hidden;
+}
+
+.atlas-v2-sanctions .san-detail-entity > div {
+  flex: 1 1 auto;
+}
+
+.atlas-v2-sanctions .san-detail-entity strong,
+.atlas-v2-sanctions .san-detail-entity span {
+  max-width: 100%;
+}
+
+.atlas-v2-sanctions .san-detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.atlas-v2-sanctions .san-detail-field,
+.atlas-v2-sanctions .san-detail-field strong {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.atlas-v2-sanctions .san-detail-field strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.atlas-v2-sanctions .san-amount-pair {
+  grid-template-columns: minmax(0, 1fr) max-content;
+  width: 100%;
+  min-width: 0;
+}
+
+.atlas-v2-sanctions .san-amount-pair strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.atlas-v2-sanctions .san-amount-pair span {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.atlas-v2-sanctions .san-timeline,
+.atlas-v2-sanctions .san-timeline > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.atlas-v2-sanctions .san-timeline > div {
+  grid-template-columns: 8px minmax(62px, 72px) minmax(0, 1fr);
+  width: 100%;
+}
+
+.atlas-v2-sanctions .san-timeline time {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.atlas-v2-sanctions .san-timeline span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.atlas-v2-sanctions .san-document a {
+  width: 100%;
+  overflow: hidden;
+}
+
+.atlas-v2-sanctions .san-document a strong,
+.atlas-v2-sanctions .san-document a span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.atlas-v2-sanctions .san-detail-cta {
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.atlas-v2-sanctions .san-guardrail {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .atlas-v2-sanctions .san-detail {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .atlas-v2-sanctions .san-detail-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .atlas-v2-sanctions .san-detail-head > .san-priority {
+    justify-self: start;
+  }
+
+  .atlas-v2-sanctions .san-detail-head > .san-priority b {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .atlas-v2-sanctions .san-detail-grid {
+    gap: 7px 8px;
+  }
+
+  .atlas-v2-sanctions .san-timeline > div {
+    grid-template-columns: 8px 66px minmax(0, 1fr);
+    gap: 5px;
+  }
+}
+
+@media (max-width: 350px) {
+  .atlas-v2-sanctions .san-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .atlas-v2-sanctions .san-timeline > div {
+    grid-template-columns: 8px minmax(0, 1fr);
+  }
+
+  .atlas-v2-sanctions .san-timeline time,
+  .atlas-v2-sanctions .san-timeline span {
+    grid-column: 2;
+  }
+}
