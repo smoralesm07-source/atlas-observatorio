@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { markAtlasOffline } from '../lib/activity';
 import { hrefFor, type Route } from '../lib/router';
 import type { AtlasRole } from './Auth';
 import { Mark } from './Mark';
@@ -136,6 +137,14 @@ export function Shell({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [route.view]);
+
+  async function handleSignOut() {
+    try {
+      await markAtlasOffline(session);
+    } finally {
+      await supabase.auth.signOut({ scope: 'local' });
+    }
+  }
 
   return (
     <div className="shell">
@@ -299,7 +308,7 @@ export function Shell({
               </svg>
             )}
           </button>
-          <button className="icon-btn" title="Cerrar sesión" onClick={() => supabase.auth.signOut({ scope: 'local' })}>
+          <button className="icon-btn" title="Cerrar sesión" onClick={() => void handleSignOut()}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M14 8V5.6A1.6 1.6 0 0 0 12.4 4H5.6A1.6 1.6 0 0 0 4 5.6v12.8A1.6 1.6 0 0 0 5.6 20h6.8a1.6 1.6 0 0 0 1.6-1.6V16M17 15l3-3-3-3M20 12H9"
                 stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
