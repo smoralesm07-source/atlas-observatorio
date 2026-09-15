@@ -1,0 +1,388 @@
+name: TMP · Implementar expediente de prensa Entidad 360
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/_tmp-entity-press-dossier.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-entity-press-dossier
+  cancel-in-progress: false
+
+jobs:
+  implementar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Descargar Atlas
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Aplicar cambio aislado de Entidad 360
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: se esperaba 1 coincidencia y hay {count}')
+              return text.replace(old, new, 1)
+
+          # ── 1) Radar Prensa: modo dossier sin alterar consumidores actuales ──
+          press_path = Path('src/lib/press.ts')
+          press = press_path.read_text(encoding='utf-8')
+
+          press = replace_once(
+              press,
+              "  articleById: Map<string, PressArticle>,\n  generatedAt: string | null,\n): PressMatch {",
+              "  articleById: Map<string, PressArticle>,\n  generatedAt: string | null,\n  articleLimit = 6,\n): PressMatch {",
+              'firma indexedMatch',
+          )
+          press = replace_once(
+              press,
+              "  articles: Array<{ article: PressArticle; score: number }>,\n  generatedAt: string | null,\n): PressMatch {",
+              "  articles: Array<{ article: PressArticle; score: number }>,\n  generatedAt: string | null,\n  articleLimit = 6,\n): PressMatch {",
+              'firma articleFallbackMatch',
+          )
+          press = replace_once(
+              press,
+              "  excludedArticleIds: Set<string>,\n  generatedAt: string | null,\n): PressMatch | null {",
+              "  excludedArticleIds: Set<string>,\n  generatedAt: string | null,\n  articleLimit = 6,\n): PressMatch | null {",
+              'firma groupContextMatch',
+          )
+          if press.count('.slice(0, 6);') != 2:
+              raise SystemExit(f'slices de artículos: se esperaban 2 y hay {press.count(".slice(0, 6);")}')
+          press = press.replace('.slice(0, 6);', '.slice(0, articleLimit);')
+          press = replace_once(
+              press,
+              "  const articles = allHits.slice(0, 6).map<PressArticleMatch>((article) => {",
+              "  const articles = allHits.slice(0, articleLimit).map<PressArticleMatch>((article) => {",
+              'límite contexto grupo',
+          )
+          press = replace_once(
+              press,
+              "export async function searchPress(query: string, limit = 12): Promise<PressMatch[]> {",
+              "export async function searchPress(query: string, limit = 12, articleLimit = 6): Promise<PressMatch[]> {",
+              'firma searchPress',
+          )
+          press = replace_once(
+              press,
+              "  const maxResults = Math.max(1, Math.min(limit, 30));\n",
+              "  const maxResults = Math.max(1, Math.min(limit, 30));\n  const maxArticles = Math.max(1, Math.min(articleLimit, 250));\n",
+              'maxArticles',
+          )
+          press = replace_once(
+              press,
+              "      articleById,\n      bridge.generated_at ?? null,\n    ));",
+              "      articleById,\n      bridge.generated_at ?? null,\n      maxArticles,\n    ));",
+              'llamada indexedMatch',
+          )
+          press = replace_once(
+              press,
+              "    ? [articleFallbackMatch(query, queryText, directArticleHits, bridge.generated_at ?? null), ...indexed]",
+              "    ? [articleFallbackMatch(query, queryText, directArticleHits, bridge.generated_at ?? null, maxArticles), ...indexed]",
+              'llamada fallback',
+          )
+          press = replace_once(
+              press,
+              "    coveredArticleIds,\n    bridge.generated_at ?? null,\n  );",
+              "    coveredArticleIds,\n    bridge.generated_at ?? null,\n    maxArticles,\n  );",
+              'llamada contexto grupo',
+          )
+          press = replace_once(
+              press,
+              "    : baseMatches.slice(0, maxResults);\n}\n\n\n/* ── Prensa por comuna",
+              "    : baseMatches.slice(0, maxResults);\n}\n\n/** Búsqueda amplia para el expediente de Entidad 360. Mantiene searchPress\n *  liviano para el resto de Atlas y sólo amplía el histórico aquí. */\nexport async function searchPressDossier(query: string, limit = 12): Promise<PressMatch[]> {\n  return searchPress(query, limit, 120);\n}\n\n\n/* ── Prensa por comuna",
+              'export searchPressDossier',
+          )
+          press_path.write_text(press, encoding='utf-8')
+
+          # ── 2) Entidad 360: pestaña Prensa y expediente navegable ──
+          entity_path = Path('src/views/EntityExpediente.tsx')
+          entity = entity_path.read_text(encoding='utf-8')
+          entity = replace_once(
+              entity,
+              "import { searchPress, type PressMatch } from '../lib/press';",
+              "import { searchPressDossier, type PressMatch } from '../lib/press';",
+              'import dossier',
+          )
+          entity = replace_once(
+              entity,
+              "type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'registros' | 'historico' | 'fuentes';",
+              "type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'prensa' | 'registros' | 'historico' | 'fuentes';",
+              'tipo tab',
+          )
+          entity = replace_once(
+              entity,
+              "  { id: 'sanciones', label: 'Sanciones' },\n  { id: 'registros', label: 'OSFL / RES' },",
+              "  { id: 'sanciones', label: 'Sanciones' },\n  { id: 'prensa', label: 'Prensa' },\n  { id: 'registros', label: 'OSFL / RES' },",
+              'tab prensa',
+          )
+          entity = replace_once(
+              entity,
+              "function strictPressMatches(entity: EntityDetail['entity'], matches: PressMatch[]): PressMatch[] {\n  const rut = compactRut(entity.rut);\n  if (rut) {\n    const byRut = matches.filter((match) => match.ruts.some((candidate) => compactRut(candidate) === rut));\n    if (byRut.length) return byRut;\n  }\n  return matches.filter((match) => match.match_score >= 0.94);\n}\n",
+              "function strictPressMatches(entity: EntityDetail['entity'], matches: PressMatch[]): PressMatch[] {\n  const rut = compactRut(entity.rut);\n  const strongName = matches.filter((match) => match.match_score >= 0.94);\n  if (!rut) return strongName;\n  const byRut = matches.filter((match) => match.ruts.some((candidate) => compactRut(candidate) === rut));\n  const seen = new Set(byRut.map((match) => match.press_entity_id));\n  return [...byRut, ...strongName.filter((match) => !seen.has(match.press_entity_id))];\n}\n\ntype PressEvidenceKind = 'directa' | 'contexto' | 'revision';\ntype PressArticleRow = ReturnType<typeof pressArticles>[number];\n\nfunction pressEvidenceKind(article: PressArticleRow): PressEvidenceKind {\n  const match = article.match;\n  if (match.resolution_status === 'GROUP_CONTEXT' || match.nature === 'GROUP_CONTEXT'\n    || /contexto de grupo/i.test(article.role ?? '')) return 'contexto';\n\n  const governed = !match.requires_validation && !article.mention_requires_validation;\n  const strongIdentity = match.match_kind === 'RUT' || match.match_kind === 'EXACTA' || match.match_score >= 0.98;\n  const strongMention = article.mention_confidence == null || article.mention_confidence >= 0.90;\n  return governed && strongIdentity && strongMention ? 'directa' : 'revision';\n}\n\nfunction pressEvidenceLabel(kind: PressEvidenceKind): string {\n  if (kind === 'directa') return 'Coincidencia directa';\n  if (kind === 'contexto') return 'Contexto de marca / grupo';\n  return 'Revisar identidad';\n}\n\nfunction pressEvidenceReason(article: PressArticleRow, kind: PressEvidenceKind): string {\n  if (kind === 'contexto') return 'La nota menciona una marca o grupo relacionado; no se atribuye el hecho a esta razón social.';\n  if (kind === 'revision') return article.match.match_source === 'ARTICLE_TEXT'\n    ? 'Coincidencia textual de fuente abierta. Conviene corroborar que corresponda a esta entidad.'\n    : 'La identidad periodística no queda completamente resuelta y requiere corroboración analítica.';\n  if (article.match.match_kind === 'RUT') return 'Coincidencia enlazada por RUT en el índice de prensa.';\n  if (article.match.match_kind === 'EXACTA') return 'Coincidencia por razón social exacta en el índice de prensa.';\n  return 'Coincidencia de identidad gobernada por Radar Prensa.';\n}\n\nfunction pressMonthBuckets(rows: PressArticleRow[]) {\n  const counts = new Map<string, number>();\n  rows.forEach((article) => {\n    const match = String(article.date ?? '').match(/^(\\d{4})-(\\d{2})/);\n    if (!match) return;\n    const key = `${match[1]}-${match[2]}`;\n    counts.set(key, (counts.get(key) ?? 0) + 1);\n  });\n  const formatter = new Intl.DateTimeFormat('es-CL', { month: 'short', year: '2-digit' });\n  return Array.from(counts.entries())\n    .sort(([a], [b]) => a.localeCompare(b))\n    .slice(-18)\n    .map(([key, count]) => ({\n      key, count, label: formatter.format(new Date(`${key}-01T12:00:00`)).replace('.', ''),\n    }));\n}\n",
+              'gobernanza coincidencias',
+          )
+          entity = replace_once(
+              entity,
+              "        let matches = await searchPress(entity.rut ?? entity.name, 10);\n        matches = strictPressMatches(entity, matches);\n        if (!matches.length && entity.rut) matches = strictPressMatches(entity, await searchPress(entity.name, 10));",
+              "        let matches = strictPressMatches(entity, await searchPressDossier(entity.name, 10));\n        if (!matches.length && entity.rut) matches = strictPressMatches(entity, await searchPressDossier(entity.rut, 10));",
+              'consulta dossier',
+          )
+          entity = replace_once(
+              entity,
+              "    sanciones: sanctionCoverage?.status === 'PRESENT' || data.sanctions.length > 0,\n    registros:",
+              "    sanciones: sanctionCoverage?.status === 'PRESENT' || data.sanctions.length > 0,\n    prensa: articles.length > 0 || pressCoverage?.status === 'PRESENT',\n    registros:",
+              'estado tab prensa',
+          )
+          entity = replace_once(
+              entity,
+              "      {tab === 'sanciones' && <SancionesTab data={data} />}\n      {tab === 'registros'",
+              "      {tab === 'sanciones' && <SancionesTab data={data} />}\n      {tab === 'prensa' && <PrensaTab press={press} articles={articles} entityName={entity.name} />}\n      {tab === 'registros'",
+              'render tab prensa',
+          )
+
+          prensa_component = r'''
+function PrensaTab({ press, articles, entityName }: { press: PressState; articles: PressArticleRow[]; entityName: string }) {
+  const [kind, setKind] = useState<'todas' | PressEvidenceKind>('todas');
+  const [media, setMedia] = useState('todas');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [term, setTerm] = useState('');
+  const [visible, setVisible] = useState(20);
+
+  const enriched = useMemo(() => articles.map((article) => ({
+    ...article,
+    evidence: pressEvidenceKind(article),
+  })), [articles]);
+
+  const mediaOptions = useMemo(() => Array.from(new Set(enriched
+    .map((article) => article.media)
+    .filter((value): value is string => Boolean(value))))
+    .sort((a, b) => a.localeCompare(b, 'es')), [enriched]);
+
+  const filtered = useMemo(() => {
+    const needle = term.trim().toLocaleLowerCase('es-CL');
+    return enriched.filter((article) => {
+      if (kind !== 'todas' && article.evidence !== kind) return false;
+      if (media !== 'todas' && article.media !== media) return false;
+      const day = String(article.date ?? '').slice(0, 10);
+      if (fromDate && (!day || day < fromDate)) return false;
+      if (toDate && (!day || day > toDate)) return false;
+      if (needle) {
+        const haystack = `${article.title ?? ''} ${article.summary ?? ''} ${article.media ?? ''}`.toLocaleLowerCase('es-CL');
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [enriched, kind, media, fromDate, toDate, term]);
+
+  useEffect(() => setVisible(20), [kind, media, fromDate, toDate, term]);
+
+  const counts = useMemo(() => ({
+    directa: enriched.filter((article) => article.evidence === 'directa').length,
+    contexto: enriched.filter((article) => article.evidence === 'contexto').length,
+    revision: enriched.filter((article) => article.evidence === 'revision').length,
+  }), [enriched]);
+  const buckets = useMemo(() => pressMonthBuckets(filtered), [filtered]);
+  const maxBucket = Math.max(1, ...buckets.map((bucket) => bucket.count));
+  const firstDate = enriched.length ? enriched[enriched.length - 1]?.date : null;
+  const lastDate = enriched.length ? enriched[0]?.date : null;
+  const hasFilters = kind !== 'todas' || media !== 'todas' || fromDate || toDate || term;
+
+  const clearFilters = () => {
+    setKind('todas');
+    setMedia('todas');
+    setFromDate('');
+    setToDate('');
+    setTerm('');
+  };
+
+  return <div className="entity360-press-dossier">
+    <section className="entity360-press-overview">
+      <div className="entity360-press-overview-copy">
+        <div className="entity360-press-overline">Radar Prensa Entidades</div>
+        <h2>Expediente periodístico</h2>
+        <p>Histórico de menciones de fuente abierta asociado a <strong>{titleCase(entityName)}</strong>. La vista separa identidad resuelta, contexto de marca o grupo y coincidencias que requieren corroboración.</p>
+        <div className="entity360-press-range">{firstDate && lastDate ? `${fecha(firstDate)} → ${fecha(lastDate)}` : 'Sin rango temporal disponible'}</div>
+      </div>
+      <div className="entity360-press-kpis">
+        <div><span>Noticias</span><strong>{n(enriched.length)}</strong><small>{n(mediaOptions.length)} medios</small></div>
+        <div data-kind="directa"><span>Directas</span><strong>{n(counts.directa)}</strong><small>identidad resuelta</small></div>
+        <div data-kind="contexto"><span>Contexto</span><strong>{n(counts.contexto)}</strong><small>marca / grupo</small></div>
+        <div data-kind="revision"><span>Por revisar</span><strong>{n(counts.revision)}</strong><small>corroboración</small></div>
+      </div>
+    </section>
+
+    <section className="entity360-press-controls" aria-label="Filtros del expediente de prensa">
+      <div className="entity360-press-kind-filter">
+        <button data-active={kind === 'todas'} onClick={() => setKind('todas')}>Todas <span>{n(enriched.length)}</span></button>
+        <button data-active={kind === 'directa'} onClick={() => setKind('directa')}>Directas <span>{n(counts.directa)}</span></button>
+        <button data-active={kind === 'contexto'} onClick={() => setKind('contexto')}>Contexto <span>{n(counts.contexto)}</span></button>
+        <button data-active={kind === 'revision'} onClick={() => setKind('revision')}>Por revisar <span>{n(counts.revision)}</span></button>
+      </div>
+      <label>Medio<select value={media} onChange={(event) => setMedia(event.target.value)}><option value="todas">Todos los medios</option>{mediaOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+      <label>Desde<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
+      <label>Hasta<input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label>
+      <label className="entity360-press-search">Buscar<input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Titular, extracto o medio" /></label>
+      {hasFilters && <button className="entity360-press-clear" onClick={clearFilters}>Limpiar filtros</button>}
+    </section>
+
+    <section className="entity360-press-timeline-card">
+      <header><div><span>Actividad periodística</span><strong>{n(filtered.length)} noticias en la selección</strong></div><small>últimos 18 meses con menciones</small></header>
+      {buckets.length ? <div className="entity360-press-timeline" role="img" aria-label="Distribución mensual de menciones de prensa">
+        {buckets.map((bucket) => <div className="entity360-press-month" key={bucket.key} title={`${bucket.label}: ${bucket.count} noticia${bucket.count === 1 ? '' : 's'}`}><div><i style={{ height: `${Math.max(10, Math.round((bucket.count / maxBucket) * 100))}%` }} /></div><strong>{bucket.count}</strong><span>{bucket.label}</span></div>)}
+      </div> : <Empty title="Sin fechas en la selección" hint="Ajusta los filtros para volver a mostrar la actividad temporal." />}
+    </section>
+
+    <section className="entity360-press-results">
+      <header><div><span>Noticias asociadas</span><strong>{n(filtered.length)} resultados</strong></div>{press.status === 'loading' && <small>Actualizando Radar Prensa…</small>}</header>
+      {press.status === 'error' ? <div className="entity360-card-message">Radar Prensa no respondió en esta consulta. {press.error}</div>
+        : filtered.length ? <div className="entity360-press-feed">{filtered.slice(0, visible).map((article) => <article key={`${article.id}-${article.match.press_entity_id}`} data-evidence={article.evidence}>
+          <div className="entity360-press-feed-meta"><span className="entity360-press-evidence">{pressEvidenceLabel(article.evidence)}</span><time>{fecha(article.date)}</time><span>{article.media ?? 'Prensa abierta'}</span></div>
+          <h3>{article.title}</h3>
+          <p>{article.summary ?? 'La fuente no entrega un extracto en el corte vigente.'}</p>
+          <div className="entity360-press-identity-note"><i />{pressEvidenceReason(article, article.evidence)}</div>
+          <div className="entity360-press-feed-foot">{article.role && <span>{article.role}</span>}{article.url && <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir nota <Glyph name="external" /></a>}</div>
+        </article>)}</div>
+        : press.status === 'loading' ? <div className="entity360-card-message">Construyendo el expediente periodístico…</div>
+          : <Empty title="Sin noticias para estos filtros" hint="No hay coincidencias suficientemente precisas dentro de la selección actual." />}
+      {filtered.length > visible && <button className="entity360-press-more" onClick={() => setVisible((value) => value + 20)}>Mostrar 20 noticias más · quedan {n(filtered.length - visible)}</button>}
+    </section>
+
+    <div className="entity360-press-governance"><strong>Regla de lectura.</strong> Una noticia es evidencia de una publicación, no de la veracidad del hecho ni de responsabilidad de la entidad. Las coincidencias “Contexto” y “Por revisar” se muestran deliberadamente separadas para evitar atribuciones automáticas.</div>
+  </div>;
+}
+
+'''
+          anchor = "function HistoricoTab({ rows }: { rows: TimelineRow[] }) {"
+          if entity.count(anchor) != 1:
+              raise SystemExit('No se encontró ancla única para PrensaTab')
+          entity = entity.replace(anchor, prensa_component + anchor, 1)
+          entity_path.write_text(entity, encoding='utf-8')
+
+          # ── 3) Estilos dedicados, sin tocar el tema global ──
+          css = r'''/* Entidad 360 · expediente de prensa. Capa aislada del Monitor de Prensa. */
+.entity360-press-dossier { display: grid; gap: 10px; }
+.entity360-press-overview { display: grid; grid-template-columns: minmax(320px, 1.2fr) minmax(520px, 1fr); gap: 14px; align-items: stretch; padding: 16px; border: 1px solid var(--e360-blue-line); border-radius: 11px; background: linear-gradient(135deg, color-mix(in srgb, var(--e360-blue) 8%, transparent), transparent 44%), var(--e360-card); }
+.entity360-press-overview-copy { min-width: 0; }
+.entity360-press-overline { color: var(--e360-blue-2); font-family: var(--mono); font-size: 9px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+.entity360-press-overview h2 { margin: 4px 0 6px; color: var(--ink); font-size: 20px; line-height: 1.15; letter-spacing: -.025em; }
+.entity360-press-overview p { max-width: 78ch; margin: 0; color: var(--ink-2); font-size: 11.5px; line-height: 1.55; }
+.entity360-press-range { margin-top: 10px; color: var(--ink-4); font-family: var(--mono); font-size: 9.5px; }
+.entity360-press-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.entity360-press-kpis > div { min-width: 0; padding: 10px 11px; border: 1px solid var(--e360-blue-line); border-radius: 8px; background: color-mix(in srgb, var(--bg-panel-2) 88%, transparent); }
+.entity360-press-kpis > div[data-kind='directa'] { border-color: color-mix(in srgb, var(--present) 42%, var(--e360-blue-line)); }
+.entity360-press-kpis > div[data-kind='contexto'] { border-color: color-mix(in srgb, var(--e360-blue) 48%, var(--e360-blue-line)); }
+.entity360-press-kpis > div[data-kind='revision'] { border-color: color-mix(in srgb, var(--sig-medium) 55%, var(--e360-blue-line)); }
+.entity360-press-kpis span, .entity360-press-kpis small { display: block; overflow: hidden; color: var(--ink-4); font-size: 8.5px; text-overflow: ellipsis; white-space: nowrap; }
+.entity360-press-kpis strong { display: block; margin: 2px 0; color: var(--ink); font-family: var(--mono); font-size: 22px; line-height: 1; }
+.entity360-press-controls { display: grid; grid-template-columns: minmax(370px, 1.4fr) minmax(150px, .7fr) 130px 130px minmax(190px, .8fr) auto; gap: 8px; align-items: end; padding: 10px; border: 1px solid var(--e360-blue-line); border-radius: 9px; background: var(--e360-card); }
+.entity360-press-controls label { display: grid; gap: 4px; color: var(--ink-4); font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.entity360-press-controls select, .entity360-press-controls input { min-width: 0; height: 31px; padding: 0 9px; border: 1px solid var(--line-strong); border-radius: 6px; outline: 0; background: var(--bg-panel-2); color: var(--ink-2); font: inherit; font-size: 10.5px; text-transform: none; letter-spacing: normal; }
+.entity360-press-controls select:focus, .entity360-press-controls input:focus { border-color: var(--e360-blue); box-shadow: 0 0 0 2px var(--e360-blue-dim); }
+.entity360-press-kind-filter { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.entity360-press-kind-filter button { height: 31px; padding: 0 7px; border: 1px solid var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 9.5px; white-space: nowrap; }
+.entity360-press-kind-filter button span { margin-left: 3px; color: var(--ink-4); font-family: var(--mono); font-size: 8.5px; }
+.entity360-press-kind-filter button[data-active='true'] { border-color: var(--e360-blue); background: var(--e360-blue-dim); color: var(--e360-blue-2); }
+.entity360-press-clear { height: 31px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 9.5px; white-space: nowrap; }
+.entity360-press-clear:hover { border-color: var(--e360-blue-line); color: var(--ink); }
+.entity360-press-timeline-card, .entity360-press-results { border: 1px solid var(--e360-blue-line); border-radius: 9px; background: var(--e360-card); overflow: hidden; }
+.entity360-press-timeline-card > header, .entity360-press-results > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 9px 12px; border-bottom: 1px solid color-mix(in srgb, var(--e360-blue-line) 60%, transparent); }
+.entity360-press-timeline-card > header div, .entity360-press-results > header div { display: flex; align-items: baseline; gap: 8px; }
+.entity360-press-timeline-card > header span, .entity360-press-results > header span { color: var(--ink); font-size: 11.5px; font-weight: 700; }
+.entity360-press-timeline-card > header strong, .entity360-press-results > header strong { color: var(--ink-4); font-size: 9.5px; font-weight: 550; }
+.entity360-press-timeline-card > header small, .entity360-press-results > header small { color: var(--ink-4); font-size: 9px; }
+.entity360-press-timeline { display: flex; align-items: stretch; gap: 7px; min-height: 128px; padding: 12px 12px 10px; overflow-x: auto; }
+.entity360-press-month { display: grid; grid-template-rows: 76px 15px 18px; flex: 1 0 44px; min-width: 44px; text-align: center; }
+.entity360-press-month > div { display: flex; align-items: end; justify-content: center; border-bottom: 1px solid var(--line-strong); background: repeating-linear-gradient(to top, color-mix(in srgb, var(--line-strong) 45%, transparent) 0 1px, transparent 1px 25px); }
+.entity360-press-month i { display: block; width: min(24px, 62%); min-height: 7px; border-radius: 3px 3px 0 0; background: linear-gradient(to top, color-mix(in srgb, var(--e360-blue) 75%, #0d5aa0), var(--e360-blue-2)); }
+.entity360-press-month strong { padding-top: 3px; color: var(--ink-2); font-family: var(--mono); font-size: 8.5px; font-weight: 650; }
+.entity360-press-month span { color: var(--ink-4); font-size: 8px; white-space: nowrap; }
+.entity360-press-feed { display: grid; gap: 0; }
+.entity360-press-feed article { position: relative; display: grid; gap: 6px; padding: 13px 15px 12px 18px; border-bottom: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent); }
+.entity360-press-feed article:last-child { border-bottom: 0; }
+.entity360-press-feed article::before { content: ''; position: absolute; inset: 14px auto 14px 7px; width: 2px; border-radius: 99px; background: var(--sig-medium); }
+.entity360-press-feed article[data-evidence='directa']::before { background: var(--present); }
+.entity360-press-feed article[data-evidence='contexto']::before { background: var(--e360-blue); }
+.entity360-press-feed-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; color: var(--ink-4); font-size: 9px; }
+.entity360-press-evidence { display: inline-flex; align-items: center; min-height: 20px; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--sig-medium) 55%, var(--line-strong)); border-radius: 99px; color: var(--sig-medium); font-weight: 700; }
+article[data-evidence='directa'] .entity360-press-evidence { border-color: color-mix(in srgb, var(--present) 50%, var(--line-strong)); color: var(--present); }
+article[data-evidence='contexto'] .entity360-press-evidence { border-color: color-mix(in srgb, var(--e360-blue) 55%, var(--line-strong)); color: var(--e360-blue-2); }
+.entity360-press-feed h3 { margin: 0; color: var(--ink); font-size: 12.5px; line-height: 1.35; letter-spacing: -.01em; }
+.entity360-press-feed p { max-width: 120ch; margin: 0; color: var(--ink-2); font-size: 10.5px; line-height: 1.5; }
+.entity360-press-identity-note { display: flex; align-items: flex-start; gap: 6px; color: var(--ink-3); font-size: 9.5px; line-height: 1.4; }
+.entity360-press-identity-note i { width: 6px; height: 6px; flex: 0 0 6px; margin-top: 4px; border-radius: 50%; background: var(--sig-medium); }
+article[data-evidence='directa'] .entity360-press-identity-note i { background: var(--present); }
+article[data-evidence='contexto'] .entity360-press-identity-note i { background: var(--e360-blue); }
+.entity360-press-feed-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px; }
+.entity360-press-feed-foot > span { color: var(--ink-4); font-size: 9px; }
+.entity360-press-feed-foot a { display: inline-flex; align-items: center; gap: 5px; color: var(--e360-blue-2); font-size: 9.5px; font-weight: 650; text-decoration: none; }
+.entity360-press-feed-foot a:hover { color: var(--ink); }
+.entity360-press-feed-foot svg { width: 12px; height: 12px; }
+.entity360-press-more { width: 100%; min-height: 36px; border: 0; border-top: 1px solid var(--line-strong); background: color-mix(in srgb, var(--e360-blue) 5%, transparent); color: var(--e360-blue-2); cursor: pointer; font-size: 10px; font-weight: 650; }
+.entity360-press-more:hover { background: var(--e360-blue-dim); }
+.entity360-press-governance { padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--sig-medium) 42%, var(--e360-blue-line)); border-radius: 8px; background: color-mix(in srgb, var(--sig-medium) 6%, var(--e360-card)); color: var(--ink-3); font-size: 9.5px; line-height: 1.5; }
+.entity360-press-governance strong { color: var(--ink-2); }
+@media (max-width: 1180px) {
+  .entity360-press-overview { grid-template-columns: 1fr; }
+  .entity360-press-controls { grid-template-columns: 1fr 1fr 130px 130px; }
+  .entity360-press-kind-filter, .entity360-press-search { grid-column: span 2; }
+}
+@media (max-width: 760px) {
+  .entity360-press-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .entity360-press-controls { grid-template-columns: 1fr 1fr; }
+  .entity360-press-kind-filter, .entity360-press-search, .entity360-press-controls label:first-of-type { grid-column: 1 / -1; }
+  .entity360-press-kind-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .entity360-press-overview { padding: 12px; }
+}
+'''
+          Path('src/styles/entity360-press-dossier.css').write_text(css, encoding='utf-8')
+
+          main_path = Path('src/main.tsx')
+          main = main_path.read_text(encoding='utf-8')
+          main = replace_once(
+              main,
+              "import './styles/entity360-light-contrast-v2.css';\n",
+              "import './styles/entity360-light-contrast-v2.css';\nimport './styles/entity360-press-dossier.css';\n",
+              'import css prensa',
+          )
+          main_path.write_text(main, encoding='utf-8')
+          PY
+
+      - name: Instalar dependencias
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f package-lock.json ]]; then npm ci; else npm install --ignore-scripts; fi
+
+      - name: Validar TypeScript y build
+        run: npm run build
+
+      - name: Publicar implementación
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "atlas-entity-press[bot]"
+          git config user.email "atlas-entity-press@users.noreply.github.com"
+          git add src/lib/press.ts src/views/EntityExpediente.tsx src/styles/entity360-press-dossier.css src/main.tsx
+          git commit -m "feat: expediente de prensa en Entidad 360"
+          git push origin HEAD:main
