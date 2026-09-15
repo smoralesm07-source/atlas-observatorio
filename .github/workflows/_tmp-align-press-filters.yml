@@ -28,7 +28,7 @@ jobs:
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Alinear consumidores del Radar Prensa Entidades
@@ -46,8 +46,6 @@ jobs:
                   raise SystemExit(f'{label}: se esperaba 1 coincidencia y hay {count}')
               p.write_text(text.replace(old, new, 1), encoding='utf-8')
 
-          # El directorio interactivo debe usar el contrato enriquecido que
-          # incorpora candidatos de prensa >=90%, no sólo evidencia histórica.
           replace_once(
               'src/components/SubjectDirectory.tsx',
               "'obs_uaf_subject_directory_v2'",
@@ -55,8 +53,6 @@ jobs:
               'RPC directorio v3',
           )
 
-          # Expone los componentes que ya publica obs_uaf_pulse para explicar
-          # el total sin mezclar confirmadas con coincidencias nuevas.
           p = Path('src/lib/contracts.ts')
           text = p.read_text(encoding='utf-8')
           old = "    prensa: number;\n    con_senal: number;"
@@ -73,22 +69,19 @@ jobs:
               'marca de prensa Universo SO',
           )
 
-          replace_once(
-              'src/views/pulso/Revision.tsx',
-              '''          <CrossCard
-            label="Figuran en prensa"
-            value={c?.prensa ?? 0}
-            sub={`${n(c?.antecedentes_prensa ?? 0)} menciones · sin enlace en origen`}
-            onClick={() => onCohort({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })}
-          />''',
-              '''          <CrossCard
-            label="Vínculo con prensa"
-            value={c?.prensa ?? 0}
-            sub={`${n(c?.prensa_confirmada ?? c?.prensa ?? 0)} confirmadas · ${n(c?.prensa_alta_confianza_nueva ?? 0)} nuevas ≥90%`}
-            onClick={() => onCohort({ cohort: 'PRENSA', title: 'SO con vínculo de prensa', hint: 'Confirmadas más coincidencias nuevas de alta confianza' })}
-          />''',
-              'tarjeta de prensa Revisión',
-          )
+          rev = Path('src/views/pulso/Revision.tsx')
+          text = rev.read_text(encoding='utf-8')
+          replacements = [
+              ('label="Figuran en prensa"', 'label="Vínculo con prensa"'),
+              ('sub={`${n(c?.antecedentes_prensa ?? 0)} menciones · sin enlace en origen`}', 'sub={`${n(c?.prensa_confirmada ?? c?.prensa ?? 0)} confirmadas · ${n(c?.prensa_alta_confianza_nueva ?? 0)} nuevas ≥90%`}'),
+              ("onClick={() => onCohort({ cohort: 'PRENSA', title: 'Sujetos que figuran en prensa' })}", "onClick={() => onCohort({ cohort: 'PRENSA', title: 'SO con vínculo de prensa', hint: 'Confirmadas más coincidencias nuevas de alta confianza' })}"),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Revisión prensa: patrón {old!r} aparece {count} veces')
+              text = text.replace(old, new, 1)
+          rev.write_text(text, encoding='utf-8')
           PY
 
       - name: Instalar dependencias
