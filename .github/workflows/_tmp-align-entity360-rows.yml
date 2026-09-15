@@ -1,0 +1,89 @@
+name: TMP Alinear grilla Entidad 360
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/_tmp-align-entity360-rows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-align-entity360-rows
+  cancel-in-progress: false
+
+jobs:
+  implementar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar Atlas
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Igualar anchos de las dos filas de Entidad 360
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/styles/entity-expediente.css')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  '.entity360-row-bottom { grid-template-columns: minmax(350px, 1fr) minmax(420px, 1.25fr) minmax(310px, .85fr); }',
+                  '.entity360-row-bottom { grid-template-columns: minmax(470px, .95fr) minmax(520px, 1.45fr); }',
+                  'grilla escritorio',
+              ),
+              (
+                  '  .entity360-row-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); }',
+                  '  .entity360-row-bottom { grid-template-columns: 1fr; }',
+                  'grilla intermedia',
+              ),
+              (
+                  '  .entity360-row-bottom > :last-child { grid-column: 1 / -1; }',
+                  '  .entity360-row-bottom > :last-child { grid-column: auto; }',
+                  'span intermedio',
+              ),
+          ]
+
+          for old, new, label in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: se esperaba 1 coincidencia y hay {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Validar build
+        run: npm run build
+
+      - name: Publicar ajuste
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "atlas-layout[bot]"
+          git config user.email "atlas-layout@users.noreply.github.com"
+          git add src/styles/entity-expediente.css
+          if git diff --cached --quiet; then
+            echo "Sin cambios pendientes"
+            exit 0
+          fi
+          git commit -m "fix: alinear grilla inferior de Entidad 360"
+          git push origin HEAD:main
