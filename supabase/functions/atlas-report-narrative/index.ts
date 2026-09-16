@@ -13,6 +13,11 @@ type AiInsights = {
   capacity: string;
 };
 
+type NumericCheck = {
+  ok: boolean;
+  invalid: Array<{ token: string; value: number | null }>;
+};
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -38,17 +43,12 @@ function extractOutputText(payload: any): string {
   return chunks.join('\n').trim();
 }
 
-function parseNumericToken(token: string): number | null {
-  let raw = token.trim().replace(/%$/, '');
-  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(raw)) raw = raw.replace(/\./g, '').replace(',', '.');
-  else raw = raw.replace(',', '.');
-  const value = Number(raw);
-  return Number.isFinite(value) ? value : null;
+function rawNumericTokens(text: string): string[] {
+  return text.match(/(?<!\d)[-−]?\d+(?:[.,]\d+)*(?:%)?/g) ?? [];
 }
 
 function numericTokens(text: string): number[] {
-  const tokens = text.match(/\b\d+(?:[.,]\d+)*(?:%)?/g) ?? [];
-  return tokens.map(parseNumericToken).filter((x): x is number => x != null);
+  return rawNumericTokens(text).map(parseNumericToken).filter((x): x is number => x != null);
 }
 
 function collectAllowedNumbers(value: unknown, out: number[] = []): number[] {
@@ -57,6 +57,7 @@ function collectAllowedNumbers(value: unknown, out: number[] = []): number[] {
   } else if (typeof value === 'string') {
     out.push(...numericTokens(value));
   } else if (Array.isArray(value)) {
+    out.push(value.length);
     value.forEach((v) => collectAllowedNumbers(v, out));
   } else if (value && typeof value === 'object') {
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
@@ -67,8 +68,19 @@ function collectAllowedNumbers(value: unknown, out: number[] = []): number[] {
   return out;
 }
 
+function parseNumericToken(token: string): number | null {
+  let raw = token.trim().replace(/%$/, '').replace('−', '-');
+  const sign = raw.startsWith('-') ? -1 : 1;
+  if (sign < 0) raw = raw.slice(1);
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(raw)) raw = raw.replace(/\./g, '').replace(',', '.');
+  else raw = raw.replace(',', '.');
+  const value = Number(raw);
+  return Number.isFinite(value) ? sign * value : null;
+}
+
 function tokenDecimals(token: string): number {
-  const raw = token.trim().replace(/%$/, '');
+  let raw = token.trim().replace(/%$/, '').replace('−', '-');
+  if (raw.startsWith('-')) raw = raw.slice(1);
   if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(raw)) return (raw.split(',')[1] ?? '').length;
   const normalized = raw.replace(',', '.');
   return (normalized.split('.')[1] ?? '').length;
@@ -87,10 +99,13 @@ function isAllowedNumber(token: string, allowed: number[]): boolean {
   });
 }
 
-function hasOnlyAllowedNumbers(text: string, data: unknown): boolean {
+function checkAllowedNumbers(text: string, data: unknown): NumericCheck {
   const allowed = [...collectAllowedNumbers(data), 0, 1, 100];
-  const tokens = text.match(/\b\d+(?:[.,]\d+)*(?:%)?/g) ?? [];
-  return tokens.every((token) => isAllowedNumber(token, allowed));
+  const invalid = rawNumericTokens(text)
+    .filter((token) => !isAllowedNumber(token, allowed))
+    .map((token) => ({ token, value: parseNumericToken(token) }));
+  const unique = invalid.filter((item, index, all) => all.findIndex((x) => x.token === item.token) === index);
+  return { ok: unique.length === 0, invalid: unique.slice(0, 8) };
 }
 
 function providerReason(status: number, errorType?: string): string {
@@ -140,6 +155,7 @@ Deno.serve(async (req: Request) => {
     'En territorio y crimen, distingue evidencia directa de proxies. No describas rankings territoriales como prevalencia de lavado o crimen organizado.',
     'Una noticia o sanción debe presentarse como hecho público o señal de contexto, nunca como prueba de lavado, delito o culpabilidad.',
     'Usa EXCLUSIVAMENTE hechos, cifras, señales y derivados presentes en validated_data. Puedes redondear sólo para presentación, sin cambiar el sentido del dato.',
+    'Cuando menciones una cifra, conserva su signo. No conviertas disminuciones negativas en magnitudes positivas.',
     'No completes datos faltantes, no cites fuentes externas y no agregues recomendaciones políticas, presupuestarias o de voto.',
     'Si el paquete no permite explicar un movimiento, dilo expresamente.',
   ].join(' ');
@@ -216,9 +232,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const combined = [narrative, insights.novelties, insights.territory, insights.crime, insights.sectors, insights.capacity].join('\n');
-    if (!hasOnlyAllowedNumbers(combined, body.validated_data)) {
-      console.warn('Narrative rejected: introduced numeric value outside validated package');
-      return json({ ai_used: false, narrative: null, insights: null, reason: 'La síntesis IA fue descartada porque introdujo una cifra fuera del paquete validado; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'guardrail', provider: 'groq', code: 'numeric_guardrail_rejection' } });
+    const numericCheck = checkAllowedNumbers(combined, body.validated_data);
+    if (!numericCheck.ok) {
+      console.warn('Narrative rejected: introduced numeric value outside validated package', numericCheck.invalid);
+      const first = numericCheck.invalid[0]?.token;
+      return json({
+        ai_used: false,
+        narrative: null,
+        insights: null,
+        reason: `La síntesis IA fue descartada porque introdujo una cifra fuera del paquete validado${first ? ` (${first})` : ''}; Atlas conserva la síntesis determinística.`,
+        diagnostic: { stage: 'guardrail', provider: 'groq', code: 'numeric_guardrail_rejection', invalid_numbers: numericCheck.invalid },
+      });
     }
 
     return json({
