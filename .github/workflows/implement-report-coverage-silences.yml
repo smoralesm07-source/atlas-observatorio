@@ -24,6 +24,18 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Corregir inserción literal de la guarda IA
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/patch_report_coverage_silences.py')
+          s = p.read_text(encoding='utf-8')
+          old = '''narr = sub_once(narr, r"function text\\(v: unknown, max = 260\\): string \\| null \\{", guard_code + "function text(v: unknown, max = 260): string | null {", 'policy guard functions')'''
+          new = '''needle = "function text(v: unknown, max = 260): string | null {"\nif needle not in narr:\n    raise SystemExit('Patch failed at policy guard functions: needle missing')\nnarr = narr.replace(needle, guard_code + needle, 1)\nprint('OK: policy guard functions')'''
+          if old not in s:
+              raise SystemExit('Could not prepare literal policy-guard insertion')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
       - name: Aplicar análisis de cobertura y silencios
         shell: bash
         run: |
@@ -54,6 +66,7 @@ jobs:
           grep -q "reporting_silence_2025" src/views/Reportes.tsx
           grep -q "without_registered_so" supabase/functions/atlas-report-narrative/index.ts
           grep -q "forbiddenInferencePatterns" supabase/functions/atlas-report-narrative/index.ts
+          grep -q "ai_generated_with_policy_guard" supabase/functions/atlas-report-narrative/index.ts
       - name: Guardar cambio verificado
         run: |
           git config user.name "Atlas maintenance bot"
