@@ -45,6 +45,8 @@ import './styles/sanciones-detail-fit.css';
 import './styles/sector-context.css';
 // Lecturas determinísticas bajo los gráficos del informe institucional.
 import './styles/report-trend-insights.css';
+// Ajuste final A4: evita que la portada sea desplazada a la segunda hoja.
+import './styles/report-print-cover-fix.css';
 
 const initialTheme = (() => {
   try {
