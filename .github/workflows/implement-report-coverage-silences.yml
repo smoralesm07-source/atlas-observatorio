@@ -1,0 +1,54 @@
+name: Implementar cobertura y silencios en Informe Atlas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_report_coverage_silences.py'
+      - '.github/workflows/implement-report-coverage-silences.yml'
+      - '.github/trigger-report-coverage-silences.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar análisis de cobertura y silencios
+        run: python3 scripts/patch_report_coverage_silences.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
+        run: npm run build
+      - name: Validar guardas narrativas
+        run: |
+          grep -q "reporting_silence_2025" src/views/Reportes.tsx
+          grep -q "without_registered_so" supabase/functions/atlas-report-narrative/index.ts
+          grep -q "forbiddenInferencePatterns" supabase/functions/atlas-report-narrative/index.ts
+      - name: Guardar cambio verificado
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/Reportes.tsx src/styles/reportes.css supabase/functions/atlas-report-narrative/index.ts supabase/functions/atlas-report-narrative-guarded/index.ts
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: agregar cobertura y silencios al informe Atlas"
+            git push origin HEAD:main
+          fi
