@@ -62,6 +62,8 @@ replace_required(
 replace_required("src/components/SubjectDirectory.tsx", "<th>IPF</th>", "<th>IPA</th>", count=1)
 replace_required("src/components/SubjectDirectory.tsx", "row.ipf_score", "row.ipa_score", count=2)
 replace_required("src/components/SubjectDirectory.tsx", "row.ipf_band", "row.ipa_band", count=2)
+# El motivo interno histórico IPF_ALTA se mantiene por compatibilidad de datos, pero no se expone como un segundo índice.
+replace_required("src/components/SubjectDirectory.tsx", "IPF_ALTA: 'IPF alto'", "IPF_ALTA: 'Prioridad alta'", count=1)
 
 # 5) Contrato TypeScript: se conserva IPF internamente, pero el nuevo RPC expone IPA.
 contracts = ROOT / "src/lib/contracts.ts"
