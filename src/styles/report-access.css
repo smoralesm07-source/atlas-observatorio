@@ -1,0 +1,4 @@
+html[data-atlas-report-ai-access="pending"] .report-btn-ai,
+html[data-atlas-report-ai-access="denied"] .report-btn-ai {
+  display: none !important;
+}
