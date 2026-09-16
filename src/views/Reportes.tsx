@@ -277,7 +277,7 @@ function derive(payload: ReportPayload): Derived {
     staffIndex: index(staffStart, staffEnd),
     iifIndex: index(iifStart, iifEnd),
     rosPerStaffEnd: ratio(rosEnd, staffEnd),
-    indicationsPerIifEnd: ratio(first('ros_con_indicios_laft') === null ? null : last('ros_con_indicios_laft'), iifEnd),
+    indicationsPerIifEnd: ratio(last('ros_con_indicios_laft'), iifEnd),
     mpStart,
     mpEnd,
     mpGrowth: pct(mpStart, mpEnd),
@@ -500,7 +500,7 @@ export function Reportes() {
     const { data, error } = await supabase.functions.invoke('atlas-report-narrative', {
       body: {
         profile: { id: profile.id, audience: profile.audience, purpose: profile.purpose, question: profile.question },
-        validated_data: validatedData(profile.id, report.data as ReportPayload, d),
+        validated_data: validatedData(profile.id, report.data as ReportPayload, d as Derived),
       },
     });
     if (error || !data?.narrative) {
