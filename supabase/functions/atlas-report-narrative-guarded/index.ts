@@ -1,0 +1,72 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' },
+  });
+}
+
+function jwtSub(token: string): string | null {
+  try {
+    const middle = token.split('.')[1];
+    if (!middle) return null;
+    const normalized = middle.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(padded));
+    return typeof payload?.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+
+  const auth = req.headers.get('authorization') ?? '';
+  const token = auth.replace(/^Bearer\s+/i, '');
+  const userId = jwtSub(token);
+  if (!userId) return json({ error: 'authenticated_user_required' }, 401);
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  if (!supabaseUrl || !anonKey) return json({ error: 'authorization_backend_unavailable' }, 500);
+
+  const accessUrl = `${supabaseUrl}/rest/v1/aml_allowed_users?select=role,enabled&user_id=eq.${encodeURIComponent(userId)}&limit=1`;
+  const accessResponse = await fetch(accessUrl, {
+    headers: { Authorization: auth, apikey: anonKey, Accept: 'application/json' },
+  });
+  if (!accessResponse.ok) return json({ error: 'role_lookup_failed' }, 503);
+
+  const accessRows = await accessResponse.json().catch(() => []);
+  const access = Array.isArray(accessRows) ? accessRows[0] : null;
+  const role = String(access?.role ?? '').toLowerCase();
+  if (!access?.enabled || (role !== 'admin' && role !== 'analyst')) {
+    return json({ error: 'report_ai_requires_analyst_or_admin' }, 403);
+  }
+
+  const body = await req.text();
+  const upstream = await fetch(`${supabaseUrl}/functions/v1/atlas-report-narrative`, {
+    method: 'POST',
+    headers: {
+      Authorization: auth,
+      apikey: anonKey,
+      'Content-Type': req.headers.get('content-type') ?? 'application/json',
+      'x-client-info': req.headers.get('x-client-info') ?? 'atlas-report-role-guard',
+    },
+    body,
+  });
+
+  const responseBody = await upstream.text();
+  return new Response(responseBody, {
+    status: upstream.status,
+    headers: { ...cors, 'Content-Type': upstream.headers.get('content-type') ?? 'application/json; charset=utf-8' },
+  });
+});
