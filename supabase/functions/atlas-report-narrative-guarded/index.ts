@@ -65,14 +65,25 @@ Deno.serve(async (req: Request) => {
   const potentialTotal = Array.isArray(potentialTotalRows) ? potentialTotalRows[0] : null;
   const potentialSectors = Array.isArray(potentialSectorRows) ? potentialSectorRows : [];
   if (potentialTotal && requestBody?.validated_data && typeof requestBody.validated_data === 'object') {
+    const potentialSo = {
+      total: potentialTotal,
+      top_sectors: potentialSectors,
+      interpretation: 'Screening económico: observadas es el universo examinado y accionables son hipótesis de inscripción que requieren validación. No acredita obligación jurídica, falta de inscripción ni incumplimiento. Si una hipótesis se confirma, puede ampliar tareas de validación, incorporación registral, orientación, supervisión y futura reportabilidad; estas cifras no estiman una brecha de dotación.',
+    };
     requestBody.validated_data = {
       ...requestBody.validated_data,
-      potential_so: {
-        total: potentialTotal,
-        top_sectors: potentialSectors,
-        interpretation: 'Screening económico: observadas es el universo examinado y accionables son hipótesis de inscripción que requieren validación. No acredita obligación jurídica, falta de inscripción ni incumplimiento.',
+      potential_so: potentialSo,
+      structural: {
+        ...(requestBody.validated_data.structural ?? {}),
+        potential_so: potentialSo,
       },
     };
+    if (requestBody.profile && typeof requestBody.profile === 'object') {
+      requestBody.profile = {
+        ...requestBody.profile,
+        purpose: `${String(requestBody.profile.purpose ?? '')} Considera también el perímetro de potenciales sujetos obligados, distinguiendo universo observado de hipótesis accionables y sus principales sectores.`,
+      };
+    }
   }
 
   const upstream = await fetch(`${supabaseUrl}/functions/v1/atlas-report-narrative`, {
