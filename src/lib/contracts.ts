@@ -606,7 +606,7 @@ export type UafCohort =
   | 'OSFL' | 'PROVEEDOR_ESTADO' | 'SANCIONADO' | 'PRENSA' | 'CON_SENAL'
   | 'IGR_ALTO' | 'IGR_MUY_ALTO'
   | 'REGION' | 'SECTOR' | 'INDUSTRIA' | 'TERMINO_ANO'
-  | 'ATENCION' | 'MOTIVO' | 'IPF_ALTO' | 'GIRO_ATIPICO'
+  | 'ATENCION' | 'MOTIVO' | 'IPA_ALTO' | 'IPF_ALTO' | 'GIRO_ATIPICO'
   | 'CAMBIO_ACTIVIDAD' | 'SIN_TERRITORIO' | 'SECTOR_SIN_ROS';
 
 /** Motivo de revisión de mayor precedencia. Ordena trabajo; no imputa nada. */
@@ -630,6 +630,8 @@ export interface UafAttentionRow {
   orden: number;
   ipf_score: number | null;
   ipf_band: string | null;
+  ipa_score: number | null;
+  ipa_band: string | null;
   sanction_evidence_count: number;
   sanction_last_date: string | null;
   press_evidence_count: number;
@@ -950,6 +952,8 @@ export interface UafSubjectRow {
   alert_count: number;
   ipf_score: number | null;
   ipf_band: string | null;
+  ipa_score: number | null;
+  ipa_band: string | null;
   /** Motivo de mayor precedencia por el que el sujeto entra a revision. */
   attention_motive: UafMotive | null;
   /** Posicion del IPF dentro del padron completo, 0..100. */

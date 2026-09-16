@@ -180,7 +180,7 @@ export function PadronAxisV2({
           </div>
           <div className="uso2-questions">
             <button onClick={() => selectRegistered({ cohort: 'SECTOR_SIN_ROS', title: 'Sujetos en sectores sin ROS 2021-2025' })}>¿Quiénes están en sectores sin ROS?</button>
-            <button onClick={() => selectRegistered({ cohort: 'IPF_ALTO', title: 'Sujetos con IPF alta o muy alta' })}>¿Quiénes concentran prioridad?</button>
+            <button onClick={() => selectRegistered({ cohort: 'IPA_ALTO', title: 'Sujetos con IPA alta o muy alta' })}>¿Quiénes concentran prioridad?</button>
             <button onClick={() => selectRegistered({ cohort: 'GIRO_ATIPICO', title: 'Sujetos con giro atípico en su sector' })}>¿Qué giros son atípicos?</button>
           </div>
         </Block>

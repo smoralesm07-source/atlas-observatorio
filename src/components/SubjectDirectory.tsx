@@ -72,14 +72,14 @@ export function SubjectDirectory({
 
   useEffect(() => setPage(0), [selectionKey]);
 
-  const registered = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v3', {
+  const registered = useRpc<UafSubjectRow[]>('obs_uaf_subject_directory_v4', {
     p_cohort: request.cohort,
     p_value: request.value ?? null,
     p_q: debouncedQuery.trim() || null,
     p_sector: selection.kind === 'registered' ? selection.clientSector ?? null : null,
     p_region: selection.kind === 'registered' ? selection.clientRegion ?? null : null,
     p_industry: selection.kind === 'registered' ? selection.clientIndustry ?? null : null,
-    p_order: sort === 'name' ? 'nombre' : sort === 'score' ? 'ipf' : sort === 'signals' ? 'senales' : 'relevancia',
+    p_order: sort === 'name' ? 'nombre' : sort === 'score' ? 'ipa' : sort === 'signals' ? 'senales' : 'relevancia',
     p_limit: PAGE,
     p_offset: page * PAGE,
   }, { skip: selection.kind !== 'registered' });
@@ -157,7 +157,7 @@ export function SubjectDirectory({
         </label>
         <div className="subject-directory-sort" aria-label="Orden del directorio">
           <button data-on={sort === 'relevance'} onClick={() => changeSort('relevance')}>Relevancia</button>
-          <button data-on={sort === 'score'} onClick={() => changeSort('score')}>{selection.kind === 'registered' ? 'IPF' : 'IVO'}</button>
+          <button data-on={sort === 'score'} onClick={() => changeSort('score')}>{selection.kind === 'registered' ? 'IPA' : 'IVO'}</button>
           <button data-on={sort === 'signals'} onClick={() => changeSort('signals')}>Señales</button>
           <button data-on={sort === 'name'} onClick={() => changeSort('name')}>Nombre</button>
         </div>
@@ -184,7 +184,7 @@ export function SubjectDirectory({
           <span>{page + 1} / {totalPages}</span>
           <button disabled={page + 1 >= totalPages || activeRpc.loading} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}>Siguiente →</button>
         </div>
-        <span>{selection.kind === 'registered' ? 'IPF ordena revisión; no mide riesgo LA/FT.' : 'IVO ordena revisión registral; no acredita obligación ni incumplimiento.'}</span>
+        <span>{selection.kind === 'registered' ? 'IPA ordena prioridad analítica; no mide probabilidad de LA/FT.' : 'IVO ordena revisión registral; no acredita obligación ni incumplimiento.'}</span>
       </footer>
     </section>
   );
@@ -195,7 +195,7 @@ function RegisteredTable({ rows }: { rows: UafSubjectRow[] }) {
     <div className="subject-directory-scroll">
       <table className="subject-directory-table">
         <thead><tr>
-          <th>Entidad</th><th>Sector UAF</th><th>Situación SII</th><th>Región</th><th>Marcas</th><th>IPF</th><th>Acciones</th>
+          <th>Entidad</th><th>Sector UAF</th><th>Situación SII</th><th>Región</th><th>Marcas</th><th>IPA</th><th>Acciones</th>
         </tr></thead>
         <tbody>
           {rows.map((row) => {
@@ -220,8 +220,8 @@ function RegisteredTable({ rows }: { rows: UafSubjectRow[] }) {
                 </td>
                 <td><RegisteredSignals row={row} /></td>
                 <td className="subject-directory-score">
-                  <b>{row.ipf_score == null ? '—' : n1(row.ipf_score)}</b>
-                  <small>{row.ipf_band ? titleCase(row.ipf_band.replace(/_/g, ' ')) : 'sin banda'}</small>
+                  <b>{row.ipa_score == null ? '—' : n1(row.ipa_score)}</b>
+                  <small>{row.ipa_band ? titleCase(row.ipa_band.replace(/_/g, ' ')) : 'sin banda'}</small>
                 </td>
                 <td>
                   <DirectoryActions
@@ -324,7 +324,7 @@ function attentionLabel(motive: string) {
   const labels: Record<string, string> = {
     GIRO_ATIPICO: 'Giro atípico',
     TERMINO_GIRO: 'Término de giro',
-    IPF_ALTA: 'IPF alto',
+    IPF_ALTA: 'Prioridad alta',
     SANCION_HISTORICA: 'Sanción histórica',
     SANCION_RECIENTE: 'Sanción reciente',
     SECTOR_SIN_ROS: 'Sector sin ROS',

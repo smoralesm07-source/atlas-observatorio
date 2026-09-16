@@ -56,7 +56,7 @@ export function rutFormat(rut: string | null | undefined): string {
    and "BANCO DE CHILE" reads "Banco De Chile". */
 const ACRONYMS = new Set([
   'AML', 'ROS', 'UAF', 'SII', 'OSFL', 'CGR', 'RUT', 'PEP', 'FATF', 'OFAC', 'ONU',
-  'BID', 'UE', 'UK', 'UN', 'EU', 'IPA3', 'IPF', 'IVO', 'SCJ', 'CMF', 'DIPRES',
+  'BID', 'UE', 'UK', 'UN', 'EU', 'IPA', 'IPF', 'IVO', 'SCJ', 'CMF', 'DIPRES',
   'RES', 'ICIJ', 'OSINT', 'LAFT', 'SA', 'SPA', 'LTDA', 'EIRL', 'SAC', 'RNPJSFL',
   'IGR', 'CEAD', 'PJSFL', 'SADP', 'FAU',
 ]);

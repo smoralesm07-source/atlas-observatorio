@@ -118,16 +118,15 @@ export function Metodologia() {
 
         <Panel title="Índices · qué ordenan y qué no">
           <dl className="kv">
-            <dt>IPA3 · Prioridad analítica</dt>
+            <dt>IPA · Prioridad analítica</dt>
             <dd>
               Ordena el esfuerzo de análisis entre entidades del mismo corte. No es
               probabilidad de LA/FT ni imputación de incumplimiento.
             </dd>
-            <dt>IPF · Priorización fiscalizadora</dt>
+            <dt>Contexto sectorial y supervisión</dt>
             <dd>
-              Ordena esfuerzo de fiscalización sobre sujetos obligados inscritos.
-              Su tasa sancionatoria describe lo publicado por la UAF, no la conducta
-              agregada del sector.
+              Vulnerabilidad sectorial, supervisión, escala y observabilidad se muestran
+              como dimensiones explicativas del IPA, no como un segundo índice competidor.
             </dd>
             <dt>Percentil de pares</dt>
             <dd>

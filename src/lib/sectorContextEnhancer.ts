@@ -139,7 +139,7 @@ function methodologyMarkup(note: string | null | undefined, year: number | null 
       <div class="sctx-help-popover">
         <strong>Referencia económica SII</strong>
         <p>${escapeHtml(note || 'Referencia descriptiva sobre datos SII observados por Atlas.')}</p>
-        <p>El tamaño relativo, la composición sectorial y la trayectoria económica son contexto descriptivo. <b>No modifican IPA3</b> ni acreditan riesgo, incumplimiento o delito.</p>
+        <p>El tamaño relativo, la composición sectorial y la trayectoria económica son contexto descriptivo. <b>No modifican IPA</b> ni acreditan riesgo, incumplimiento o delito.</p>
         ${year ? `<small>Corte económico ${escapeHtml(year)}</small>` : ''}
       </div>
     </details>`;

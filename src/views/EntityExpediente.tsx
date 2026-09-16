@@ -349,25 +349,25 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
 
         <div className="entity360-score" data-has-score={score != null && score > 0}>
           <div className="entity360-score-label">
-            <span>IPA3 · prioridad analítica</span>
+            <span>IPA · prioridad analítica</span>
             <details className="entity360-ipa-help">
-              <summary aria-label="Ayuda metodológica del IPA3" title="Cómo se calcula e interpreta el IPA3">i</summary>
+              <summary aria-label="Ayuda metodológica del IPA" title="Cómo se calcula e interpreta el IPA">i</summary>
               <div className="entity360-ipa-help-popover" role="note">
                 <header>
                   <div>
                     <span>Ayuda metodológica</span>
-                    <h3>IPA3 · Índice de Prioridad Analítica</h3>
+                    <h3>IPA · Índice de Prioridad Analítica</h3>
                   </div>
-                  <em>{text(priority.adjusted_score_version) ?? text(priority.score_version) ?? 'IPA3'}</em>
+                  <em>{text(priority.adjusted_score_version) ?? text(priority.score_version) ?? 'IPA'}</em>
                 </header>
 
                 <p className="entity360-ipa-help-lede">
                   <strong>{score == null ? '—' : n1(score)}/100</strong> ordena la revisión analítica de la entidad. <b>No es una probabilidad de LA/FT</b>, ni acredita delito o incumplimiento.
                 </p>
 
-                <div className="entity360-ipa-formula" aria-label="Fórmula de agregación IPA3">
+                <div className="entity360-ipa-formula" aria-label="Fórmula de agregación IPA">
                   <span>Agregación</span>
-                  <code>IPA3 = G1 + 0,25·G2 + 0,10·G3</code>
+                  <code>IPA = G1 + 0,25·G2 + 0,10·G3</code>
                   <small>G1, G2 y G3 son los tres grupos independientes con mayor aporte. El resultado se acota a 100.</small>
                 </div>
 
@@ -413,7 +413,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
 
                 <footer>
                   {ipaPressScore > 0 && ipaBaseScore != null && Number(score ?? 0) !== ipaBaseScore
-                    ? <>IPA3 base sin prensa: <strong>{n1(ipaBaseScore)}/100</strong> · </>
+                    ? <>IPA base sin prensa: <strong>{n1(ipaBaseScore)}/100</strong> · </>
                     : null}
                   {ipaCoverage != null ? <>Cobertura del modelo base: <strong>{n1(ipaCoverage)}%</strong> · </> : null}
                   La cobertura y la confianza se informan aparte y no elevan por sí solas el score.
@@ -609,7 +609,6 @@ function UafTab({ data, uaf, coverage }: { data: EntityDetail; uaf: Record<strin
     <dt>Sector</dt><dd>{titleCase(text(uaf.uaf_sector_canonical) ?? data.entity.uaf_sector ?? '—')}</dd>
     <dt>Naturaleza</dt><dd>{text(uaf.subject_nature) ? titleCase(String(uaf.subject_nature).replace(/_/g, ' ')) : '—'}</dd>
     <dt>Observado por Atlas</dt><dd>{fecha(text(uaf.registry_observed_at))}</dd>
-    <dt>IPF</dt><dd>{numberValue(uaf.ipf_score) == null ? '—' : `${n1(numberValue(uaf.ipf_score))} · ${text(uaf.ipf_band) ?? 'sin banda'}`}</dd>
     <dt>Vulnerabilidad sectorial</dt><dd>{numberValue(uaf.sector_vulnerability) == null ? '—' : n1(numberValue(uaf.sector_vulnerability))}</dd>
     <dt>Sanciones observadas</dt><dd className="mono">{numberValue(uaf.sanction_event_count) == null ? n(data.sanctions.length) : n(numberValue(uaf.sanction_event_count))}</dd>
   </dl> : <Empty title={coverageLabel(coverage)} hint="La ausencia de registro en el corte no reemplaza una consulta a la fuente primaria." />}</Card><Card title="Lectura UAF" meta="contexto de supervisión"><div className="entity360-explain"><strong>{present ? 'Entidad observada como sujeto obligado' : 'Sin perfil UAF materializado'}</strong><p>{typeof uaf.semantics === 'string' ? uaf.semantics.replace(/_/g, ' ') : 'El perfil UAF se utiliza como contexto regulatorio y de priorización; no como probabilidad de LA/FT.'}</p>{Array.isArray(uaf.ipf_flags) && uaf.ipf_flags.length > 0 && <div className="entity360-chipset">{(uaf.ipf_flags as unknown[]).map((flag) => <Badge key={String(flag)} tone="unknown">{titleCase(String(flag).replace(/_/g, ' '))}</Badge>)}</div>}</div></Card></div>;

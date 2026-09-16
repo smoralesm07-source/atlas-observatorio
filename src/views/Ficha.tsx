@@ -104,7 +104,7 @@ export function Ficha({
         <div className="ficha-scores">
           <ScoreTile
             value={e.ipa3_score == null ? '—' : n1(e.ipa3_score)}
-            label="Prioridad analítica"
+            label="IPA"
             hint={bandLabel(e.ipa3_band)}
           />
           <ScoreTile value={n(present.length)} label="Fuentes con registro" hint={`de ${n(consulted)} consultadas`} />
@@ -569,9 +569,6 @@ function Economia({ data }: { data: EntityDetail }) {
               <Row k="Sanciones (total)" v={n(uaf.sanction_event_count as number)} />
               <Row k="Sanciones (5 años)" v={n(uaf.sanction_event_count_5y as number)} />
               <Row k="Última sanción" v={fecha(uaf.sanction_last_event_date as string)} />
-              <Row k="IPF" v={`${n1(uaf.ipf_score as number)} · ${String(uaf.ipf_band ?? '—')}`} />
-              <Row k="Percentil IPF" v={pct(uaf.ipf_percentile as number)} />
-              <Row k="Percentil en sector" v={pct(uaf.ipf_sector_percentile as number)} />
             </dl>
             {typeof uaf.semantics === 'string' && (
               <div className="note" style={{ marginTop: 14 }}>{uaf.semantics}</div>
