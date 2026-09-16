@@ -41,7 +41,21 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
       - name: Verificar tipos
-        run: npm run typecheck
+        id: typecheck
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee ipa-typecheck.log
+      - name: Guardar diagnóstico de tipos si falla
+        if: steps.typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa-typecheck-diagnostic
+          path: ipa-typecheck.log
+          retention-days: 1
+      - name: Detener si falló typecheck
+        if: steps.typecheck.outcome == 'failure'
+        run: exit 1
       - name: Verificar build
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
