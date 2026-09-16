@@ -55,6 +55,11 @@ type BriefPayload = {
   methodology: { focus: string; interpretation: string; cutoffs: string; ai: string };
 };
 
+type UniversePulse = {
+  universe: { total: number } | null;
+  by_sector: Array<{ sector: string; sujetos: number }>;
+};
+
 type DepthPayload = {
   contract: string;
   window: { days: number; current_from: string; previous_from: string; to: string };
@@ -236,6 +241,7 @@ export function ReportesDirectivosV2() {
 
   const briefing = useRpc<BriefPayload>('obs_uaf_directive_brief_payload', { p_from_year: fromYear, p_to_year: toYear });
   const depth = useRpc<DepthPayload>('obs_uaf_strategic_depth_payload', { p_novelty_days: noveltyDays });
+  const universePulse = useRpc<UniversePulse>('obs_uaf_pulse', {});
   const profile = PROFILES.find((p) => p.id === profileId) ?? PROFILES[0];
 
   useEffect(() => { setAiText(null); setAiInsights(null); setReportVersion('base'); setAiStatus('idle'); setAiMeta(null); }, [profileId, fromYear, toYear, noveltyDays]);
@@ -253,6 +259,11 @@ export function ReportesDirectivosV2() {
   const summary = useAiVersion && aiText ? aiText.split(/\n\s*\n/).filter(Boolean) : baseSummary;
   const growth = d.sector_growth.slice(0, 7);
   const declines = d.sector_decline.slice(0, 4);
+  const sectorConcentration = [...(universePulse.data?.by_sector ?? [])]
+    .filter((x) => x.sector && Number.isFinite(Number(x.sujetos)))
+    .sort((a, b) => Number(b.sujetos ?? 0) - Number(a.sujetos ?? 0))
+    .slice(0, 5);
+  const sectorTotal = Number(universePulse.data?.universe?.total ?? d.situation.subjects_latest ?? 0);
   const themes = context?.press_momentum?.slice(0, 5) ?? [];
   const regions = context?.regional_convergence?.slice(0, 5) ?? [];
   const focusConfig = FOCUS_CONFIG[profileId];
@@ -295,6 +306,7 @@ export function ReportesDirectivosV2() {
     },
     chart_context: {
       sectors: {
+        largest_current: sectorConcentration.map((x) => ({ sector: x.sector, current_subjects: x.sujetos, share_pct: sectorTotal > 0 ? (Number(x.sujetos) / sectorTotal) * 100 : null })),
         largest_increases: growth.map((x) => ({ sector: x.sector, registered_so_2025: x.registered_so_2025, current_subjects: x.current_subjects, delta_subjects: x.delta, delta_pct: x.delta_pct, top_region: x.top_region, top_region_share_pct: x.top_region_share_pct })),
         largest_declines: declines.map((x) => ({ sector: x.sector, registered_so_2025: x.registered_so_2025, current_subjects: x.current_subjects, delta_subjects: x.delta, delta_pct: x.delta_pct, top_region: x.top_region, top_region_share_pct: x.top_region_share_pct })),
         highest_ros_2025: [],
@@ -444,8 +456,11 @@ export function ReportesDirectivosV2() {
       </section>
 
       <section className="report-section report-page-break">
-        <div className="report-section-heading"><span>06</span><div><h3>Expansión del universo obligado</h3><p>Variación del padrón respecto del cierre 2025.</p></div></div>
+        <div className="report-section-heading"><span>06</span><div><h3>Universo Obligado</h3><p>Composición actual del padrón y análisis de su expansión.</p></div></div>
         <div className="dbv2-perimeter"><Stat label="Padrón cierre 2025" value={fmt0.format(c.subjects_end ?? 0)} note="personas y entidades" /><Stat label="Último padrón" value={fmt0.format(d.situation.subjects_latest ?? 0)} note={d.situation.subjects_latest_date ?? 's/d'} highlight /><Stat label="Actividades obligadas" value={`${fmt0.format(c.activities_start ?? 0)} → ${fmt0.format(c.activities_end ?? 0)}`} note={`${fromYear}–${toYear}`} /></div>
+        <p className="dbv2-note"><strong>Composición sectorial del padrón vigente.</strong> Top 5 de sectores por número de sujetos obligados; la primera fila identifica el sector que reúne más inscritos.</p>
+        {sectorConcentration.length > 0 ? <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>SO actuales</th><th>% del padrón</th></tr></thead><tbody>{sectorConcentration.map((x, index) => <tr key={x.sector}><td>{index === 0 ? <strong>{x.sector}</strong> : x.sector}</td><td>{fmt0.format(x.sujetos ?? 0)}</td><td>{sectorTotal > 0 ? `${fmt1.format((Number(x.sujetos ?? 0) / sectorTotal) * 100)}%` : 's/d'}</td></tr>)}</tbody></table></div> : <p className="dbv2-note">La distribución sectorial del padrón vigente no está disponible en este corte.</p>}
+        <p className="dbv2-note"><strong>Expansión del universo obligado.</strong> Variación del padrón respecto del cierre 2025.</p>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>2025</th><th>Actual</th><th>Variación</th><th>Región principal</th></tr></thead><tbody>{growth.map((x) => <tr key={x.sector}><td>{x.sector}</td><td>{fmt0.format(x.registered_so_2025 ?? 0)}</td><td>{fmt0.format(x.current_subjects ?? 0)}</td><td>+{fmt0.format(x.delta ?? 0)} ({signed(x.delta_pct)})</td><td>{x.top_region ?? '—'}</td></tr>)}</tbody></table></div>
         {useAiVersion && aiInsights?.sectors && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.sectors}</p>}
         {declines.length > 0 && <p className="dbv2-note">Sectores con disminución registral en el mismo contraste: {declines.map((x) => `${x.sector} (${fmt0.format(x.delta ?? 0)})`).join(', ')}.</p>}
