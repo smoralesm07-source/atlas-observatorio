@@ -73,6 +73,12 @@ if needle not in text:
     raise RuntimeError("No se encontró el bloque IPF esperado en contracts.ts")
 if "  ipa_score: number | null;\n  ipa_band: string | null;\n" not in text:
     text = text.replace(needle, needle + "  ipa_score: number | null;\n  ipa_band: string | null;\n")
+# Nueva cohorte pública; se mantiene el alias IPF_ALTO sólo para contratos históricos.
+cohort_old = "  | 'ATENCION' | 'MOTIVO' | 'IPF_ALTO' | 'GIRO_ATIPICO'"
+cohort_new = "  | 'ATENCION' | 'MOTIVO' | 'IPA_ALTO' | 'IPF_ALTO' | 'GIRO_ATIPICO'"
+if cohort_old not in text:
+    raise RuntimeError("No se encontró UafCohort con IPF_ALTO en contracts.ts")
+text = text.replace(cohort_old, cohort_new, 1)
 contracts.write_text(text, encoding="utf-8")
 
 # 6) Universo SO: el acceso rápido y la explicación pasan a IPA.
