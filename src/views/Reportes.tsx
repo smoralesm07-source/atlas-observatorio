@@ -84,6 +84,19 @@ type StrategicPayload = {
 type ProfileId = 'presupuesto' | 'crimen' | 'supervision' | 'territorial' | 'ciudadania' | 'internacional' | 'ejecutivo';
 type Profile = { id: ProfileId; short: string; title: string; audience: string; purpose: string; lead: string };
 type AiInsights = { novelties: string; territory: string; crime: string; sectors: string; capacity: string };
+type AiInsightKey = keyof AiInsights;
+type ReportVersion = 'base' | 'ai';
+type FocusConfig = { title: string; lead: string; primary: AiInsightKey; secondary: AiInsightKey; tertiary: AiInsightKey };
+
+const FOCUS_CONFIG: Record<ProfileId, FocusConfig> = {
+  presupuesto: { title: 'Presión y capacidad institucional', lead: 'Prioriza la relación entre demanda observable, capacidad y cambios que agregan complejidad.', primary: 'capacity', secondary: 'sectors', tertiary: 'novelties' },
+  crimen: { title: 'Convergencia de señales vinculadas a economías criminales', lead: 'Prioriza proxies, territorio y novedades sin convertir señales de contexto en prueba de delito.', primary: 'crime', secondary: 'territory', tertiary: 'novelties' },
+  supervision: { title: 'Sectores que explican los cambios de reportabilidad', lead: 'Prioriza industrias que aumentan o reducen su aporte, concentración y señales de contexto supervisor.', primary: 'sectors', secondary: 'novelties', tertiary: 'capacity' },
+  territorial: { title: 'Dónde se concentran y qué explica las señales', lead: 'Prioriza regiones, comunas y componentes que explican la lectura territorial del período.', primary: 'territory', secondary: 'crime', tertiary: 'novelties' },
+  ciudadania: { title: 'Qué cambió y cómo debe interpretarse', lead: 'Traduce los principales cambios a una lectura pública clara, con límites metodológicos explícitos.', primary: 'novelties', secondary: 'capacity', tertiary: 'territory' },
+  internacional: { title: 'Dimensión internacional y presión doméstica', lead: 'Relaciona novedades transfronterizas con la evolución del sistema nacional sin confundir cooperación con criminalidad.', primary: 'novelties', secondary: 'capacity', tertiary: 'territory' },
+  ejecutivo: { title: 'Lectura directiva de los cambios más relevantes', lead: 'Concentra los cambios que merecen atención y los factores que explican su movimiento.', primary: 'capacity', secondary: 'sectors', tertiary: 'novelties' },
+};
 
 const PROFILES: Profile[] = [
   { id: 'presupuesto', short: 'Presupuesto', title: 'Capacidad institucional frente a una demanda ALA/CFT más compleja', audience: 'Comisión de presupuesto y autoridades con responsabilidad sobre recursos públicos', purpose: 'Mostrar cómo evoluciona la presión observable que absorbe la UAF y qué nuevas exigencias aparecen, sin convertir el análisis en una recomendación de asignación.', lead: 'Capacidad, demanda, expansión del perímetro y novedades que aumentan complejidad.' },
@@ -218,12 +231,13 @@ export function Reportes() {
   const [aiInsights, setAiInsights] = useState<AiInsights | null>(null);
   const [aiStatus, setAiStatus] = useState<'idle'|'loading'|'ready'|'fallback'>('idle');
   const [aiMeta, setAiMeta] = useState<string | null>(null);
+  const [reportVersion, setReportVersion] = useState<ReportVersion>('base');
 
   const report = useRpc<StrategicPayload>('obs_uaf_strategic_report_payload', { p_from_year: fromYear, p_to_year: toYear, p_novelty_days: noveltyDays });
   const profile = PROFILES.find(x => x.id === profileId) ?? PROFILES[0];
   const s = useMemo(() => report.data ? structural(report.data.base) : null, [report.data]);
 
-  useEffect(() => { setAiNarrative(null); setAiInsights(null); setAiStatus('idle'); setAiMeta(null); }, [fromYear, toYear, noveltyDays, profileId]);
+  useEffect(() => { setAiNarrative(null); setAiInsights(null); setAiStatus('idle'); setAiMeta(null); setReportVersion('base'); }, [fromYear, toYear, noveltyDays, profileId]);
   useEffect(() => { document.body.classList.add('atlas-report-mode'); return () => document.body.classList.remove('atlas-report-mode'); }, []);
 
   if (report.loading && !report.data) return <Loading label="Construyendo informe estratégico trazable…" />;
@@ -232,7 +246,9 @@ export function Reportes() {
 
   const p = report.data;
   const baseBrief = deterministicBrief(profileId, p, s);
-  const brief = aiNarrative ? aiNarrative.split(/\n\s*\n/).filter(Boolean) : baseBrief;
+  const useAiVersion = reportVersion === 'ai' && aiStatus === 'ready' && !!aiNarrative;
+  const brief = useAiVersion && aiNarrative ? aiNarrative.split(/\n\s*\n/).filter(Boolean) : baseBrief;
+  const focusConfig = FOCUS_CONFIG[profileId];
   const questions = p.preguntas_estrategicas;
   const regions = [...p.territorio.regiones].sort((a,b) => a.strategic_rank-b.strategic_rank).slice(0,8);
   const communes = p.territorio.comunas_prioritarias.slice(0,8);
@@ -246,6 +262,9 @@ export function Reportes() {
   const qTerritory = questions.find(q => q.id === 'territorial_focus');
   const qNovelty = questions.find(q => q.id === 'external_novelties');
   const qCrime = questions.find(q => q.id === 'organized_crime_proxy');
+  const focusPrimary = useAiVersion ? aiInsights?.[focusConfig.primary] : null;
+  const focusSecondary = useAiVersion ? aiInsights?.[focusConfig.secondary] : null;
+  const focusTertiary = useAiVersion ? aiInsights?.[focusConfig.tertiary] : null;
 
   const sectorDeltas = p.sectores.movimientos
     .filter(x => x.ros_2024 != null && x.ros_2025 != null)
@@ -293,22 +312,23 @@ export function Reportes() {
   async function requestAiNarrative() {
     setAiStatus('loading'); setAiMeta(null); setAiInsights(null);
     const { data, error } = await supabase.functions.invoke('atlas-report-narrative', { body: { profile: { id: profile.id, audience: profile.audience, purpose: profile.purpose, question: profile.lead }, validated_data: validated } });
-    if (error || !data?.narrative) { setAiNarrative(null); setAiInsights(null); setAiStatus('fallback'); setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene la síntesis determinística.'); return; }
+    if (error || !data?.narrative) { setAiNarrative(null); setAiInsights(null); setAiStatus('fallback'); setReportVersion('base'); setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene el informe base determinístico.'); return; }
     const insights = data?.insights;
     const validInsights = insights && ['novelties','territory','crime','sectors','capacity'].every(k => typeof insights[k] === 'string');
     setAiNarrative(String(data.narrative));
     setAiInsights(validInsights ? { novelties: String(insights.novelties), territory: String(insights.territory), crime: String(insights.crime), sectors: String(insights.sectors), capacity: String(insights.capacity) } : null);
     setAiStatus(data.ai_used ? 'ready' : 'fallback');
-    setAiMeta(data.ai_used ? `Síntesis + lecturas IA · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene la síntesis determinística.'));
+    setReportVersion(data.ai_used ? 'ai' : 'base');
+    setAiMeta(data.ai_used ? `Propuesta IA disponible · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene el informe base determinístico.'));
   }
 
   function printPdf() {
-    const prev = document.title; document.title = `ATLAS_Informe_Estrategico_${profile.short}_${fromYear}_${toYear}`; window.print(); window.setTimeout(() => { document.title = prev; }, 500);
+    const prev = document.title; const version = useAiVersion ? 'IA' : 'Base'; document.title = `ATLAS_Informe_Estrategico_${profile.short}_${fromYear}_${toYear}_${version}`; window.print(); window.setTimeout(() => { document.title = prev; }, 500);
   }
 
   return <div className="report-view fade-in">
     <aside className="atlas-report-controls">
-      <div><span className="report-kicker">ATLAS · INFORMES ESTRATÉGICOS</span><h1>Informe de situación</h1><p>Combina evidencia estructural con novedades del entorno. La IA redacta; no calcula.</p></div>
+      <div><span className="report-kicker">ATLAS · INFORMES ESTRATÉGICOS</span><h1>Informe de situación</h1><p>El informe base siempre se conserva. La IA propone una versión focalizada; nunca reemplaza los datos ni cálculos de Atlas.</p></div>
       <label><span>Enfoque</span><select value={profileId} onChange={e => setProfileId(e.target.value as ProfileId)}>{PROFILES.map(x => <option key={x.id} value={x.id}>{x.short}</option>)}</select></label>
       <div className="report-profile-card"><strong>{profile.title}</strong><small>{profile.audience}</small><p>{profile.purpose}</p></div>
       <div className="report-year-grid">
@@ -316,9 +336,13 @@ export function Reportes() {
         <label><span>Hasta</span><select value={toYear} onChange={e => setToYear(Math.max(Number(e.target.value),fromYear))}>{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
       </div>
       <label><span>Ventana de novedades</span><select value={noveltyDays} onChange={e => setNoveltyDays(Number(e.target.value))}><option value={7}>7 días</option><option value={30}>30 días</option><option value={60}>60 días</option><option value={90}>90 días</option></select></label>
-      <div className="report-safety-box"><strong>Arquitectura</strong><span>SQL / reglas → cifras, rankings, selección de novedades y preguntas.</span><span>IA → síntesis ejecutiva y lecturas de gráficos sobre un paquete ya validado.</span></div>
-      <button className="report-btn report-btn-ai" onClick={() => void requestAiNarrative()} disabled={aiStatus==='loading'}>{aiStatus==='loading'?'Redactando…':'Redactar síntesis IA'}</button>
-      <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF</button>
+      <div className="report-safety-box"><strong>Arquitectura</strong><span>SQL / reglas → cifras, rankings, selección de novedades y preguntas.</span><span>IA → propone síntesis y una lectura focal sobre el mismo paquete validado. El informe base permanece disponible.</span></div>
+      <div className="report-version-switch" aria-label="Versión del informe">
+        <button className={reportVersion==='base'?'is-active':''} onClick={() => setReportVersion('base')}>Informe base</button>
+        <button className={reportVersion==='ai'?'is-active':''} onClick={() => setReportVersion('ai')} disabled={aiStatus!=='ready'}>Propuesta IA</button>
+      </div>
+      <button className="report-btn report-btn-ai" onClick={() => void requestAiNarrative()} disabled={aiStatus==='loading'}>{aiStatus==='loading'?'Generando propuesta…':aiStatus==='ready'?'Regenerar propuesta IA':'Generar propuesta IA'}</button>
+      <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF · {useAiVersion?'IA':'Base'}</button>
       {aiMeta && <small className="report-ai-meta">{aiMeta}</small>}
     </aside>
 
@@ -326,7 +350,7 @@ export function Reportes() {
       <header className="report-cover strategic-cover">
         <div className="report-cover-top"><span>ATLAS OBSERVATORIO</span><span>CORTE DINÁMICO · {p.novedad.hasta}</span></div>
         <div className="report-cover-body"><span className="report-eyebrow">INFORME ESTRATÉGICO · {profile.short}</span><h2>{profile.title}</h2><p>{profile.lead}</p></div>
-        <div className="report-badges"><span>DATOS TRAZABLES</span><span>NOVEDADES {p.novedad.dias} DÍAS</span><span>{aiStatus==='ready'?'SÍNTESIS IA VALIDADA':'SÍNTESIS DETERMINÍSTICA'}</span><span>HASH {p.snapshot_hash.slice(0,10)}</span></div>
+        <div className="report-badges"><span>DATOS TRAZABLES</span><span>NOVEDADES {p.novedad.dias} DÍAS</span><span>{useAiVersion?'PROPUESTA IA VALIDADA':'INFORME BASE DETERMINÍSTICO'}</span><span>HASH {p.snapshot_hash.slice(0,10)}</span></div>
       </header>
 
       <section className="report-section sr-executive report-no-break">
@@ -337,12 +361,25 @@ export function Reportes() {
           <div className="sr-hero"><span>Sanciones recientes</span><strong>{fmt0.format(p.novedades.sanciones_resumen.recent_event_count ?? 0)}</strong><small>eventos vinculados a sujetos UAF</small></div>
           <div className="sr-hero"><span>Regiones priorizadas</span><strong>{qTerritory?.regions?.length ?? p.territorio.regiones.length}</strong><small>en respuesta estratégica · cobertura nacional disponible</small></div>
         </div>
-        <div className="report-narrative"><div className="report-narrative-label"><span>{aiStatus==='ready'?'Síntesis estratégica IA':'Síntesis estratégica base'}</span><small>{aiStatus==='ready'?'Redacción sobre paquete validado, sin cálculo generativo.':'Texto reproducible construido desde reglas y métricas.'}</small></div>{brief.map((x,i)=><p key={i}>{x}</p>)}</div>
+        <div className="report-narrative"><div className="report-narrative-label"><span>{useAiVersion?'Síntesis estratégica · propuesta IA':'Síntesis estratégica base'}</span><small>{useAiVersion?'Versión reversible construida sobre paquete validado, sin cálculo generativo.':'Texto reproducible construido desde reglas y métricas.'}</small></div>{brief.map((x,i)=><p key={i}>{x}</p>)}</div>
       </section>
 
       <section className="report-section report-page-break">
-        <div className="report-section-heading"><span>02</span><div><h3>Preguntas que el informe puede responder</h3><p>Las respuestas cambian cuando cambian los datos, no por criterio del modelo generativo.</p></div></div>
-        <div className="sr-question-grid">{questions.map(q => <article className="sr-question" key={q.id}><span>INTERROGANTE</span><h4>{q.question}</h4><p>{answerQuestion(q,s,p)}</p>{q.caveat && <small>{q.caveat}</small>}</article>)}</div>
+        {useAiVersion ? <>
+          <div className="report-section-heading"><span>02</span><div><h3>Lectura focal · {profile.short}</h3><p>{focusConfig.lead}</p></div></div>
+          <div className="sr-focus-shell">
+            <div className="sr-focus-head"><span>PROPUESTA IA · REVERSIBLE</span><h4>{focusConfig.title}</h4><p>Atlas selecciona el foco según el propósito del informe; la IA interpreta únicamente señales ya validadas.</p></div>
+            <div className="sr-focus-grid">
+              <article className="sr-focus-card is-primary"><span>HALLAZGO CENTRAL</span><p>{focusPrimary ?? brief[0]}</p></article>
+              <article className="sr-focus-card"><span>QUÉ LO SOSTIENE</span><p>{focusSecondary ?? 'La propuesta IA no agregó una segunda lectura válida; se conserva la evidencia del informe base.'}</p></article>
+              <article className="sr-focus-card"><span>QUÉ CONTRASTAR</span><p>{focusTertiary ?? 'La propuesta IA no agregó una tercera lectura válida; revise las preguntas determinísticas del informe base.'}</p></article>
+            </div>
+            <div className="sr-focus-footer"><strong>Control del usuario</strong><span>Puede volver a “Informe base” en cualquier momento. Los datos, gráficos y cálculos no cambian entre versiones.</span></div>
+          </div>
+        </> : <>
+          <div className="report-section-heading"><span>02</span><div><h3>Preguntas que el informe puede responder</h3><p>Las respuestas cambian cuando cambian los datos, no por criterio del modelo generativo.</p></div></div>
+          <div className="sr-question-grid">{questions.map(q => <article className="sr-question" key={q.id}><span>INTERROGANTE</span><h4>{q.question}</h4><p>{answerQuestion(q,s,p)}</p>{q.caveat && <small>{q.caveat}</small>}</article>)}</div>
+        </>}
       </section>
 
       <section className="report-section report-page-break">
@@ -350,7 +387,7 @@ export function Reportes() {
         <div className="sr-novelty-summary">
           <div><strong>{qNovelty?.external_alert_count ?? 0}</strong><span>alertas externas</span></div><div><strong>{p.novedades.prensa_resumen.article_count ?? 0}</strong><span>notas temáticas</span></div><div><strong>{p.novedades.prensa_resumen.media_count ?? 0}</strong><span>medios</span></div><div><strong>{p.novedades.sanciones_resumen.recent_entity_count ?? 0}</strong><span>entidades sancionadas recientes</span></div>
         </div>
-        {aiStatus==='ready' && aiInsights?.novelties && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.novelties}</p>}
+        {useAiVersion && aiInsights?.novelties && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.novelties}</p>}
         <h4 className="sr-subtitle">Alertas externas prioritarias</h4>
         <div className="sr-alert-list">{alerts.length ? alerts.map(a => <article key={a.alert_id}><div className="sr-alert-head"><span className="sr-severity">{a.severity}</span><strong>{a.entity_name}</strong><em>{a.uaf_sector ?? 'Sector no informado'}</em></div><p>{a.signal_label ?? a.alert_reason}</p><small>{a.latest_source ?? 'Fuente abierta'} · {a.event_at} · urgencia {a.urgency_score}/100</small>{a.latest_url && <a href={a.latest_url} target="_blank" rel="noreferrer">Ver antecedente</a>}</article>) : <p className="report-method-note">Sin alertas externas dentro de la ventana seleccionada.</p>}</div>
         <div className="sr-two-col">
@@ -364,7 +401,7 @@ export function Reportes() {
       <section className="report-section report-page-break">
         <div className="report-section-heading"><span>04</span><div><h3>Dónde están pasando cosas</h3><p>Priorización territorial determinística. Promedios regionales simples de comunas.</p></div></div>
         <div className="sr-region-grid">{regions.map(r => <article key={r.region_code}><div className="sr-rank">#{r.strategic_rank}</div><h4>{r.region_name}</h4><div className="sr-region-metric"><span>Delito base</span><strong>{r.avg_predicate_score==null?'—':fmt.format(r.avg_predicate_score)}</strong><Bar value={r.avg_predicate_score}/></div><div className="sr-region-metric"><span>Economía criminal</span><strong>{r.avg_criminal_economy_score==null?'—':fmt.format(r.avg_criminal_economy_score)}</strong><Bar value={r.avg_criminal_economy_score}/></div><small>Máx. IGR {r.max_igr==null?'—':fmt.format(r.max_igr)} · {r.alerted_context} alertas · {r.sanctioned_context} sanciones/contexto</small></article>)}</div>
-        {aiStatus==='ready' && aiInsights?.territory && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.territory}</p>}
+        {useAiVersion && aiInsights?.territory && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.territory}</p>}
         <h4 className="sr-subtitle">Comunas prioritarias por IGR</h4>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Comuna</th><th>Región</th><th>IGR</th><th>Delito base</th><th>Economía criminal</th><th>Brecha</th></tr></thead><tbody>{communes.map(c => <tr key={c.commune_code}><td>{c.commune_name}</td><td>{c.region_name}</td><td>{c.igr==null?'—':fmt.format(c.igr)}</td><td>{c.predicate_score==null?'—':fmt.format(c.predicate_score)}</td><td>{c.criminal_economy_score==null?'—':fmt.format(c.criminal_economy_score)}</td><td>{c.gap==null?'—':fmt.format(c.gap)}</td></tr>)}</tbody></table></div>
         <p className="report-method-note">{p.territorio.metodologia}</p>
@@ -374,7 +411,7 @@ export function Reportes() {
         <div className="report-section-heading"><span>05</span><div><h3>Cómo leer la dinámica asociada a crimen organizado</h3><p>Atlas no estima organizaciones criminales: construye proxies territoriales de delitos base y economías criminales.</p></div></div>
         <div className="sr-crime-intro"><strong>{qCrime?.answer === 'PROXY_ONLY' ? 'PROXY, NO PREVALENCIA' : 'LECTURA TERRITORIAL'}</strong><p>{answerQuestion(qCrime ?? {id:'organized_crime_proxy',question:'',answer:'PROXY_ONLY'},s,p)}</p></div>
         <div className="sr-component-grid">{components.map(c => <article key={c.component_id}><span>{c.component_label}</span><strong>{c.avg_score==null?'—':fmt.format(c.avg_score)}</strong><Bar value={c.avg_score}/><small>Tendencia media {c.avg_trend==null?'—':fmt.format(c.avg_trend)} · {c.commune_count} comunas · {c.max_years_observed ?? '—'} años observados</small></article>)}</div>
-        {aiStatus==='ready' && aiInsights?.crime && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.crime}</p>}
+        {useAiVersion && aiInsights?.crime && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.crime}</p>}
         <p className="report-method-note">Estos indicadores permiten formular preguntas —por ejemplo, dónde coinciden delitos asociados a drogas, receptación, robos de vehículos u homicidios con señales económicas—, pero no deben utilizarse para afirmar que una comuna “tiene más crimen organizado”.</p>
       </section>
 
@@ -382,7 +419,7 @@ export function Reportes() {
         <div className="report-section-heading"><span>06</span><div><h3>Qué cambia en los sectores obligados</h3><p>Variaciones de reportabilidad, intensidad y señales para supervisión.</p></div></div>
         <div className="sr-sector-kpis"><div><strong>{t8==null?'s/d':`${fmt.format(t8)}%`}</strong><span>ROS 2025 concentrados en top 8 sectores</span></div><div><strong>{p.sectores.resumen.silent_sector_count ?? 0}</strong><span>categorías silenciosas en 5 años</span></div><div><strong>{fmt0.format(p.sectores.resumen.registered_total ?? 0)}</strong><span>inscritos en base sectorial 2025</span></div></div>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>SO 2025</th><th>ROS 2024</th><th>ROS 2025</th><th>Var.</th><th>ROS/100 SO</th><th>Indicios 2025</th></tr></thead><tbody>{sectorMoves.map(x => <tr key={x.sector_official}><td>{x.sector_official}</td><td>{x.registered_so_2025==null?'—':fmt0.format(x.registered_so_2025)}</td><td>{x.ros_2024==null?'—':fmt0.format(x.ros_2024)}</td><td>{x.ros_2025==null?'—':fmt0.format(x.ros_2025)}</td><td>{x.delta_ros_2025_vs_2024_pct==null?'—':signed(x.delta_ros_2025_vs_2024_pct)}</td><td>{x.ros_per_100_so_2025==null?'—':fmt.format(x.ros_per_100_so_2025)}</td><td>{x.indicios_2025==null?'—':fmt0.format(x.indicios_2025)}</td></tr>)}</tbody></table></div>
-        {aiStatus==='ready' && aiInsights?.sectors && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.sectors}</p>}
+        {useAiVersion && aiInsights?.sectors && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.sectors}</p>}
         <p className="report-method-note">Las variaciones extremas pueden reflejar bases pequeñas. Volumen o silencio de ROS no equivalen automáticamente a riesgo, calidad ni cumplimiento.</p>
       </section>
 
@@ -390,7 +427,7 @@ export function Reportes() {
         <div className="report-section-heading"><span>07</span><div><h3>Presión del sistema y capacidad observable</h3><p>Comparación estructural, especialmente relevante para el enfoque presupuestario.</p></div></div>
         <div className="sr-index-grid"><IndexCard label="Presión observable" value={s.pressureIndex} note="media geométrica de padrón, ROS y actividades obligadas"/><IndexCard label="Dotación efectiva" value={s.staffIndex} note="índice de dotación total institucional"/><IndexCard label="IIF" value={s.iifIndex} note="índice de informes y complementos"/></div>
         <div className="sr-struct-grid"><div><span>Sujetos obligados</span><strong>{fmt0.format(s.so0 ?? 0)} → {fmt0.format(s.so1 ?? 0)}</strong><small>{signed(s.soGrowth)}</small></div><div><span>ROS</span><strong>{fmt0.format(s.ros0 ?? 0)} → {fmt0.format(s.ros1 ?? 0)}</strong><small>{signed(s.rosGrowth)}</small></div><div><span>Dotación</span><strong>{fmt0.format(s.staff0 ?? 0)} → {fmt0.format(s.staff1 ?? 0)}</strong><small>{signed(s.staffGrowth)}</small></div><div><span>IIF</span><strong>{fmt0.format(s.iif0 ?? 0)} → {fmt0.format(s.iif1 ?? 0)}</strong><small>{signed(s.iifGrowth)}</small></div><div><span>Req. Ministerio Público</span><strong>{fmt0.format(s.mp0 ?? 0)} → {fmt0.format(s.mp1 ?? 0)}</strong><small>{signed(s.mpGrowth)}</small></div></div>
-        {aiStatus==='ready' && aiInsights?.capacity && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.capacity}</p>}
+        {useAiVersion && aiInsights?.capacity && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.capacity}</p>}
         <p className="report-method-note">La comparación no define productividad ni dotación óptima. La dotación corresponde al total institucional y los IIF pueden consolidar múltiples ROS y otros antecedentes.</p>
       </section>
 
