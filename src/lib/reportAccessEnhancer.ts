@@ -6,6 +6,15 @@ const MENU_ATTR = 'data-atlas-report-nav';
 let scheduled = false;
 let roleLoaded = false;
 
+function installGuardedAiRoute() {
+  const functionsClient = supabase.functions as any;
+  if (functionsClient.__atlasReportGuarded) return;
+  const originalInvoke = functionsClient.invoke.bind(functionsClient);
+  functionsClient.invoke = (name: string, options?: unknown) =>
+    originalInvoke(name === 'atlas-report-narrative' ? 'atlas-report-narrative-guarded' : name, options);
+  functionsClient.__atlasReportGuarded = true;
+}
+
 function isReportsRoute() {
   return window.location.hash.startsWith('#/reportes');
 }
@@ -85,6 +94,7 @@ function scheduleScan() {
   window.requestAnimationFrame(scan);
 }
 
+installGuardedAiRoute();
 const root = document.getElementById('root') ?? document.body;
 new MutationObserver(scheduleScan).observe(root, { childList: true, subtree: true });
 window.addEventListener('hashchange', scheduleScan);
