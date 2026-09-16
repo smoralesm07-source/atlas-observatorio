@@ -15,7 +15,7 @@ import { Entidades } from './views/Entidades';
 import { EntityExpediente } from './views/EntityExpediente';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
-import { ReportesDirectivos } from './views/ReportesDirectivos';
+import { ReportesDirectivosV2 } from './views/ReportesDirectivosV2';
 import { Metodologia } from './views/Metodologia';
 import { Administracion } from './views/Administracion';
 import './styles/territory-commune-typography.css';
@@ -74,7 +74,7 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
         </>
       )}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
-      {route.view === 'reportes' && <ReportesDirectivos />}
+      {route.view === 'reportes' && <ReportesDirectivosV2 />}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
       {route.view === 'administracion' && (
