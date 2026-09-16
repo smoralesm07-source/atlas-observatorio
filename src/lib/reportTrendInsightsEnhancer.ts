@@ -1,3 +1,5 @@
+export {};
+
 /* ATLAS Observatorio · lecturas determinísticas de tendencias
    Enriquece los gráficos del informe institucional sin recalcular las series
    en backend ni usar IA. Sólo describe propiedades observables de los puntos
