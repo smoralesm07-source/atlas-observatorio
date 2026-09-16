@@ -1,0 +1,32 @@
+/* ATLAS · corrección de portada para impresión A4.
+   Mantiene una holgura real dentro del área imprimible para evitar que
+   Chrome/Edge empujen la portada completa a una segunda hoja. */
+
+@media print {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .dbv2-cover {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 258mm !important;
+    min-height: 258mm !important;
+    max-height: 258mm !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .dbv2-cover + .report-section {
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+}
