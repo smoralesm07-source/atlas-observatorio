@@ -97,7 +97,6 @@ const PROFILES: Profile[] = [
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 const fmt = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 });
 const fmt0 = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 });
-const money = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 });
 
 function n(value: unknown): number | null { const x = Number(value); return Number.isFinite(x) ? x : null; }
 function pct(a: number | null, b: number | null): number | null { return a == null || b == null || a === 0 ? null : ((b / a) - 1) * 100; }
@@ -141,7 +140,7 @@ function structural(base: BasePayload) {
 
 function answerQuestion(q: StrategicQuestion, s: ReturnType<typeof structural>, payload: StrategicPayload): string {
   if (q.id === 'capacity_pressure') {
-    if (q.answer === 'PRESION_CRECE_MAS') return `La presión observable crece más rápido que la dotación: índice ${fmt.format(q.pressure_index ?? 0)} versus ${fmt.format(q.staff_index ?? 0)}, una diferencia de ${fmt.format(q.gap_points ?? 0)} puntos índice.`;
+    if (q.answer === 'PRESION_CRECE_MAS') return `Entre ${s.from} y ${s.to}, la presión observable crece más rápido que la dotación: índice ${fmt.format(q.pressure_index ?? 0)} versus ${fmt.format(q.staff_index ?? 0)}, una diferencia de ${fmt.format(q.gap_points ?? 0)} puntos índice.`;
     if (q.answer === 'CAPACIDAD_CRECE_MAS') return `La dotación crece a un ritmo superior al índice experimental de presión observable en el período seleccionado.`;
     return 'Las series disponibles no permiten establecer una diferencia material con la metodología actual.';
   }
@@ -306,7 +305,7 @@ export function Reportes() {
           <div className="sr-hero"><span>Presión observable</span><strong>{qCapacity?.pressure_index==null?'s/d':fmt.format(qCapacity.pressure_index)}</strong><small>base {fromYear}=100 · dotación {qCapacity?.staff_index==null?'s/d':fmt.format(qCapacity.staff_index)}</small></div>
           <div className="sr-hero"><span>Novedades críticas</span><strong>{p.novedades.alertas_externas.length}</strong><small>alertas externas trazadas en {p.novedad.dias} días</small></div>
           <div className="sr-hero"><span>Sanciones recientes</span><strong>{fmt0.format(p.novedades.sanciones_resumen.recent_event_count ?? 0)}</strong><small>eventos vinculados a sujetos UAF</small></div>
-          <div className="sr-hero"><span>Regiones observadas</span><strong>{p.territorio.regiones.length}</strong><small>con capas territoriales comparables</small></div>
+          <div className="sr-hero"><span>Regiones priorizadas</span><strong>{qTerritory?.regions?.length ?? p.territorio.regiones.length}</strong><small>en respuesta estratégica · cobertura nacional disponible</small></div>
         </div>
         <div className="report-narrative"><div className="report-narrative-label"><span>{aiStatus==='ready'?'Síntesis estratégica IA':'Síntesis estratégica base'}</span><small>{aiStatus==='ready'?'Redacción sobre paquete validado, sin cálculo generativo.':'Texto reproducible construido desde reglas y métricas.'}</small></div>{brief.map((x,i)=><p key={i}>{x}</p>)}</div>
       </section>
