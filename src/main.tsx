@@ -6,6 +6,7 @@ import './lib/territoryDirectoryEnhancer';
 import './lib/typographyFloorEnhancer';
 import './lib/sectorContextEnhancer';
 import './lib/reportTrendInsightsEnhancer';
+import './lib/reportRecentContextEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
@@ -45,6 +46,8 @@ import './styles/sanciones-detail-fit.css';
 import './styles/sector-context.css';
 // Lecturas determinísticas bajo los gráficos del informe institucional.
 import './styles/report-trend-insights.css';
+// Tendencias de prensa y sanciones en el contexto reciente del informe.
+import './styles/report-recent-context.css';
 // Ajuste final A4: evita que la portada sea desplazada a la segunda hoja.
 import './styles/report-print-cover-fix.css';
 
