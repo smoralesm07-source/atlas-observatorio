@@ -1,0 +1,49 @@
+name: Implementar control de calidad IA en informes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_report_ai_quality_gate.py'
+      - '.github/workflows/implement-report-ai-quality-gate.yml'
+      - '.github/trigger-report-ai-quality-gate.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar control de calidad de propuesta IA
+        run: python3 scripts/patch_report_ai_quality_gate.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
+        run: npm run build
+      - name: Guardar cambio verificado
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/ReportesDirectivosV2.tsx
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "fix: no mostrar propuestas IA incompletas en informes"
+            git push origin HEAD:main
+          fi
