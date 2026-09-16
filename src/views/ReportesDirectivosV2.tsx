@@ -169,6 +169,46 @@ function Question({ title, answer, note }: { title: string; answer: string; note
   return <article className="dbv2-question"><h4>{title}</h4><p>{answer}</p>{note && <small>{note}</small>}</article>;
 }
 
+const AI_UNUSABLE_PATTERNS = [
+  /no permite (?:agregar|generar|construir|realizar)/i,
+  /se mantiene (?:la )?(?:interpretaci[oó]n|lectura|s[ií]ntesis|versi[oó]n|informe).*determin/i,
+  /sin introducir cifras (?:ajenas|nuevas)/i,
+  /no (?:es|fue) posible/i,
+  /no hay (?:suficiente|una lectura)/i,
+  /no (?:se )?dispone de informaci[oó]n suficiente/i,
+  /paquete validado.*no/i,
+  /no agreg[oó] una .*lectura/i,
+  /no devolvi[oó] una .*utilizable/i,
+  /tokens?/i,
+];
+
+function isUsableAiBlock(value: unknown, minLength = 55): value is string {
+  if (typeof value !== 'string') return false;
+  const text = value.trim();
+  if (text.length < minLength) return false;
+  return !AI_UNUSABLE_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function parseUsableAiInsights(value: unknown): AiInsights | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Record<string, unknown>;
+  const keys: AiInsightKey[] = ['novelties', 'territory', 'crime', 'sectors', 'capacity'];
+  if (!keys.every((key) => isUsableAiBlock(candidate[key]))) return null;
+  return {
+    novelties: String(candidate.novelties),
+    territory: String(candidate.territory),
+    crime: String(candidate.crime),
+    sectors: String(candidate.sectors),
+    capacity: String(candidate.capacity),
+  };
+}
+
+function isUsableAiNarrative(value: unknown): value is string {
+  if (!isUsableAiBlock(value, 180)) return false;
+  const paragraphs = value.split(/\n\s*\n/).map((part) => part.trim()).filter((part) => part.length >= 40);
+  return paragraphs.length >= 2;
+}
+
 function buildSummary(profile: ProfileId, d: BriefPayload, depth: DepthPayload | null): string[] {
   const c = d.change;
   const base = [
@@ -278,20 +318,26 @@ export function ReportesDirectivosV2() {
     const { data, error } = await supabase.functions.invoke('atlas-report-narrative', {
       body: { profile: { id: profile.id, audience: profile.label, purpose: profile.subtitle, question: profile.title }, validated_data: validated }
     });
-    if (error || !data?.narrative) {
-      setAiText(null); setAiInsights(null); setReportVersion('base'); setAiStatus('fallback');
-      setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene el informe base determinístico.');
+
+    const usableInsights = parseUsableAiInsights(data?.insights);
+    const proposalIsUsable = !error && data?.ai_used === true && isUsableAiNarrative(data?.narrative) && usableInsights !== null;
+
+    if (!proposalIsUsable) {
+      // Fail closed: a partial, abstaining or provider-error response never becomes a visible AI report.
+      // Detailed provider/guardrail diagnostics remain outside the document; the user simply keeps the base report.
+      setAiText(null);
+      setAiInsights(null);
+      setReportVersion('base');
+      setAiStatus('fallback');
+      setAiMeta('Se mantiene el informe base.');
       return;
     }
-    const insights = data?.insights;
-    const validInsights = insights && ['novelties','territory','crime','sectors','capacity'].every((key) => typeof insights[key] === 'string');
-    setAiText(String(data.narrative));
-    setAiInsights(validInsights ? {
-      novelties: String(insights.novelties), territory: String(insights.territory), crime: String(insights.crime), sectors: String(insights.sectors), capacity: String(insights.capacity)
-    } : null);
-    setAiStatus(data.ai_used ? 'ready' : 'fallback');
-    setReportVersion(data.ai_used ? 'ai' : 'base');
-    setAiMeta(data.ai_used ? `Propuesta IA disponible · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene el informe base determinístico.'));
+
+    setAiText(data.narrative.trim());
+    setAiInsights(usableInsights);
+    setAiStatus('ready');
+    setReportVersion('ai');
+    setAiMeta(`Propuesta IA validada · ${String(data.model ?? 'modelo configurado')}`);
   }
 
   function printPdf() {
@@ -350,7 +396,7 @@ export function ReportesDirectivosV2() {
         <div className="sr-focus-shell">
           <div className="sr-focus-head"><span>PROPUESTA IA · REVERSIBLE</span><h4>{focusConfig.title}</h4><p>Esta página cambia según el enfoque elegido. Los cálculos y gráficos permanecen idénticos al informe base.</p></div>
           <div className="sr-focus-grid">
-            <article className="sr-focus-card is-primary"><span>HALLAZGO CENTRAL</span><p>{focusPrimary ?? summary[0]}</p></article>
+            <article className="sr-focus-card is-primary"><span>HALLAZGO CENTRAL</span><p>{focusPrimary || summary[0]}</p></article>
             <article className="sr-focus-card"><span>QUÉ LO SOSTIENE</span><p>{focusSecondary ?? 'La IA no agregó una segunda lectura válida; se conserva la evidencia del informe base.'}</p></article>
             <article className="sr-focus-card"><span>QUÉ CONTRASTAR</span><p>{focusTertiary ?? 'La IA no agregó una tercera lectura válida; revise el informe base para mantener la interpretación reproducible.'}</p></article>
           </div>
