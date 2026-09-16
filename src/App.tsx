@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { AuthGate, type AtlasRole } from './components/OpenAuthGate';
 import { Shell } from './components/Shell';
 import { Entity360StatusMarks } from './components/Entity360StatusMarks';
+import { StrategicDepth } from './components/StrategicDepth';
 import { useAtlasActivity } from './lib/activity';
 import { useRoute } from './lib/router';
 import { PulsoV6 } from './views/PulsoV6';
@@ -74,7 +75,12 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
         </>
       )}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
-      {route.view === 'reportes' && <Reportes />}
+      {route.view === 'reportes' && (
+        <>
+          <Reportes />
+          <StrategicDepth />
+        </>
+      )}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
       {route.view === 'administracion' && (
