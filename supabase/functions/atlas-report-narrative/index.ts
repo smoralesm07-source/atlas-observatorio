@@ -13,10 +13,7 @@ type AiInsights = {
   capacity: string;
 };
 
-type NumericCheck = {
-  ok: boolean;
-  invalid: Array<{ token: string; value: number | null }>;
-};
+type NumericIssue = { token: string; value: number | null };
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -47,16 +44,24 @@ function rawNumericTokens(text: string): string[] {
   return text.match(/(?<!\d)[-−]?\d+(?:[.,]\d+)*(?:%)?/g) ?? [];
 }
 
+function parseNumericToken(token: string): number | null {
+  let raw = token.trim().replace(/%$/, '').replace('−', '-');
+  const sign = raw.startsWith('-') ? -1 : 1;
+  if (sign < 0) raw = raw.slice(1);
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(raw)) raw = raw.replace(/\./g, '').replace(',', '.');
+  else raw = raw.replace(',', '.');
+  const value = Number(raw);
+  return Number.isFinite(value) ? sign * value : null;
+}
+
 function numericTokens(text: string): number[] {
   return rawNumericTokens(text).map(parseNumericToken).filter((x): x is number => x != null);
 }
 
 function collectAllowedNumbers(value: unknown, out: number[] = []): number[] {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    out.push(value);
-  } else if (typeof value === 'string') {
-    out.push(...numericTokens(value));
-  } else if (Array.isArray(value)) {
+  if (typeof value === 'number' && Number.isFinite(value)) out.push(value);
+  else if (typeof value === 'string') out.push(...numericTokens(value));
+  else if (Array.isArray(value)) {
     out.push(value.length);
     value.forEach((v) => collectAllowedNumbers(v, out));
   } else if (value && typeof value === 'object') {
@@ -66,16 +71,6 @@ function collectAllowedNumbers(value: unknown, out: number[] = []): number[] {
     }
   }
   return out;
-}
-
-function parseNumericToken(token: string): number | null {
-  let raw = token.trim().replace(/%$/, '').replace('−', '-');
-  const sign = raw.startsWith('-') ? -1 : 1;
-  if (sign < 0) raw = raw.slice(1);
-  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(raw)) raw = raw.replace(/\./g, '').replace(',', '.');
-  else raw = raw.replace(',', '.');
-  const value = Number(raw);
-  return Number.isFinite(value) ? sign * value : null;
 }
 
 function tokenDecimals(token: string): number {
@@ -99,20 +94,93 @@ function isAllowedNumber(token: string, allowed: number[]): boolean {
   });
 }
 
-function checkAllowedNumbers(text: string, data: unknown): NumericCheck {
+function invalidNumbers(text: string, data: unknown): NumericIssue[] {
   const allowed = [...collectAllowedNumbers(data), 0, 1, 100];
   const invalid = rawNumericTokens(text)
     .filter((token) => !isAllowedNumber(token, allowed))
     .map((token) => ({ token, value: parseNumericToken(token) }));
-  const unique = invalid.filter((item, index, all) => all.findIndex((x) => x.token === item.token) === index);
-  return { ok: unique.length === 0, invalid: unique.slice(0, 8) };
+  return invalid.filter((item, index, all) => all.findIndex((x) => x.token === item.token) === index).slice(0, 8);
 }
 
-function providerReason(status: number, errorType?: string): string {
+function repairNumericText(text: string, data: unknown): { text: string; removed: NumericIssue[] } {
+  const pieces = text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const kept: string[] = [];
+  const removed: NumericIssue[] = [];
+  for (const piece of pieces) {
+    const bad = invalidNumbers(piece, data);
+    if (bad.length) removed.push(...bad);
+    else kept.push(piece);
+  }
+  const unique = removed.filter((item, index, all) => all.findIndex((x) => x.token === item.token) === index).slice(0, 8);
+  return { text: kept.join(' ').trim(), removed: unique };
+}
+
+function text(v: unknown, max = 260): string | null {
+  if (typeof v !== 'string') return null;
+  const clean = v.replace(/\s+/g, ' ').trim();
+  return clean ? clean.slice(0, max) : null;
+}
+
+function buildCompactPacket(source: any) {
+  const d = source ?? {};
+  const q = Array.isArray(d.strategic_questions) ? d.strategic_questions.slice(0, 5) : [];
+  const alerts = Array.isArray(d.novelties?.external_alerts) ? d.novelties.external_alerts.slice(0, 3) : [];
+  const themes = Array.isArray(d.novelties?.press_themes) ? d.novelties.press_themes.slice(0, 5) : [];
+  const sanctions = Array.isArray(d.novelties?.recent_sanctions) ? d.novelties.recent_sanctions.slice(0, 3) : [];
+  const regions = Array.isArray(d.territory?.top_regions) ? d.territory.top_regions.slice(0, 5) : [];
+  const communes = Array.isArray(d.territory?.top_communes) ? d.territory.top_communes.slice(0, 5) : [];
+  const components = Array.isArray(d.territory?.cead_components) ? d.territory.cead_components.slice(0, 5) : [];
+  const sectorCtx = d.chart_context?.sectors ?? {};
+
+  return {
+    generated_context: d.generated_context,
+    structural: d.structural,
+    strategic_questions: q.map((x: any) => ({
+      id: x.id,
+      answer: x.answer,
+      pressure_index: x.pressure_index,
+      staff_index: x.staff_index,
+      gap_points: x.gap_points,
+      external_alert_count: x.external_alert_count,
+      strategic_press_count: x.strategic_press_count,
+      recent_uaf_sanction_count: x.recent_uaf_sanction_count,
+      ros_total_2025: x.ros_total_2025,
+      silent_sector_count: x.silent_sector_count,
+      caveat: text(x.caveat, 180),
+    })),
+    novelties: {
+      press_summary: d.novelties?.press_summary,
+      external_alerts: alerts.map((x: any) => ({ entity_name: x.entity_name, severity: x.severity, urgency_score: x.urgency_score, event_at: x.event_at, signal_label: text(x.signal_label, 120) })),
+      press_themes: themes.map((x: any) => ({ theme: x.theme, article_count: x.article_count, source_count: x.source_count, latest_date: x.latest_date })),
+      recent_sanctions: sanctions.map((x: any) => ({ event_date: x.event_date, canonical_name: x.canonical_name, regulator: x.regulator, uaf_sector: x.uaf_sector, region: x.region })),
+    },
+    territory: {
+      year: d.territory?.year,
+      top_regions: regions.map((x: any) => ({ region_name: x.region_name, strategic_rank: x.strategic_rank, avg_igr: x.avg_igr, avg_predicate_score: x.avg_predicate_score, avg_criminal_economy_score: x.avg_criminal_economy_score, avg_criminogenic_context_score: x.avg_criminogenic_context_score })),
+      top_communes: communes.map((x: any) => ({ region_name: x.region_name, commune_name: x.commune_name, igr: x.igr, predicate_score: x.predicate_score, criminal_economy_score: x.criminal_economy_score, criminogenic_context_score: x.criminogenic_context_score })),
+      cead_components: components.map((x: any) => ({ component_label: x.component_label, commune_count: x.commune_count, avg_score: x.avg_score, avg_trend: x.avg_trend, total_2025: x.total_2025 })),
+      methodology: text(d.territory?.methodology, 260),
+    },
+    sectors: {
+      largest_increases: Array.isArray(sectorCtx.largest_increases) ? sectorCtx.largest_increases.slice(0, 5) : [],
+      largest_declines: Array.isArray(sectorCtx.largest_declines) ? sectorCtx.largest_declines.slice(0, 5) : [],
+      highest_ros_2025: Array.isArray(sectorCtx.highest_ros_2025) ? sectorCtx.highest_ros_2025.slice(0, 5) : [],
+    },
+    constraints: Array.isArray(d.constraints) ? d.constraints.slice(0, 5).map((x: unknown) => text(x, 160)) : [],
+  };
+}
+
+function providerReason(status: number, errorType?: string, errorCode?: string): string {
+  const marker = `${errorType ?? ''} ${errorCode ?? ''}`.toLowerCase();
+  if (marker.includes('token')) return 'Groq alcanzó un límite temporal de tokens. Atlas conserva la síntesis determinística.';
   if (status === 401) return 'Groq rechazó la credencial de API. Revisa que GROQ_API_KEY sea una clave válida y activa.';
-  if (status === 429) return 'Groq rechazó temporalmente la solicitud por cuota o límite de uso. Atlas conserva la síntesis determinística.';
+  if (status === 429) return 'Groq alcanzó un límite temporal de uso. Atlas conserva la síntesis determinística.';
+  if (status === 413) return 'El paquete enviado a Groq excedió el tamaño permitido. Atlas conserva la síntesis determinística.';
   if (status === 403) return 'Groq rechazó la solicitud por permisos de la clave API.';
-  if (status === 400) return `Groq rechazó la solicitud por configuración de la petición${errorType ? ` (${errorType})` : ''}.`;
+  if (status === 400) return `Groq rechazó la solicitud por configuración${errorType ? ` (${errorType})` : ''}.`;
   return `Groq no devolvió una síntesis utilizable${errorType ? ` (${errorType})` : ''}.`;
 }
 
@@ -127,40 +195,24 @@ Deno.serve(async (req: Request) => {
   let body: NarrativeRequest;
   try { body = await req.json(); }
   catch { return json({ error: 'invalid_json' }, 400); }
-
-  if (!body.validated_data || !body.profile?.id) {
-    return json({ error: 'validated_data_and_profile_required' }, 400);
-  }
+  if (!body.validated_data || !body.profile?.id) return json({ error: 'validated_data_and_profile_required' }, 400);
 
   const apiKey = Deno.env.get('GROQ_API_KEY');
   const model = Deno.env.get('ATLAS_REPORT_GROQ_MODEL') || 'openai/gpt-oss-120b';
-  if (!apiKey) {
-    return json({
-      ai_used: false,
-      narrative: null,
-      insights: null,
-      reason: 'GROQ_API_KEY no está configurada en los secretos de la función; Atlas conserva la síntesis determinística.',
-      diagnostic: { stage: 'secret', code: 'missing_groq_api_key' },
-    });
-  }
+  if (!apiKey) return json({ ai_used: false, narrative: null, insights: null, reason: 'GROQ_API_KEY no está configurada; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'secret', code: 'missing_groq_api_key' } });
 
+  const compact = buildCompactPacket(body.validated_data as any);
   const instructions = [
-    'Eres la capa de redacción estratégica de ATLAS Observatorio para informes AML/ALA-CFT de alto nivel.',
-    'Tu tarea es interpretar un paquete YA VALIDADO; no debes inventar datos ni recalcular indicadores.',
-    'Escribe la síntesis general en español profesional, sobrio y preciso, en 4 a 6 párrafos breves.',
-    'Además genera cinco lecturas breves para acompañar visualizaciones: novedades, territorio, crimen/proxies, sectores y capacidad.',
-    'Cada lectura debe agregar valor explicando qué patrón domina, qué elemento explica el movimiento observado, qué concentración o quiebre es visible y qué cautela metodológica corresponde.',
-    'En sectores, usa chart_context si está disponible para identificar expresamente qué industrias explican los mayores aumentos o caídas de ROS; no calcules diferencias por tu cuenta.',
-    'En capacidad, conecta tendencia de padrón, ROS, dotación, IIF y requerimientos sólo con los indicadores ya entregados.',
-    'En territorio y crimen, distingue evidencia directa de proxies. No describas rankings territoriales como prevalencia de lavado o crimen organizado.',
-    'Una noticia o sanción debe presentarse como hecho público o señal de contexto, nunca como prueba de lavado, delito o culpabilidad.',
-    'Usa EXCLUSIVAMENTE hechos, cifras, señales y derivados presentes en validated_data. Puedes redondear sólo para presentación, sin cambiar el sentido del dato.',
-    'Cuando menciones una cifra, conserva su signo. No conviertas disminuciones negativas en magnitudes positivas.',
-    'No completes datos faltantes, no cites fuentes externas y no agregues recomendaciones políticas, presupuestarias o de voto.',
-    'Si el paquete no permite explicar un movimiento, dilo expresamente.',
+    'Redacta análisis estratégico AML/ALA-CFT en español profesional.',
+    'Interpreta sólo el paquete validado; no inventes ni recalcules cifras.',
+    'Entrega narrative en 3 a 4 párrafos breves y cinco insights: novelties, territory, crime, sectors, capacity.',
+    'Cada insight debe ser una bajada breve que explique patrón, determinante principal y cautela metodológica.',
+    'Para sectores usa sectors.largest_increases, largest_declines y highest_ros_2025 para nombrar industrias que explican movimientos.',
+    'No conviertas prensa, sanciones o proxies en prueba de delito o prevalencia criminal.',
+    'Si una cifra no es indispensable, explica la tendencia sin repetirla. Si mencionas una cifra, debe existir literalmente o por redondeo en el paquete.',
+    'No cites fuentes externas ni formules recomendaciones políticas, presupuestarias o de voto.',
   ].join(' ');
 
-  const input = JSON.stringify({ profile: body.profile, validated_data: body.validated_data });
   const schema = {
     type: 'object',
     properties: {
@@ -168,11 +220,7 @@ Deno.serve(async (req: Request) => {
       insights: {
         type: 'object',
         properties: {
-          novelties: { type: 'string' },
-          territory: { type: 'string' },
-          crime: { type: 'string' },
-          sectors: { type: 'string' },
-          capacity: { type: 'string' },
+          novelties: { type: 'string' }, territory: { type: 'string' }, crime: { type: 'string' }, sectors: { type: 'string' }, capacity: { type: 'string' },
         },
         required: ['novelties', 'territory', 'crime', 'sectors', 'capacity'],
         additionalProperties: false,
@@ -190,8 +238,8 @@ Deno.serve(async (req: Request) => {
         model,
         reasoning: { effort: 'low' },
         instructions,
-        input,
-        max_output_tokens: 1400,
+        input: JSON.stringify({ profile: body.profile, validated_data: compact }),
+        max_output_tokens: 850,
         text: { format: { type: 'json_schema', name: 'atlas_report_analysis', strict: true, schema } },
       }),
     });
@@ -201,49 +249,37 @@ Deno.serve(async (req: Request) => {
       const errorType = typeof payload?.error?.type === 'string' ? payload.error.type : undefined;
       const errorCode = typeof payload?.error?.code === 'string' ? payload.error.code : undefined;
       console.error('Groq response error', response.status, errorType ?? 'unknown', errorCode ?? 'unknown');
-      return json({
-        ai_used: false,
-        narrative: null,
-        insights: null,
-        reason: providerReason(response.status, errorType ?? errorCode),
-        diagnostic: { stage: 'provider', provider: 'groq', provider_status: response.status, provider_error_type: errorType ?? null, provider_error_code: errorCode ?? null },
-      });
+      return json({ ai_used: false, narrative: null, insights: null, reason: providerReason(response.status, errorType, errorCode), diagnostic: { stage: 'provider', provider: 'groq', provider_status: response.status, provider_error_type: errorType ?? null, provider_error_code: errorCode ?? null } });
     }
 
     const raw = extractOutputText(payload);
-    if (!raw) {
-      return json({ ai_used: false, narrative: null, insights: null, reason: 'La respuesta de Groq llegó sin texto; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'response', provider: 'groq', code: 'empty_output' } });
-    }
+    if (!raw) return json({ ai_used: false, narrative: null, insights: null, reason: 'La respuesta de Groq llegó sin texto; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'response', provider: 'groq', code: 'empty_output' } });
 
     let parsed: { narrative?: unknown; insights?: Partial<AiInsights> };
     try { parsed = JSON.parse(raw); }
-    catch {
-      return json({ ai_used: false, narrative: null, insights: null, reason: 'Groq devolvió una estructura no utilizable; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'response', provider: 'groq', code: 'invalid_structured_output' } });
-    }
+    catch { return json({ ai_used: false, narrative: null, insights: null, reason: 'Groq devolvió una estructura no utilizable; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'response', provider: 'groq', code: 'invalid_structured_output' } }); }
 
-    const narrative = typeof parsed.narrative === 'string' ? parsed.narrative.trim() : '';
+    const originalNarrative = typeof parsed.narrative === 'string' ? parsed.narrative.trim() : '';
     const i = parsed.insights ?? {};
-    const insights: AiInsights | null = ['novelties','territory','crime','sectors','capacity'].every((k) => typeof (i as any)[k] === 'string')
-      ? { novelties: String(i.novelties).trim(), territory: String(i.territory).trim(), crime: String(i.crime).trim(), sectors: String(i.sectors).trim(), capacity: String(i.capacity).trim() }
-      : null;
-
-    if (!narrative || !insights) {
+    if (!originalNarrative || !['novelties','territory','crime','sectors','capacity'].every((k) => typeof (i as any)[k] === 'string')) {
       return json({ ai_used: false, narrative: null, insights: null, reason: 'La respuesta estructurada de Groq quedó incompleta; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'response', provider: 'groq', code: 'incomplete_structured_output' } });
     }
 
-    const combined = [narrative, insights.novelties, insights.territory, insights.crime, insights.sectors, insights.capacity].join('\n');
-    const numericCheck = checkAllowedNumbers(combined, body.validated_data);
-    if (!numericCheck.ok) {
-      console.warn('Narrative rejected: introduced numeric value outside validated package', numericCheck.invalid);
-      const first = numericCheck.invalid[0]?.token;
-      return json({
-        ai_used: false,
-        narrative: null,
-        insights: null,
-        reason: `La síntesis IA fue descartada porque introdujo una cifra fuera del paquete validado${first ? ` (${first})` : ''}; Atlas conserva la síntesis determinística.`,
-        diagnostic: { stage: 'guardrail', provider: 'groq', code: 'numeric_guardrail_rejection', invalid_numbers: numericCheck.invalid },
-      });
-    }
+    const repairedNarrative = repairNumericText(originalNarrative, compact);
+    const repairInsight = (value: unknown) => repairNumericText(String(value ?? '').trim(), compact);
+    const rn = repairInsight(i.novelties); const rt = repairInsight(i.territory); const rc = repairInsight(i.crime); const rs = repairInsight(i.sectors); const rcap = repairInsight(i.capacity);
+    const fallbackInsight = 'El paquete validado no permite agregar una lectura cuantitativa adicional sin introducir cifras ajenas; se mantiene la interpretación determinística del bloque.';
+    const insights: AiInsights = {
+      novelties: rn.text || fallbackInsight,
+      territory: rt.text || fallbackInsight,
+      crime: rc.text || fallbackInsight,
+      sectors: rs.text || fallbackInsight,
+      capacity: rcap.text || fallbackInsight,
+    };
+    const narrative = repairedNarrative.text || [insights.sectors, insights.capacity, insights.novelties].join(' ');
+    const removed = [...repairedNarrative.removed, ...rn.removed, ...rt.removed, ...rc.removed, ...rs.removed, ...rcap.removed]
+      .filter((item, index, all) => all.findIndex((x) => x.token === item.token) === index)
+      .slice(0, 12);
 
     return json({
       ai_used: true,
@@ -252,7 +288,7 @@ Deno.serve(async (req: Request) => {
       model,
       provider: 'groq',
       generated_at: new Date().toISOString(),
-      diagnostic: { stage: 'success', provider: 'groq', code: 'ai_narrative_and_insights_generated' },
+      diagnostic: { stage: 'success', provider: 'groq', code: removed.length ? 'ai_generated_with_numeric_repair' : 'ai_narrative_and_insights_generated', removed_numeric_fragments: removed, compact_payload_chars: JSON.stringify(compact).length },
     });
   } catch (error) {
     console.error('Groq narrative generation failed', error instanceof Error ? error.message : 'unknown');
