@@ -1,0 +1,38 @@
+.dbv2-trend-insight {
+  margin-top: 4px;
+  padding: 10px 11px 9px;
+  border-top: 1px solid #e6eaed;
+  border-left: 3px solid #e87924;
+  background: linear-gradient(90deg, rgba(232,121,36,.055), rgba(232,121,36,0));
+  color: #4f5963;
+}
+
+.dbv2-trend-insight > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #b95616;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.dbv2-trend-insight p {
+  margin: 0;
+  color: #4f5963;
+  font-size: 9.2px;
+  line-height: 1.48;
+}
+
+@media (max-width: 680px) {
+  .dbv2-trend-insight p { font-size: 10px; }
+}
+
+@media print {
+  .dbv2-trend-insight {
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
