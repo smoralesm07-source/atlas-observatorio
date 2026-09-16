@@ -204,3 +204,9 @@
   .dbv2-method,.dbv2-perimeter { grid-template-columns: repeat(3,1fr); }
   .dbv2-stat,.dbv2-trend,.dbv2-question,.dbv2-context-grid article { break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* Controles de Informes: se retiran los dos cuadros auxiliares solicitados. */
+.dbv2-controls .report-profile-card,
+.dbv2-controls .report-safety-box {
+  display: none !important;
+}
