@@ -104,20 +104,25 @@ function metricCard(args: {
   return article;
 }
 
-async function load(days: number) {
+async function load(days: number): Promise<RecentDepthPayload | null> {
   if (cache.has(days)) return cache.get(days) ?? null;
-  if (pending.has(days)) return pending.get(days) ?? null;
-  const request = supabase
-    .rpc('obs_uaf_strategic_depth_payload', { p_novelty_days: days })
-    .then(({ data, error }) => {
-      if (error || !data) return null;
-      const payload = data as RecentDepthPayload;
-      cache.set(days, payload);
-      return payload;
-    })
-    .finally(() => pending.delete(days));
+  const active = pending.get(days);
+  if (active) return active;
+
+  const request: Promise<RecentDepthPayload | null> = (async () => {
+    const { data, error } = await supabase.rpc('obs_uaf_strategic_depth_payload', { p_novelty_days: days });
+    if (error || !data) return null;
+    const payload = data as RecentDepthPayload;
+    cache.set(days, payload);
+    return payload;
+  })();
+
   pending.set(days, request);
-  return request;
+  try {
+    return await request;
+  } finally {
+    pending.delete(days);
+  }
 }
 
 function enrichThemeRows(section: HTMLElement, payload: RecentDepthPayload) {
