@@ -83,6 +83,7 @@ type StrategicPayload = {
 
 type ProfileId = 'presupuesto' | 'crimen' | 'supervision' | 'territorial' | 'ciudadania' | 'internacional' | 'ejecutivo';
 type Profile = { id: ProfileId; short: string; title: string; audience: string; purpose: string; lead: string };
+type AiInsights = { novelties: string; territory: string; crime: string; sectors: string; capacity: string };
 
 const PROFILES: Profile[] = [
   { id: 'presupuesto', short: 'Presupuesto', title: 'Capacidad institucional frente a una demanda ALA/CFT más compleja', audience: 'Comisión de presupuesto y autoridades con responsabilidad sobre recursos públicos', purpose: 'Mostrar cómo evoluciona la presión observable que absorbe la UAF y qué nuevas exigencias aparecen, sin convertir el análisis en una recomendación de asignación.', lead: 'Capacidad, demanda, expansión del perímetro y novedades que aumentan complejidad.' },
@@ -214,6 +215,7 @@ export function Reportes() {
   const [noveltyDays, setNoveltyDays] = useState(30);
   const [profileId, setProfileId] = useState<ProfileId>('presupuesto');
   const [aiNarrative, setAiNarrative] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<AiInsights | null>(null);
   const [aiStatus, setAiStatus] = useState<'idle'|'loading'|'ready'|'fallback'>('idle');
   const [aiMeta, setAiMeta] = useState<string | null>(null);
 
@@ -221,7 +223,7 @@ export function Reportes() {
   const profile = PROFILES.find(x => x.id === profileId) ?? PROFILES[0];
   const s = useMemo(() => report.data ? structural(report.data.base) : null, [report.data]);
 
-  useEffect(() => { setAiNarrative(null); setAiStatus('idle'); setAiMeta(null); }, [fromYear, toYear, noveltyDays, profileId]);
+  useEffect(() => { setAiNarrative(null); setAiInsights(null); setAiStatus('idle'); setAiMeta(null); }, [fromYear, toYear, noveltyDays, profileId]);
   useEffect(() => { document.body.classList.add('atlas-report-mode'); return () => document.body.classList.remove('atlas-report-mode'); }, []);
 
   if (report.loading && !report.data) return <Loading label="Construyendo informe estratégico trazable…" />;
@@ -245,6 +247,28 @@ export function Reportes() {
   const qNovelty = questions.find(q => q.id === 'external_novelties');
   const qCrime = questions.find(q => q.id === 'organized_crime_proxy');
 
+  const sectorDeltas = p.sectores.movimientos
+    .filter(x => x.ros_2024 != null && x.ros_2025 != null)
+    .map(x => ({
+      sector: x.sector_official,
+      ros_2024: Number(x.ros_2024),
+      ros_2025: Number(x.ros_2025),
+      delta_ros: Number(x.ros_2025) - Number(x.ros_2024),
+      delta_pct: x.delta_ros_2025_vs_2024_pct,
+      registered_so_2025: x.registered_so_2025,
+    }));
+  const chartContext = {
+    sectors: {
+      largest_increases: [...sectorDeltas].filter(x => x.delta_ros > 0).sort((a,b) => b.delta_ros-a.delta_ros).slice(0,5),
+      largest_declines: [...sectorDeltas].filter(x => x.delta_ros < 0).sort((a,b) => a.delta_ros-b.delta_ros).slice(0,5),
+      highest_ros_2025: [...p.sectores.movimientos].filter(x => x.ros_2025 != null).sort((a,b) => Number(b.ros_2025)-Number(a.ros_2025)).slice(0,5).map(x => ({ sector: x.sector_official, ros_2025: x.ros_2025, registered_so_2025: x.registered_so_2025 })),
+    },
+    territory: { leaders: regions.slice(0,5), communes: communes.slice(0,5) },
+    crime: { components: components.slice(0,5) },
+    capacity: { from: s.from, to: s.to, subject_growth_pct: s.soGrowth, ros_growth_pct: s.rosGrowth, staff_growth_pct: s.staffGrowth, iif_growth_pct: s.iifGrowth, mp_growth_pct: s.mpGrowth, pressure_index: s.pressureIndex, staff_index: s.staffIndex },
+    novelties: { external_alert_count: alerts.length, press_summary: p.novedades.prensa_resumen, recent_sanction_count: p.novedades.sanciones_resumen.recent_event_count ?? 0, press_themes: p.novedades.prensa_temas.slice(0,6) },
+  };
+
   const generated = new Date(p.generated_at);
   const validated = {
     contract: p.contract,
@@ -255,6 +279,7 @@ export function Reportes() {
     novelties: { external_alerts: alerts, press_summary: p.novedades.prensa_resumen, press_themes: p.novedades.prensa_temas, recent_sanctions: sanctions },
     territory: { year: p.territorio.year, top_regions: regions, top_communes: communes, cead_components: components, methodology: p.territorio.metodologia },
     sectors: sectorMoves,
+    chart_context: chartContext,
     rules: p.reglas,
     constraints: [
       'No recalcular ni introducir cifras nuevas.',
@@ -266,10 +291,15 @@ export function Reportes() {
   };
 
   async function requestAiNarrative() {
-    setAiStatus('loading'); setAiMeta(null);
+    setAiStatus('loading'); setAiMeta(null); setAiInsights(null);
     const { data, error } = await supabase.functions.invoke('atlas-report-narrative', { body: { profile: { id: profile.id, audience: profile.audience, purpose: profile.purpose, question: profile.lead }, validated_data: validated } });
-    if (error || !data?.narrative) { setAiNarrative(null); setAiStatus('fallback'); setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene la síntesis determinística.'); return; }
-    setAiNarrative(String(data.narrative)); setAiStatus(data.ai_used ? 'ready' : 'fallback'); setAiMeta(data.ai_used ? `Síntesis estratégica IA · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene la síntesis determinística.'));
+    if (error || !data?.narrative) { setAiNarrative(null); setAiInsights(null); setAiStatus('fallback'); setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene la síntesis determinística.'); return; }
+    const insights = data?.insights;
+    const validInsights = insights && ['novelties','territory','crime','sectors','capacity'].every(k => typeof insights[k] === 'string');
+    setAiNarrative(String(data.narrative));
+    setAiInsights(validInsights ? { novelties: String(insights.novelties), territory: String(insights.territory), crime: String(insights.crime), sectors: String(insights.sectors), capacity: String(insights.capacity) } : null);
+    setAiStatus(data.ai_used ? 'ready' : 'fallback');
+    setAiMeta(data.ai_used ? `Síntesis + lecturas IA · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene la síntesis determinística.'));
   }
 
   function printPdf() {
@@ -286,7 +316,7 @@ export function Reportes() {
         <label><span>Hasta</span><select value={toYear} onChange={e => setToYear(Math.max(Number(e.target.value),fromYear))}>{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
       </div>
       <label><span>Ventana de novedades</span><select value={noveltyDays} onChange={e => setNoveltyDays(Number(e.target.value))}><option value={7}>7 días</option><option value={30}>30 días</option><option value={60}>60 días</option><option value={90}>90 días</option></select></label>
-      <div className="report-safety-box"><strong>Arquitectura</strong><span>SQL / reglas → cifras, rankings, selección de novedades y preguntas.</span><span>IA → síntesis ejecutiva sobre paquete ya validado.</span></div>
+      <div className="report-safety-box"><strong>Arquitectura</strong><span>SQL / reglas → cifras, rankings, selección de novedades y preguntas.</span><span>IA → síntesis ejecutiva y lecturas de gráficos sobre un paquete ya validado.</span></div>
       <button className="report-btn report-btn-ai" onClick={() => void requestAiNarrative()} disabled={aiStatus==='loading'}>{aiStatus==='loading'?'Redactando…':'Redactar síntesis IA'}</button>
       <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF</button>
       {aiMeta && <small className="report-ai-meta">{aiMeta}</small>}
@@ -320,6 +350,7 @@ export function Reportes() {
         <div className="sr-novelty-summary">
           <div><strong>{qNovelty?.external_alert_count ?? 0}</strong><span>alertas externas</span></div><div><strong>{p.novedades.prensa_resumen.article_count ?? 0}</strong><span>notas temáticas</span></div><div><strong>{p.novedades.prensa_resumen.media_count ?? 0}</strong><span>medios</span></div><div><strong>{p.novedades.sanciones_resumen.recent_entity_count ?? 0}</strong><span>entidades sancionadas recientes</span></div>
         </div>
+        {aiStatus==='ready' && aiInsights?.novelties && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.novelties}</p>}
         <h4 className="sr-subtitle">Alertas externas prioritarias</h4>
         <div className="sr-alert-list">{alerts.length ? alerts.map(a => <article key={a.alert_id}><div className="sr-alert-head"><span className="sr-severity">{a.severity}</span><strong>{a.entity_name}</strong><em>{a.uaf_sector ?? 'Sector no informado'}</em></div><p>{a.signal_label ?? a.alert_reason}</p><small>{a.latest_source ?? 'Fuente abierta'} · {a.event_at} · urgencia {a.urgency_score}/100</small>{a.latest_url && <a href={a.latest_url} target="_blank" rel="noreferrer">Ver antecedente</a>}</article>) : <p className="report-method-note">Sin alertas externas dentro de la ventana seleccionada.</p>}</div>
         <div className="sr-two-col">
@@ -333,6 +364,7 @@ export function Reportes() {
       <section className="report-section report-page-break">
         <div className="report-section-heading"><span>04</span><div><h3>Dónde están pasando cosas</h3><p>Priorización territorial determinística. Promedios regionales simples de comunas.</p></div></div>
         <div className="sr-region-grid">{regions.map(r => <article key={r.region_code}><div className="sr-rank">#{r.strategic_rank}</div><h4>{r.region_name}</h4><div className="sr-region-metric"><span>Delito base</span><strong>{r.avg_predicate_score==null?'—':fmt.format(r.avg_predicate_score)}</strong><Bar value={r.avg_predicate_score}/></div><div className="sr-region-metric"><span>Economía criminal</span><strong>{r.avg_criminal_economy_score==null?'—':fmt.format(r.avg_criminal_economy_score)}</strong><Bar value={r.avg_criminal_economy_score}/></div><small>Máx. IGR {r.max_igr==null?'—':fmt.format(r.max_igr)} · {r.alerted_context} alertas · {r.sanctioned_context} sanciones/contexto</small></article>)}</div>
+        {aiStatus==='ready' && aiInsights?.territory && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.territory}</p>}
         <h4 className="sr-subtitle">Comunas prioritarias por IGR</h4>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Comuna</th><th>Región</th><th>IGR</th><th>Delito base</th><th>Economía criminal</th><th>Brecha</th></tr></thead><tbody>{communes.map(c => <tr key={c.commune_code}><td>{c.commune_name}</td><td>{c.region_name}</td><td>{c.igr==null?'—':fmt.format(c.igr)}</td><td>{c.predicate_score==null?'—':fmt.format(c.predicate_score)}</td><td>{c.criminal_economy_score==null?'—':fmt.format(c.criminal_economy_score)}</td><td>{c.gap==null?'—':fmt.format(c.gap)}</td></tr>)}</tbody></table></div>
         <p className="report-method-note">{p.territorio.metodologia}</p>
@@ -342,6 +374,7 @@ export function Reportes() {
         <div className="report-section-heading"><span>05</span><div><h3>Cómo leer la dinámica asociada a crimen organizado</h3><p>Atlas no estima organizaciones criminales: construye proxies territoriales de delitos base y economías criminales.</p></div></div>
         <div className="sr-crime-intro"><strong>{qCrime?.answer === 'PROXY_ONLY' ? 'PROXY, NO PREVALENCIA' : 'LECTURA TERRITORIAL'}</strong><p>{answerQuestion(qCrime ?? {id:'organized_crime_proxy',question:'',answer:'PROXY_ONLY'},s,p)}</p></div>
         <div className="sr-component-grid">{components.map(c => <article key={c.component_id}><span>{c.component_label}</span><strong>{c.avg_score==null?'—':fmt.format(c.avg_score)}</strong><Bar value={c.avg_score}/><small>Tendencia media {c.avg_trend==null?'—':fmt.format(c.avg_trend)} · {c.commune_count} comunas · {c.max_years_observed ?? '—'} años observados</small></article>)}</div>
+        {aiStatus==='ready' && aiInsights?.crime && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.crime}</p>}
         <p className="report-method-note">Estos indicadores permiten formular preguntas —por ejemplo, dónde coinciden delitos asociados a drogas, receptación, robos de vehículos u homicidios con señales económicas—, pero no deben utilizarse para afirmar que una comuna “tiene más crimen organizado”.</p>
       </section>
 
@@ -349,6 +382,7 @@ export function Reportes() {
         <div className="report-section-heading"><span>06</span><div><h3>Qué cambia en los sectores obligados</h3><p>Variaciones de reportabilidad, intensidad y señales para supervisión.</p></div></div>
         <div className="sr-sector-kpis"><div><strong>{t8==null?'s/d':`${fmt.format(t8)}%`}</strong><span>ROS 2025 concentrados en top 8 sectores</span></div><div><strong>{p.sectores.resumen.silent_sector_count ?? 0}</strong><span>categorías silenciosas en 5 años</span></div><div><strong>{fmt0.format(p.sectores.resumen.registered_total ?? 0)}</strong><span>inscritos en base sectorial 2025</span></div></div>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>SO 2025</th><th>ROS 2024</th><th>ROS 2025</th><th>Var.</th><th>ROS/100 SO</th><th>Indicios 2025</th></tr></thead><tbody>{sectorMoves.map(x => <tr key={x.sector_official}><td>{x.sector_official}</td><td>{x.registered_so_2025==null?'—':fmt0.format(x.registered_so_2025)}</td><td>{x.ros_2024==null?'—':fmt0.format(x.ros_2024)}</td><td>{x.ros_2025==null?'—':fmt0.format(x.ros_2025)}</td><td>{x.delta_ros_2025_vs_2024_pct==null?'—':signed(x.delta_ros_2025_vs_2024_pct)}</td><td>{x.ros_per_100_so_2025==null?'—':fmt.format(x.ros_per_100_so_2025)}</td><td>{x.indicios_2025==null?'—':fmt0.format(x.indicios_2025)}</td></tr>)}</tbody></table></div>
+        {aiStatus==='ready' && aiInsights?.sectors && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.sectors}</p>}
         <p className="report-method-note">Las variaciones extremas pueden reflejar bases pequeñas. Volumen o silencio de ROS no equivalen automáticamente a riesgo, calidad ni cumplimiento.</p>
       </section>
 
@@ -356,6 +390,7 @@ export function Reportes() {
         <div className="report-section-heading"><span>07</span><div><h3>Presión del sistema y capacidad observable</h3><p>Comparación estructural, especialmente relevante para el enfoque presupuestario.</p></div></div>
         <div className="sr-index-grid"><IndexCard label="Presión observable" value={s.pressureIndex} note="media geométrica de padrón, ROS y actividades obligadas"/><IndexCard label="Dotación efectiva" value={s.staffIndex} note="índice de dotación total institucional"/><IndexCard label="IIF" value={s.iifIndex} note="índice de informes y complementos"/></div>
         <div className="sr-struct-grid"><div><span>Sujetos obligados</span><strong>{fmt0.format(s.so0 ?? 0)} → {fmt0.format(s.so1 ?? 0)}</strong><small>{signed(s.soGrowth)}</small></div><div><span>ROS</span><strong>{fmt0.format(s.ros0 ?? 0)} → {fmt0.format(s.ros1 ?? 0)}</strong><small>{signed(s.rosGrowth)}</small></div><div><span>Dotación</span><strong>{fmt0.format(s.staff0 ?? 0)} → {fmt0.format(s.staff1 ?? 0)}</strong><small>{signed(s.staffGrowth)}</small></div><div><span>IIF</span><strong>{fmt0.format(s.iif0 ?? 0)} → {fmt0.format(s.iif1 ?? 0)}</strong><small>{signed(s.iifGrowth)}</small></div><div><span>Req. Ministerio Público</span><strong>{fmt0.format(s.mp0 ?? 0)} → {fmt0.format(s.mp1 ?? 0)}</strong><small>{signed(s.mpGrowth)}</small></div></div>
+        {aiStatus==='ready' && aiInsights?.capacity && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.capacity}</p>}
         <p className="report-method-note">La comparación no define productividad ni dotación óptima. La dotación corresponde al total institucional y los IIF pueden consolidar múltiples ROS y otros antecedentes.</p>
       </section>
 
