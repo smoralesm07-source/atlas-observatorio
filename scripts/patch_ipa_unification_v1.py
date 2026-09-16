@@ -89,8 +89,26 @@ replace_required(
     count=1,
 )
 
-# 7) Ficha clásica: estandariza el rótulo si alguien entra por una ruta antigua.
+# 7) Ficha clásica: estandariza IPA y retira la antigua ficha IPF/percentiles.
 replace_required("src/views/Ficha.tsx", 'label="Prioridad analítica"', 'label="IPA"', count=1)
+replace_required(
+    "src/views/Ficha.tsx",
+    "              <Row k=\"IPF\" v={`${n1(uaf.ipf_score as number)} · ${String(uaf.ipf_band ?? '—')}`} />\n",
+    "",
+    count=1,
+)
+replace_required(
+    "src/views/Ficha.tsx",
+    "              <Row k=\"Percentil IPF\" v={pct(uaf.ipf_percentile as number)} />\n",
+    "",
+    count=1,
+)
+replace_required(
+    "src/views/Ficha.tsx",
+    "              <Row k=\"Percentil en sector\" v={pct(uaf.ipf_sector_percentile as number)} />\n",
+    "",
+    count=1,
+)
 
 # Protección: ninguna superficie activa debe seguir mostrando IPA3 o IPF como rótulo.
 # IPF_ALTA puede persistir como clave técnica heredada hasta migrar el histórico de motivos.
