@@ -5,6 +5,7 @@ import './lib/caseDrawerEnhancer';
 import './lib/territoryDirectoryEnhancer';
 import './lib/typographyFloorEnhancer';
 import './lib/sectorContextEnhancer';
+import './lib/reportTrendInsightsEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
@@ -42,6 +43,8 @@ import './styles/gestion-so-redesign-v2.css';
 import './styles/sanciones-detail-fit.css';
 // Capa sectorial descriptiva: se carga al final para armonizar con Entidad 360 y Universo SO.
 import './styles/sector-context.css';
+// Lecturas determinísticas bajo los gráficos del informe institucional.
+import './styles/report-trend-insights.css';
 
 const initialTheme = (() => {
   try {
