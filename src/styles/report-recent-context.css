@@ -1,0 +1,139 @@
+.dbv2-recent-trends {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+  margin: 0 0 14px;
+}
+
+.dbv2-recent-trend-card {
+  padding: 14px 15px 13px;
+  border: 1px solid #d7dde3;
+  border-top: 3px solid #e87924;
+  border-radius: 10px;
+  background: #fff;
+  break-inside: avoid;
+}
+
+.dbv2-recent-trend-graphite {
+  border-top-color: #4f5963;
+}
+
+.dbv2-recent-trend-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.dbv2-recent-trend-head h4 {
+  margin: 0;
+  color: #26282b;
+  font-size: 12px;
+}
+
+.dbv2-recent-trend-head strong {
+  color: #b95616;
+  font-size: 17px;
+  letter-spacing: -.025em;
+}
+
+.dbv2-recent-trend-graphite .dbv2-recent-trend-head strong {
+  color: #4f5963;
+}
+
+.dbv2-recent-trend-direction {
+  margin: 4px 0 11px;
+  color: #69737d;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.dbv2-recent-trend-bars {
+  display: grid;
+  gap: 7px;
+}
+
+.dbv2-recent-trend-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0,1fr) 42px;
+  gap: 8px;
+  align-items: center;
+}
+
+.dbv2-recent-trend-row span,
+.dbv2-recent-trend-row b {
+  font-size: 8px;
+  color: #707981;
+}
+
+.dbv2-recent-trend-row b {
+  text-align: right;
+  color: #343a40;
+}
+
+.dbv2-recent-trend-row i {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: #e87924;
+}
+
+.dbv2-recent-trend-graphite .dbv2-recent-trend-row i {
+  background: #59636c;
+}
+
+.dbv2-recent-trend-card > small {
+  display: block;
+  margin-top: 10px;
+  color: #4f5963;
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+
+.dbv2-recent-trend-card > em {
+  display: block;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid #e6eaed;
+  color: #7a838b;
+  font-size: 8px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.dbv2-context-theme-trend {
+  display: inline-block !important;
+  margin-top: 4px !important;
+  color: #b95616 !important;
+  font-size: 8px !important;
+  font-weight: 800;
+}
+
+@media (max-width: 680px) {
+  .dbv2-recent-trends { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .dbv2-recent-trends {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 4mm !important;
+    margin-bottom: 4mm !important;
+  }
+
+  .dbv2-recent-trend-card {
+    padding: 3.6mm !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .dbv2-recent-trend-head h4 { font-size: 9pt !important; }
+  .dbv2-recent-trend-head strong { font-size: 13pt !important; }
+  .dbv2-recent-trend-direction,
+  .dbv2-recent-trend-card > small { font-size: 7pt !important; }
+  .dbv2-recent-trend-card > em,
+  .dbv2-context-theme-trend,
+  .dbv2-recent-trend-row span,
+  .dbv2-recent-trend-row b { font-size: 6.5pt !important; }
+}
