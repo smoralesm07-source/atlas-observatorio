@@ -92,7 +92,8 @@ replace_required(
 # 7) Ficha clásica: estandariza el rótulo si alguien entra por una ruta antigua.
 replace_required("src/views/Ficha.tsx", 'label="Prioridad analítica"', 'label="IPA"', count=1)
 
-# Protección: ninguna superficie activa de esta transición debe seguir mostrando IPA3 o IPF.
+# Protección: ninguna superficie activa debe seguir mostrando IPA3 o IPF como rótulo.
+# IPF_ALTA puede persistir como clave técnica heredada hasta migrar el histórico de motivos.
 active_surfaces = [
     "src/views/EntityExpediente.tsx",
     "src/views/Metodologia.tsx",
@@ -105,7 +106,8 @@ for rel in active_surfaces:
     content = (ROOT / rel).read_text(encoding="utf-8")
     if "IPA3" in content:
         raise RuntimeError(f"Persistió el rótulo IPA3 en {rel}")
-    if "IPF" in content:
+    visible_check = content.replace("IPF_ALTA", "")
+    if "IPF" in visible_check:
         raise RuntimeError(f"Persistió un IPF visible o referencia no migrada en {rel}")
 
 print("Unificación IPA aplicada: IPA es el único índice principal visible en las superficies activas.")
