@@ -23,7 +23,21 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Aplicar unificación IPA
-        run: python3 scripts/patch_ipa_unification_v1.py
+        id: apply
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 scripts/patch_ipa_unification_v1.py 2>&1 | tee ipa-patch.log
+      - name: Guardar diagnóstico si falla
+        if: steps.apply.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa-patch-diagnostic
+          path: ipa-patch.log
+          retention-days: 1
+      - name: Detener si falló el parche
+        if: steps.apply.outcome == 'failure'
+        run: exit 1
       - name: Instalar dependencias
         run: npm ci
       - name: Verificar tipos
