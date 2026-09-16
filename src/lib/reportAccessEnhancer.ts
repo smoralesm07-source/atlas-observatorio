@@ -8,11 +8,14 @@ let roleLoaded = false;
 
 function installGuardedAiRoute() {
   const functionsClient = supabase.functions as any;
-  if (functionsClient.__atlasReportGuarded) return;
-  const originalInvoke = functionsClient.invoke.bind(functionsClient);
-  functionsClient.invoke = (name: string, options?: unknown) =>
-    originalInvoke(name === 'atlas-report-narrative' ? 'atlas-report-narrative-guarded' : name, options);
-  functionsClient.__atlasReportGuarded = true;
+  const prototype = Object.getPrototypeOf(functionsClient) as any;
+  if (!prototype || prototype.__atlasReportGuarded) return;
+  const originalInvoke = prototype.invoke;
+  if (typeof originalInvoke !== 'function') return;
+  prototype.invoke = function (name: string, options?: unknown) {
+    return originalInvoke.call(this, name === 'atlas-report-narrative' ? 'atlas-report-narrative-guarded' : name, options);
+  };
+  prototype.__atlasReportGuarded = true;
 }
 
 function isReportsRoute() {
