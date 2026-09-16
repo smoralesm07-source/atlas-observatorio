@@ -167,7 +167,7 @@ function answerQuestion(q: StrategicQuestion, s: ReturnType<typeof structural>, 
     const comps = (q.top_components ?? []).slice(0, 3).map((c) => c.component).join(', ');
     return comps ? `Los proxies territoriales con mayor intensidad relativa incluyen ${comps}. Deben leerse como contexto criminógeno y delitos base, no como medición directa de organizaciones criminales.` : 'Atlas no dispone de una medición directa de organizaciones criminales; sólo proxies territoriales y hechos públicos trazados.';
   }
-  if (q.id === 'reporting_concentration') return `La reportabilidad 2025 alcanza ${fmt0.format(q.ros_total_2025 ?? 0)} ROS y existen ${q.silent_sector_count ?? 0} categorías sin ROS en el quinquenio sectorial disponible. El silencio no equivale por sí solo a incumplimiento.`;
+  if (q.id === 'reporting_concentration') return `La reportabilidad 2025 alcanza ${fmt0.format(q.ros_total_2025 ?? 0)} ROS y existen ${q.silent_sector_count ?? 0} categorías sin ROS en el quinquenio sectorial disponible. El silencio identifica ausencia de ROS observados en el período; por sí solo no califica la conducta del sector.`;
   return q.caveat ?? 'Pregunta disponible sin respuesta estructurada.';
 }
 
@@ -192,9 +192,9 @@ function deterministicBrief(profile: ProfileId, p: StrategicPayload, s: ReturnTy
     `Sanciones y alertas de prensa se muestran como contexto adicional, evitando convertir coincidencias geográficas en causalidad.`
   ];
   if (profile === 'supervision') return [
-    `El universo obligado debe leerse junto con su comportamiento: crecimiento del padrón, concentración de ROS, sectores silenciosos, sanciones y señales externas pueden describir necesidades distintas de supervisión.`,
-    `Atlas identifica movimientos sectoriales con reglas reproducibles y muestra las sanciones recientes vinculadas a sujetos UAF sin inferir incumplimientos adicionales.`,
-    `El objetivo es responder qué sectores cambiaron, cuáles concentran reportabilidad y dónde aparecen señales que ameritan una revisión analítica.`
+    `El universo obligado debe leerse junto con su comportamiento: crecimiento del padrón, concentración de ROS, silencios de reportabilidad y categorías sin sujetos inscritos describen dimensiones distintas de cobertura.`,
+    `Atlas separa la ausencia de ROS observados de la ausencia de correspondencia en el padrón, y mantiene sanciones y señales externas como capas de contexto independientes.`,
+    `El objetivo es responder qué sectores cambiaron, cuáles concentran reportabilidad, dónde aparecen silencios y qué categorías no registran sujetos inscritos en el corte analizado.`
   ];
   if (profile === 'internacional') return [
     `La dimensión internacional se superpone con la carga nacional: intercambio entre UIF, noticias transfronterizas y crecimiento del flujo doméstico ocurren simultáneamente.`,
@@ -266,6 +266,14 @@ export function Reportes() {
   const focusSecondary = useAiVersion ? aiInsights?.[focusConfig.secondary] : null;
   const focusTertiary = useAiVersion ? aiInsights?.[focusConfig.tertiary] : null;
 
+  const reportingSilence2025 = [...p.sectores.movimientos]
+    .filter(x => Number(x.registered_so_2025 ?? 0) > 0 && Number(x.ros_2025 ?? 0) === 0)
+    .sort((a,b) => Number(b.registered_so_2025 ?? 0) - Number(a.registered_so_2025 ?? 0));
+  const reportingSilence5y = reportingSilence2025.filter(x => x.silence_5y === true);
+  const sectorsWithoutRegisteredSo = [...p.sectores.movimientos]
+    .filter(x => x.sector_canonical == null)
+    .sort((a,b) => a.sector_official.localeCompare(b.sector_official, 'es'));
+
   const sectorDeltas = p.sectores.movimientos
     .filter(x => x.ros_2024 != null && x.ros_2025 != null)
     .map(x => ({
@@ -281,6 +289,10 @@ export function Reportes() {
       largest_increases: [...sectorDeltas].filter(x => x.delta_ros > 0).sort((a,b) => b.delta_ros-a.delta_ros).slice(0,5),
       largest_declines: [...sectorDeltas].filter(x => x.delta_ros < 0).sort((a,b) => a.delta_ros-b.delta_ros).slice(0,5),
       highest_ros_2025: [...p.sectores.movimientos].filter(x => x.ros_2025 != null).sort((a,b) => Number(b.ros_2025)-Number(a.ros_2025)).slice(0,5).map(x => ({ sector: x.sector_official, ros_2025: x.ros_2025, registered_so_2025: x.registered_so_2025 })),
+      reporting_silence_2025: reportingSilence2025.slice(0,8).map(x => ({ sector: x.sector_official, registered_so_2025: x.registered_so_2025, ros_2025: x.ros_2025, ros_total_2021_2025: x.ros_total_2021_2025, silence_5y: x.silence_5y })),
+      persistent_silence_5y: reportingSilence5y.slice(0,8).map(x => ({ sector: x.sector_official, registered_so_2025: x.registered_so_2025, ros_total_2021_2025: x.ros_total_2021_2025 })),
+      without_registered_so: sectorsWithoutRegisteredSo.slice(0,12).map(x => ({ sector: x.sector_official, sector_canonical: x.sector_canonical })),
+      coverage_summary: { current_silence_count: reportingSilence2025.length, persistent_silence_count: reportingSilence5y.length, without_registered_so_count: sectorsWithoutRegisteredSo.length, registered_total_2025: p.sectores.resumen.registered_total ?? null },
     },
     territory: { leaders: regions.slice(0,5), communes: communes.slice(0,5) },
     crime: { components: components.slice(0,5) },
@@ -305,7 +317,10 @@ export function Reportes() {
       'No presentar proxies territoriales como prevalencia de lavado o crimen organizado.',
       'No asumir culpabilidad a partir de prensa o sanciones administrativas.',
       'No recomendar votos, asignaciones presupuestarias ni decisiones políticas.',
-      'Distinguir hechos, señales, proxies y limitaciones.'
+      'Distinguir hechos, señales, proxies y limitaciones.',
+      'Cuando no hay ROS, describir sólo ausencia de reportes observados en el período y fuente analizada.',
+      'Cuando una categoría no tiene correspondencia en el padrón, describir sólo cobertura registral observada.',
+      'No convertir ausencia de ROS o de inscritos en calificaciones de cumplimiento, irregularidad o deber.'
     ]
   };
 
@@ -416,11 +431,16 @@ export function Reportes() {
       </section>
 
       <section className="report-section report-page-break">
-        <div className="report-section-heading"><span>06</span><div><h3>Qué cambia en los sectores obligados</h3><p>Variaciones de reportabilidad, intensidad y señales para supervisión.</p></div></div>
-        <div className="sr-sector-kpis"><div><strong>{t8==null?'s/d':`${fmt.format(t8)}%`}</strong><span>ROS 2025 concentrados en top 8 sectores</span></div><div><strong>{p.sectores.resumen.silent_sector_count ?? 0}</strong><span>categorías silenciosas en 5 años</span></div><div><strong>{fmt0.format(p.sectores.resumen.registered_total ?? 0)}</strong><span>inscritos en base sectorial 2025</span></div></div>
+        <div className="report-section-heading"><span>06</span><div><h3>Cobertura y dinámica de los sectores obligados</h3><p>Reportabilidad, silencios observados y categorías sin sujetos inscritos en el corte disponible.</p></div></div>
+        <div className="sr-sector-kpis"><div><strong>{t8==null?'s/d':`${fmt.format(t8)}%`}</strong><span>ROS 2025 concentrados en top 8 sectores</span></div><div><strong>{reportingSilence2025.length}</strong><span>sectores con inscritos y 0 ROS en 2025</span></div><div><strong>{reportingSilence5y.length}</strong><span>silencios persistentes 2021–2025</span></div><div><strong>{sectorsWithoutRegisteredSo.length}</strong><span>categorías sin SO inscritos observados</span></div></div>
+        <h4 className="sr-subtitle">Movimientos de reportabilidad</h4>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>SO 2025</th><th>ROS 2024</th><th>ROS 2025</th><th>Var.</th><th>ROS/100 SO</th><th>Indicios 2025</th></tr></thead><tbody>{sectorMoves.map(x => <tr key={x.sector_official}><td>{x.sector_official}</td><td>{x.registered_so_2025==null?'—':fmt0.format(x.registered_so_2025)}</td><td>{x.ros_2024==null?'—':fmt0.format(x.ros_2024)}</td><td>{x.ros_2025==null?'—':fmt0.format(x.ros_2025)}</td><td>{x.delta_ros_2025_vs_2024_pct==null?'—':signed(x.delta_ros_2025_vs_2024_pct)}</td><td>{x.ros_per_100_so_2025==null?'—':fmt.format(x.ros_per_100_so_2025)}</td><td>{x.indicios_2025==null?'—':fmt0.format(x.indicios_2025)}</td></tr>)}</tbody></table></div>
+        <div className="sr-two-col">
+          <div><h4 className="sr-subtitle">Silencios de reportabilidad observados</h4><div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>SO 2025</th><th>ROS 2025</th><th>Lectura</th></tr></thead><tbody>{reportingSilence2025.slice(0,8).map(x => <tr key={`silence-${x.sector_official}`}><td>{x.sector_official}</td><td>{fmt0.format(Number(x.registered_so_2025 ?? 0))}</td><td>{fmt0.format(Number(x.ros_2025 ?? 0))}</td><td>{x.silence_5y ? '0 ROS 2021–2025' : '0 ROS en 2025'}</td></tr>)}{!reportingSilence2025.length && <tr><td colSpan={4}>Sin silencios sectoriales observados en 2025.</td></tr>}</tbody></table></div></div>
+          <div><h4 className="sr-subtitle">Categorías sin SO inscritos observados</h4><div className="report-table-wrap"><table className="report-table"><thead><tr><th>Categoría oficial</th><th>Cobertura registral</th></tr></thead><tbody>{sectorsWithoutRegisteredSo.slice(0,8).map(x => <tr key={`coverage-${x.sector_official}`}><td>{x.sector_official}</td><td>Sin correspondencia en padrón vigente</td></tr>)}{!sectorsWithoutRegisteredSo.length && <tr><td colSpan={2}>Todas las categorías del contrato tienen correspondencia registral en el corte.</td></tr>}</tbody></table></div></div>
+        </div>
         {useAiVersion && aiInsights?.sectors && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.sectors}</p>}
-        <p className="report-method-note">Las variaciones extremas pueden reflejar bases pequeñas. Volumen o silencio de ROS no equivalen automáticamente a riesgo, calidad ni cumplimiento.</p>
+        <p className="report-method-note">Silencio 2025 = sector con sujetos inscritos y 0 ROS agregados observados en 2025. Silencio persistente = 0 ROS agregados entre 2021 y 2025. “Sin SO inscritos observados” identifica categorías oficiales sin correspondencia en el padrón vigente del corte. Estas señales describen cobertura y reportabilidad agregada; no califican la conducta de entidades individuales ni permiten inferir por sí solas una exigencia de inscripción o reporte.</p>
       </section>
 
       <section className="report-section report-page-break">

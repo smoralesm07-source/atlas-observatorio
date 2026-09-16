@@ -118,6 +118,29 @@ function repairNumericText(text: string, data: unknown): { text: string; removed
   return { text: kept.join(' ').trim(), removed: unique };
 }
 
+const forbiddenInferencePatterns: Array<{ id: string; re: RegExp }> = [
+  { id: 'legal_obligation', re: /obligaci(?:ó|o)n(?:es)?\s+jur[ií]dica/i },
+  { id: 'confirmed_obligation', re: /obligaci(?:ó|o)n(?:es)?\s+confirmad/i },
+  { id: 'should_be_registered', re: /deber[ií]a(?:n)?\s+(?:estar\s+)?inscrit/i },
+  { id: 'should_report', re: /deber[ií]a(?:n)?\s+reportar/i },
+  { id: 'noncompliance', re: /\bincumpl(?:imiento|e|en|ió|ieron|ir)/i },
+  { id: 'irregularity', re: /\birregularidad(?:es)?\b/i },
+  { id: 'evasion', re: /\bevas(?:i[oó]n|ivo|iva|ivos|ivas)\b/i },
+  { id: 'unsupported_legal_translation', re: /no\s+se\s+traduce\s+en\s+obligaciones/i },
+];
+
+function repairPolicyText(value: string): { text: string; removed: string[] } {
+  const pieces = value.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+  const removed: string[] = [];
+  const kept = pieces.filter((piece) => {
+    const hit = forbiddenInferencePatterns.find((rule) => rule.re.test(piece));
+    if (!hit) return true;
+    removed.push(hit.id);
+    return false;
+  });
+  return { text: kept.join(' ').trim(), removed: [...new Set(removed)] };
+}
+
 function text(v: unknown, max = 260): string | null {
   if (typeof v !== 'string') return null;
   const clean = v.replace(/\s+/g, ' ').trim();
@@ -168,8 +191,12 @@ function buildCompactPacket(source: any) {
       largest_increases: Array.isArray(sectorCtx.largest_increases) ? sectorCtx.largest_increases.slice(0, 5) : [],
       largest_declines: Array.isArray(sectorCtx.largest_declines) ? sectorCtx.largest_declines.slice(0, 5) : [],
       highest_ros_2025: Array.isArray(sectorCtx.highest_ros_2025) ? sectorCtx.highest_ros_2025.slice(0, 5) : [],
+      reporting_silence_2025: Array.isArray(sectorCtx.reporting_silence_2025) ? sectorCtx.reporting_silence_2025.slice(0, 8) : [],
+      persistent_silence_5y: Array.isArray(sectorCtx.persistent_silence_5y) ? sectorCtx.persistent_silence_5y.slice(0, 8) : [],
+      without_registered_so: Array.isArray(sectorCtx.without_registered_so) ? sectorCtx.without_registered_so.slice(0, 12) : [],
+      coverage_summary: sectorCtx.coverage_summary ?? {},
     },
-    constraints: Array.isArray(d.constraints) ? d.constraints.slice(0, 5).map((x: unknown) => text(x, 160)) : [],
+    constraints: Array.isArray(d.constraints) ? d.constraints.slice(0, 8).map((x: unknown) => text(x, 180)) : [],
   };
 }
 
@@ -208,6 +235,10 @@ Deno.serve(async (req: Request) => {
     'Entrega narrative en 3 a 4 párrafos breves y cinco insights: novelties, territory, crime, sectors, capacity.',
     'Cada insight debe ser una bajada breve que explique patrón, determinante principal y cautela metodológica.',
     'Para sectores usa sectors.largest_increases, largest_declines y highest_ros_2025 para nombrar industrias que explican movimientos.',
+    'Incluye, cuando existan, los silencios de reportabilidad y las categorías sin sujetos inscritos usando sectors.reporting_silence_2025, persistent_silence_5y, without_registered_so y coverage_summary.',
+    'Silencio significa únicamente ausencia de ROS agregados observados en el período indicado. Describe el dato y su alcance; no califiques la conducta de un sector o entidad.',
+    'Una categoría sin correspondencia en el padrón debe describirse únicamente como cobertura registral observada. No infieras a partir de ello una exigencia, una falta o un estado regulatorio.',
+    'Evita lenguaje jurídico conclusivo o no sustentado, incluyendo expresiones equivalentes a obligación jurídica confirmada, debería estar inscrito, debería reportar, incumplimiento, irregularidad o evasión.',
     'No conviertas prensa, sanciones o proxies en prueba de delito o prevalencia criminal.',
     'Si una cifra no es indispensable, explica la tendencia sin repetirla. Si mencionas una cifra, debe existir literalmente o por redondeo en el paquete.',
     'No cites fuentes externas ni formules recomendaciones políticas, presupuestarias o de voto.',
@@ -265,10 +296,14 @@ Deno.serve(async (req: Request) => {
       return json({ ai_used: false, narrative: null, insights: null, reason: 'La respuesta estructurada de Groq quedó incompleta; Atlas conserva la síntesis determinística.', diagnostic: { stage: 'response', provider: 'groq', code: 'incomplete_structured_output' } });
     }
 
-    const repairedNarrative = repairNumericText(originalNarrative, compact);
-    const repairInsight = (value: unknown) => repairNumericText(String(value ?? '').trim(), compact);
-    const rn = repairInsight(i.novelties); const rt = repairInsight(i.territory); const rc = repairInsight(i.crime); const rs = repairInsight(i.sectors); const rcap = repairInsight(i.capacity);
-    const fallbackInsight = 'El paquete validado no permite agregar una lectura cuantitativa adicional sin introducir cifras ajenas; se mantiene la interpretación determinística del bloque.';
+    const repairOutput = (value: unknown) => {
+      const numeric = repairNumericText(String(value ?? '').trim(), compact);
+      const policy = repairPolicyText(numeric.text);
+      return { text: policy.text, removedNumeric: numeric.removed, removedPolicy: policy.removed };
+    };
+    const repairedNarrative = repairOutput(originalNarrative);
+    const rn = repairOutput(i.novelties); const rt = repairOutput(i.territory); const rc = repairOutput(i.crime); const rs = repairOutput(i.sectors); const rcap = repairOutput(i.capacity);
+    const fallbackInsight = 'El paquete validado no permite agregar una lectura adicional con suficiente respaldo; se mantiene la interpretación determinística del bloque.';
     const insights: AiInsights = {
       novelties: rn.text || fallbackInsight,
       territory: rt.text || fallbackInsight,
@@ -277,9 +312,11 @@ Deno.serve(async (req: Request) => {
       capacity: rcap.text || fallbackInsight,
     };
     const narrative = repairedNarrative.text || [insights.sectors, insights.capacity, insights.novelties].join(' ');
-    const removed = [...repairedNarrative.removed, ...rn.removed, ...rt.removed, ...rc.removed, ...rs.removed, ...rcap.removed]
+    const removed = [...repairedNarrative.removedNumeric, ...rn.removedNumeric, ...rt.removedNumeric, ...rc.removedNumeric, ...rs.removedNumeric, ...rcap.removedNumeric]
       .filter((item, index, all) => all.findIndex((x) => x.token === item.token) === index)
       .slice(0, 12);
+    const removedPolicy = [...repairedNarrative.removedPolicy, ...rn.removedPolicy, ...rt.removedPolicy, ...rc.removedPolicy, ...rs.removedPolicy, ...rcap.removedPolicy]
+      .filter((item, index, all) => all.indexOf(item) === index);
 
     return json({
       ai_used: true,
@@ -288,7 +325,7 @@ Deno.serve(async (req: Request) => {
       model,
       provider: 'groq',
       generated_at: new Date().toISOString(),
-      diagnostic: { stage: 'success', provider: 'groq', code: removed.length ? 'ai_generated_with_numeric_repair' : 'ai_narrative_and_insights_generated', removed_numeric_fragments: removed, compact_payload_chars: JSON.stringify(compact).length },
+      diagnostic: { stage: 'success', provider: 'groq', code: removedPolicy.length ? 'ai_generated_with_policy_guard' : removed.length ? 'ai_generated_with_numeric_repair' : 'ai_narrative_and_insights_generated', removed_numeric_fragments: removed, removed_policy_categories: removedPolicy, compact_payload_chars: JSON.stringify(compact).length },
     });
   } catch (error) {
     console.error('Groq narrative generation failed', error instanceof Error ? error.message : 'unknown');

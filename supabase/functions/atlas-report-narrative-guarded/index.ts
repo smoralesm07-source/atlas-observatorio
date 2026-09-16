@@ -68,7 +68,7 @@ Deno.serve(async (req: Request) => {
     const potentialSo = {
       total: potentialTotal,
       top_sectors: potentialSectors,
-      interpretation: 'Screening económico: observadas es el universo examinado y accionables son hipótesis de inscripción que requieren validación. No acredita obligación jurídica, falta de inscripción ni incumplimiento. Si una hipótesis se confirma, puede ampliar tareas de validación, incorporación registral, orientación, supervisión y futura reportabilidad; estas cifras no estiman una brecha de dotación.',
+      interpretation: 'Screening económico: observadas es el universo examinado y accionables son casos para validación. La salida debe limitarse a describir universo observado, correspondencias registrales y pendientes de contraste, sin calificar cumplimiento ni inferir deberes a partir de una ausencia de coincidencia. Puede orientar tareas de validación registral y análisis de cobertura, sin estimar una brecha de dotación.',
     };
     requestBody.validated_data = {
       ...requestBody.validated_data,
