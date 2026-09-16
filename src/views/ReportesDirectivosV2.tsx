@@ -65,6 +65,19 @@ type DepthPayload = {
 
 type ProfileId = 'presupuesto' | 'crimen' | 'supervision' | 'ciudadania' | 'internacional' | 'ejecutivo';
 type Profile = { id: ProfileId; label: string; title: string; subtitle: string };
+type AiInsights = { novelties: string; territory: string; crime: string; sectors: string; capacity: string };
+type AiInsightKey = keyof AiInsights;
+type ReportVersion = 'base' | 'ai';
+type FocusConfig = { title: string; lead: string; primary: AiInsightKey; secondary: AiInsightKey; tertiary: AiInsightKey };
+
+const FOCUS_CONFIG: Record<ProfileId, FocusConfig> = {
+  presupuesto: { title: 'Presión y capacidad institucional', lead: 'Conecta crecimiento de la demanda observable, capacidad institucional y expansión del perímetro obligado.', primary: 'capacity', secondary: 'sectors', tertiary: 'novelties' },
+  crimen: { title: 'Señales asociadas a economías criminales', lead: 'Prioriza contexto público y territorial, distinguiendo proxies y hechos de una medición directa de criminalidad.', primary: 'crime', secondary: 'territory', tertiary: 'novelties' },
+  supervision: { title: 'Sectores que explican el cambio del universo obligado', lead: 'Prioriza industrias que aumentan o disminuyen, concentración del padrón y señales recientes útiles para supervisión.', primary: 'sectors', secondary: 'novelties', tertiary: 'capacity' },
+  ciudadania: { title: 'Qué cambió y cómo interpretarlo', lead: 'Traduce los principales movimientos institucionales a una lectura pública clara y cauta.', primary: 'novelties', secondary: 'capacity', tertiary: 'territory' },
+  internacional: { title: 'Presión doméstica y dimensión internacional', lead: 'Relaciona capacidad nacional, cooperación entre UIF y cambios recientes sin confundir intercambio con criminalidad.', primary: 'novelties', secondary: 'capacity', tertiary: 'territory' },
+  ejecutivo: { title: 'Lectura directiva de los cambios relevantes', lead: 'Concentra los movimientos que más cambian el cuadro institucional y los factores que ayudan a explicarlos.', primary: 'capacity', secondary: 'sectors', tertiary: 'novelties' },
+};
 
 type TrendPoint = { year: number; value: number | null };
 
@@ -176,6 +189,8 @@ export function ReportesDirectivosV2() {
   const [toYear, setToYear] = useState(2025);
   const [noveltyDays, setNoveltyDays] = useState(30);
   const [aiText, setAiText] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<AiInsights | null>(null);
+  const [reportVersion, setReportVersion] = useState<ReportVersion>('base');
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'ready' | 'fallback'>('idle');
   const [aiMeta, setAiMeta] = useState<string | null>(null);
 
@@ -183,7 +198,7 @@ export function ReportesDirectivosV2() {
   const depth = useRpc<DepthPayload>('obs_uaf_strategic_depth_payload', { p_novelty_days: noveltyDays });
   const profile = PROFILES.find((p) => p.id === profileId) ?? PROFILES[0];
 
-  useEffect(() => { setAiText(null); setAiStatus('idle'); setAiMeta(null); }, [profileId, fromYear, toYear, noveltyDays]);
+  useEffect(() => { setAiText(null); setAiInsights(null); setReportVersion('base'); setAiStatus('idle'); setAiMeta(null); }, [profileId, fromYear, toYear, noveltyDays]);
   useEffect(() => { document.body.classList.add('atlas-report-mode'); return () => document.body.classList.remove('atlas-report-mode'); }, []);
 
   if (briefing.loading && !briefing.data) return <Loading label="Cargando informe institucional…" />;
@@ -194,21 +209,61 @@ export function ReportesDirectivosV2() {
   const c = d.change;
   const context = depth.data;
   const baseSummary = buildSummary(profileId, d, context);
-  const summary = aiText ? aiText.split(/\n\s*\n/).filter(Boolean) : baseSummary;
+  const useAiVersion = reportVersion === 'ai' && aiStatus === 'ready' && !!aiText;
+  const summary = useAiVersion && aiText ? aiText.split(/\n\s*\n/).filter(Boolean) : baseSummary;
   const growth = d.sector_growth.slice(0, 7);
   const declines = d.sector_decline.slice(0, 4);
   const themes = context?.press_momentum?.slice(0, 5) ?? [];
   const regions = context?.regional_convergence?.slice(0, 5) ?? [];
+  const focusConfig = FOCUS_CONFIG[profileId];
+  const focusPrimary = useAiVersion ? aiInsights?.[focusConfig.primary] : null;
+  const focusSecondary = useAiVersion ? aiInsights?.[focusConfig.secondary] : null;
+  const focusTertiary = useAiVersion ? aiInsights?.[focusConfig.tertiary] : null;
 
+  const generated = new Date(d.generated_at);
   const validated = {
     contract: d.contract,
-    profile: profileId,
-    situation: d.situation,
-    change: d.change,
-    series: d.series,
-    sector_growth: growth,
-    sector_decline: declines,
-    recent_context: context ? { window: context.window, press_momentum: themes, regions } : null,
+    generated_context: { year: generated.getUTCFullYear(), month: generated.getUTCMonth() + 1, day: generated.getUTCDate(), novelty_days: noveltyDays },
+    profile: { id: profile.id, audience: profile.label, purpose: profile.subtitle },
+    structural: {
+      period: d.period,
+      situation: d.situation,
+      change: d.change,
+    },
+    strategic_questions: [],
+    novelties: {
+      press_summary: context ? { article_count: context.coverage.press_relevant_articles ?? null, media_count: context.coverage.press_media_count ?? null } : null,
+      external_alerts: [],
+      press_themes: themes.map((x) => ({ theme: x.theme, article_count: x.current_n, source_count: x.current_media, latest_date: x.latest_date, previous_count: x.previous_n, delta_pct: x.delta_pct })),
+      recent_sanctions: [],
+    },
+    territory: {
+      year: toYear,
+      top_regions: regions.map((x, index) => ({
+        region_name: x.region_name,
+        strategic_rank: index + 1,
+        avg_igr: x.avg_igr,
+        max_igr: x.max_igr,
+        finding_n: x.finding_n,
+        sanction_n: x.sanction_n,
+        alert_context: x.alert_context,
+        coverage: x.coverage,
+      })),
+      top_communes: [],
+      cead_components: [],
+      methodology: 'Convergencia territorial de señales públicas y capas Atlas; no equivale a prevalencia de lavado de activos o crimen organizado.',
+    },
+    chart_context: {
+      sectors: {
+        largest_increases: growth.map((x) => ({ sector: x.sector, registered_so_2025: x.registered_so_2025, current_subjects: x.current_subjects, delta_subjects: x.delta, delta_pct: x.delta_pct, top_region: x.top_region, top_region_share_pct: x.top_region_share_pct })),
+        largest_declines: declines.map((x) => ({ sector: x.sector, registered_so_2025: x.registered_so_2025, current_subjects: x.current_subjects, delta_subjects: x.delta, delta_pct: x.delta_pct, top_region: x.top_region, top_region_share_pct: x.top_region_share_pct })),
+        highest_ros_2025: [],
+      },
+      capacity: { period: d.period, situation: d.situation, change: d.change },
+      novelties: { press_summary: context?.coverage ?? null, press_themes: themes },
+      territory: { leaders: regions },
+      crime: { press_themes: themes, regional_context: regions },
+    },
     constraints: [
       'No recalcular ni introducir cifras nuevas.',
       'No inferir déficit de personal sin datos internos de carga, complejidad, backlog y tiempos de ciclo.',
@@ -219,19 +274,29 @@ export function ReportesDirectivosV2() {
   };
 
   async function generateNarrative() {
-    setAiStatus('loading'); setAiMeta(null);
+    setAiStatus('loading'); setAiMeta(null); setAiInsights(null);
     const { data, error } = await supabase.functions.invoke('atlas-report-narrative', {
       body: { profile: { id: profile.id, audience: profile.label, purpose: profile.subtitle, question: profile.title }, validated_data: validated }
     });
     if (error || !data?.narrative) {
-      setAiText(null); setAiStatus('fallback'); setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene la síntesis determinística.'); return;
+      setAiText(null); setAiInsights(null); setReportVersion('base'); setAiStatus('fallback');
+      setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene el informe base determinístico.');
+      return;
     }
-    setAiText(String(data.narrative)); setAiStatus(data.ai_used ? 'ready' : 'fallback'); setAiMeta(data.ai_used ? 'Síntesis actualizada sobre datos validados.' : String(data.reason ?? 'Se mantiene la síntesis determinística.'));
+    const insights = data?.insights;
+    const validInsights = insights && ['novelties','territory','crime','sectors','capacity'].every((key) => typeof insights[key] === 'string');
+    setAiText(String(data.narrative));
+    setAiInsights(validInsights ? {
+      novelties: String(insights.novelties), territory: String(insights.territory), crime: String(insights.crime), sectors: String(insights.sectors), capacity: String(insights.capacity)
+    } : null);
+    setAiStatus(data.ai_used ? 'ready' : 'fallback');
+    setReportVersion(data.ai_used ? 'ai' : 'base');
+    setAiMeta(data.ai_used ? `Propuesta IA disponible · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene el informe base determinístico.'));
   }
 
   function printPdf() {
     const previous = document.title;
-    document.title = `ATLAS_Situacion_UAF_${profile.label}_${fromYear}_${toYear}`;
+    document.title = `ATLAS_Situacion_UAF_${profile.label}_${fromYear}_${toYear}_${useAiVersion ? 'IA' : 'Base'}`;
     window.print();
     window.setTimeout(() => { document.title = previous; }, 500);
   }
@@ -248,8 +313,13 @@ export function ReportesDirectivosV2() {
         <label><span>Hasta</span><select value={toYear} onChange={(e) => setToYear(Math.max(Number(e.target.value), fromYear))}>{YEARS.map((y) => <option key={y}>{y}</option>)}</select></label>
       </div>
       <label><span>Contexto reciente</span><select value={noveltyDays} onChange={(e) => setNoveltyDays(Number(e.target.value))}><option value={7}>7 días</option><option value={30}>30 días</option><option value={60}>60 días</option><option value={90}>90 días</option></select></label>
-      <button className="report-btn report-btn-ai" onClick={() => void generateNarrative()} disabled={aiStatus === 'loading'}>{aiStatus === 'loading' ? 'Actualizando síntesis…' : 'Actualizar síntesis'}</button>
-      <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF</button>
+      <div className="report-safety-box"><strong>Versión del informe</strong><span>El informe base siempre se conserva. La propuesta IA cambia la lectura y el foco, pero no las cifras ni gráficos validados.</span></div>
+      <div className="report-version-switch" aria-label="Versión del informe">
+        <button className={reportVersion === 'base' ? 'is-active' : ''} onClick={() => setReportVersion('base')}>Informe base</button>
+        <button className={reportVersion === 'ai' ? 'is-active' : ''} onClick={() => setReportVersion('ai')} disabled={aiStatus !== 'ready'}>Propuesta IA</button>
+      </div>
+      <button className="report-btn report-btn-ai" onClick={() => void generateNarrative()} disabled={aiStatus === 'loading'}>{aiStatus === 'loading' ? 'Generando propuesta…' : aiStatus === 'ready' ? 'Regenerar propuesta IA' : 'Generar propuesta IA'}</button>
+      <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF · {useAiVersion ? 'IA' : 'Base'}</button>
       {aiMeta && <small className="report-ai-meta">{aiMeta}</small>}
     </aside>
 
@@ -257,7 +327,7 @@ export function ReportesDirectivosV2() {
       <header className="dbv2-cover">
         <div className="dbv2-cover-top"><span>ATLAS OBSERVATORIO</span><span>{fromYear}–{toYear}</span></div>
         <div><span className="dbv2-eyebrow">{profile.label}</span><h2>{profile.title}</h2><p>{profile.subtitle}</p></div>
-        <div className="dbv2-cover-meta"><span>Último padrón: {d.situation.subjects_latest_date ?? 's/d'}</span><span>Última dotación publicada: {d.situation.staff_latest_date ?? 's/d'}</span></div>
+        <div className="dbv2-cover-meta"><span>Último padrón: {d.situation.subjects_latest_date ?? 's/d'}</span><span>Última dotación publicada: {d.situation.staff_latest_date ?? 's/d'}</span><span>{useAiVersion ? 'PROPUESTA IA · REVERSIBLE' : 'INFORME BASE'}</span></div>
       </header>
 
       <section className="report-section">
@@ -272,8 +342,21 @@ export function ReportesDirectivosV2() {
           <Stat label="IIF y complementos 2025" value={fmt0.format(d.situation.iif_latest ?? 0)} note={`${signed(c.iif_growth_pct)} desde ${fromYear}`} />
           <Stat label="Requerimientos MP 2025" value={fmt0.format(d.situation.mp_requests_latest ?? 0)} note={`${fmt0.format(d.situation.mp_people_latest ?? 0)} personas comprendidas`} highlight />
         </div>
-        <div className="dbv2-summary">{summary.map((p, i) => <p key={i}>{p}</p>)}</div>
+        <div className="dbv2-summary"><div className="report-narrative-label"><span>{useAiVersion ? 'Síntesis estratégica · propuesta IA' : 'Síntesis estratégica base'}</span><small>{useAiVersion ? 'Propuesta reversible sobre datos validados.' : 'Texto reproducible sin dependencia de IA.'}</small></div>{summary.map((p, i) => <p key={i}>{p}</p>)}</div>
       </section>
+
+      {useAiVersion && <section className="report-section report-page-break dbv2-focus-section">
+        <div className="report-section-heading"><span>FOCO</span><div><h3>Lectura focal · {profile.label}</h3><p>{focusConfig.lead}</p></div></div>
+        <div className="sr-focus-shell">
+          <div className="sr-focus-head"><span>PROPUESTA IA · REVERSIBLE</span><h4>{focusConfig.title}</h4><p>Esta página cambia según el enfoque elegido. Los cálculos y gráficos permanecen idénticos al informe base.</p></div>
+          <div className="sr-focus-grid">
+            <article className="sr-focus-card is-primary"><span>HALLAZGO CENTRAL</span><p>{focusPrimary ?? summary[0]}</p></article>
+            <article className="sr-focus-card"><span>QUÉ LO SOSTIENE</span><p>{focusSecondary ?? 'La IA no agregó una segunda lectura válida; se conserva la evidencia del informe base.'}</p></article>
+            <article className="sr-focus-card"><span>QUÉ CONTRASTAR</span><p>{focusTertiary ?? 'La IA no agregó una tercera lectura válida; revise el informe base para mantener la interpretación reproducible.'}</p></article>
+          </div>
+          <div className="sr-focus-footer"><strong>Control del usuario</strong><span>Use “Informe base” para volver instantáneamente al documento original, sin regenerar datos ni consumir otra llamada IA.</span></div>
+        </div>
+      </section>}
 
       <section className="report-section report-page-break">
         <div className="report-section-heading"><span>02</span><div><h3>Evolución institucional</h3><p>Dotación, padrón y actividades económicas obligadas.</p></div></div>
@@ -282,6 +365,7 @@ export function ReportesDirectivosV2() {
           <TrendChart title="Sujetos inscritos" subtitle="Personas y entidades reportantes" points={series(d, 'entidades_reportantes_total')} />
           <TrendChart title="Actividades económicas obligadas" subtitle="Número de actividades" points={series(d, 'actividades_economicas_obligadas')} tone="blue" />
         </div>
+        {useAiVersion && aiInsights?.capacity && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.capacity}</p>}
         <p className="dbv2-note">La ampliación de actividades desde 2023 corresponde a un cambio del perímetro normativo. La dotación corresponde al total institucional publicado y no a una división específica.</p>
       </section>
 
@@ -317,6 +401,7 @@ export function ReportesDirectivosV2() {
         <div className="report-section-heading"><span>06</span><div><h3>Expansión del universo obligado</h3><p>Variación del padrón respecto del cierre 2025.</p></div></div>
         <div className="dbv2-perimeter"><Stat label="Padrón cierre 2025" value={fmt0.format(c.subjects_end ?? 0)} note="personas y entidades" /><Stat label="Último padrón" value={fmt0.format(d.situation.subjects_latest ?? 0)} note={d.situation.subjects_latest_date ?? 's/d'} highlight /><Stat label="Actividades obligadas" value={`${fmt0.format(c.activities_start ?? 0)} → ${fmt0.format(c.activities_end ?? 0)}`} note={`${fromYear}–${toYear}`} /></div>
         <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>2025</th><th>Actual</th><th>Variación</th><th>Región principal</th></tr></thead><tbody>{growth.map((x) => <tr key={x.sector}><td>{x.sector}</td><td>{fmt0.format(x.registered_so_2025 ?? 0)}</td><td>{fmt0.format(x.current_subjects ?? 0)}</td><td>+{fmt0.format(x.delta ?? 0)} ({signed(x.delta_pct)})</td><td>{x.top_region ?? '—'}</td></tr>)}</tbody></table></div>
+        {useAiVersion && aiInsights?.sectors && <p className="report-ai-insight"><strong>Lectura IA</strong>{aiInsights.sectors}</p>}
         {declines.length > 0 && <p className="dbv2-note">Sectores con disminución registral en el mismo contraste: {declines.map((x) => `${x.sector} (${fmt0.format(x.delta ?? 0)})`).join(', ')}.</p>}
       </section>
 
@@ -338,6 +423,7 @@ export function ReportesDirectivosV2() {
           <article><h4>Temas con movimiento de cobertura</h4>{themes.map((x) => <div className="dbv2-context-row" key={x.theme}><strong>{x.theme}</strong><span>{fmt0.format(x.previous_n)} → {fmt0.format(x.current_n)} notas · {x.current_media} medios</span></div>)}</article>
           <article><h4>Regiones con mayor convergencia de señales</h4>{regions.map((x) => <div className="dbv2-context-row" key={x.region_name}><strong>{x.region_name}</strong><span>{fmt0.format(x.finding_n)} hallazgos · {fmt0.format(x.sanction_n)} sanciones recientes · IGR medio {x.avg_igr == null ? 's/d' : fmt1.format(x.avg_igr)}</span></div>)}</article>
         </div>
+        {useAiVersion && aiInsights && <p className="report-ai-insight"><strong>Lectura IA</strong>{profileId === 'crimen' ? aiInsights.crime : profileId === 'supervision' ? aiInsights.novelties : profileId === 'internacional' ? aiInsights.novelties : profileId === 'ciudadania' ? aiInsights.novelties : aiInsights.territory}</p>}
         <p className="dbv2-note">La prensa describe agenda pública y hechos reportados; el IGR y los hallazgos territoriales son señales de contexto. Ninguna de estas capas constituye por sí sola una medición de lavado de activos o crimen organizado.</p>
       </section>}
 
