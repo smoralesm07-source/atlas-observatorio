@@ -7,6 +7,8 @@ import './lib/typographyFloorEnhancer';
 import './lib/sectorContextEnhancer';
 import './lib/reportTrendInsightsEnhancer';
 import './lib/reportRecentContextEnhancer';
+import './lib/reportAccessEnhancer';
+import './lib/reportPotentialSoEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
@@ -48,6 +50,10 @@ import './styles/sector-context.css';
 import './styles/report-trend-insights.css';
 // Tendencias de prensa y sanciones en el contexto reciente del informe.
 import './styles/report-recent-context.css';
+// Acceso a Informes y visibilidad de síntesis IA según rol.
+import './styles/report-access.css';
+// Perímetro potencial de sujetos obligados en el informe institucional.
+import './styles/report-potential-so.css';
 // Ajuste final A4: evita que la portada sea desplazada a la segunda hoja.
 import './styles/report-print-cover-fix.css';
 
