@@ -43,6 +43,7 @@ export type Route =
   | { view: 'entidades'; q?: string; region?: string }
   | { view: 'ficha'; entityId: string }
   | { view: 'territorio' }
+  | { view: 'reportes' }
   | { view: 'fuentes' }
   | { view: 'metodologia' }
   | { view: 'administracion' };
@@ -91,6 +92,8 @@ export function parseHash(hash: string): Route {
         : { view: 'entidades' };
     case 'territorio':
       return { view: 'territorio' };
+    case 'reportes':
+      return { view: 'reportes' };
     case 'fuentes':
       return { view: 'fuentes' };
     case 'metodologia':
@@ -131,6 +134,8 @@ export function hrefFor(r: Route): string {
       return `#/entidad/${encodeURIComponent(r.entityId)}`;
     case 'territorio':
       return '#/territorio';
+    case 'reportes':
+      return '#/reportes';
     case 'fuentes':
       return '#/fuentes';
     case 'metodologia':
