@@ -4,607 +4,368 @@ import { useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
 import '../styles/reportes.css';
 
-type ReportPoint = {
-  periodo: string;
-  valor: number | null;
-  metodo_captura: string | null;
-  fuente: string | null;
-  corte: string | null;
+type Point = { periodo: string; valor: number | null; fuente?: string | null; corte?: string | null; metodo_captura?: string | null };
+type Series = { unidad?: string | null; categoria?: string | null; puntos: Point[] };
+type BaseSector = {
+  sector: string; inscritos_2025: number | null; ros_2025: number | null; ros_2021_2025: number | null;
+  ros_por_100_so_2025: number | null; variacion_ros_2025_2024_pct: number | null; silencio_5y: boolean | null;
+  indicios_2021_2025: number | null; fuente?: string | null; corte?: string | null;
 };
-
-type ReportSeries = {
-  unidad: string | null;
-  categoria: string | null;
-  puntos: ReportPoint[];
-};
-
-type ReportSector = {
-  sector: string;
-  sector_canonico: string | null;
-  inscritos_2025: number | null;
-  ros_2025: number | null;
-  ros_2021_2025: number | null;
-  ros_por_100_so_2025: number | null;
-  variacion_ros_2025_2024_pct: number | null;
-  silencio_5y: boolean | null;
-  indicios_2021_2025: number | null;
-  fuente: string | null;
-  corte: string | null;
-};
-
-type ReportPayload = {
-  contract: 'ATLAS_OBS_UAF_REPORT_V1';
+type BasePayload = {
+  contract: string;
   periodo: { desde: number; hasta: number };
-  series: Record<string, ReportSeries>;
-  sectores: ReportSector[];
-  metodologia: {
-    calculo: string;
-    nivel_reportabilidad: string;
-    comparabilidad: string;
+  series: Record<string, Series>;
+  sectores: BaseSector[];
+  metodologia: { calculo: string; nivel_reportabilidad: string; comparabilidad: string };
+};
+type StrategicQuestion = {
+  id: string; question: string; answer: string; caveat?: string;
+  pressure_index?: number | null; staff_index?: number | null; gap_points?: number | null;
+  regions?: Array<Record<string, any>>; external_alert_count?: number; strategic_press_count?: number;
+  recent_uaf_sanction_count?: number; window_days?: number; top_components?: Array<Record<string, any>>;
+  ros_total_2025?: number; silent_sector_count?: number;
+};
+type ExternalAlert = {
+  alert_id: string; severity: string; urgency_score: number; event_at: string; entity_id?: string; entity_name: string;
+  uaf_sector?: string | null; signal_label?: string | null; article_count?: number; source_count?: number;
+  latest_title?: string | null; latest_summary?: string | null; latest_source?: string | null; latest_url?: string | null;
+  ipa3_score?: number | null; ipa_gap?: string | null; alert_reason?: string | null;
+};
+type PressItem = {
+  article_id: string; article_date: string; title: string; media: string; url: string; summary?: string | null;
+  region?: string | null; commune?: string | null; theme: string; scope: 'NACIONAL' | 'INTERNACIONAL';
+};
+type PressTheme = { theme: string; article_count: number; source_count: number; latest_date: string };
+type SanctionItem = {
+  event_id: string; event_date: string; regulator: string; canonical_name: string; region?: string | null;
+  uaf_sector?: string | null; reason?: string | null; document_url?: string | null; amount_uf?: number | null; amount_clp?: number | null;
+};
+type RegionRow = {
+  region_code: string; region_name: string; commune_count: number; avg_igr: number | null; max_igr: number | null;
+  avg_predicate_score: number | null; avg_criminal_economy_score: number | null; avg_criminogenic_context_score: number | null;
+  sanctioned_context: number; alerted_context: number; findings_context: number; methodological_coverage: number | null; strategic_rank: number;
+};
+type CommuneRow = {
+  region_name: string; commune_name: string; commune_code: string; igr: number | null; threat: number | null;
+  vulnerability: number | null; density: number | null; gap: number | null; potential_total: number | null;
+  uaf_observed: number | null; cead_year: number; cead_confidence: number | null; predicate_score: number | null;
+  criminal_economy_score: number | null; criminogenic_context_score: number | null; interpretation?: string | null;
+};
+type CeadComponent = {
+  component_id: string; component_label: string; commune_count: number; avg_score: number | null;
+  avg_trend: number | null; total_2025: number | null; max_years_observed: number | null;
+};
+type SectorMove = {
+  sector_official: string; sector_canonical?: string | null; registered_so_2025: number | null; ros_2024: number | null;
+  ros_2025: number | null; ros_total_2021_2025: number | null; ros_per_100_so_2025: number | null;
+  delta_ros_2025_vs_2024_pct: number | null; silence_5y: boolean | null; indicios_2025: number | null;
+  indicios_total_2021_2025: number | null; source_url?: string | null; as_of_date?: string | null;
+};
+type StrategicPayload = {
+  contract: string; generated_at: string; snapshot_hash: string;
+  periodo: { desde: number; hasta: number };
+  novedad: { dias: number; desde: string; hasta: string };
+  base: BasePayload;
+  preguntas_estrategicas: StrategicQuestion[];
+  novedades: {
+    alertas_externas: ExternalAlert[];
+    prensa_resumen: { article_count?: number; national_count?: number; international_count?: number; media_count?: number; latest_date?: string };
+    prensa_temas: PressTheme[];
+    prensa_reciente: PressItem[];
+    sanciones_resumen: { recent_event_count?: number; recent_entity_count?: number; regulator_count?: number; region_count?: number; latest_date?: string };
+    sanciones_recientes: SanctionItem[];
+    sanciones_universo: Record<string, any>;
   };
+  territorio: { year: number; regiones: RegionRow[]; comunas_prioritarias: CommuneRow[]; componentes_cead: CeadComponent[]; metodologia: string };
+  sectores: { movimientos: SectorMove[]; resumen: { ros_total?: number; registered_total?: number; silent_sector_count?: number } };
+  reglas: { datos: string; prensa: string; ia: string };
 };
 
-type ProfileId = 'presupuesto' | 'crimen' | 'supervision' | 'ejecutivo' | 'internacional';
+type ProfileId = 'presupuesto' | 'crimen' | 'supervision' | 'territorial' | 'ciudadania' | 'internacional' | 'ejecutivo';
+type Profile = { id: ProfileId; short: string; title: string; audience: string; purpose: string; lead: string };
 
-type ReportProfile = {
-  id: ProfileId;
-  short: string;
-  title: string;
-  audience: string;
-  purpose: string;
-  question: string;
-  emphasis: string[];
-};
-
-type Derived = {
-  from: number;
-  to: number;
-  soStart: number | null;
-  soEnd: number | null;
-  soGrowth: number | null;
-  rosStart: number | null;
-  rosEnd: number | null;
-  rosGrowth: number | null;
-  staffStart: number | null;
-  staffEnd: number | null;
-  staffGrowth: number | null;
-  iifStart: number | null;
-  iifEnd: number | null;
-  iifGrowth: number | null;
-  activitiesStart: number | null;
-  activitiesEnd: number | null;
-  pressureIndex: number | null;
-  staffIndex: number | null;
-  iifIndex: number | null;
-  rosPerStaffEnd: number | null;
-  indicationsPerIifEnd: number | null;
-  mpStart: number | null;
-  mpEnd: number | null;
-  mpGrowth: number | null;
-  intlStart: number | null;
-  intlEnd: number | null;
-  intlGrowth: number | null;
-  top8Share: number | null;
-  silentSectors: number;
-  indexedRows: Record<string, number | string | null>[];
-  demandRows: Record<string, number | string | null>[];
-};
-
-const PROFILES: ReportProfile[] = [
-  {
-    id: 'presupuesto',
-    short: 'Presupuesto',
-    title: 'Capacidad institucional frente a la presión del sistema ALA/CFT',
-    audience: 'Comisión legislativa de presupuesto / discusión de recursos institucionales',
-    purpose: 'Contrastar la evolución de la demanda observable con la capacidad institucional disponible, sin recomendar una asignación presupuestaria específica.',
-    question: '¿Cómo ha cambiado la presión que absorbe la UAF respecto de su capacidad instalada observable?',
-    emphasis: ['Padrón y actividades obligadas', 'ROS e inteligencia financiera', 'Dotación efectiva', 'Demanda del Ministerio Público', 'Cooperación internacional'],
-  },
-  {
-    id: 'crimen',
-    short: 'Crimen organizado',
-    title: 'Demanda de inteligencia financiera y articulación con la persecución penal',
-    audience: 'Comisión o instancia de análisis sobre crimen organizado',
-    purpose: 'Mostrar el flujo de información sospechosa, la detección de indicios y la interacción con el Ministerio Público. No mide por sí mismo prevalencia de crimen organizado.',
-    question: '¿Qué volumen de información financiera es procesado y qué parte alimenta productos de inteligencia y requerimientos investigativos?',
-    emphasis: ['ROS recibidos', 'ROS con indicios', 'IIF', 'Requerimientos del Ministerio Público', 'Personas comprendidas en requerimientos'],
-  },
-  {
-    id: 'supervision',
-    short: 'Supervisión',
-    title: 'Cobertura del universo obligado y comportamiento de reportabilidad',
-    audience: 'Instancias de supervisión, regulación y gestión del padrón',
-    purpose: 'Caracterizar expansión del universo obligado, intensidad de reportabilidad, concentración sectorial y sectores que requieren seguimiento.',
-    question: '¿Cómo crece el perímetro supervisado y dónde se concentra o debilita la reportabilidad?',
-    emphasis: ['Sujetos obligados', 'Actividades económicas', 'ROS por sector', 'Concentración de reportabilidad', 'Sectores sin ROS'],
-  },
-  {
-    id: 'ejecutivo',
-    short: 'Ejecutivo',
-    title: 'Síntesis ejecutiva del sistema de información financiera',
-    audience: 'Dirección y comités de gestión',
-    purpose: 'Entregar una lectura compacta de entradas, productos de inteligencia, cooperación y cobertura para apoyar priorización institucional.',
-    question: '¿Qué cambió materialmente en el sistema y qué variables requieren atención de gestión?',
-    emphasis: ['Crecimiento del padrón', 'Volumen de ROS', 'Productos de inteligencia', 'Cooperación', 'Concentración sectorial'],
-  },
-  {
-    id: 'internacional',
-    short: 'Internacional',
-    title: 'Cooperación internacional e intercambio de inteligencia financiera',
-    audience: 'Instancias de cooperación ALA/CFT y asuntos internacionales',
-    purpose: 'Mostrar la dimensión transfronteriza de la demanda de información mediante intercambios con UIF extranjeras y su relación con la carga nacional.',
-    question: '¿Qué presión adicional representa la cooperación internacional y cómo evoluciona junto con la demanda doméstica?',
-    emphasis: ['Consultas recibidas de UIF', 'Solicitudes enviadas', 'ROS nacionales', 'Requerimientos del Ministerio Público', 'Trazabilidad de fuentes'],
-  },
+const PROFILES: Profile[] = [
+  { id: 'presupuesto', short: 'Presupuesto', title: 'Capacidad institucional frente a una demanda ALA/CFT más compleja', audience: 'Comisión de presupuesto y autoridades con responsabilidad sobre recursos públicos', purpose: 'Mostrar cómo evoluciona la presión observable que absorbe la UAF y qué nuevas exigencias aparecen, sin convertir el análisis en una recomendación de asignación.', lead: 'Capacidad, demanda, expansión del perímetro y novedades que aumentan complejidad.' },
+  { id: 'crimen', short: 'Crimen organizado', title: 'Inteligencia financiera y señales vinculadas a economías criminales', audience: 'Comisiones y autoridades que abordan crimen organizado y delitos base', purpose: 'Integrar demanda de inteligencia financiera, señales territoriales, prensa trazada y delitos base, distinguiendo hechos de proxies.', lead: 'Delitos base, territorio, señales externas y articulación con investigación penal.' },
+  { id: 'supervision', short: 'Supervisión', title: 'Cobertura, reportabilidad y señales del universo obligado', audience: 'Instancias de supervisión, regulación y coordinación sectorial', purpose: 'Mostrar concentración de reportabilidad, sectores que cambian, sanciones y señales que podrían justificar revisión focalizada.', lead: 'Perímetro, comportamiento sectorial, sanciones y cobertura de supervisión.' },
+  { id: 'territorial', short: 'Territorial', title: 'Dónde se concentran las señales relevantes para análisis AML', audience: 'Autoridades nacionales y regionales', purpose: 'Ordenar evidencia territorial para identificar dónde convergen delitos base, economía criminal, sanciones y alertas.', lead: 'Regiones, comunas y componentes criminógenos con mayor intensidad relativa.' },
+  { id: 'ciudadania', short: 'Ciudadanía', title: 'Qué está observando la UAF y por qué importa', audience: 'Ciudadanía, rendición pública y comunicaciones institucionales', purpose: 'Explicar en lenguaje claro qué volumen absorbe el sistema, dónde aparecen señales y cuáles son los límites de interpretación.', lead: 'Transparencia, contexto y explicación no técnica de cifras verificables.' },
+  { id: 'internacional', short: 'Internacional', title: 'Dimensión transfronteriza de la inteligencia financiera', audience: 'Cooperación internacional y autoridades ALA/CFT', purpose: 'Relacionar cooperación entre UIF con presión doméstica, novedades internacionales y evolución del sistema nacional.', lead: 'Intercambio entre UIF, presión internacional y señales transfronterizas.' },
+  { id: 'ejecutivo', short: 'Ejecutivo', title: 'Situación estratégica del sistema ALA/CFT observado por Atlas', audience: 'Dirección y comités de gestión', purpose: 'Concentrar lo que cambió, dónde está ocurriendo y qué evidencia requiere atención directiva.', lead: 'Una lectura integral de presión, novedades, territorio, sectores y fuentes.' },
 ];
-
-const PROFILE_METRICS: Record<ProfileId, string[]> = {
-  presupuesto: [
-    'entidades_reportantes_total', 'actividades_economicas_obligadas', 'ros_recibidos',
-    'ros_con_indicios_laft', 'informes_inteligencia_financiera', 'dotacion_efectiva_total',
-    'requerimientos_ministerio_publico', 'consultas_uif_extranjeras_recibidas',
-    'solicitudes_uif_extranjeras_enviadas',
-  ],
-  crimen: [
-    'ros_recibidos', 'ros_con_indicios_laft', 'informes_inteligencia_financiera',
-    'requerimientos_ministerio_publico', 'personas_en_requerimientos_mp',
-  ],
-  supervision: ['entidades_reportantes_total', 'actividades_economicas_obligadas', 'ros_recibidos', 'acciones_supervision'],
-  ejecutivo: [
-    'entidades_reportantes_total', 'ros_recibidos', 'ros_con_indicios_laft',
-    'informes_inteligencia_financiera', 'requerimientos_ministerio_publico',
-    'consultas_uif_extranjeras_recibidas',
-  ],
-  internacional: [
-    'consultas_uif_extranjeras_recibidas', 'solicitudes_uif_extranjeras_enviadas',
-    'ros_recibidos', 'requerimientos_ministerio_publico',
-  ],
-};
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025];
 const fmt = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 });
 const fmt0 = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 });
 
-function pct(a: number | null, b: number | null): number | null {
-  if (a == null || b == null || a === 0) return null;
-  return ((b / a) - 1) * 100;
+function n(value: unknown): number | null { const x = Number(value); return Number.isFinite(x) ? x : null; }
+function pct(a: number | null, b: number | null): number | null { return a == null || b == null || a === 0 ? null : ((b / a) - 1) * 100; }
+function idx(a: number | null, b: number | null): number | null { return a == null || b == null || a === 0 ? null : (b / a) * 100; }
+function signed(value: number | null): string { return value == null ? 's/d' : `${value >= 0 ? '+' : ''}${fmt.format(value)}%`; }
+function val(base: BasePayload, metric: string, year: number): number | null {
+  const p = base.series[metric]?.puntos.find((x) => x.periodo === String(year));
+  return p?.valor == null ? null : n(p.valor);
 }
-
-function ratio(n: number | null, d: number | null): number | null {
-  if (n == null || d == null || d === 0) return null;
-  return n / d;
+function top8Share(base: BasePayload): number | null {
+  const total = val(base, 'ros_recibidos', 2025);
+  if (!total) return null;
+  const top = [...base.sectores].sort((a, b) => Number(b.ros_2025 ?? 0) - Number(a.ros_2025 ?? 0)).slice(0, 8).reduce((s, x) => s + Number(x.ros_2025 ?? 0), 0);
+  return top / total * 100;
 }
-
-function index(start: number | null, end: number | null): number | null {
-  if (start == null || end == null || start === 0) return null;
-  return end / start * 100;
-}
-
 function geometricMean(values: number[]): number | null {
-  if (values.length === 0 || values.some((v) => !Number.isFinite(v) || v <= 0)) return null;
-  return Math.exp(values.reduce((sum, v) => sum + Math.log(v), 0) / values.length);
+  if (!values.length || values.some((x) => x <= 0 || !Number.isFinite(x))) return null;
+  return Math.exp(values.reduce((s, x) => s + Math.log(x), 0) / values.length);
 }
 
-function round1(value: number | null): number | null {
-  return value == null ? null : Math.round(value * 10) / 10;
-}
-
-function signedPct(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return 's/d';
-  return `${value >= 0 ? '+' : ''}${fmt.format(value)}%`;
-}
-
-function seriesValue(payload: ReportPayload, metric: string, year: number): number | null {
-  const point = payload.series[metric]?.puntos.find((item) => item.periodo === String(year));
-  return point?.valor == null ? null : Number(point.valor);
-}
-
-function derive(payload: ReportPayload): Derived {
-  const { desde: from, hasta: to } = payload.periodo;
-  const first = (metric: string) => seriesValue(payload, metric, from);
-  const last = (metric: string) => seriesValue(payload, metric, to);
-  const soStart = first('entidades_reportantes_total');
-  const soEnd = last('entidades_reportantes_total');
-  const rosStart = first('ros_recibidos');
-  const rosEnd = last('ros_recibidos');
-  const staffStart = first('dotacion_efectiva_total');
-  const staffEnd = last('dotacion_efectiva_total');
-  const iifStart = first('informes_inteligencia_financiera');
-  const iifEnd = last('informes_inteligencia_financiera');
-  const activitiesStart = first('actividades_economicas_obligadas');
-  const activitiesEnd = last('actividades_economicas_obligadas');
-  const mpStart = first('requerimientos_ministerio_publico');
-  const mpEnd = last('requerimientos_ministerio_publico');
-  const receivedStart = first('consultas_uif_extranjeras_recibidas');
-  const receivedEnd = last('consultas_uif_extranjeras_recibidas');
-  const sentStart = first('solicitudes_uif_extranjeras_enviadas');
-  const sentEnd = last('solicitudes_uif_extranjeras_enviadas');
-  const intlStart = receivedStart != null && sentStart != null ? receivedStart + sentStart : null;
-  const intlEnd = receivedEnd != null && sentEnd != null ? receivedEnd + sentEnd : null;
-  const pressureParts = [index(soStart, soEnd), index(rosStart, rosEnd), index(activitiesStart, activitiesEnd)];
-  const pressureIndex = pressureParts.every((value) => value != null)
-    ? geometricMean(pressureParts as number[])
-    : null;
-  const years = Array.from({ length: to - from + 1 }, (_, i) => from + i);
-  const indexedRows = years.map((year) => {
-    const localIndex = (metric: string) => index(seriesValue(payload, metric, from), seriesValue(payload, metric, year));
-    const pressure = [
-      localIndex('entidades_reportantes_total'),
-      localIndex('ros_recibidos'),
-      localIndex('actividades_economicas_obligadas'),
-    ];
-    return {
-      year: String(year),
-      pressure: pressure.every((value) => value != null) ? geometricMean(pressure as number[]) : null,
-      staff: localIndex('dotacion_efectiva_total'),
-      iif: localIndex('informes_inteligencia_financiera'),
-    };
-  });
-  const demandRows = years.map((year) => {
-    const received = seriesValue(payload, 'consultas_uif_extranjeras_recibidas', year);
-    const sent = seriesValue(payload, 'solicitudes_uif_extranjeras_enviadas', year);
-    return {
-      year: String(year),
-      mp: seriesValue(payload, 'requerimientos_ministerio_publico', year),
-      intl: received != null && sent != null ? received + sent : null,
-    };
-  });
-  const ros2025 = seriesValue(payload, 'ros_recibidos', 2025);
-  const top8Ros = [...payload.sectores]
-    .filter((sector) => sector.ros_2025 != null)
-    .sort((a, b) => Number(b.ros_2025 ?? 0) - Number(a.ros_2025 ?? 0))
-    .slice(0, 8)
-    .reduce((sum, sector) => sum + Number(sector.ros_2025 ?? 0), 0);
-
+function structural(base: BasePayload) {
+  const from = base.periodo.desde; const to = base.periodo.hasta;
+  const so0 = val(base, 'entidades_reportantes_total', from); const so1 = val(base, 'entidades_reportantes_total', to);
+  const ros0 = val(base, 'ros_recibidos', from); const ros1 = val(base, 'ros_recibidos', to);
+  const act0 = val(base, 'actividades_economicas_obligadas', from); const act1 = val(base, 'actividades_economicas_obligadas', to);
+  const staff0 = val(base, 'dotacion_efectiva_total', from); const staff1 = val(base, 'dotacion_efectiva_total', to);
+  const iif0 = val(base, 'informes_inteligencia_financiera', from); const iif1 = val(base, 'informes_inteligencia_financiera', to);
+  const mp0 = val(base, 'requerimientos_ministerio_publico', from); const mp1 = val(base, 'requerimientos_ministerio_publico', to);
+  const rec0 = val(base, 'consultas_uif_extranjeras_recibidas', from); const rec1 = val(base, 'consultas_uif_extranjeras_recibidas', to);
+  const sent0 = val(base, 'solicitudes_uif_extranjeras_enviadas', from); const sent1 = val(base, 'solicitudes_uif_extranjeras_enviadas', to);
+  const pressureParts = [idx(so0, so1), idx(ros0, ros1), idx(act0, act1)];
   return {
-    from,
-    to,
-    soStart,
-    soEnd,
-    soGrowth: pct(soStart, soEnd),
-    rosStart,
-    rosEnd,
-    rosGrowth: pct(rosStart, rosEnd),
-    staffStart,
-    staffEnd,
-    staffGrowth: pct(staffStart, staffEnd),
-    iifStart,
-    iifEnd,
-    iifGrowth: pct(iifStart, iifEnd),
-    activitiesStart,
-    activitiesEnd,
-    pressureIndex,
-    staffIndex: index(staffStart, staffEnd),
-    iifIndex: index(iifStart, iifEnd),
-    rosPerStaffEnd: ratio(rosEnd, staffEnd),
-    indicationsPerIifEnd: ratio(last('ros_con_indicios_laft'), iifEnd),
-    mpStart,
-    mpEnd,
-    mpGrowth: pct(mpStart, mpEnd),
-    intlStart,
-    intlEnd,
-    intlGrowth: pct(intlStart, intlEnd),
-    top8Share: ros2025 && ros2025 !== 0 ? top8Ros / ros2025 * 100 : null,
-    silentSectors: payload.sectores.filter((sector) => sector.silencio_5y === true).length,
-    indexedRows,
-    demandRows,
+    from, to, so0, so1, ros0, ros1, act0, act1, staff0, staff1, iif0, iif1, mp0, mp1,
+    intl0: rec0 != null && sent0 != null ? rec0 + sent0 : null,
+    intl1: rec1 != null && sent1 != null ? rec1 + sent1 : null,
+    pressureIndex: pressureParts.every((x) => x != null) ? geometricMean(pressureParts as number[]) : null,
+    staffIndex: idx(staff0, staff1), iifIndex: idx(iif0, iif1),
+    soGrowth: pct(so0, so1), rosGrowth: pct(ros0, ros1), staffGrowth: pct(staff0, staff1), iifGrowth: pct(iif0, iif1), mpGrowth: pct(mp0, mp1),
   };
 }
 
-function baseNarrative(profile: ProfileId, d: Derived): string[] {
-  if (profile === 'presupuesto') {
-    return [
-      `Entre ${d.from} y ${d.to}, el universo reportante varió ${signedPct(d.soGrowth)}, mientras los ROS recibidos aumentaron ${signedPct(d.rosGrowth)}. En el mismo periodo, la dotación efectiva total varió ${signedPct(d.staffGrowth)}.`,
-      `El índice experimental de presión observable alcanza ${d.pressureIndex == null ? 's/d' : fmt.format(d.pressureIndex)} puntos, con base ${d.from}=100. La dotación llega a ${d.staffIndex == null ? 's/d' : fmt.format(d.staffIndex)} y la salida en IIF a ${d.iifIndex == null ? 's/d' : fmt.format(d.iifIndex)}. El contraste muestra ritmos relativos y no define productividad ni una dotación óptima.`,
-      `Los requerimientos del Ministerio Público variaron ${signedPct(d.mpGrowth)} y los intercambios con UIF extranjeras ${signedPct(d.intlGrowth)}. Estas demandas coexisten con funciones de supervisión, regulación, capacitación y coordinación que también utilizan capacidad institucional.`,
-    ];
+function answerQuestion(q: StrategicQuestion, s: ReturnType<typeof structural>, payload: StrategicPayload): string {
+  if (q.id === 'capacity_pressure') {
+    if (q.answer === 'PRESION_CRECE_MAS') return `La presión observable crece más rápido que la dotación: índice ${fmt.format(q.pressure_index ?? 0)} versus ${fmt.format(q.staff_index ?? 0)}, una diferencia de ${fmt.format(q.gap_points ?? 0)} puntos índice.`;
+    if (q.answer === 'CAPACIDAD_CRECE_MAS') return `La dotación crece a un ritmo superior al índice experimental de presión observable en el período seleccionado.`;
+    return 'Las series disponibles no permiten establecer una diferencia material con la metodología actual.';
   }
-  if (profile === 'crimen') {
-    return [
-      `Los ROS recibidos variaron ${signedPct(d.rosGrowth)} entre ${d.from} y ${d.to}. Los ROS con indicios y los IIF no siguen necesariamente la misma trayectoria porque un IIF puede integrar múltiples ROS y antecedentes adicionales.`,
-      `Los requerimientos del Ministerio Público pasaron de ${fmt0.format(d.mpStart ?? 0)} a ${fmt0.format(d.mpEnd ?? 0)} (${signedPct(d.mpGrowth)}), mostrando una vía adicional de demanda analítica distinta de la generación de IIF.`,
-      'Estas cifras describen carga y articulación de inteligencia financiera. No permiten inferir por sí solas la prevalencia, incidencia ni evolución del crimen organizado en Chile.',
-    ];
+  if (q.id === 'territorial_focus') {
+    const regions = (q.regions ?? []).slice(0, 3).map((r) => r.region).join(', ');
+    return regions ? `Las señales territoriales determinísticas priorizan actualmente ${regions}. El ranking combina delitos base, economía criminal e IGR, no una tasa de lavado.` : 'No hay suficiente cobertura territorial para priorizar regiones.';
   }
-  if (profile === 'supervision') {
-    return [
-      `El registro reportante pasó de ${fmt0.format(d.soStart ?? 0)} a ${fmt0.format(d.soEnd ?? 0)} entidades (${signedPct(d.soGrowth)}) y las actividades económicas obligadas pasaron de ${fmt0.format(d.activitiesStart ?? 0)} a ${fmt0.format(d.activitiesEnd ?? 0)}.`,
-      `En 2025, los ocho sectores con mayor volumen concentran ${d.top8Share == null ? 's/d' : `${fmt.format(d.top8Share)}%`} de los ROS del año. La concentración dimensiona dependencia de pocos sectores, pero no califica la calidad de los reportes.`,
-      `Atlas identifica ${d.silentSectors} categorías con inscritos y sin ROS en el quinquenio sectorial disponible. El silencio sectorial no prueba incumplimiento: el ROS se presenta ante una operación sospechosa y no tiene periodicidad mínima.`,
-    ];
+  if (q.id === 'external_novelties') return `En la ventana de ${q.window_days ?? payload.novedad.dias} días Atlas detecta ${q.external_alert_count ?? 0} alertas externas de sujetos obligados, ${q.strategic_press_count ?? 0} noticias temáticas y ${q.recent_uaf_sanction_count ?? 0} eventos sancionatorios recientes vinculados a sujetos UAF.`;
+  if (q.id === 'organized_crime_proxy') {
+    const comps = (q.top_components ?? []).slice(0, 3).map((c) => c.component).join(', ');
+    return comps ? `Los proxies territoriales con mayor intensidad relativa incluyen ${comps}. Deben leerse como contexto criminógeno y delitos base, no como medición directa de organizaciones criminales.` : 'Atlas no dispone de una medición directa de organizaciones criminales; sólo proxies territoriales y hechos públicos trazados.';
   }
-  if (profile === 'internacional') {
-    return [
-      `Los intercambios con UIF extranjeras pasaron de ${fmt0.format(d.intlStart ?? 0)} en ${d.from} a ${fmt0.format(d.intlEnd ?? 0)} en ${d.to} (${signedPct(d.intlGrowth)}), considerando consultas recibidas y solicitudes enviadas.`,
-      `Esta demanda se superpone con la carga doméstica: los requerimientos del Ministerio Público variaron ${signedPct(d.mpGrowth)} y los ROS recibidos ${signedPct(d.rosGrowth)} en el mismo periodo.`,
-      'El volumen de intercambios internacionales mide cooperación y demanda de información; no constituye por sí solo un indicador de riesgo país ni de criminalidad transnacional.',
-    ];
-  }
+  if (q.id === 'reporting_concentration') return `La reportabilidad 2025 alcanza ${fmt0.format(q.ros_total_2025 ?? 0)} ROS y existen ${q.silent_sector_count ?? 0} categorías sin ROS en el quinquenio sectorial disponible. El silencio no equivale por sí solo a incumplimiento.`;
+  return q.caveat ?? 'Pregunta disponible sin respuesta estructurada.';
+}
+
+function deterministicBrief(profile: ProfileId, p: StrategicPayload, s: ReturnType<typeof structural>): string[] {
+  const topRegions = [...p.territorio.regiones].sort((a,b) => a.strategic_rank-b.strategic_rank).slice(0,3).map(x => x.region_name).join(', ');
+  const alerts = p.novedades.alertas_externas.length;
+  const sanctions = p.novedades.sanciones_resumen.recent_event_count ?? 0;
+  const press = p.novedades.prensa_resumen.article_count ?? 0;
+  if (profile === 'presupuesto') return [
+    `La discusión de capacidad no se explica sólo por el volumen de ROS. Entre ${s.from} y ${s.to}, el universo reportante varió ${signed(s.soGrowth)}, los ROS ${signed(s.rosGrowth)} y la dotación efectiva ${signed(s.staffGrowth)}.`,
+    `Al corte actual, Atlas agrega una segunda capa de complejidad: ${alerts} alertas externas de alta relevancia, ${sanctions} eventos sancionatorios recientes vinculados a sujetos UAF y ${press} noticias temáticas dentro de la ventana seleccionada.`,
+    `Territorialmente, las señales relativas más intensas se concentran en ${topRegions || 'regiones con cobertura suficiente'}. Esto no determina una necesidad presupuestaria por sí solo, pero permite mostrar que la carga institucional combina volumen, amplitud sectorial, cooperación, supervisión y cambios del entorno.`
+  ];
+  if (profile === 'crimen') return [
+    `La lectura de crimen organizado debe separar evidencia directa de proxies. Atlas combina ROS, requerimientos del Ministerio Público, prensa trazada y capas CEAD de delitos base, economía criminal y contexto criminógeno.`,
+    `Las regiones que hoy aparecen con mayor intensidad relativa son ${topRegions || 'las de mayor cobertura territorial'}. La señal territorial no atribuye conductas a personas ni empresas y no constituye una estimación de prevalencia de organizaciones criminales.`,
+    `Las novedades externas y sancionatorias se incorporan como hechos de contexto para orientar preguntas analíticas, no como prueba de ilícitos.`
+  ];
+  if (profile === 'territorial') return [
+    `El informe territorial busca responder dónde convergen señales, no etiquetar territorios. El ranking actual prioriza ${topRegions || 'las regiones con mayor intensidad relativa'} a partir de promedios comunales comparables.`,
+    `Cada región puede desagregarse en comunas y en componentes CEAD para distinguir presión por delitos base, economía criminal y contexto criminógeno.`,
+    `Sanciones y alertas de prensa se muestran como contexto adicional, evitando convertir coincidencias geográficas en causalidad.`
+  ];
+  if (profile === 'supervision') return [
+    `El universo obligado debe leerse junto con su comportamiento: crecimiento del padrón, concentración de ROS, sectores silenciosos, sanciones y señales externas pueden describir necesidades distintas de supervisión.`,
+    `Atlas identifica movimientos sectoriales con reglas reproducibles y muestra las sanciones recientes vinculadas a sujetos UAF sin inferir incumplimientos adicionales.`,
+    `El objetivo es responder qué sectores cambiaron, cuáles concentran reportabilidad y dónde aparecen señales que ameritan una revisión analítica.`
+  ];
+  if (profile === 'internacional') return [
+    `La dimensión internacional se superpone con la carga nacional: intercambio entre UIF, noticias transfronterizas y crecimiento del flujo doméstico ocurren simultáneamente.`,
+    `Entre ${s.from} y ${s.to}, los requerimientos del Ministerio Público variaron ${signed(s.mpGrowth)}; la cooperación con UIF se presenta en paralelo para evitar confundir intercambio internacional con criminalidad transnacional.`,
+    `La prensa internacional funciona sólo como radar de novedades y nunca como fuente de una cifra estructural.`
+  ];
+  if (profile === 'ciudadania') return [
+    `Atlas permite explicar qué observa la UAF con cifras verificables y límites claros: cuántos actores reportan, cuánto flujo recibe el sistema, qué señales públicas cambian y dónde se concentra el contexto territorial.`,
+    `La existencia de una noticia, sanción o señal territorial no significa que una persona o empresa haya cometido lavado de activos. Cada capa se presenta con su alcance metodológico.`,
+    `El informe busca hacer comprensible la complejidad del sistema sin ocultar las limitaciones de los datos.`
+  ];
   return [
-    `Entre ${d.from} y ${d.to}, el padrón varió ${signedPct(d.soGrowth)}, los ROS ${signedPct(d.rosGrowth)} y los IIF ${signedPct(d.iifGrowth)}.`,
-    `La presión no se limita a los ROS: los requerimientos del Ministerio Público variaron ${signedPct(d.mpGrowth)} y los intercambios con UIF extranjeras ${signedPct(d.intlGrowth)}.`,
-    'La lectura conjunta separa expansión del universo, demanda de análisis y productos de inteligencia, manteniendo las cautelas de comparabilidad y trazabilidad.',
+    `La situación actual combina una tendencia estructural de mayor complejidad con novedades que cambian semana a semana.`,
+    `Hoy Atlas integra ${alerts} alertas externas, ${sanctions} eventos sancionatorios recientes y ${press} noticias temáticas dentro de la ventana seleccionada, además de capas territoriales y sectoriales.`,
+    `El valor del informe está en conectar esas capas y convertirlas en preguntas concretas para decisión directiva, manteniendo trazabilidad y cautelas metodológicas.`
   ];
 }
 
-function validatedData(profile: ProfileId, payload: ReportPayload, d: Derived) {
-  return {
-    contract: payload.contract,
-    profile,
-    period: payload.periodo,
-    methodology: payload.metodologia,
-    source_series: Object.fromEntries(PROFILE_METRICS[profile].map((metric) => [metric, payload.series[metric] ?? null])),
-    deterministic_derivatives: {
-      subject_growth_pct: round1(d.soGrowth),
-      ros_growth_pct: round1(d.rosGrowth),
-      staff_growth_pct: round1(d.staffGrowth),
-      iif_growth_pct: round1(d.iifGrowth),
-      pressure_index_base_from_100: round1(d.pressureIndex),
-      staff_index_base_from_100: round1(d.staffIndex),
-      iif_index_base_from_100: round1(d.iifIndex),
-      ros_per_total_staff_to: round1(d.rosPerStaffEnd),
-      indications_per_iif_to: round1(d.indicationsPerIifEnd),
-      mp_requirements_growth_pct: round1(d.mpGrowth),
-      international_exchanges_growth_pct: round1(d.intlGrowth),
-      top8_ros_share_2025_pct: round1(d.top8Share),
-      silent_sectors_5y: d.silentSectors,
-    },
-    constraints: [
-      'Do not calculate or replace any figure.',
-      'Do not introduce figures that are not present in this object.',
-      'Do not treat total institutional staffing as staffing of the Financial Intelligence Division.',
-      'Do not interpret IIF count as direct productivity because one IIF may consolidate multiple ROS.',
-      'Do not infer crime prevalence from ROS volumes.',
-      'For budget audiences, describe capacity pressure without recommending a vote, allocation or political decision.',
-    ],
-  };
+function Bar({ value, max = 100 }: { value: number | null | undefined; max?: number }) {
+  const v = value == null ? 0 : Math.max(0, Math.min(max, value));
+  return <span className="sr-bar"><i style={{ width: `${max ? (v/max)*100 : 0}%` }} /></span>;
 }
 
-function LineChart({
-  rows,
-  series,
-  title,
-  subtitle,
-}: {
-  rows: Record<string, number | string | null>[];
-  series: { key: string; label: string; tone: string }[];
-  title: string;
-  subtitle: string;
-}) {
-  const width = 760;
-  const height = 250;
-  const pad = { left: 48, right: 18, top: 34, bottom: 38 };
-  const values = series
-    .flatMap((item) => rows.map((row) => typeof row[item.key] === 'number' ? Number(row[item.key]) : NaN))
-    .filter(Number.isFinite);
-  const max = Math.max(1, ...values);
-  const min = Math.min(0, ...values);
-  const span = Math.max(1, max - min);
-  const x = (i: number) => pad.left + (rows.length <= 1 ? 0 : i * (width - pad.left - pad.right) / (rows.length - 1));
-  const y = (value: number) => pad.top + (max - value) * (height - pad.top - pad.bottom) / span;
-
-  return (
-    <figure className="report-chart">
-      <figcaption><strong>{title}</strong><span>{subtitle}</span></figcaption>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
-        {[0, 0.25, 0.5, 0.75, 1].map((portion) => {
-          const yy = pad.top + portion * (height - pad.top - pad.bottom);
-          const tick = max - portion * span;
-          return (
-            <g key={portion}>
-              <line x1={pad.left} y1={yy} x2={width - pad.right} y2={yy} className="report-grid" />
-              <text x={pad.left - 8} y={yy + 4} textAnchor="end" className="report-axis-label">{fmt.format(tick)}</text>
-            </g>
-          );
-        })}
-        {rows.map((row, i) => (
-          <text key={String(row.year)} x={x(i)} y={height - 12} textAnchor="middle" className="report-axis-label">{String(row.year)}</text>
-        ))}
-        {series.map((item) => {
-          const points = rows.map((row, i) => {
-            const value = row[item.key];
-            return typeof value === 'number' ? `${x(i)},${y(value)}` : null;
-          }).filter(Boolean).join(' ');
-          return (
-            <g key={item.key} className={`report-series ${item.tone}`}>
-              <polyline points={points} fill="none" vectorEffect="non-scaling-stroke" />
-              {rows.map((row, i) => {
-                const value = row[item.key];
-                return typeof value === 'number' ? <circle key={i} cx={x(i)} cy={y(value)} r="3.4" /> : null;
-              })}
-            </g>
-          );
-        })}
-      </svg>
-      <div className="report-legend">
-        {series.map((item) => <span key={item.key}><i className={item.tone} />{item.label}</span>)}
-      </div>
-    </figure>
-  );
+function IndexCard({ label, value, note }: { label: string; value: number | null; note: string }) {
+  return <div className="sr-index-card"><div><span>{label}</span><strong>{value == null ? 's/d' : fmt.format(value)}</strong></div><Bar value={value} max={220} /><small>{note}</small></div>;
 }
 
 export function Reportes() {
   const [fromYear, setFromYear] = useState(2020);
   const [toYear, setToYear] = useState(2025);
+  const [noveltyDays, setNoveltyDays] = useState(30);
   const [profileId, setProfileId] = useState<ProfileId>('presupuesto');
   const [aiNarrative, setAiNarrative] = useState<string | null>(null);
-  const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'ready' | 'fallback'>('idle');
+  const [aiStatus, setAiStatus] = useState<'idle'|'loading'|'ready'|'fallback'>('idle');
   const [aiMeta, setAiMeta] = useState<string | null>(null);
-  const report = useRpc<ReportPayload>('obs_uaf_report_payload', { p_from_year: fromYear, p_to_year: toYear });
-  const profile = PROFILES.find((item) => item.id === profileId) ?? PROFILES[0];
-  const d = useMemo(() => report.data ? derive(report.data) : null, [report.data]);
-  const deterministicNarrative = useMemo(() => d ? baseNarrative(profileId, d) : [], [profileId, d]);
 
-  useEffect(() => {
-    setAiNarrative(null);
-    setAiStatus('idle');
-    setAiMeta(null);
-  }, [profileId, fromYear, toYear]);
+  const report = useRpc<StrategicPayload>('obs_uaf_strategic_report_payload', { p_from_year: fromYear, p_to_year: toYear, p_novelty_days: noveltyDays });
+  const profile = PROFILES.find(x => x.id === profileId) ?? PROFILES[0];
+  const s = useMemo(() => report.data ? structural(report.data.base) : null, [report.data]);
 
-  useEffect(() => {
-    document.body.classList.add('atlas-report-mode');
-    return () => document.body.classList.remove('atlas-report-mode');
-  }, []);
+  useEffect(() => { setAiNarrative(null); setAiStatus('idle'); setAiMeta(null); }, [fromYear, toYear, noveltyDays, profileId]);
+  useEffect(() => { document.body.classList.add('atlas-report-mode'); return () => document.body.classList.remove('atlas-report-mode'); }, []);
 
-  if (report.loading && !report.data) return <Loading label="Preparando series trazadas para informes…" />;
+  if (report.loading && !report.data) return <Loading label="Construyendo informe estratégico trazable…" />;
   if (report.error) return <ErrorBox error={report.error} onRetry={report.reload} />;
-  if (!report.data || !d) return <ErrorBox error="Atlas no pudo construir el contrato de informe." onRetry={report.reload} />;
+  if (!report.data || !s) return <ErrorBox error="Atlas no pudo construir el informe estratégico." onRetry={report.reload} />;
 
-  const narrative = aiNarrative ? aiNarrative.split(/\n\s*\n/).filter(Boolean) : deterministicNarrative;
-  const topSectors = [...report.data.sectores]
-    .filter((sector) => sector.ros_2025 != null)
-    .sort((a, b) => Number(b.ros_2025 ?? 0) - Number(a.ros_2025 ?? 0))
-    .slice(0, profileId === 'supervision' ? 10 : 6);
-  const sourceMap = new Map<string, ReportPoint>();
-  for (const metric of PROFILE_METRICS[profileId]) {
-    for (const point of report.data.series[metric]?.puntos ?? []) {
-      if (point.fuente) sourceMap.set(point.fuente, point);
-    }
-  }
-  const uniqueSources = Array.from(sourceMap.values());
-  const indicationsTo = seriesValue(report.data, 'ros_con_indicios_laft', toYear);
-  const receivedTo = seriesValue(report.data, 'consultas_uif_extranjeras_recibidas', toYear);
-  const sentTo = seriesValue(report.data, 'solicitudes_uif_extranjeras_enviadas', toYear);
+  const p = report.data;
+  const baseBrief = deterministicBrief(profileId, p, s);
+  const brief = aiNarrative ? aiNarrative.split(/\n\s*\n/).filter(Boolean) : baseBrief;
+  const questions = p.preguntas_estrategicas;
+  const regions = [...p.territorio.regiones].sort((a,b) => a.strategic_rank-b.strategic_rank).slice(0,8);
+  const communes = p.territorio.comunas_prioritarias.slice(0,8);
+  const components = p.territorio.componentes_cead.slice(0,7);
+  const sectorMoves = p.sectores.movimientos.slice(0,10);
+  const alerts = p.novedades.alertas_externas.slice(0,5);
+  const sanctions = p.novedades.sanciones_recientes.slice(0,6);
+  const pressItems = p.novedades.prensa_reciente.filter(x => profileId === 'internacional' ? x.scope === 'INTERNACIONAL' : true).slice(0,7);
+  const t8 = top8Share(p.base);
+  const qCapacity = questions.find(q => q.id === 'capacity_pressure');
+  const qTerritory = questions.find(q => q.id === 'territorial_focus');
+  const qNovelty = questions.find(q => q.id === 'external_novelties');
+  const qCrime = questions.find(q => q.id === 'organized_crime_proxy');
 
-  const kpis: [string, string, string][] = profileId === 'presupuesto'
-    ? [
-        ['Universo reportante', `${fmt0.format(d.soStart ?? 0)} → ${fmt0.format(d.soEnd ?? 0)}`, signedPct(d.soGrowth)],
-        ['ROS recibidos', `${fmt0.format(d.rosStart ?? 0)} → ${fmt0.format(d.rosEnd ?? 0)}`, signedPct(d.rosGrowth)],
-        ['Dotación efectiva', `${fmt0.format(d.staffStart ?? 0)} → ${fmt0.format(d.staffEnd ?? 0)}`, signedPct(d.staffGrowth)],
-        ['IIF y complementos', `${fmt0.format(d.iifStart ?? 0)} → ${fmt0.format(d.iifEnd ?? 0)}`, signedPct(d.iifGrowth)],
-      ]
-    : profileId === 'crimen'
-      ? [
-          ['ROS recibidos', fmt0.format(d.rosEnd ?? 0), signedPct(d.rosGrowth)],
-          ['ROS con indicios', fmt0.format(indicationsTo ?? 0), 'flujo con indicios'],
-          ['IIF y complementos', fmt0.format(d.iifEnd ?? 0), signedPct(d.iifGrowth)],
-          ['Requerimientos MP', fmt0.format(d.mpEnd ?? 0), signedPct(d.mpGrowth)],
-        ]
-      : profileId === 'internacional'
-        ? [
-            ['Intercambios UIF', fmt0.format(d.intlEnd ?? 0), signedPct(d.intlGrowth)],
-            ['Consultas recibidas', fmt0.format(receivedTo ?? 0), 'Red Egmont'],
-            ['Solicitudes enviadas', fmt0.format(sentTo ?? 0), 'Red Egmont'],
-            ['Requerimientos MP', fmt0.format(d.mpEnd ?? 0), signedPct(d.mpGrowth)],
-          ]
-        : [
-            ['Universo reportante', fmt0.format(d.soEnd ?? 0), signedPct(d.soGrowth)],
-            ['Actividades obligadas', fmt0.format(d.activitiesEnd ?? 0), `${fmt0.format(d.activitiesStart ?? 0)} en ${fromYear}`],
-            ['ROS recibidos', fmt0.format(d.rosEnd ?? 0), signedPct(d.rosGrowth)],
-            ['Top 8 sectores', d.top8Share == null ? 's/d' : `${fmt.format(d.top8Share)}%`, 'de ROS 2025'],
-          ];
+  const generated = new Date(p.generated_at);
+  const validated = {
+    contract: p.contract,
+    generated_context: { year: generated.getUTCFullYear(), month: generated.getUTCMonth()+1, day: generated.getUTCDate(), novelty_days: p.novedad.dias },
+    profile: { id: profile.id, audience: profile.audience, purpose: profile.purpose },
+    structural: { from: s.from, to: s.to, subject_growth_pct: s.soGrowth, ros_growth_pct: s.rosGrowth, staff_growth_pct: s.staffGrowth, iif_growth_pct: s.iifGrowth, mp_growth_pct: s.mpGrowth, pressure_index: s.pressureIndex, staff_index: s.staffIndex, top8_ros_share_2025_pct: t8 },
+    strategic_questions: questions,
+    novelties: { external_alerts: alerts, press_summary: p.novedades.prensa_resumen, press_themes: p.novedades.prensa_temas, recent_sanctions: sanctions },
+    territory: { year: p.territorio.year, top_regions: regions, top_communes: communes, cead_components: components, methodology: p.territorio.metodologia },
+    sectors: sectorMoves,
+    rules: p.reglas,
+    constraints: [
+      'No recalcular ni introducir cifras nuevas.',
+      'No presentar proxies territoriales como prevalencia de lavado o crimen organizado.',
+      'No asumir culpabilidad a partir de prensa o sanciones administrativas.',
+      'No recomendar votos, asignaciones presupuestarias ni decisiones políticas.',
+      'Distinguir hechos, señales, proxies y limitaciones.'
+    ]
+  };
 
   async function requestAiNarrative() {
-    setAiStatus('loading');
-    setAiMeta(null);
-    const { data, error } = await supabase.functions.invoke('atlas-report-narrative', {
-      body: {
-        profile: { id: profile.id, audience: profile.audience, purpose: profile.purpose, question: profile.question },
-        validated_data: validatedData(profile.id, report.data as ReportPayload, d as Derived),
-      },
-    });
-    if (error || !data?.narrative) {
-      setAiNarrative(null);
-      setAiStatus('fallback');
-      setAiMeta(error?.message ?? data?.reason ?? 'Síntesis IA no disponible; se conserva la lectura determinística.');
-      return;
-    }
-    setAiNarrative(String(data.narrative));
-    setAiStatus(data.ai_used ? 'ready' : 'fallback');
-    setAiMeta(data.ai_used ? `Síntesis interpretativa · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se conserva síntesis determinística.'));
+    setAiStatus('loading'); setAiMeta(null);
+    const { data, error } = await supabase.functions.invoke('atlas-report-narrative', { body: { profile: { id: profile.id, audience: profile.audience, purpose: profile.purpose, question: profile.lead }, validated_data: validated } });
+    if (error || !data?.narrative) { setAiNarrative(null); setAiStatus('fallback'); setAiMeta(error?.message ?? data?.reason ?? 'Se mantiene la síntesis determinística.'); return; }
+    setAiNarrative(String(data.narrative)); setAiStatus(data.ai_used ? 'ready' : 'fallback'); setAiMeta(data.ai_used ? `Síntesis estratégica IA · ${String(data.model ?? 'modelo configurado')}` : String(data.reason ?? 'Se mantiene la síntesis determinística.'));
   }
 
   function printPdf() {
-    const previousTitle = document.title;
-    document.title = `ATLAS_${profile.short.replace(/\s+/g, '_')}_${fromYear}_${toYear}`;
-    window.print();
-    window.setTimeout(() => { document.title = previousTitle; }, 500);
+    const prev = document.title; document.title = `ATLAS_Informe_Estrategico_${profile.short}_${fromYear}_${toYear}`; window.print(); window.setTimeout(() => { document.title = prev; }, 500);
   }
 
-  return (
-    <div className="report-view fade-in">
-      <aside className="atlas-report-controls" aria-label="Configuración del informe">
-        <div>
-          <span className="report-kicker">ATLAS · motor de informes</span>
-          <h1>Generar informe</h1>
-          <p>Los números se calculan desde datos trazados. La IA sólo puede redactar la síntesis sobre el paquete validado.</p>
+  return <div className="report-view fade-in">
+    <aside className="atlas-report-controls">
+      <div><span className="report-kicker">ATLAS · INFORMES ESTRATÉGICOS</span><h1>Informe de situación</h1><p>Combina evidencia estructural con novedades del entorno. La IA redacta; no calcula.</p></div>
+      <label><span>Enfoque</span><select value={profileId} onChange={e => setProfileId(e.target.value as ProfileId)}>{PROFILES.map(x => <option key={x.id} value={x.id}>{x.short}</option>)}</select></label>
+      <div className="report-profile-card"><strong>{profile.title}</strong><small>{profile.audience}</small><p>{profile.purpose}</p></div>
+      <div className="report-year-grid">
+        <label><span>Desde</span><select value={fromYear} onChange={e => setFromYear(Math.min(Number(e.target.value),toYear))}>{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
+        <label><span>Hasta</span><select value={toYear} onChange={e => setToYear(Math.max(Number(e.target.value),fromYear))}>{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
+      </div>
+      <label><span>Ventana de novedades</span><select value={noveltyDays} onChange={e => setNoveltyDays(Number(e.target.value))}><option value={7}>7 días</option><option value={30}>30 días</option><option value={60}>60 días</option><option value={90}>90 días</option></select></label>
+      <div className="report-safety-box"><strong>Arquitectura</strong><span>SQL / reglas → cifras, rankings, selección de novedades y preguntas.</span><span>IA → síntesis ejecutiva sobre paquete ya validado.</span></div>
+      <button className="report-btn report-btn-ai" onClick={() => void requestAiNarrative()} disabled={aiStatus==='loading'}>{aiStatus==='loading'?'Redactando…':'Redactar síntesis IA'}</button>
+      <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF</button>
+      {aiMeta && <small className="report-ai-meta">{aiMeta}</small>}
+    </aside>
+
+    <main className="report-paper-wrap"><article className="report-paper strategic-report">
+      <header className="report-cover strategic-cover">
+        <div className="report-cover-top"><span>ATLAS OBSERVATORIO</span><span>CORTE DINÁMICO · {p.novedad.hasta}</span></div>
+        <div className="report-cover-body"><span className="report-eyebrow">INFORME ESTRATÉGICO · {profile.short}</span><h2>{profile.title}</h2><p>{profile.lead}</p></div>
+        <div className="report-badges"><span>DATOS TRAZABLES</span><span>NOVEDADES {p.novedad.dias} DÍAS</span><span>{aiStatus==='ready'?'SÍNTESIS IA VALIDADA':'SÍNTESIS DETERMINÍSTICA'}</span><span>HASH {p.snapshot_hash.slice(0,10)}</span></div>
+      </header>
+
+      <section className="report-section sr-executive report-no-break">
+        <div className="report-section-heading"><span>01</span><div><h3>Qué debería saber hoy una comisión</h3><p>Lectura priorizada a partir de evidencia estructural y novedades.</p></div></div>
+        <div className="sr-hero-grid">
+          <div className="sr-hero"><span>Presión observable</span><strong>{qCapacity?.pressure_index==null?'s/d':fmt.format(qCapacity.pressure_index)}</strong><small>base {fromYear}=100 · dotación {qCapacity?.staff_index==null?'s/d':fmt.format(qCapacity.staff_index)}</small></div>
+          <div className="sr-hero"><span>Novedades críticas</span><strong>{p.novedades.alertas_externas.length}</strong><small>alertas externas trazadas en {p.novedad.dias} días</small></div>
+          <div className="sr-hero"><span>Sanciones recientes</span><strong>{fmt0.format(p.novedades.sanciones_resumen.recent_event_count ?? 0)}</strong><small>eventos vinculados a sujetos UAF</small></div>
+          <div className="sr-hero"><span>Regiones observadas</span><strong>{p.territorio.regiones.length}</strong><small>con capas territoriales comparables</small></div>
         </div>
-        <label>
-          <span>Enfoque</span>
-          <select value={profileId} onChange={(event) => setProfileId(event.target.value as ProfileId)}>
-            {PROFILES.map((item) => <option key={item.id} value={item.id}>{item.short}</option>)}
-          </select>
-        </label>
-        <div className="report-profile-card">
-          <strong>{profile.title}</strong>
-          <small>{profile.audience}</small>
-          <p>{profile.purpose}</p>
-          <p>{profile.emphasis.join(' · ')}</p>
+        <div className="report-narrative"><div className="report-narrative-label"><span>{aiStatus==='ready'?'Síntesis estratégica IA':'Síntesis estratégica base'}</span><small>{aiStatus==='ready'?'Redacción sobre paquete validado, sin cálculo generativo.':'Texto reproducible construido desde reglas y métricas.'}</small></div>{brief.map((x,i)=><p key={i}>{x}</p>)}</div>
+      </section>
+
+      <section className="report-section report-page-break">
+        <div className="report-section-heading"><span>02</span><div><h3>Preguntas que el informe puede responder</h3><p>Las respuestas cambian cuando cambian los datos, no por criterio del modelo generativo.</p></div></div>
+        <div className="sr-question-grid">{questions.map(q => <article className="sr-question" key={q.id}><span>INTERROGANTE</span><h4>{q.question}</h4><p>{answerQuestion(q,s,p)}</p>{q.caveat && <small>{q.caveat}</small>}</article>)}</div>
+      </section>
+
+      <section className="report-section report-page-break">
+        <div className="report-section-heading"><span>03</span><div><h3>Qué cambió recientemente</h3><p>Alertas externas, sanciones y prensa incorporadas en cada generación.</p></div></div>
+        <div className="sr-novelty-summary">
+          <div><strong>{qNovelty?.external_alert_count ?? 0}</strong><span>alertas externas</span></div><div><strong>{p.novedades.prensa_resumen.article_count ?? 0}</strong><span>notas temáticas</span></div><div><strong>{p.novedades.prensa_resumen.media_count ?? 0}</strong><span>medios</span></div><div><strong>{p.novedades.sanciones_resumen.recent_entity_count ?? 0}</strong><span>entidades sancionadas recientes</span></div>
         </div>
-        <div className="report-year-grid">
-          <label><span>Desde</span><select value={fromYear} onChange={(event) => setFromYear(Math.min(Number(event.target.value), toYear))}>{YEARS.map((year) => <option key={year}>{year}</option>)}</select></label>
-          <label><span>Hasta</span><select value={toYear} onChange={(event) => setToYear(Math.max(Number(event.target.value), fromYear))}>{YEARS.map((year) => <option key={year}>{year}</option>)}</select></label>
+        <h4 className="sr-subtitle">Alertas externas prioritarias</h4>
+        <div className="sr-alert-list">{alerts.length ? alerts.map(a => <article key={a.alert_id}><div className="sr-alert-head"><span className="sr-severity">{a.severity}</span><strong>{a.entity_name}</strong><em>{a.uaf_sector ?? 'Sector no informado'}</em></div><p>{a.signal_label ?? a.alert_reason}</p><small>{a.latest_source ?? 'Fuente abierta'} · {a.event_at} · urgencia {a.urgency_score}/100</small>{a.latest_url && <a href={a.latest_url} target="_blank" rel="noreferrer">Ver antecedente</a>}</article>) : <p className="report-method-note">Sin alertas externas dentro de la ventana seleccionada.</p>}</div>
+        <div className="sr-two-col">
+          <div><h4 className="sr-subtitle">Temas en prensa</h4><div className="sr-theme-list">{p.novedades.prensa_temas.slice(0,6).map(t => <div key={t.theme}><span>{t.theme}</span><strong>{fmt0.format(t.article_count)}</strong><Bar value={t.article_count} max={Math.max(...p.novedades.prensa_temas.map(x=>x.article_count),1)} /><small>{t.source_count} medios</small></div>)}</div></div>
+          <div><h4 className="sr-subtitle">Últimas noticias seleccionadas por regla</h4><div className="sr-news-list">{pressItems.map(x => <a key={x.article_id} href={x.url} target="_blank" rel="noreferrer"><span>{x.theme} · {x.scope}</span><strong>{x.title.replace(/<!\[CDATA\[|\]\]>/g,'')}</strong><small>{x.media} · {x.article_date}</small></a>)}</div></div>
         </div>
-        <div className="report-safety-box">
-          <strong>Separación de responsabilidades</strong>
-          <span>SQL / funciones determinísticas → cifras, tasas, índices y gráficos.</span>
-          <span>IA → redacción interpretativa; no modifica ni recalcula datos.</span>
-        </div>
-        <button className="report-btn report-btn-ai" onClick={() => void requestAiNarrative()} disabled={aiStatus === 'loading'}>{aiStatus === 'loading' ? 'Generando síntesis…' : 'Generar síntesis IA'}</button>
-        <button className="report-btn report-btn-primary" onClick={printPdf}>Generar PDF</button>
-        {aiMeta && <small className="report-ai-meta">{aiMeta}</small>}
-      </aside>
+        <h4 className="sr-subtitle">Sanciones recientes vinculadas a sujetos UAF</h4>
+        <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Fecha</th><th>Entidad</th><th>Regulador</th><th>Sector</th><th>Región</th></tr></thead><tbody>{sanctions.map(x => <tr key={x.event_id}><td>{x.event_date}</td><td>{x.document_url?<a href={x.document_url} target="_blank" rel="noreferrer">{x.canonical_name}</a>:x.canonical_name}</td><td>{x.regulator}</td><td>{x.uaf_sector ?? '—'}</td><td>{x.region ?? '—'}</td></tr>)}</tbody></table></div>
+      </section>
 
-      <main className="report-paper-wrap">
-        <article className="report-paper">
-          <header className="report-cover">
-            <div className="report-cover-top"><span>ATLAS OBSERVATORIO</span><span>INFORME TRAZABLE · {fromYear}–{toYear}</span></div>
-            <div className="report-cover-body"><span className="report-eyebrow">{profile.short}</span><h2>{profile.title}</h2><p>{profile.question}</p></div>
-            <div className="report-badges"><span>DATOS DETERMINÍSTICOS</span><span>{aiStatus === 'ready' ? 'SÍNTESIS IA SOBRE CIFRAS VALIDADAS' : 'SÍNTESIS BASE DETERMINÍSTICA'}</span><span>FUENTES UAF TRAZADAS</span></div>
-          </header>
+      <section className="report-section report-page-break">
+        <div className="report-section-heading"><span>04</span><div><h3>Dónde están pasando cosas</h3><p>Priorización territorial determinística. Promedios regionales simples de comunas.</p></div></div>
+        <div className="sr-region-grid">{regions.map(r => <article key={r.region_code}><div className="sr-rank">#{r.strategic_rank}</div><h4>{r.region_name}</h4><div className="sr-region-metric"><span>Delito base</span><strong>{r.avg_predicate_score==null?'—':fmt.format(r.avg_predicate_score)}</strong><Bar value={r.avg_predicate_score}/></div><div className="sr-region-metric"><span>Economía criminal</span><strong>{r.avg_criminal_economy_score==null?'—':fmt.format(r.avg_criminal_economy_score)}</strong><Bar value={r.avg_criminal_economy_score}/></div><small>Máx. IGR {r.max_igr==null?'—':fmt.format(r.max_igr)} · {r.alerted_context} alertas · {r.sanctioned_context} sanciones/contexto</small></article>)}</div>
+        <h4 className="sr-subtitle">Comunas prioritarias por IGR</h4>
+        <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Comuna</th><th>Región</th><th>IGR</th><th>Delito base</th><th>Economía criminal</th><th>Brecha</th></tr></thead><tbody>{communes.map(c => <tr key={c.commune_code}><td>{c.commune_name}</td><td>{c.region_name}</td><td>{c.igr==null?'—':fmt.format(c.igr)}</td><td>{c.predicate_score==null?'—':fmt.format(c.predicate_score)}</td><td>{c.criminal_economy_score==null?'—':fmt.format(c.criminal_economy_score)}</td><td>{c.gap==null?'—':fmt.format(c.gap)}</td></tr>)}</tbody></table></div>
+        <p className="report-method-note">{p.territorio.metodologia}</p>
+      </section>
 
-          <section className="report-section report-no-break">
-            <div className="report-section-heading"><span>01</span><div><h3>Lectura ejecutiva</h3><p>El foco cambia; las cifras subyacentes no.</p></div></div>
-            <div className="report-kpi-grid">{kpis.map(([label, value, note]) => <div className="report-kpi" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div>
-            <div className="report-narrative">
-              <div className="report-narrative-label"><span>{aiStatus === 'ready' ? 'Síntesis interpretativa IA' : 'Síntesis interpretativa base'}</span><small>{aiStatus === 'ready' ? 'La IA recibió sólo métricas validadas y restricciones metodológicas.' : 'Texto reproducible generado por reglas de la plantilla.'}</small></div>
-              {narrative.map((paragraph, i) => <p key={i}>{paragraph}</p>)}
-            </div>
-          </section>
+      <section className="report-section report-page-break">
+        <div className="report-section-heading"><span>05</span><div><h3>Cómo leer la dinámica asociada a crimen organizado</h3><p>Atlas no estima organizaciones criminales: construye proxies territoriales de delitos base y economías criminales.</p></div></div>
+        <div className="sr-crime-intro"><strong>{qCrime?.answer === 'PROXY_ONLY' ? 'PROXY, NO PREVALENCIA' : 'LECTURA TERRITORIAL'}</strong><p>{answerQuestion(qCrime ?? {id:'organized_crime_proxy',question:'',answer:'PROXY_ONLY'},s,p)}</p></div>
+        <div className="sr-component-grid">{components.map(c => <article key={c.component_id}><span>{c.component_label}</span><strong>{c.avg_score==null?'—':fmt.format(c.avg_score)}</strong><Bar value={c.avg_score}/><small>Tendencia media {c.avg_trend==null?'—':fmt.format(c.avg_trend)} · {c.commune_count} comunas · {c.max_years_observed ?? '—'} años observados</small></article>)}</div>
+        <p className="report-method-note">Estos indicadores permiten formular preguntas —por ejemplo, dónde coinciden delitos asociados a drogas, receptación, robos de vehículos u homicidios con señales económicas—, pero no deben utilizarse para afirmar que una comuna “tiene más crimen organizado”.</p>
+      </section>
 
-          {(profileId === 'presupuesto' || profileId === 'ejecutivo') && (
-            <section className="report-section report-page-break">
-              <div className="report-section-heading"><span>02</span><div><h3>Presión frente a capacidad observable</h3><p>Índices normalizados con base {fromYear}=100.</p></div></div>
-              <LineChart rows={d.indexedRows} series={[{ key: 'pressure', label: 'Presión observable', tone: 'tone-pressure' }, { key: 'staff', label: 'Dotación efectiva', tone: 'tone-staff' }, { key: 'iif', label: 'IIF', tone: 'tone-iif' }]} title="Trayectorias relativas" subtitle="Presión = media geométrica de índices de padrón, ROS y actividades obligadas. Es un indicador experimental, no de productividad." />
-              <div className="report-callouts"><div><strong>{d.pressureIndex == null ? 's/d' : fmt.format(d.pressureIndex)}</strong><span>Índice de presión observable</span></div><div><strong>{d.rosPerStaffEnd == null ? 's/d' : fmt.format(d.rosPerStaffEnd)}</strong><span>ROS por funcionario total · {toYear}</span></div><div><strong>{d.indicationsPerIifEnd == null ? 's/d' : fmt.format(d.indicationsPerIifEnd)}</strong><span>ROS con indicios por IIF · {toYear}</span></div></div>
-              <p className="report-method-note">La razón ROS/dotación es un proxy institucional deliberadamente grueso: la dotación incluye a toda la UAF y no representa carga individual ni dotación de la División de Inteligencia Financiera. Un IIF puede consolidar múltiples ROS y antecedentes.</p>
-            </section>
-          )}
+      <section className="report-section report-page-break">
+        <div className="report-section-heading"><span>06</span><div><h3>Qué cambia en los sectores obligados</h3><p>Variaciones de reportabilidad, intensidad y señales para supervisión.</p></div></div>
+        <div className="sr-sector-kpis"><div><strong>{t8==null?'s/d':`${fmt.format(t8)}%`}</strong><span>ROS 2025 concentrados en top 8 sectores</span></div><div><strong>{p.sectores.resumen.silent_sector_count ?? 0}</strong><span>categorías silenciosas en 5 años</span></div><div><strong>{fmt0.format(p.sectores.resumen.registered_total ?? 0)}</strong><span>inscritos en base sectorial 2025</span></div></div>
+        <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>SO 2025</th><th>ROS 2024</th><th>ROS 2025</th><th>Var.</th><th>ROS/100 SO</th><th>Indicios 2025</th></tr></thead><tbody>{sectorMoves.map(x => <tr key={x.sector_official}><td>{x.sector_official}</td><td>{x.registered_so_2025==null?'—':fmt0.format(x.registered_so_2025)}</td><td>{x.ros_2024==null?'—':fmt0.format(x.ros_2024)}</td><td>{x.ros_2025==null?'—':fmt0.format(x.ros_2025)}</td><td>{x.delta_ros_2025_vs_2024_pct==null?'—':signed(x.delta_ros_2025_vs_2024_pct)}</td><td>{x.ros_per_100_so_2025==null?'—':fmt.format(x.ros_per_100_so_2025)}</td><td>{x.indicios_2025==null?'—':fmt0.format(x.indicios_2025)}</td></tr>)}</tbody></table></div>
+        <p className="report-method-note">Las variaciones extremas pueden reflejar bases pequeñas. Volumen o silencio de ROS no equivalen automáticamente a riesgo, calidad ni cumplimiento.</p>
+      </section>
 
-          {(profileId === 'presupuesto' || profileId === 'crimen' || profileId === 'internacional') && (
-            <section className={`report-section ${profileId !== 'presupuesto' ? 'report-page-break' : ''}`}>
-              <div className="report-section-heading"><span>{profileId === 'presupuesto' ? '03' : '02'}</span><div><h3>Demanda nacional e internacional</h3><p>Requerimientos del Ministerio Público e intercambios con UIF extranjeras.</p></div></div>
-              <LineChart rows={d.demandRows} series={[{ key: 'mp', label: 'Requerimientos MP', tone: 'tone-mp' }, { key: 'intl', label: 'Intercambios UIF', tone: 'tone-intl' }]} title="Canales adicionales de demanda de información" subtitle="Intercambios UIF = consultas extranjeras recibidas + solicitudes enviadas por la UAF mediante cooperación entre UIF." />
-            </section>
-          )}
+      <section className="report-section report-page-break">
+        <div className="report-section-heading"><span>07</span><div><h3>Presión del sistema y capacidad observable</h3><p>Comparación estructural, especialmente relevante para el enfoque presupuestario.</p></div></div>
+        <div className="sr-index-grid"><IndexCard label="Presión observable" value={s.pressureIndex} note="media geométrica de padrón, ROS y actividades obligadas"/><IndexCard label="Dotación efectiva" value={s.staffIndex} note="índice de dotación total institucional"/><IndexCard label="IIF" value={s.iifIndex} note="índice de informes y complementos"/></div>
+        <div className="sr-struct-grid"><div><span>Sujetos obligados</span><strong>{fmt0.format(s.so0 ?? 0)} → {fmt0.format(s.so1 ?? 0)}</strong><small>{signed(s.soGrowth)}</small></div><div><span>ROS</span><strong>{fmt0.format(s.ros0 ?? 0)} → {fmt0.format(s.ros1 ?? 0)}</strong><small>{signed(s.rosGrowth)}</small></div><div><span>Dotación</span><strong>{fmt0.format(s.staff0 ?? 0)} → {fmt0.format(s.staff1 ?? 0)}</strong><small>{signed(s.staffGrowth)}</small></div><div><span>IIF</span><strong>{fmt0.format(s.iif0 ?? 0)} → {fmt0.format(s.iif1 ?? 0)}</strong><small>{signed(s.iifGrowth)}</small></div><div><span>Req. Ministerio Público</span><strong>{fmt0.format(s.mp0 ?? 0)} → {fmt0.format(s.mp1 ?? 0)}</strong><small>{signed(s.mpGrowth)}</small></div></div>
+        <p className="report-method-note">La comparación no define productividad ni dotación óptima. La dotación corresponde al total institucional y los IIF pueden consolidar múltiples ROS y otros antecedentes.</p>
+      </section>
 
-          {(profileId === 'supervision' || profileId === 'ejecutivo' || profileId === 'presupuesto') && (
-            <section className="report-section report-page-break">
-              <div className="report-section-heading"><span>{profileId === 'presupuesto' ? '04' : '03'}</span><div><h3>Concentración sectorial de reportabilidad</h3><p>Principales sectores por ROS 2025.</p></div></div>
-              <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Sector</th><th>Inscritos 2025</th><th>ROS 2025</th><th>ROS / 100 SO</th><th>Var. anual</th></tr></thead><tbody>{topSectors.map((sector) => <tr key={sector.sector}><td>{sector.sector}</td><td>{sector.inscritos_2025 == null ? '—' : fmt0.format(sector.inscritos_2025)}</td><td>{sector.ros_2025 == null ? '—' : fmt0.format(sector.ros_2025)}</td><td>{sector.ros_por_100_so_2025 == null ? '—' : fmt.format(sector.ros_por_100_so_2025)}</td><td>{sector.variacion_ros_2025_2024_pct == null ? '—' : signedPct(sector.variacion_ros_2025_2024_pct)}</td></tr>)}</tbody></table></div>
-              <p className="report-method-note">La reportabilidad disponible en Atlas es sectorial y agregada. No existe atribución de ROS a sujetos individuales en este informe. Volumen de ROS no equivale por sí solo a riesgo LA/FT ni a calidad de reporte.</p>
-            </section>
-          )}
-
-          <section className="report-section report-sources report-page-break">
-            <div className="report-section-heading"><span>{profileId === 'presupuesto' ? '05' : '04'}</span><div><h3>Trazabilidad y metodología</h3><p>Cada punto utilizado conserva fuente, corte y método de captura en la base de Atlas.</p></div></div>
-            <div className="report-method-grid"><div><strong>Cálculo</strong><p>{report.data.metodologia.calculo}</p></div><div><strong>Reportabilidad</strong><p>{report.data.metodologia.nivel_reportabilidad}</p></div><div><strong>Comparabilidad</strong><p>{report.data.metodologia.comparabilidad}</p></div></div>
-            <h4>Fuentes utilizadas por este perfil</h4>
-            <ol className="report-source-list">{uniqueSources.map((point) => <li key={point.fuente ?? ''}><a href={point.fuente ?? '#'} target="_blank" rel="noreferrer">{point.fuente}</a><span>Corte registrado: {point.corte ?? 's/d'} · método: {point.metodo_captura ?? 's/d'}</span></li>)}</ol>
-            <div className="report-footer-note"><strong>Regla de IA de Atlas</strong><p>La capa generativa recibe un objeto de datos ya validado. No tiene autorización para consultar tablas, modificar cifras, recalcular indicadores ni introducir números ausentes. Su función es exclusivamente redactar una interpretación compatible con el foco seleccionado y las cautelas metodológicas.</p></div>
-          </section>
-        </article>
-      </main>
-    </div>
-  );
+      <section className="report-section report-page-break report-sources">
+        <div className="report-section-heading"><span>08</span><div><h3>Trazabilidad, reglas y límites</h3><p>El informe debe poder defenderse cifra por cifra.</p></div></div>
+        <div className="report-method-grid"><div><strong>Datos</strong><p>{p.reglas.datos}</p></div><div><strong>Prensa</strong><p>{p.reglas.prensa}</p></div><div><strong>IA</strong><p>{p.reglas.ia}</p></div></div>
+        <div className="sr-audit"><div><span>Contrato</span><strong>{p.contract}</strong></div><div><span>Generado</span><strong>{p.generated_at}</strong></div><div><span>Hash</span><strong>{p.snapshot_hash}</strong></div><div><span>Ventana de novedad</span><strong>{p.novedad.desde} → {p.novedad.hasta}</strong></div></div>
+        <div className="report-footer-note"><strong>Principio de uso</strong><p>Atlas distingue hechos, señales, proxies y conclusiones. Las novedades sirven para elevar preguntas y contextualizar cifras; no acreditan ilícitos. Los informes para autoridades describen evidencia e implicancias posibles sin recomendar decisiones políticas, votos o asignaciones presupuestarias.</p></div>
+      </section>
+    </article></main>
+  </div>;
 }
