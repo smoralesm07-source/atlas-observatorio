@@ -84,6 +84,14 @@ if old not in text:
     raise SystemExit('No se encontró render de KPI económico esperado.')
 text = text.replace(old, new, 1)
 
+old = """      <div className=\"entity360-row entity360-row-top\"><BaseCard data={data} /><SalesBandCard history={history} currentBand={salesBand} /><ActivitiesCard rows={activities} /></div>
+"""
+new = """      <div className=\"entity360-row entity360-row-top\"><BaseCard data={data} /><SalesBandCard history={history} currentBand={salesBand.value} dataStatus={text(tax.sales_data_status)} /><ActivitiesCard rows={activities} /></div>
+"""
+if old not in text:
+    raise SystemExit('No se encontró SalesBandCard del resumen esperado.')
+text = text.replace(old, new, 1)
+
 old = """    1: { short: 'Sin ventas', full: 'Sin ventas', hasUf: false },
 """
 new = """    1: { short: 'Sin info.', full: 'Sin información de ventas (SII)', hasUf: false },
@@ -119,11 +127,6 @@ if old not in text:
     raise SystemExit('No se encontró SalesBandCard esperado.')
 text = text.replace(old, new, 1)
 
-old = """  </div></Card>;
-}
-
-function RegistryCard"""
-# Sólo cambia el primer bloque correspondiente a ActivitiesCard inmediatamente antes de RegistryCard.
 activity_old = """{rows.length ? <div className=\"entity360-activity-list\">{visible.map((row, index) => <div className=\"entity360-activity\" key={`${row.code ?? index}-${row.name}`}><div className=\"entity360-activity-rank\">{String(index + 1).padStart(2, '0')}</div><div className=\"entity360-activity-text\"><strong>{row.name}</strong><span>{row.code ? `Código ${row.code}` : 'Código no materializado'}</span></div>{row.principal && <Badge tone=\"present\">Principal</Badge>}</div>)}{rows.length > 5 && <button className=\"entity360-linkbtn\" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Mostrar menos' : `Ver ${rows.length - 5} actividades más`} →</button>}</div> : <Empty title=\"Sin actividades materializadas\" hint=\"El corte SII no aporta giros para esta entidad.\" />}
 """
 activity_new = """{rows.length ? <div className=\"entity360-activity-list\">{visible.map((row, index) => <div className=\"entity360-activity\" key={`${row.code ?? index}-${row.name}`}><div className=\"entity360-activity-rank\">{String(index + 1).padStart(2, '0')}</div><div className=\"entity360-activity-text\"><strong>{row.name}</strong><span>{row.code ? `Código ${row.code}` : 'Código no materializado'}</span></div>{row.principal && <Badge tone=\"present\">Principal</Badge>}</div>)}{rows.length > 5 && <button className=\"entity360-linkbtn\" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Mostrar menos' : `Ver ${rows.length - 5} actividades más`} →</button>}</div> : <Empty title=\"Sin actividades materializadas\" hint=\"Atlas no tiene giros materializados para esta entidad en el corte actual; esto no equivale a ausencia de actividades en SII.\" />}
