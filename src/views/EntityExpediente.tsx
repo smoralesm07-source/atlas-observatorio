@@ -33,6 +33,25 @@ type ActivityRow = {
   principal: boolean;
 };
 
+type EntityTaxHistoryRow = {
+  commercial_year: number;
+  sales_band?: string | null;
+  sales_band_code?: string | null;
+  sales_band_rank?: number | null;
+  sales_band_uf?: string | null;
+  size_label?: string | null;
+  workers_numeric?: number | null;
+  source?: string | null;
+};
+
+type TaxEvolutionRow = {
+  year: number;
+  rank: number | null;
+  band: string | null;
+  workers: number | null;
+  source: string | null;
+};
+
 const TABS: { id: Tab; label: string }[] = [
   { id: 'resumen', label: 'Resumen' },
   { id: 'tributario', label: 'Tributario' },
@@ -169,17 +188,30 @@ function activitiesFor(data: EntityDetail): ActivityRow[] {
   return rows;
 }
 
-function salesHistory(data: EntityDetail) {
+function salesHistory(data: EntityDetail, annual: EntityTaxHistoryRow[] | null): TaxEvolutionRow[] {
   const tax = record(data.tax);
+  const rows: TaxEvolutionRow[] = (annual ?? [])
+    .map((row) => ({
+      year: Number(row.commercial_year),
+      rank: numberValue(row.sales_band_rank),
+      band: text(row.sales_band_uf) ?? text(row.sales_band) ?? text(row.sales_band_code),
+      workers: numberValue(row.workers_numeric),
+      source: text(row.source),
+    }))
+    .filter((row) => Number.isFinite(row.year) && row.year > 0)
+    .sort((a, b) => a.year - b.year);
+
   const currentYear = numberValue(tax.commercial_year);
-  const currentRank = numberValue(tax.sales_band_rank);
-  const currentBand = text(tax.sales_band_uf) ?? text(data.entity.tax_sales_band_uf);
-  const rows = data.peers
-    .map((peer) => ({ year: peer.commercial_year, rank: numberValue(peer.sales_band_code), band: peer.sales_band_code }))
-    .filter((row) => row.year && row.rank != null);
-  if (currentYear && currentRank != null && !rows.some((row) => row.year === currentYear)) {
-    rows.push({ year: currentYear, rank: currentRank, band: currentBand });
+  if (currentYear && !rows.some((row) => row.year === currentYear)) {
+    rows.push({
+      year: currentYear,
+      rank: numberValue(tax.sales_band_rank),
+      band: text(tax.sales_band_uf) ?? text(data.entity.tax_sales_band_uf),
+      workers: numberValue(tax.workers_numeric) ?? data.entity.tax_workers ?? null,
+      source: text(tax.economic_data_source),
+    });
   }
+
   return rows.sort((a, b) => a.year - b.year).slice(-6);
 }
 
@@ -294,6 +326,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const [tab, setTab] = useState<Tab>('resumen');
   const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
   const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_detail', { p_entity_id: entityId });
+  const { data: taxHistory } = useRpc<EntityTaxHistoryRow[]>('obs_entity_tax_history', { p_entity_id: entityId });
 
   useEffect(() => {
     let cancelled = false;
@@ -326,7 +359,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const res = record(data.res);
   const osfl = record(data.osfl);
   const activities = activitiesFor(data);
-  const history = salesHistory(data);
+  const history = salesHistory(data, taxHistory);
   const finding = mainFinding(data);
   const purchase = coverageByCode(data, 'MERCADO_PUBLICO');
   const uafCoverage = coverageByCode(data, 'RADAR_UAF');
@@ -579,13 +612,41 @@ function salesBandUfLabel(rank: number | null | undefined) {
 
 function SalesBandCard({ history, currentBand, dataStatus }: { history: ReturnType<typeof salesHistory>; currentBand: string; dataStatus?: string | null }) {
   const maxRank = Math.max(13, ...history.map((row) => row.rank ?? 0));
+  const workerValues = history.map((row) => row.workers).filter((value): value is number => value != null && Number.isFinite(value));
+  const maxWorkers = Math.max(1, ...workerValues);
   const atlasMissing = dataStatus === 'ATLAS_NOT_MATERIALIZED';
-  return <Card title="Evolución tributaria" meta="tramo de ventas SII">
-    {history.length ? <div className="entity360-bars" role="img" aria-label="Evolución del tramo de ventas en UF por año comercial"><div className="entity360-bars-grid" /><div className="entity360-bars-items">{history.map((row) => {
-      const label = salesBandUfLabel(row.rank);
-      return <div className="entity360-bar-col" key={row.year} title={`${row.year}: ${label.full}`}><div className="entity360-bar-value"><span>{label.short}</span>{label.hasUf && <small>UF</small>}</div><div className="entity360-bar-wrap"><i style={{ height: `${Math.max(8, ((row.rank ?? 0) / maxRank) * 100)}%` }} /></div><div className="entity360-bar-year">{row.year}</div></div>;
-    })}</div></div> : atlasMissing ? <Empty title="Histórico anual SII no cargado en Atlas" hint="La entidad está presente en el registro SII, pero su perfil económico anual todavía no fue materializado en este corte." /> : <div className="entity360-bigfact"><span>Tramo publicado</span><strong>{currentBand}</strong><small>No hay serie comparable materializada para años anteriores.</small></div>}
-    <div className="entity360-chart-note">El gráfico muestra el <strong>tramo de ventas en UF</strong> por año comercial. El tramo 1 significa <strong>sin información de ventas</strong>, no ventas cero. La altura conserva el orden relativo entre tramos y la etiqueta entrega el rango publicado.</div>
+  const linePoints = history
+    .map((row, index) => row.workers == null ? null : {
+      x: ((index + 0.5) / history.length) * 100,
+      y: 100 - (row.workers / maxWorkers) * 100,
+      workers: row.workers,
+      year: row.year,
+    })
+    .filter((point): point is { x: number; y: number; workers: number; year: number } => point != null);
+
+  return <Card title="Evolución tributaria" meta="ventas + dotación SII">
+    {history.length ? <div className="entity360-tax-evolution">
+      <div className="entity360-tax-legend" aria-label="Leyenda del gráfico"><span><i className="sales" />Tramo de ventas</span><span><i className="workers" />Trabajadores</span></div>
+      <div className="entity360-tax-combo" role="img" aria-label="Evolución anual del tramo de ventas SII y cantidad de trabajadores">
+        <div className="entity360-bars-grid" />
+        <div className="entity360-bars-items">{history.map((row) => {
+          const label = salesBandUfLabel(row.rank);
+          const workerText = row.workers == null ? 'sin dato de trabajadores' : `${n(row.workers)} trabajadores`;
+          return <div className="entity360-bar-col" key={row.year} title={`${row.year}: ${label.full} · ${workerText}`}>
+            <div className="entity360-bar-value"><span>{label.short}</span>{label.hasUf && <small>UF</small>}</div>
+            <div className="entity360-bar-wrap"><i style={{ height: `${row.rank == null ? 0 : Math.max(8, (row.rank / maxRank) * 100)}%` }} /></div>
+            <div className="entity360-bar-year">{row.year}</div>
+          </div>;
+        })}</div>
+        {linePoints.length > 0 && <div className="entity360-workers-overlay" aria-hidden="true">
+          {linePoints.length > 1 && <svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points={linePoints.map((point) => `${point.x},${point.y}`).join(' ')} /></svg>}
+          {linePoints.map((point) => <span key={point.year} className="entity360-workers-point" style={{ left: `${point.x}%`, top: `${point.y}%` }} title={`${point.year}: ${n(point.workers)} trabajadores`} />)}
+          <div className="entity360-workers-axis"><strong>{n(maxWorkers)}</strong><span>trab.</span><em>0</em></div>
+        </div>}
+      </div>
+      <div className="entity360-tax-year-values">{history.map((row) => <div key={row.year}><strong>{row.year}</strong><span>Ventas: {salesBandUfLabel(row.rank).full}</span><span>Trab.: {row.workers == null ? '—' : n(row.workers)}</span></div>)}</div>
+    </div> : atlasMissing ? <Empty title="Histórico anual SII no cargado en Atlas" hint="La entidad está presente en el registro SII, pero su perfil económico anual todavía no fue materializado en este corte." /> : <div className="entity360-bigfact"><span>Tramo publicado</span><strong>{currentBand}</strong><small>No hay serie histórica materializada para años anteriores.</small></div>}
+    <div className="entity360-chart-note"><strong>Barras:</strong> tramo de ventas en UF por año comercial. <strong>Línea:</strong> trabajadores dependientes informados, con escala propia a la derecha. El tramo 1 significa <strong>sin información de ventas</strong>, no ventas cero; una dotación de 0 sí se conserva como valor observado.</div>
   </Card>;
 }
 
