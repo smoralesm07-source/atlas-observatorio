@@ -13,12 +13,12 @@ replacements = [
         "function workersDisplay(tax: Record<string, unknown>, fallback?: number | null, latest?: TaxEvolutionRow | null): SiiEconomicDisplay {\n  const status = text(tax.workers_data_status);\n  if (atlasAnnualMissing(tax, status)) {\n    if (latest && latest.workers != null) {\n      return { value: n(latest.workers), sub: `Año comercial ${latest.year} · Radar SII` };\n    }\n    return {\n      value: 'No cargado en Atlas',\n      sub: 'Histórico anual SII pendiente de materialización',\n    };\n  }\n",
     ),
     (
-        "  const tax = record(data.tax);\n  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf);\n  const workers = workersDisplay(tax, data.entity.tax_workers);\n",
-        "  const tax = record(data.tax);\n  const latestHistory = history.length ? history[history.length - 1] : null;\n  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);\n  const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);\n",
-    ),
-    (
         "function TributarioTab({ data, activities, history }: { data: EntityDetail; activities: ActivityRow[]; history: ReturnType<typeof salesHistory> }) {\n  const tax = record(data.tax);\n  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf);\n  const workers = workersDisplay(tax, data.entity.tax_workers);\n  const annualMissing = text(tax.economic_data_status) === 'ATLAS_ANNUAL_NOT_MATERIALIZED';\n",
         "function TributarioTab({ data, activities, history }: { data: EntityDetail; activities: ActivityRow[]; history: ReturnType<typeof salesHistory> }) {\n  const tax = record(data.tax);\n  const latestHistory = history.length ? history[history.length - 1] : null;\n  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);\n  const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);\n  const annualGap = text(tax.economic_data_status) === 'ATLAS_ANNUAL_NOT_MATERIALIZED';\n  const annualMissing = annualGap && !latestHistory;\n  const annualAvailableLive = annualGap && Boolean(latestHistory);\n",
+    ),
+    (
+        "  const tax = record(data.tax);\n  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf);\n  const workers = workersDisplay(tax, data.entity.tax_workers);\n",
+        "  const tax = record(data.tax);\n  const latestHistory = history.length ? history[history.length - 1] : null;\n  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);\n  const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);\n",
     ),
     (
         "    {annualMissing && <><dt>Cobertura económica</dt><dd>Histórico anual SII no materializado en Atlas</dd></>}\n",
