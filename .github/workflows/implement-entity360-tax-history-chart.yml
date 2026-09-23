@@ -1,0 +1,48 @@
+name: Implement Entity 360 tax history chart
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_entity360_tax_history_chart.py'
+      - '.github/workflows/implement-entity360-tax-history-chart.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: entity360-tax-history-chart-main
+  cancel-in-progress: true
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply patch
+        run: python scripts/patch_entity360_tax_history_chart.py
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit implementation
+        run: |
+          git config user.name "Atlas automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/views/EntityExpediente.tsx src/styles/entity-expediente.css
+          if git diff --cached --quiet; then
+            echo "No source changes"
+          else
+            git commit -m "feat: evolución tributaria combina ventas y trabajadores"
+            git push origin HEAD:main
+          fi
