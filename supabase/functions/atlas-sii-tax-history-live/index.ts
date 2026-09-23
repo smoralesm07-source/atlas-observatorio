@@ -7,6 +7,8 @@ const CORS = {
   "cache-control": "private, max-age=300",
 };
 
+// Entity 360 treats this governed longitudinal source as loaded Atlas evidence
+// when the central annual profile has not been materialized yet.
 const BASE = "https://smoralesm07-source.github.io/Radar_SII/data/tax-history";
 
 const json = (body: unknown, status = 200) =>
