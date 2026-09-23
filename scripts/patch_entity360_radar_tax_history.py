@@ -18,7 +18,7 @@ replacements = [
     ),
     (
         "  const history = salesHistory(data, taxHistory);\n",
-        "  const mergedTaxHistory = useMemo(() => {\n    const byYear = new Map<number, EntityTaxHistoryRow>();\n    (taxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));\n    (liveTaxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));\n    return [...byYear.values()].filter((row) => Number.isFinite(Number(row.commercial_year))).sort((a, b) => Number(a.commercial_year) - Number(b.commercial_year));\n  }, [taxHistory, liveTaxHistory]);\n  const history = salesHistory(data, mergedTaxHistory);\n",
+        "  const byYear = new Map<number, EntityTaxHistoryRow>();\n  (taxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));\n  (liveTaxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));\n  const mergedTaxHistory = [...byYear.values()]\n    .filter((row) => Number.isFinite(Number(row.commercial_year)))\n    .sort((a, b) => Number(a.commercial_year) - Number(b.commercial_year));\n  const history = salesHistory(data, mergedTaxHistory);\n",
     ),
 ]
 
