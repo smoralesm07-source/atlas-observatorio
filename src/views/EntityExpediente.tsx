@@ -101,10 +101,22 @@ function atlasAnnualMissing(tax: Record<string, unknown>, fieldStatus?: string |
     || fieldStatus === 'ATLAS_NOT_MATERIALIZED';
 }
 
-function salesBandDisplay(tax: Record<string, unknown>, fallback?: string | null): SiiEconomicDisplay {
+function salesBandDisplay(tax: Record<string, unknown>, fallback?: string | null, latest?: TaxEvolutionRow | null): SiiEconomicDisplay {
   const status = text(tax.sales_data_status);
   const year = text(tax.commercial_year);
   if (atlasAnnualMissing(tax, status)) {
+    if (latest && (latest.rank != null || latest.band)) {
+      if (latest.rank === 1) {
+        return {
+          value: 'Sin información SII',
+          sub: `Año comercial ${latest.year} · tramo 1 SII · Radar SII`,
+        };
+      }
+      return {
+        value: latest.band ?? salesBandUfLabel(latest.rank).full,
+        sub: `Año comercial ${latest.year} · Radar SII`,
+      };
+    }
     return {
       value: 'No cargado en Atlas',
       sub: 'Histórico anual SII pendiente de materialización',
@@ -123,9 +135,12 @@ function salesBandDisplay(tax: Record<string, unknown>, fallback?: string | null
   };
 }
 
-function workersDisplay(tax: Record<string, unknown>, fallback?: number | null): SiiEconomicDisplay {
+function workersDisplay(tax: Record<string, unknown>, fallback?: number | null, latest?: TaxEvolutionRow | null): SiiEconomicDisplay {
   const status = text(tax.workers_data_status);
   if (atlasAnnualMissing(tax, status)) {
+    if (latest && latest.workers != null) {
+      return { value: n(latest.workers), sub: `Año comercial ${latest.year} · Radar SII` };
+    }
     return {
       value: 'No cargado en Atlas',
       sub: 'Histórico anual SII pendiente de materialización',
@@ -585,8 +600,9 @@ function ResumenTab({ data, press, articles, timeline, activities, history, purc
   registry: { uaf: CoverageRow | undefined; sii: CoverageRow | undefined; osfl: CoverageRow | undefined; res: CoverageRow | undefined; press: CoverageRow | undefined; sanctions: CoverageRow | undefined };
 }) {
   const tax = record(data.tax);
-  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf);
-  const workers = workersDisplay(tax, data.entity.tax_workers);
+  const latestHistory = history.length ? history[history.length - 1] : null;
+  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);
+  const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);
   const purchasePresent = purchase?.status === 'PRESENT';
   const indexedPressCount = press.matches.reduce((best, match) => Math.max(best, match.article_count ?? 0), 0);
   const pressCount = Math.max(articles.length, indexedPressCount, registry.press?.record_count ?? 0);
@@ -724,9 +740,12 @@ function PressCard({ press, articles }: { press: PressState; articles: ReturnTyp
 
 function TributarioTab({ data, activities, history }: { data: EntityDetail; activities: ActivityRow[]; history: ReturnType<typeof salesHistory> }) {
   const tax = record(data.tax);
-  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf);
-  const workers = workersDisplay(tax, data.entity.tax_workers);
-  const annualMissing = text(tax.economic_data_status) === 'ATLAS_ANNUAL_NOT_MATERIALIZED';
+  const latestHistory = history.length ? history[history.length - 1] : null;
+  const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);
+  const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);
+  const annualGap = text(tax.economic_data_status) === 'ATLAS_ANNUAL_NOT_MATERIALIZED';
+  const annualMissing = annualGap && !latestHistory;
+  const annualAvailableLive = annualGap && Boolean(latestHistory);
   return <div className="entity360-tabgrid entity360-tabgrid-tax"><Card title="Perfil tributario" meta="Servicio de Impuestos Internos"><dl className="entity360-kv entity360-kv-wide">
     <dt>Estado</dt><dd>{text(tax.current_status) ? titleCase(String(tax.current_status).replace(/_/g, ' ')) : '—'}</dd>
     <dt>Inicio de actividades</dt><dd>{fecha(text(tax.activity_start_date))}</dd>
@@ -739,6 +758,7 @@ function TributarioTab({ data, activities, history }: { data: EntityDetail; acti
     <dt>Tramo ventas UF</dt><dd>{salesBand.value}</dd>
     <dt>Trabajadores</dt><dd className={workers.value === 'No cargado en Atlas' ? undefined : 'mono'}>{workers.value}</dd>
     {annualMissing && <><dt>Cobertura económica</dt><dd>Histórico anual SII no materializado en Atlas</dd></>}
+    {annualAvailableLive && latestHistory && <><dt>Cobertura económica</dt><dd>Disponible vía Radar SII · último año {latestHistory.year}</dd></>}
     <dt>Domicilios observados</dt><dd className="mono">{numberValue(tax.address_count) == null ? '—' : n(numberValue(tax.address_count))}</dd>
   </dl></Card><SalesBandCard history={history} currentBand={salesBand.value} dataStatus={text(tax.sales_data_status)} /><ActivitiesCard rows={activities} /></div>;
 }
