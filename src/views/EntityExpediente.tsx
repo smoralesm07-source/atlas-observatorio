@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRpc } from '../lib/rpc';
+import { supabase } from '../lib/supabase';
 import { hrefFor } from '../lib/router';
 import type { CoverageRow, EntityDetail } from '../lib/contracts';
 import { Badge, Empty, ErrorBox, Loading } from '../components/primitives';
@@ -212,7 +213,7 @@ function salesHistory(data: EntityDetail, annual: EntityTaxHistoryRow[] | null):
     });
   }
 
-  return rows.sort((a, b) => a.year - b.year).slice(-6);
+  return rows.sort((a, b) => a.year - b.year);
 }
 
 function pressArticles(matches: PressMatch[]) {
@@ -327,6 +328,28 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
   const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_detail', { p_entity_id: entityId });
   const { data: taxHistory } = useRpc<EntityTaxHistoryRow[]>('obs_entity_tax_history', { p_entity_id: entityId });
+  const [liveTaxHistory, setLiveTaxHistory] = useState<EntityTaxHistoryRow[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const rut = data?.entity.rut;
+    if (!rut) {
+      setLiveTaxHistory(null);
+      return () => { cancelled = true; };
+    }
+    setLiveTaxHistory(null);
+    const run = async () => {
+      try {
+        const { data: live, error: liveError } = await supabase.functions.invoke('atlas-sii-tax-history-live', { body: { rut } });
+        const rows = !liveError && live && live.ok && Array.isArray(live.rows) ? live.rows as EntityTaxHistoryRow[] : null;
+        if (!cancelled) setLiveTaxHistory(rows);
+      } catch {
+        if (!cancelled) setLiveTaxHistory(null);
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [data?.entity.entity_id, data?.entity.rut]);
 
   useEffect(() => {
     let cancelled = false;
@@ -359,7 +382,13 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const res = record(data.res);
   const osfl = record(data.osfl);
   const activities = activitiesFor(data);
-  const history = salesHistory(data, taxHistory);
+  const byYear = new Map<number, EntityTaxHistoryRow>();
+  (taxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));
+  (liveTaxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));
+  const mergedTaxHistory = [...byYear.values()]
+    .filter((row) => Number.isFinite(Number(row.commercial_year)))
+    .sort((a, b) => Number(a.commercial_year) - Number(b.commercial_year));
+  const history = salesHistory(data, mergedTaxHistory);
   const finding = mainFinding(data);
   const purchase = coverageByCode(data, 'MERCADO_PUBLICO');
   const uafCoverage = coverageByCode(data, 'RADAR_UAF');
