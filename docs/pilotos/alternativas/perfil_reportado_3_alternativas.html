@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Perfil del Reportado · Tres alternativas</title>
+<style>
+/* Comparador: marco neutro que no compite con las tres propuestas; cada maqueta fija su propia paleta. */
+:root{--bg:#f3f4f6;--surface:#fff;--line:#e2e5ea;--ink:#111827;--ink-2:#4b5563;--ink-3:#6b7280;--accent:#1f3a68;color-scheme:light;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1016;--surface:#151a22;--line:#262d38;--ink:#eef1f5;--ink-2:#c3cad4;--ink-3:#8e98a6;--accent:#9db4e8;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1016;--surface:#151a22;--line:#262d38;--ink:#eef1f5;--ink-2:#c3cad4;--ink-3:#8e98a6;--accent:#9db4e8;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+.page{max-width:1480px;margin:0 auto;padding:24px 24px 60px}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.ph h1{margin:0;font:650 26px/1.2 var(--sans);letter-spacing:-.02em}
+.ph p{margin:6px 0 0;color:var(--ink-3);max-width:70ch}
+.sw{position:sticky;top:0;z-index:20;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:18px -24px 0;padding:12px 24px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.alts{display:flex;gap:8px;flex-wrap:wrap}
+.alt-b{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left}
+.alt-b[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.alt-b .sw-thumb{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font:700 14px var(--sans)}
+.alt-b b{display:block;font-size:13.5px}.alt-b span{display:block;font-size:12px;color:var(--ink-3)}
+.scr{display:inline-flex;padding:3px;border-radius:10px;background:var(--line);gap:2px}
+.scr button{height:30px;padding:0 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.scr button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 /.1)}
+.stage{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.frame{border-radius:14px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 40px rgb(0 0 0 /.12);background:var(--surface)}
+.frame-bar{display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;background:var(--line)}
+.frame-bar i{width:10px;height:10px;border-radius:50%;background:var(--surface);opacity:.8}
+.frame-bar span{margin-left:10px;font:12px var(--mono);color:var(--ink-3)}
+.frame-view{overflow-x:auto}
+.frame-view>div{min-width:1120px}
+.notes{position:sticky;top:90px;display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.notes h2{margin:0;font-size:17px}.notes h3{margin:0 0 4px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.notes p,.notes ul{margin:0;font-size:13px;color:var(--ink-2)}.notes ul{padding-left:18px}.notes li{margin:3px 0}
+.hint{font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px}
+.cmp{margin-top:28px;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow-x:auto}
+.cmp table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+.cmp th,.cmp td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.cmp th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.cmp tr:last-child td{border-bottom:0}
+.cmp td:first-child{font-weight:600;color:var(--ink)}
+.cmp td{color:var(--ink-2)}
+.cmp-h{margin:32px 0 10px;font-size:16px}
+@media (max-width:1100px){.stage{grid-template-columns:minmax(0,1fr)}.notes{position:static}}
+@media (max-width:700px){.page{padding:16px 16px 48px}.sw{margin:14px -16px 0;padding:10px 16px}}
+
+/* ═════════ A · CENTRO DE MANDO (oscuro, denso, instrumental) ═════════ */
+.A{--a-bg:#0a0f15;--a-p:#10161f;--a-p2:#151d29;--a-l:#1e2835;--a-t:#e4ebf3;--a-t2:#9aa7b8;--a-t3:#627186;--a-blue:#58a6e8;--a-amb:#f2a93b;--a-red:#ff5f5a;--a-grn:#3ccf91;--a-mono:var(--mono);
+  display:grid;grid-template-columns:56px minmax(0,1fr);min-height:760px;background:var(--a-bg);color:var(--a-t);font:13px/1.45 var(--sans)}
+.A .rail{background:#070b10;border-right:1px solid var(--a-l);display:flex;flex-direction:column;align-items:center;gap:14px;padding:14px 0}
+.A .rail i{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--a-t3);font:700 10px var(--a-mono)}
+.A .rail i.on{background:var(--a-p2);color:var(--a-amb);box-shadow:inset 2px 0 0 var(--a-amb)}
+.A .top{display:flex;align-items:center;gap:14px;height:46px;padding:0 18px;border-bottom:1px solid var(--a-l);font:12px var(--a-mono);color:var(--a-t2)}
+.A .top b{color:var(--a-t);font-family:var(--sans);font-size:13px;letter-spacing:.02em}
+.A .top .live{width:7px;height:7px;border-radius:50%;background:var(--a-grn);box-shadow:0 0 8px var(--a-grn)}
+.A .srch{flex:1;max-width:460px;margin-left:auto;height:30px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--a-l);border-radius:6px;background:var(--a-p);color:var(--a-t3)}
+.A .body{padding:16px 18px}
+.A .lbl{font:600 10.5px var(--a-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--a-t3)}
+.A .kp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--a-l);border:1px solid var(--a-l);border-radius:8px;overflow:hidden}
+.A .k{background:var(--a-p);padding:12px 14px;position:relative}
+.A .k b{display:block;font:500 26px/1.1 var(--a-mono);margin-top:6px;letter-spacing:-.02em}
+.A .k b small{font-size:12px;color:var(--a-t2)}
+.A .k .d{position:absolute;top:12px;right:12px;font:600 11px var(--a-mono);color:var(--a-amb)}
+.A .k svg{display:block;margin-top:6px}
+.A .grid3>*{min-width:0}.A .grid3>.pn{overflow-x:auto}.A .grid3{display:grid;grid-template-columns:190px minmax(0,1fr) 220px;gap:14px;margin-top:14px}
+.A .pn{background:var(--a-p);border:1px solid var(--a-l);border-radius:8px;padding:12px 14px}
+.A .pn+.pn{margin-top:14px}
+.A .pn h4{margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+.A .tg{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--a-l);font-size:12.5px;color:var(--a-t2)}
+.A .tg:last-child{border-bottom:0}
+.A .sw2{width:28px;height:15px;border-radius:9px;background:var(--a-l);position:relative}
+.A .sw2::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--a-t3)}
+.A .sw2.on{background:color-mix(in srgb,var(--a-amb) 45%,var(--a-l))}.A .sw2.on::after{left:15px;background:var(--a-amb)}
+.A .seg{display:flex;gap:2px;margin:6px 0 10px}.A .seg span{flex:1;text-align:center;padding:4px 0;border:1px solid var(--a-l);font:600 11px var(--a-mono);color:var(--a-t3);border-radius:4px}.A .seg span.on{border-color:var(--a-blue);color:var(--a-blue)}
+.A table{width:100%;border-collapse:collapse;font-size:12.5px}
+.A th{text-align:left;font:600 10.5px var(--a-mono);letter-spacing:.1em;color:var(--a-t3);padding:8px 8px;border-bottom:1px solid var(--a-l);text-transform:uppercase}
+.A td{padding:9px 6px;border-bottom:1px solid var(--a-l);white-space:nowrap}.A td.w{white-space:normal;min-width:150px}
+.A tbody tr{cursor:pointer}.A tbody tr:hover td{background:var(--a-p2)}
+.A td.sv{padding:0;width:3px}.A td.sv i{display:block;width:3px;height:38px;background:var(--c)}
+.A .mono{font-family:var(--a-mono)}
+.A .mk{display:inline-flex;gap:3px}.A .mk i{font:700 9.5px/16px var(--a-mono);padding:0 4px;border:1px solid var(--a-l);color:var(--a-t3);border-radius:3px;font-style:normal}.A .mk i.on{border-color:var(--a-amb);color:var(--a-amb);background:color-mix(in srgb,var(--a-amb) 12%,transparent)}
+.A .sc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;border-radius:4px;font:700 11px var(--a-mono);color:#0a0f15;background:var(--c)}
+.A .heat{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.A .heat i{aspect-ratio:1;border-radius:2px;background:var(--c)}
+.A .fh{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px}
+.A .kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--a-l);border:1px solid var(--a-l);border-radius:8px;overflow:hidden}
+.A .kv div{background:var(--a-p);padding:10px 12px}.A .kv span{display:block;font:600 10px var(--a-mono);letter-spacing:.1em;color:var(--a-t3);text-transform:uppercase}.A .kv b{display:block;font:500 15px var(--a-mono);margin-top:3px}
+.A .rs{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--a-l);font-size:12.5px}.A .rs:last-child{border-bottom:0}
+.A .rs i{width:8px;height:8px;margin-top:5px;flex:none;background:var(--c);transform:rotate(45deg)}
+.A .pc{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--a-l);border-radius:6px;background:var(--a-p2);cursor:pointer;margin-top:8px}
+.A .pc:hover{border-color:var(--a-blue)}
+.A .f2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.A .fld span{display:block;font:600 10px var(--a-mono);letter-spacing:.1em;color:var(--a-t3);text-transform:uppercase;margin-bottom:4px}
+.A .fld b{display:block;padding:7px 10px;border:1px solid var(--a-l);border-radius:4px;background:#0c121a;font:500 13px var(--a-mono);color:var(--a-t)}
+
+/* ═════════ B · DOSSIER EDITORIAL (claro, tipográfico, narrativo) ═════════ */
+.B{--b-bg:#ffffff;--b-t:#161616;--b-t2:#3d3d3d;--b-t3:#77777a;--b-l:#e4e4e4;--b-red:#a3161b;--b-soft:#f6f5f3;
+  min-height:760px;background:var(--b-bg);color:var(--b-t);font:14px/1.6 var(--sans)}
+.B .top{display:flex;align-items:center;gap:24px;height:58px;padding:0 48px;border-bottom:2px solid var(--b-t)}
+.B .brand{font:700 17px/1 var(--serif);letter-spacing:-.01em}
+.B .brand small{font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--b-t3);margin-left:10px}
+.B .nav{display:flex;gap:22px;font-size:13px;color:var(--b-t3)}.B .nav .on{color:var(--b-t);font-weight:600;border-bottom:2px solid var(--b-red);padding-bottom:3px}
+.B .srch{margin-left:auto;display:flex;align-items:center;gap:8px;width:300px;border-bottom:1px solid var(--b-t);padding:6px 0;color:var(--b-t3);font-size:13px}
+.B .wrap{padding:34px 48px 40px;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:48px}
+.B .kick{font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--b-red)}
+.B h2{font:600 40px/1.12 var(--serif);letter-spacing:-.02em;margin:8px 0 14px;max-width:22ch}
+.B h2 em{font-style:normal;color:var(--b-red)}
+.B .lede{font:400 17px/1.55 var(--serif);color:var(--b-t2);max-width:60ch;margin:0}
+.B .sent{margin:22px 0 0;padding:14px 0;border-top:1px solid var(--b-l);border-bottom:1px solid var(--b-l);font:400 15px/2 var(--serif);color:var(--b-t2)}
+.B .sent u{text-decoration:none;border-bottom:1.5px solid var(--b-red);color:var(--b-t);font-family:var(--sans);font-size:13.5px;font-weight:600;padding:0 2px;cursor:pointer}
+.B .stories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;margin-top:26px}
+.B .story{cursor:pointer;border-top:3px solid var(--b-t);padding-top:12px}
+.B .story:hover h3{color:var(--b-red)}
+.B .story .n{font:500 12px var(--mono);color:var(--b-t3)}
+.B .story h3{font:600 20px/1.2 var(--serif);margin:6px 0 8px;transition:color .15s}
+.B .story p{margin:0;font-size:13.5px;color:var(--b-t2)}
+.B .story .big{font:500 30px/1 var(--serif);margin-top:12px}.B .story .big small{font:500 12px var(--sans);color:var(--b-t3);margin-left:4px}
+.B .rank{margin-top:34px}
+.B .rank h4{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;margin:0 0 6px}
+.B .rr{display:grid;grid-template-columns:30px 70px minmax(0,1fr) 110px 150px 110px;gap:14px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--b-l);cursor:pointer}
+.B .rr:hover{background:var(--b-soft)}
+.B .rr .no{font:600 22px/1 var(--serif);color:var(--b-t3)}
+.B .rr b{font:600 15px var(--serif)}
+.B .rr .s{display:block;font-size:12px;color:var(--b-t3)}
+.B .mk{display:inline-flex;gap:8px;font:700 10.5px var(--sans);letter-spacing:.08em}.B .mk i{font-style:normal;color:#c9c9c9}.B .mk i.on{color:var(--b-red)}
+.B .side h5{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--b-t3);margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--b-t)}
+.B .side .blk{margin-bottom:28px}
+.B .side .fig{font:500 34px/1 var(--serif)}.B .side .fig small{font:13px var(--sans);color:var(--b-t3)}
+.B .side p{margin:6px 0 0;font-size:12.5px;color:var(--b-t2)}
+.B .dos{display:grid;grid-template-columns:170px minmax(0,1fr) 230px;gap:40px;padding:34px 48px}
+.B .toc{position:sticky;top:0;font-size:13px}.B .toc div{padding:6px 0;border-bottom:1px solid var(--b-l);color:var(--b-t3)}.B .toc div.on{color:var(--b-t);font-weight:600}
+.B .dos h2{font-size:38px;margin-top:4px}
+.B .verdict{display:flex;gap:18px;align-items:center;padding:16px 0;border-top:1px solid var(--b-t);border-bottom:1px solid var(--b-l);margin:18px 0}
+.B .verdict .sc{font:600 54px/1 var(--serif);color:var(--b-red)}
+.B .verdict p{margin:0;font:400 15.5px/1.55 var(--serif);color:var(--b-t2)}
+.B .sec h3{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;margin:26px 0 8px}
+.B .sec p{font:400 16px/1.65 var(--serif);color:var(--b-t2);margin:0 0 10px;max-width:62ch}
+.B .dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
+.B .dl div{padding:10px 0;border-bottom:1px solid var(--b-l)}.B .dl span{display:block;font-size:11.5px;color:var(--b-t3)}.B .dl b{font:600 17px var(--serif)}
+.B .rel{display:grid;grid-template-columns:150px minmax(0,1fr) auto 50px;gap:14px;padding:10px 0;border-bottom:1px solid var(--b-l);cursor:pointer;align-items:baseline}
+.B .rel:hover b{color:var(--b-red)}
+.B .rel .t{font-size:12px;color:var(--b-t3)}
+.B .rel b{font:600 15px var(--serif)}
+.B .form{max-width:780px}
+.B .ln{display:flex;align-items:baseline;gap:8px;padding:9px 0;font-size:14px}
+.B .ln span{color:var(--b-t3);white-space:nowrap}.B .ln i{flex:1;border-bottom:1px dotted #b8b8b8;transform:translateY(-4px)}.B .ln b{font:600 15px var(--serif);white-space:nowrap}
+.B .part{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:16px;padding:14px 0;border-bottom:1px solid var(--b-l);cursor:pointer;align-items:baseline}
+.B .part:hover b{color:var(--b-red)}
+.B .part b{font:600 18px var(--serif)}
+
+/* ═════════ C · TABLERO MODULAR (bento, color suave, tarjetas) ═════════ */
+.C{--c-bg:#eef1f6;--c-card:#ffffff;--c-t:#172033;--c-t2:#4a5670;--c-t3:#8390a8;--c-teal:#0f9d8a;--c-coral:#f0604d;--c-amb:#f2b33d;--c-sky:#3b7dd8;--c-navy:#1c2b4a;
+  min-height:760px;background:var(--c-bg);color:var(--c-t);font:13.5px/1.5 var(--sans);padding:18px}
+.C .top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.C .logo{width:36px;height:36px;border-radius:12px;background:var(--c-navy);display:grid;place-items:center;color:#fff;font:800 13px var(--sans)}
+.C .pills{display:flex;gap:6px;background:var(--c-card);padding:4px;border-radius:14px}
+.C .pills span{padding:6px 14px;border-radius:10px;font-weight:600;color:var(--c-t2);font-size:13px}.C .pills span.on{background:var(--c-navy);color:#fff}
+.C .user{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--c-t2)}
+.C .av{color:#fff!important;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--sans);color:#fff;background:var(--c)}
+.C .bento{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.C .cd{background:var(--c-card);border-radius:20px;padding:18px;box-shadow:0 1px 2px rgb(23 32 51 /.05);min-width:0}
+.C .cd h4{margin:0 0 10px;font-size:13.5px;display:flex;justify-content:space-between;align-items:center}
+.C .cd h4 small{font-weight:500;color:var(--c-t3);font-size:12px}
+.C .hello{grid-column:span 7;background:linear-gradient(135deg,#1c2b4a,#24406e);color:#fff}
+.C .hello h3{margin:0;font:700 24px/1.2 var(--sans);letter-spacing:-.02em}.C .hello p{margin:6px 0 16px;color:#c3cfe6}
+.C .hs{display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:14px;background:rgb(255 255 255 / .12);color:#dfe7f5}
+.C .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.C .chips span{padding:5px 11px;border-radius:999px;background:rgb(255 255 255 / .14);font-size:12px;font-weight:600}
+.C .kc{grid-column:span 5;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:0;background:none;box-shadow:none}
+.C .kt{border-radius:20px;padding:16px;color:var(--c-t);background:color-mix(in srgb,var(--c) 14%,#fff)}
+.C .kt span{font-size:12px;font-weight:600;color:var(--c-t2)}.C .kt b{display:block;font:800 28px/1.1 var(--sans);letter-spacing:-.03em;margin-top:6px}.C .kt b small{font-size:12px;font-weight:600;color:var(--c-t2)}
+.C .kt em{font-style:normal;font-size:11.5px;font-weight:700;color:var(--c)}
+.C .mk{display:inline-flex;gap:4px}.C .mk i{font:800 10px/20px var(--sans);padding:0 7px;border-radius:999px;background:#eef1f6;color:#a7b1c4;font-style:normal}.C .mk i.on{background:color-mix(in srgb,var(--c-coral) 16%,#fff);color:var(--c-coral)}
+.C .kan{grid-column:span 8;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.C .col{background:#f5f7fb;border-radius:16px;padding:10px}
+.C .col h5{margin:2px 4px 10px;font-size:12.5px;display:flex;justify-content:space-between}.C .col h5 i{font-style:normal;background:var(--c);color:#fff;border-radius:999px;padding:0 8px;font-size:11px;line-height:18px}
+.C .rc{background:#fff;border-radius:14px;padding:12px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 2px rgb(23 32 51 /.06);transition:transform .15s}
+.C .rc:hover{transform:translateY(-2px)}
+.C .rc .r1{display:flex;justify-content:space-between;align-items:center;font:700 12px var(--mono);color:var(--c-sky)}
+.C .rc b{display:block;margin:6px 0 2px;font-size:13.5px}
+.C .rc .r3{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:8px;font-size:12px;color:var(--c-t2)}
+.C .donut{grid-column:span 4}
+.C .lg{display:flex;flex-direction:column;gap:6px;font-size:12.5px}.C .lg div{display:flex;align-items:center;gap:8px}.C .lg i{width:10px;height:10px;border-radius:3px;background:var(--c)}.C .lg b{margin-left:auto}
+.C .bars{grid-column:span 12}
+.C .prof{grid-column:span 4;text-align:center}
+.C .prof .big{width:72px;height:72px;margin:6px auto 10px;border-radius:22px;display:grid;place-items:center;background:var(--c-navy);color:#fff;font:800 24px var(--sans)}
+.C .prof h3{margin:0;font-size:19px}.C .prof .rut{font:12.5px var(--mono);color:var(--c-t3)}
+.C .tiles{grid-column:span 8;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.C .ti{background:#f5f7fb;border-radius:16px;padding:12px}.C .ti span{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--c-t2)}.C .ti span i{width:22px;height:22px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 18%,#fff);color:var(--c);font:800 11px var(--sans);font-style:normal}.C .ti b{display:block;font:800 19px/1.2 var(--sans);margin-top:6px}.C .ti em{display:block;font-style:normal;font-size:11.5px;color:var(--c-t3)}
+.C .why{grid-column:span 5}.C .why div{display:flex;gap:10px;padding:10px;border-radius:12px;background:#f5f7fb;margin-bottom:8px;font-size:12.5px}.C .why i{flex:none;width:8px;border-radius:4px;background:var(--c)}.C .why b{display:block;font-size:13px}
+.C .rel{grid-column:span 7}.C .rl{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:12px;cursor:pointer}.C .rl:hover{background:#f5f7fb}.C .rl .tx{flex:1;min-width:0}.C .rl b{display:block;font-size:13px}.C .rl span{font-size:11.5px;color:var(--c-t3)}
+.C .step{display:flex;gap:8px;margin-bottom:14px}.C .step span{flex:1;height:6px;border-radius:3px;background:var(--c)}
+.C .ff{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.C .ff div{background:#f5f7fb;border-radius:12px;padding:10px 12px}.C .ff span{display:block;font-size:11.5px;color:var(--c-t3);font-weight:600}.C .ff b{font-size:14px}
+.C .pp{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:#f5f7fb;margin-bottom:10px;cursor:pointer}.C .pp:hover{outline:2px solid var(--c-sky)}
+.C .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;background:color-mix(in srgb,var(--c) 15%,#fff);color:var(--c)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="ph"><div><h1>Tres alternativas de diseño</h1><p>Mismos datos ficticios y mismas tres pantallas en tres propuestas distintas. Elige una alternativa, recorre sus pantallas y haz clic en filas, reportes y personas: la maqueta navega.</p></div></div>
+  <div class="sw">
+    <div class="alts" role="group" aria-label="Alternativa">
+      <button class="alt-b" data-alt="A" aria-pressed="true"><span class="sw-thumb" style="background:#0a0f15;color:#f2a93b">A</span><span><b>Centro de mando</b><span>oscuro · denso · instrumental</span></span></button>
+      <button class="alt-b" data-alt="B" aria-pressed="false"><span class="sw-thumb" style="background:#fff;color:#a3161b;border:1px solid #ddd;font-family:Georgia,serif">B</span><span><b>Dossier editorial</b><span>claro · tipográfico · narrativo</span></span></button>
+      <button class="alt-b" data-alt="C" aria-pressed="false"><span class="sw-thumb" style="background:#eef1f6;color:#1c2b4a">C</span><span><b>Tablero modular</b><span>tarjetas · color suave · visual</span></span></button>
+    </div>
+    <div class="scr" role="group" aria-label="Pantalla"><button data-scr="inicio" aria-pressed="true">Inicio</button><button data-scr="ros" aria-pressed="false">Detalle ROS</button><button data-scr="ficha" aria-pressed="false">Ficha</button></div>
+  </div>
+  <div class="stage">
+    <div class="frame"><div class="frame-bar"><i></i><i></i><i></i><span id="fUrl"></span></div><div class="frame-view" id="view"></div></div>
+    <aside class="notes" id="notes"></aside>
+  </div>
+  <h2 class="cmp-h">Comparación rápida</h2>
+  <div class="cmp"><table><thead><tr><th></th><th>A · Centro de mando</th><th>B · Dossier editorial</th><th>C · Tablero modular</th></tr></thead><tbody>
+    <tr><td>Sensación</td><td>Sala de monitoreo, profesional y técnica</td><td>Informe de inteligencia, sobrio y formal</td><td>Aplicación moderna, cercana y visual</td></tr>
+    <tr><td>Densidad</td><td>Alta: mucha información por pantalla</td><td>Baja: se lee de arriba abajo</td><td>Media: bloques independientes</td></tr>
+    <tr><td>Punto fuerte</td><td>Filtrar y triar volúmenes grandes</td><td>Explicar por qué una entidad importa</td><td>Entender el estado de un vistazo</td></tr>
+    <tr><td>Primera pantalla</td><td>Instrumentos, mapa de calor y grilla</td><td>Titular con los hallazgos y ranking</td><td>Bento con flujo de ROS por estado</td></tr>
+    <tr><td>Filtros</td><td>Consola lateral siempre visible</td><td>Frase editable: «ROS de 12 meses con monto ≥ …»</td><td>Chips de color</td></tr>
+    <tr><td>Riesgo</td><td>Puede abrumar a usuarios nuevos</td><td>Menos datos a la vista a la vez</td><td>Puede verse menos «institucional»</td></tr>
+  </tbody></table></div>
+</div>
+<script>
+(()=>{
+'use strict';
+const NF=new Intl.NumberFormat('es-CL'),n=v=>NF.format(v),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* datos ficticios compartidos */
+const ROWS=[
+ {f:'100001',d:'14-09-2026',ago:'hace 14 días',so:'Bancos',e:'Comercial Andes SpA',rut:'76.123.456-0',uf:18400,nr:11,m:'1111',p:100,l:'crit',st:'En análisis'},
+ {f:'200078',d:'22-08-2026',ago:'hace 37 días',so:'Compañías de seguros',e:'Comercial Los Robles SpA',rut:'77.882.115-K',uf:43750,nr:3,m:'0101',p:92,l:'crit',st:'En análisis'},
+ {f:'100013',d:'18-08-2026',ago:'hace 41 días',so:'Agentes de aduana',e:'Importadora del Sur SpA',rut:'79.555.111-5',uf:33500,nr:4,m:'0111',p:88,l:'crit',st:'En análisis'},
+ {f:'100002',d:'02-07-2026',ago:'hace 3 meses',so:'Notarías',e:'Inversiones Costa Pacífico Ltda.',rut:'76.987.654-5',uf:42000,nr:4,m:'0100',p:60,l:'high',st:'En análisis'},
+ {f:'100003',d:'21-05-2026',ago:'hace 4 meses',so:'Bancos',e:'Importadora del Sur SpA',rut:'79.555.111-5',uf:9800,nr:4,m:'0111',p:88,l:'crit',st:'Revisado'},
+ {f:'100014',d:'22-04-2026',ago:'hace 5 meses',so:'Bancos',e:'Transportes Cordillera SpA',rut:'78.234.567-2',uf:4800,nr:2,m:'1010',p:50,l:'high',st:'Revisado'},
+ {f:'100004',d:'11-03-2026',ago:'hace 7 meses',so:'Corredores de bolsa',e:'Carlos Pérez Demo',rut:'17.123.456-5',uf:6250,nr:1,m:'1101',p:90,l:'crit',st:'Derivado'},
+ {f:'200041',d:'02-02-2026',ago:'hace 8 meses',so:'Remesadoras',e:'Felipe Valenzuela Demo',rut:'16.885.277-0',uf:2310,nr:2,m:'0010',p:34,l:'med',st:'Derivado'}];
+const MC=['JUD','RMP','ROE','IMP'],MN=['Marca judicial','Requerimiento del Ministerio Público','ROE anómalo','Informe al Ministerio Público'];
+const LV={crit:'Crítica',high:'Alta',med:'Media',low:'Baja',none:'Sin señales'};
+const MS=[1,3,0,2,4,1,0,3,1,2,1,3,2,1,4,2,1,5,5,6,5,3,6,4],MON=['oct','nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep'];
+const REL=[['Representante legal','María José Martínez Demo','16.222.333-K','Representante legal y socia (60 %)','0000',13,'low'],['Familiar','Juan Martínez Demo','15.444.555-2','Hermano de la representante legal','1101',84,'crit'],['Familiar','Pedro Rojas Demo','16.888.999-2','Cónyuge de la representante legal','0000',6,'low'],['Socio común','Asesorías Financieras Alfa Ltda.','80.321.654-1','Comparte socia y domicilio','0000',9,'low'],['Co-interviniente','Carlos Pérez Demo','17.123.456-5','RUC 2400796964-K','1101',90,'crit'],['Co-reportado ROS','Importadora del Sur SpA','79.555.111-5','ROS 100003, 100007, 100011','0111',88,'crit'],['Co-reportado ROS','Inversiones Costa Pacífico Ltda.','76.987.654-5','ROS 100001, 100002','0100',60,'high']];
+const WHY=[['crit','Causa vigente por lavado de activos','RUC 2400796964-K · querellado desde 10-06-2024'],['high','ROS reciente como reportado','N° 100001 · Bancos · hace 14 días'],['high','Informe al Ministerio Público','Informe de inteligencia remitido'],['high','Reportado en 5 ROS','5 como reportado y 6 como vinculado desde 2021']];
+const SALES=[68000,73500,81200,108500,126000];
+const PARTS=[['Reportado','Titular de las operaciones','Comercial Andes SpA','76.123.456-0','1111',100,'crit','PJ'],['Vinculado','Ordenante','Inversiones Costa Pacífico Ltda.','76.987.654-5','0100',60,'high','PJ']];
+const SIGS=['Rotación rápida de fondos','Cambio abrupto de comportamiento','Efectivo inusual para el perfil'];
+const S={alt:'A',scr:'inicio'};
+const ini=s=>s.replace(/\b(SpA|Ltda\.|Demo)\b/g,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+
+/* ───── A · Centro de mando */
+const AC={crit:'#ff5f5a',high:'#f2a93b',med:'#d9c24a',low:'#58a6e8',none:'#627186'};
+const aMk=m=>`<span class="mk">${MC.map((c,i)=>`<i class="${m[i]==='1'?'on':''}" title="${MN[i]}">${c}</i>`).join('')}</span>`;
+function aBars(v,w,h,c){const mx=Math.max(...v),bw=w/v.length;return`<svg width="${w}" height="${h}">${v.map((x,i)=>`<rect x="${(i*bw+1).toFixed(1)}" y="${(h-x/mx*h).toFixed(1)}" width="${(bw-2).toFixed(1)}" height="${(x/mx*h).toFixed(1)}" fill="${i>=v.length-12?c:'#1e2835'}"/>`).join('')}</svg>`}
+function aShell(inner,act){return`<div class="A"><nav class="rail"><i style="background:#f2a93b;color:#0a0f15">PR</i><i class="${act==='inicio'?'on':''}">INI</i><i class="${act==='ros'?'on':''}">ROS</i><i class="${act==='ficha'?'on':''}">ENT</i><i>LOT</i><i>SRC</i></nav><div><div class="top"><b>PERFIL DEL REPORTADO</b><span>/ ${act==='inicio'?'EXPLORADOR':act==='ros'?'ROS 100001':'ENTIDAD 76.123.456-0'}</span><span class="srch">⌕ RUT · nombre · N° ROS <span style="margin-left:auto">⌘K</span></span><i class="live"></i><span>CORTE 28-09-2026 06:00</span></div><div class="body">${inner}</div></div></div>`}
+function aInicio(){
+  const heat=Array.from({length:84},(_,i)=>{const v=(i*37%11+(i>60?4:0))%7;return`<i style="--c:${['#121a24','#15324a','#1b4b70','#2470a6','#58a6e8','#9cd0ff','#f2a93b'][v]}"></i>`}).join('');
+  return aShell(`<div class="kp">${[['ROS · 12M','44','','▲83%',[1,2,1,4,2,1,5,5,6,5,3,6]],['MONTO','509.370','UF','▲312%',[3,2,4,2,1,6,3,5,8,4,6,7]],['REPORTADOS','30','','▲76%',[1,2,1,3,2,1,4,4,5,4,3,5]],['ALTA/CRÍTICA','9','','▲200%',[0,1,0,1,1,0,2,1,2,1,2,3]]].map(([l,v,u,d,s])=>`<div class="k"><span class="lbl">${l}</span><span class="d">${d}</span><b>${v}<small> ${u}</small></b>${aBars(s,180,22,'#58a6e8')}</div>`).join('')}
+    <div class="k"><span class="lbl">MARCAS · REPORTADOS</span><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px">${[['JUD',11],['RMP',9],['ROE',9],['IMP',5]].map(([c,v])=>`<div><span class="mk"><i class="on">${c}</i></span><b style="font-size:20px;margin-top:4px">${v}</b></div>`).join('')}</div></div></div>
+  <div class="grid3">
+    <div><div class="pn"><h4 class="lbl">Filtros</h4><span class="lbl" style="font-size:9.5px">Periodo</span><div class="seg"><span>30D</span><span>90D</span><span class="on">12M</span><span>TODO</span></div><span class="lbl" style="font-size:9.5px">Monto UF</span><div class="seg"><span class="on">TODO</span><span>1K</span><span>10K</span><span>50K</span></div>
+      ${[['Marca judicial',1],['RMP',0],['ROE anómalo',0],['Informe al MP',1],['Reincidente 5+',0],['Término de giro',0]].map(([l,o])=>`<div class="tg"><span>${l}</span><i class="sw2 ${o?'on':''}"></i></div>`).join('')}</div>
+      <div class="pn"><h4 class="lbl">Tipo de SO</h4>${[['Bancos',11],['Cooperativas',3],['Corredores',2],['Tarjetas',2],['Cambio',1]].map(([l,v])=>`<div class="tg"><span>${l}</span><span class="mono" style="color:#e4ebf3">${v}</span></div>`).join('')}</div></div>
+    <div class="pn" style="padding:0"><div style="display:flex;justify-content:space-between;padding:12px 14px"><span class="lbl">Cola de ROS · 8 de 44 · orden prioridad</span><span class="lbl" style="color:#58a6e8">EXPORTAR CSV</span></div>
+      <table><thead><tr><th></th><th>N° ROS</th><th>Fecha · SO</th><th>Reportado</th><th style="text-align:right">UF</th><th>Marcas</th><th>Prio</th></tr></thead><tbody>${ROWS.map(r=>`<tr data-go="ros"><td class="sv"><i style="--c:${AC[r.l]}"></i></td><td class="mono" style="color:#58a6e8">${r.f}</td><td><div class="mono">${r.d}</div><div style="color:#627186;font-size:11px">${r.so}</div></td><td class="w"><div style="font-weight:600" data-go="ficha">${r.e}</div><div class="mono" style="color:#627186;font-size:11px">${r.rut}</div></td><td class="mono" style="text-align:right">${n(r.uf)}</td><td>${aMk(r.m)}</td><td><span class="sc" style="--c:${AC[r.l]}">${r.p}</span></td></tr>`).join('')}</tbody></table></div>
+    <div><div class="pn"><h4 class="lbl">Actividad · 12 semanas</h4><div class="heat">${heat}</div><div style="display:flex;justify-content:space-between;margin-top:6px" class="lbl"><span>JUL</span><span>AGO</span><span>SEP</span></div></div>
+      <div class="pn"><h4 class="lbl">ROS por mes · 24M</h4>${aBars(MS,190,70,'#f2a93b')}</div>
+      <div class="pn"><h4 class="lbl">Alertas en vivo</h4>${[['#ff5f5a','ROS 100001 · reportado con causa LA vigente'],['#f2a93b','200078 · 43.750 UF, 3,5× su promedio'],['#f2a93b','100013 · aduana, reportado con IMP']].map(([c,t])=>`<div class="rs"><i style="--c:${c}"></i><span>${t}</span></div>`).join('')}</div></div>
+  </div>`,'inicio')}
+function aRos(){return aShell(`<div class="fh"><div><div style="display:flex;align-items:baseline;gap:14px"><span class="lbl">Reporte de operación sospechosa</span><span class="mk"><i class="on">EN ANÁLISIS</i></span></div><div style="font:500 30px var(--a-mono);margin:6px 0 14px">ROS N° 100001</div>
+  <div class="pn"><h4 class="lbl">01 · Identificación</h4><div class="f2">${[['N° ROS','100001'],['Recepción','14-09-2026'],['Canal','Mixto'],['Tipo SO','Bancos'],['Sujeto obligado','Banco del Pacífico (ficticio)'],['Estado','En análisis']].map(([l,v])=>`<div class="fld"><span>${l}</span><b>${v}</b></div>`).join('')}</div></div>
+  <div class="pn"><h4 class="lbl">02 · Operaciones</h4><div class="f2">${[['Tipo','Transferencias electrónicas'],['Periodo','03-05 → 05-09-2026'],['N° operaciones','3'],['Monto total','18.400 UF'],['Moneda','CLP'],['Promedio','6.133 UF']].map(([l,v])=>`<div class="fld"><span>${l}</span><b>${v}</b></div>`).join('')}</div></div>
+  <div class="pn"><h4 class="lbl">03 · Señales y descripción</h4><div style="display:flex;gap:6px;margin-bottom:10px">${SIGS.map(s=>`<span class="mk"><i class="on" style="font-size:10.5px;line-height:20px;padding:0 8px">${s.toUpperCase()}</i></span>`).join('')}</div><div style="color:#9aa7b8">Depósitos en efectivo fraccionados bajo el umbral de reporte, en seis sucursales durante tres semanas.</div></div></div>
+  <div><div class="pn"><h4 class="lbl">04 · Participantes</h4>${PARTS.map(p=>`<div class="pc" data-go="ficha"><span class="sc" style="--c:${AC[p[6]]}">${p[5]}</span><div style="flex:1;min-width:0"><div class="lbl" style="color:${p[0]==='Reportado'?'#58a6e8':'#9aa7b8'}">${p[0]} · ${p[1]}</div><div style="font-weight:600">${p[2]}</div><div class="mono" style="font-size:11px;color:#627186">${p[3]}</div><div style="margin-top:6px">${aMk(p[4])}</div></div></div>`).join('')}</div>
+  <div class="pn"><h4 class="lbl">05 · Otros ROS</h4><div style="display:flex;flex-wrap:wrap;gap:4px">${['100013','100002','100003','100004','100012','100005','100006','100007'].map(f=>`<span class="mk"><i style="font-size:10.5px;line-height:20px;padding:0 6px;color:#58a6e8;border-color:#1e2835">${f}</i></span>`).join('')}</div></div></div></div>`,'ros')}
+function aFicha(){const g=(v,r)=>{const a=Math.PI*(1-v/100);return`<svg width="200" height="116" viewBox="0 0 200 116"><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#1e2835" stroke-width="12"/><path d="M20 100 A80 80 0 0 1 ${(100+80*Math.cos(a)).toFixed(1)} ${(100-80*Math.sin(a)).toFixed(1)}" fill="none" stroke="#ff5f5a" stroke-width="12"/><text x="100" y="92" text-anchor="middle" fill="#e4ebf3" style="font:500 38px var(--mono)">${v}</text><text x="100" y="112" text-anchor="middle" fill="#ff5f5a" style="font:700 11px var(--mono);letter-spacing:.12em">CRÍTICA</text></svg>`};
+  return aShell(`<div class="fh"><div><span class="lbl">Persona jurídica · SpA · Las Condes</span><div style="font:600 28px var(--sans);margin:4px 0 6px">Comercial Andes SpA</div><div style="display:flex;gap:12px;align-items:center"><span class="mono" style="color:#9aa7b8">76.123.456-0</span>${aMk('1111')}</div>
+   <div class="kv" style="margin-top:14px">${[['Tamaño','GRANDE'],['Ventas 2025','126.000 UF'],['Trabajadores','28'],['Antigüedad','12 AÑOS'],['Bienes raíces','3 · 42.000 UF'],['Vehículos','6'],['ROS R/V','5 / 6'],['ROS 12m / ventas','25 %']].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px"><div class="pn"><h4 class="lbl">Ventas UF · 2021-2025</h4>${aBars(SALES,300,70,'#58a6e8')}</div><div class="pn"><h4 class="lbl">ROS por año · R/V</h4>${aBars([1,1,1,1,3,4],300,70,'#f2a93b')}</div></div>
+   <div class="pn" style="margin-top:14px;padding:0"><div style="padding:12px 14px" class="lbl">Relacionados · 8</div><table><tbody>${REL.map(r=>`<tr data-go="ficha"><td class="sv"><i style="--c:${AC[r[6]]}"></i></td><td class="lbl" style="font-size:9.5px">${r[0]}</td><td style="font-weight:600">${r[1]}</td><td class="mono" style="color:#627186">${r[2]}</td><td>${aMk(r[4])}</td><td><span class="sc" style="--c:${AC[r[6]]}">${r[5]}</span></td></tr>`).join('')}</tbody></table></div></div>
+  <div><div class="pn" style="text-align:center">${g(100)}<div class="lbl" style="margin-top:4px">Prioridad de revisión</div></div><div class="pn"><h4 class="lbl">Motivos</h4>${WHY.map(([l,t,d])=>`<div class="rs"><i style="--c:${AC[l]}"></i><div><div style="font-weight:600">${t}</div><div style="color:#627186;font-size:11.5px">${d}</div></div></div>`).join('')}</div></div></div>`,'ficha')}
+
+/* ───── B · Dossier editorial */
+const bMk=m=>`<span class="mk">${MC.map((c,i)=>`<i class="${m[i]==='1'?'on':''}" title="${MN[i]}">${c}</i>`).join('')}</span>`;
+function bShell(inner,act){return`<div class="B"><div class="top"><span class="brand">Perfil del Reportado<small>Unidad de análisis</small></span><nav class="nav"><span class="${act!=='masiva'?'on':''}">Explorador</span><span>Búsqueda masiva</span><span>Fuentes</span></nav><span class="srch">Buscar RUT, nombre o N° de ROS</span></div>${inner}</div>`}
+function bSpark(v,w,h){const mx=Math.max(...v),d=v.map((x,i)=>`${i?'L':'M'}${(i*w/(v.length-1)).toFixed(1)} ${(h-x/mx*(h-4)-2).toFixed(1)}`).join('');return`<svg width="${w}" height="${h}"><path d="${d}" fill="none" stroke="#161616" stroke-width="1.4"/><circle cx="${w}" cy="${(h-v.at(-1)/mx*(h-4)-2).toFixed(1)}" r="3" fill="#a3161b"/></svg>`}
+function bInicio(){return bShell(`<div class="wrap"><div><span class="kick">Informe al 28 de septiembre de 2026</span><h2>Nueve reportados concentran <em>el riesgo</em> de los últimos doce meses</h2>
+  <p class="lede">Se recibieron 44 ROS por 509.370 UF. Uno de cada tres reportados tiene causas judiciales y cinco tienen informe al Ministerio Público.</p>
+  <p class="sent">Mostrando ROS de los <u>últimos 12 meses</u>, con monto <u>desde cualquier valor</u>, de <u>todos los sujetos obligados</u>, cuyos reportados tengan <u>cualquier marca</u>.</p>
+  <div class="stories">${ROWS.slice(0,3).map((r,i)=>`<article class="story" data-go="ros"><span class="n">ROS ${r.f} · ${r.d}</span><h3>${r.e}</h3><p>${['Reportado con causa vigente por lavado de activos, informe al MP y 11 ROS desde 2021.','Monto 3,5 veces su promedio histórico; registra informe al MP y requerimientos.','Importaciones bajo precio de referencia; ROE anómalo y 4 ROS en dos años.'][i]}</p><div class="big">${n(r.uf)}<small>UF</small></div><div style="margin-top:8px">${bMk(r.m)}</div></article>`).join('')}</div>
+  <div class="rank"><h4>Ranking por prioridad</h4>${ROWS.map((r,i)=>`<div class="rr" data-go="ros"><span class="no">${i+1}</span><span style="font:500 12.5px var(--mono);color:#77777a">${r.f}</span><span><b>${r.e}</b><span class="s">${r.so} · ${r.d}</span></span><span style="font:600 15px var(--serif)">${n(r.uf)} <span class="s" style="display:inline">UF</span></span>${bMk(r.m)}<span style="font:600 15px var(--serif);color:${r.l==='crit'?'#a3161b':'#161616'}">${r.p} · ${LV[r.l]}</span></div>`).join('')}</div></div>
+  <aside class="side"><div class="blk"><h5>ROS en 12 meses</h5><div class="fig">44</div>${bSpark(MS.slice(12),220,40)}<p>+83 % frente a los 12 meses anteriores.</p></div>
+    <div class="blk"><h5>Monto asociado</h5><div class="fig">509.370 <small>UF</small></div><p>Mediana de 6.360 UF por ROS.</p></div>
+    <div class="blk"><h5>Marcas de los reportados</h5>${[['Judicial',11],['RMP',9],['ROE anómalo',9],['Informe al MP',5]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e4e4e4;font-size:13px"><span>${l}</span><b style="font-family:var(--serif)">${v}</b></div>`).join('')}</div>
+    <div class="blk"><h5>Atajos</h5>${['Con informe al MP','Reincidentes 5+','Montos ≥ 10.000 UF','Término de giro'].map(t=>`<div style="padding:6px 0;font-size:13px;border-bottom:1px solid #e4e4e4">→ ${t}</div>`).join('')}</div></aside></div>`,'inicio')}
+function bRos(){const ln=(l,v)=>`<div class="ln"><span>${l}</span><i></i><b>${v}</b></div>`;return bShell(`<div class="dos"><nav class="toc">${['I. Identificación','II. Operaciones','III. Señales','IV. Participantes','V. Otros ROS'].map((t,i)=>`<div class="${i===0?'on':''}">${t}</div>`).join('')}</nav>
+  <div class="form"><span class="kick">Reporte de operación sospechosa</span><h2>ROS N° 100001</h2><p class="lede">Recibido el 14 de septiembre de 2026 desde un banco. En análisis.</p>
+   <div class="sec"><h3>I. Identificación del reporte</h3>${ln('Número de ROS','100001')}${ln('Fecha de recepción','14-09-2026')}${ln('Tipo de sujeto obligado','Bancos')}${ln('Sujeto obligado','Banco del Pacífico (ficticio)')}${ln('Canal','Mixto')}</div>
+   <div class="sec"><h3>II. Operaciones reportadas</h3>${ln('Tipo de operación','Transferencias electrónicas')}${ln('Periodo','03-05-2026 al 05-09-2026')}${ln('Número de operaciones','3')}${ln('Monto total','18.400 UF')}</div>
+   <div class="sec"><h3>III. Señales de alerta</h3><p>${SIGS.join('; ')}. Según el sujeto obligado, se trata de depósitos en efectivo fraccionados bajo el umbral de reporte, en seis sucursales durante tres semanas.</p></div>
+   <div class="sec"><h3>IV. Reportados y vinculados</h3>${PARTS.map(p=>`<div class="part" data-go="ficha"><span style="font:600 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:${p[0]==='Reportado'?'#a3161b':'#77777a'}">${p[0]}</span><span><b>${p[2]}</b><span style="display:block;font-size:12.5px;color:#77777a">${p[3]} · ${p[1]} · prioridad ${p[5]}</span></span>${bMk(p[4])}</div>`).join('')}</div></div>
+  <aside class="side"><div class="blk"><h5>Monto</h5><div class="fig">18.400 <small>UF</small></div><p>Promedio de 6.133 UF por operación.</p></div><div class="blk"><h5>Otros ROS</h5><p style="font-family:var(--mono)">100013 · 100002 · 100003 · 100004 · 100012 · 100005 …</p></div></aside></div>`,'ros')}
+function bFicha(){return bShell(`<div class="dos"><nav class="toc">${['Evaluación','Perfil socioeconómico','Reportabilidad','Antecedentes judiciales','Relacionados','Fuentes'].map((t,i)=>`<div class="${i===0?'on':''}">${t}</div>`).join('')}</nav>
+  <div><span class="kick">Ficha de entidad · persona jurídica</span><h2>Comercial Andes SpA</h2><div style="display:flex;gap:16px;align-items:center;font-size:13px;color:#77777a"><span style="font-family:var(--mono)">76.123.456-0</span><span>Las Condes, Región Metropolitana</span>${bMk('1111')}</div>
+   <div class="verdict"><span class="sc">100</span><p><b>Prioridad crítica.</b> Tiene una causa vigente por lavado de activos, un ROS recibido hace 14 días, informe al Ministerio Público y cinco ROS como reportado. Lo reportado en 12 meses equivale al 25 % de sus ventas anuales.</p></div>
+   <div class="sec"><h3>Perfil socioeconómico</h3><div class="dl">${[['Tamaño','Grande'],['Ventas 2025','126.000 UF'],['Trabajadores','28'],['Antigüedad','12 años'],['Bienes raíces','3 · 42.000 UF'],['Vehículos · socios','6 · 2']].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('')}</div></div>
+   <div class="sec"><h3>Relacionados</h3>${REL.map(r=>`<div class="rel" data-go="ficha"><span class="t">${r[0]}</span><span><b>${r[1]}</b><span style="display:block;font-size:12px;color:#77777a">${r[3]}</span></span>${bMk(r[4])}<span style="font:600 15px var(--serif);color:${r[6]==='crit'?'#a3161b':'#161616'};text-align:right">${r[5]}</span></div>`).join('')}</div></div>
+  <aside class="side"><div class="blk"><h5>Ventas UF</h5><div class="fig">126.000</div>${bSpark(SALES,220,40)}<p>+85 % desde 2021.</p></div><div class="blk"><h5>ROS</h5><div class="fig">11</div><p>5 como reportado, 6 como vinculado. El último, hace 14 días.</p></div><div class="blk"><h5>Causas</h5><div class="fig">2</div><p>Una vigente por lavado de activos.</p></div></aside></div>`,'ficha')}
+
+/* ───── C · Tablero modular */
+const CC={crit:'#f0604d',high:'#f2b33d',med:'#3b7dd8',low:'#0f9d8a',none:'#8390a8'};
+const cMk=m=>`<span class="mk">${MC.map((c,i)=>`<i class="${m[i]==='1'?'on':''}" title="${MN[i]}">${c}</i>`).join('')}</span>`;
+const cRing=(v,c,s=40)=>{const r=s/2-4,C=2*Math.PI*r;return`<svg width="${s}" height="${s}"><circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="#eef1f6" stroke-width="4"/><circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="${c}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(C*v/100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 ${s/2} ${s/2})"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" style="font:800 ${s>50?20:11}px var(--sans);fill:#172033">${v}</text></svg>`};
+function cShell(inner,act){return`<div class="C"><div class="top"><span class="logo">PR</span><div class="pills"><span class="${act==='inicio'?'on':''}">Inicio</span><span class="${act==='ros'?'on':''}">Reportes</span><span class="${act==='ficha'?'on':''}">Entidades</span><span>Masiva</span></div><div class="user">Corte 28-09 · 06:00<span class="av" style="--c:#3b7dd8">AN</span></div></div>${inner}</div>`}
+function cDonut(){const d=[['Bancos',11,'#3b7dd8'],['Cooperativas',3,'#0f9d8a'],['Corredores',2,'#f2b33d'],['Tarjetas',2,'#f0604d'],['Otros',3,'#a7b1c4']],t=21;let a=-Math.PI/2,s='';d.forEach(([,v,c])=>{const b=a+v/t*2*Math.PI,l=b-a>Math.PI?1:0;s+=`<path d="M${(60+46*Math.cos(a)).toFixed(1)} ${(60+46*Math.sin(a)).toFixed(1)} A46 46 0 ${l} 1 ${(60+46*Math.cos(b)).toFixed(1)} ${(60+46*Math.sin(b)).toFixed(1)}" fill="none" stroke="${c}" stroke-width="16"/>`;a=b});return`<div style="display:flex;gap:16px;align-items:center"><svg width="120" height="120">${s}<text x="60" y="58" text-anchor="middle" style="font:800 22px var(--sans);fill:#172033">44</text><text x="60" y="76" text-anchor="middle" style="font:600 11px var(--sans);fill:#8390a8">ROS</text></svg><div class="lg" style="flex:1">${d.map(([l,v,c])=>`<div style="--c:${c}"><i></i>${l}<b>${v}</b></div>`).join('')}</div></div>`}
+function cInicio(){const col=(t,c,rs)=>`<div class="col"><h5 style="--c:${c}">${t}<i>${rs.length}</i></h5>${rs.map(r=>`<div class="rc" data-go="ros"><div class="r1"><span>${r.f}</span>${cRing(r.p,CC[r.l],34)}</div><b>${r.e}</b><span style="font-size:12px;color:#8390a8">${r.so} · ${r.ago}</span><div class="r3"><span style="font-weight:700;color:#172033">${n(r.uf)} UF</span>${cMk(r.m)}</div></div>`).join('')}</div>`;
+  return cShell(`<div class="bento">
+   <div class="cd hello"><h3>Hola, Andrea</h3><p>44 ROS en los últimos 12 meses · 9 reportados requieren atención</p><div class="hs">⌕ Busca un RUT, nombre o N° de ROS</div><div class="chips">${['12 meses','Todos los montos','Todos los SO','+ Marca','+ Tributario'].map(t=>`<span>${t}</span>`).join('')}</div></div>
+   <div class="kc">${[['ROS','44','','▲ 83 %','#3b7dd8'],['Monto','509K','UF','▲ 312 %','#0f9d8a'],['Reportados','30','','▲ 76 %','#f2b33d'],['Alta o crítica','9','','▲ 200 %','#f0604d']].map(([l,v,u,d,c])=>`<div class="kt" style="--c:${c}"><span>${l}</span><b>${v}<small> ${u}</small></b><em>${d}</em></div>`).join('')}</div>
+   <div class="kan">${col('En análisis','#3b7dd8',ROWS.filter(r=>r.st==='En análisis'))}${col('Revisado','#0f9d8a',ROWS.filter(r=>r.st==='Revisado'))}${col('Derivado al MP','#f0604d',ROWS.filter(r=>r.st==='Derivado'))}</div>
+   <div class="cd donut"><h4>Tipo de SO <small>12 meses</small></h4>${cDonut()}<h4 style="margin-top:16px">Marcas <small>de 30 reportados</small></h4><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">${[['JUD',11],['RMP',9],['ROE',9],['IMP',5]].map(([c,v])=>`<div style="background:#fdeeea;border-radius:14px;padding:10px 4px"><div style="font:800 10px var(--sans);color:#f0604d">${c}</div><div style="font:800 20px var(--sans)">${v}</div></div>`).join('')}</div>
+     <h4 style="margin-top:16px">ROS por mes</h4><svg width="100%" height="70" viewBox="0 0 240 70" preserveAspectRatio="none">${MS.map((v,i)=>`<rect x="${i*10+1}" y="${70-v*10}" width="8" height="${v*10}" rx="3" fill="${i>=12?'#3b7dd8':'#dfe5ef'}"/>`).join('')}</svg></div>
+  </div>`,'inicio')}
+function cRos(){return cShell(`<div class="bento"><div class="cd" style="grid-column:span 8"><div style="display:flex;justify-content:space-between;align-items:center"><div><span class="tag" style="--c:#3b7dd8">En análisis</span><h3 style="margin:8px 0 2px;font:800 26px var(--sans)">ROS N° 100001</h3><span style="color:#8390a8">Recibido el 14-09-2026 · Bancos</span></div>${cRing(100,CC.crit,64)}</div>
+   <div class="step" style="margin-top:16px">${['#3b7dd8','#3b7dd8','#3b7dd8','#dfe5ef'].map(c=>`<span style="--c:${c}"></span>`).join('')}</div>
+   <h4>Identificación</h4><div class="ff">${[['Sujeto obligado','Banco del Pacífico (ficticio)'],['Canal','Mixto'],['Estado','En análisis']].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+   <h4 style="margin-top:16px">Operaciones</h4><div class="ff">${[['Tipo','Transferencias electrónicas'],['Periodo','03-05 → 05-09-2026'],['Operaciones','3'],['Monto total','18.400 UF'],['Moneda','CLP'],['Promedio','6.133 UF']].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+   <h4 style="margin-top:16px">Señales de alerta</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${SIGS.map(s=>`<span class="tag" style="--c:#f2b33d">${s}</span>`).join('')}</div></div>
+  <div class="cd" style="grid-column:span 4"><h4>Participantes <small>clic para abrir ficha</small></h4>${PARTS.map(p=>`<div class="pp" data-go="ficha"><span class="av" style="--c:${p[0]==='Reportado'?'#1c2b4a':'#8390a8'};border-radius:${p[7]==='PJ'?'12px':'50%'}">${ini(p[2])}</span><div style="flex:1;min-width:0"><span class="tag" style="--c:${p[0]==='Reportado'?'#3b7dd8':'#8390a8'}">${p[0]}</span><b style="display:block;margin-top:4px">${p[2]}</b><span style="font:11.5px var(--mono);color:#8390a8">${p[3]}</span><div style="margin-top:6px">${cMk(p[4])}</div></div>${cRing(p[5],CC[p[6]],38)}</div>`).join('')}
+   <h4 style="margin-top:14px">Otros ROS</h4><div style="display:flex;flex-wrap:wrap;gap:6px">${['100013','100002','100003','100004','100012'].map(f=>`<span class="tag" style="--c:#3b7dd8;font-family:var(--mono)">${f}</span>`).join('')}</div></div></div>`,'ros')}
+function cFicha(){return cShell(`<div class="bento"><div class="cd prof"><div class="big">CA</div><h3>Comercial Andes SpA</h3><div class="rut">76.123.456-0 · Las Condes</div><div style="margin:12px 0">${cMk('1111')}</div>${cRing(100,CC.crit,96)}<div style="font-weight:800;color:#f0604d;margin-top:4px">Prioridad crítica</div></div>
+  <div class="tiles">${[['T','Tamaño','Grande','+100.000 UF','#3b7dd8'],['$','Ventas 2025','126.000 UF','+85 % desde 2021','#0f9d8a'],['P','Trabajadores','28','4.500 UF c/u','#f2b33d'],['A','Antigüedad','12 años','desde 2014','#8390a8'],['B','Bienes raíces','3','42.000 UF','#3b7dd8'],['V','Vehículos','6','2 socios','#0f9d8a'],['R','ROS','11','5 R · 6 V','#f0604d'],['%','ROS 12m / ventas','25 %','coherente','#0f9d8a']].map(([i,l,v,e,c])=>`<div class="ti" style="--c:${c}"><span><i>${i}</i>${l}</span><b>${v}</b><em>${e}</em></div>`).join('')}</div>
+  <div class="cd why"><h4>Por qué importa</h4>${WHY.map(([l,t,d])=>`<div style="--c:${CC[l]}"><i></i><span><b>${t}</b>${d}</span></div>`).join('')}</div>
+  <div class="cd rel"><h4>Relacionados <small>8 · por tipo de vínculo</small></h4>${REL.map(r=>`<div class="rl" data-go="ficha"><span class="av" style="--c:${CC[r[6]]}">${ini(r[1])}</span><div class="tx"><b>${r[1]}</b><span>${r[0]} · ${r[3]}</span></div>${cMk(r[4])}${cRing(r[5],CC[r[6]],34)}</div>`).join('')}</div></div>`,'ficha')}
+
+/* ───── notas y navegación */
+const NOTES={
+ A:['Centro de mando','Una sala de monitoreo: todo a la vista, con la cola de ROS en el centro, filtros siempre visibles a la izquierda e instrumentos a la derecha.',['Alta densidad de datos y lectura rápida en pantallas grandes','Filtros como consola con interruptores','Tipografía monoespaciada para cifras e identificadores','Barra de color por prioridad en cada fila'],'Conviene si el equipo trabaja muchas horas sobre volúmenes grandes y prefiere ver mucho a la vez.'],
+ B:['Dossier editorial','Un informe de inteligencia: la pantalla abre con un titular que resume el hallazgo y cada ficha se lee como un documento.',['Titular y bajada que explican la situación en una frase','Filtros escritos como frase editable','Ranking numerado y tres casos destacados','Ficha con índice lateral y evaluación redactada'],'Conviene si la app también se usa para explicar a jefaturas o fundamentar decisiones.'],
+ C:['Tablero modular','Una app moderna de tarjetas: cada bloque responde una pregunta y el flujo de ROS se ve por estado, como un tablero de trabajo.',['Distribución en bloques (bento) fácil de escanear','ROS organizados en columnas por estado','Gráficos de anillo y colores suaves por categoría','Ficha con tarjetas de perfil y relacionados con avatares'],'Conviene si se busca una herramienta cercana, fácil de aprender y con énfasis en el estado del trabajo.']};
+const R={A:{inicio:aInicio,ros:aRos,ficha:aFicha},B:{inicio:bInicio,ros:bRos,ficha:bFicha},C:{inicio:cInicio,ros:cRos,ficha:cFicha}};
+function render(){
+  document.getElementById('view').innerHTML=`<div>${R[S.alt][S.scr]()}</div>`;
+  document.getElementById('fUrl').textContent=`perfil-reportado / ${S.scr==='inicio'?'inicio':S.scr==='ros'?'ros/100001':'entidad/76123456-0'}`;
+  const[t,c,list,when]=NOTES[S.alt];
+  document.getElementById('notes').innerHTML=`<h2>${S.alt} · ${t}</h2><div><h3>Concepto</h3><p>${c}</p></div><div><h3>Qué propone</h3><ul>${list.map(x=>`<li>${x}</li>`).join('')}</ul></div><div><h3>Cuándo conviene</h3><p>${when}</p></div><p class="hint">Pantalla actual: <b>${{inicio:'Inicio',ros:'Detalle del ROS',ficha:'Ficha de entidad'}[S.scr]}</b>. En la maqueta, las filas de ROS abren el detalle y los nombres abren la ficha.</p>`;
+  document.querySelectorAll('[data-alt]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.alt===S.alt));
+  document.querySelectorAll('[data-scr]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.scr===S.scr));
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-alt]');if(a){S.alt=a.dataset.alt;render();return}
+  const s=e.target.closest('[data-scr]');if(s){S.scr=s.dataset.scr;render();return}
+  const g=e.target.closest('[data-go]');if(g){S.scr=g.dataset.go;render();document.querySelector('.frame').scrollIntoView({behavior:'smooth',block:'start'})}
+});
+render();
+})();
+</script>
+</body>
+</html>
