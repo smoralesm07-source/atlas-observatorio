@@ -1,0 +1,212 @@
+name: Apply monitor Excel exports
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-monitor-excel-export.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Patch monitor exports
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Anchor not found in {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          excel = r'''import type { ReactNode } from 'react';
+
+export type ExcelColumn<T> = {
+  header: string;
+  value: (row: T) => unknown;
+};
+
+export type ExcelMeta = { label: string; value: unknown };
+
+function xmlEscape(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
+function cell(value: unknown, header = false): string {
+  const style = header ? ' ss:StyleID="Header"' : '';
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `<Cell${style}><Data ss:Type="Number">${value}</Data></Cell>`;
+  }
+  if (typeof value === 'boolean') {
+    return `<Cell${style}><Data ss:Type="String">${value ? 'Sí' : 'No'}</Data></Cell>`;
+  }
+  return `<Cell${style}><Data ss:Type="String">${xmlEscape(value)}</Data></Cell>`;
+}
+
+function row(values: unknown[], header = false): string {
+  return `<Row>${values.map((value) => cell(value, header)).join('')}</Row>`;
+}
+
+function worksheet<T>(name: string, rows: T[], columns: ExcelColumn<T>[]): string {
+  const header = row(columns.map((column) => column.header), true);
+  const body = rows.map((item) => row(columns.map((column) => column.value(item)))).join('');
+  const range = rows.length ? `R1C1:R${rows.length + 1}C${Math.max(1, columns.length)}` : `R1C1:R1C${Math.max(1, columns.length)}`;
+  return `<Worksheet ss:Name="${xmlEscape(name)}"><Table>${header}${body}</Table><x:AutoFilter x:Range="${range}"/><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal><TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane></WorksheetOptions></Worksheet>`;
+}
+
+function metadataSheet(metadata: ExcelMeta[]): string {
+  const rows = metadata.map((item) => row([item.label, item.value])).join('');
+  return `<Worksheet ss:Name="Metadatos"><Table>${row(['Campo', 'Valor'], true)}${rows}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal><TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane></WorksheetOptions></Worksheet>`;
+}
+
+export function downloadExcel<T>({
+  filename,
+  sheetName,
+  rows,
+  columns,
+  metadata,
+}: {
+  filename: string;
+  sheetName: string;
+  rows: T[];
+  columns: ExcelColumn<T>[];
+  metadata: ExcelMeta[];
+}) {
+  const workbook = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Bottom"/><Font ss:FontName="Calibri" ss:Size="11"/></Style><Style ss:ID="Header"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#EDEDED" ss:Pattern="Solid"/></Style></Styles>${worksheet(sheetName, rows, columns)}${metadataSheet(metadata)}</Workbook>`;
+  const blob = new Blob(['\ufeff', workbook], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function exportDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function filtersAsMetadata(filters: Record<string, unknown>): ExcelMeta[] {
+  const active = Object.entries(filters)
+    .filter(([, value]) => value != null && value !== '' && value !== 'TODAS' && value !== 'TODOS')
+    .map(([key, value]) => `${key}=${String(value)}`);
+  return [{ label: 'Filtros aplicados', value: active.length ? active.join(' · ') : 'Sin filtros' }];
+}
+
+export function ExportButton({ exporting, count, onClick }: { exporting: boolean; count: number; onClick: () => void }): ReactNode {
+  return <button className="atlas-export-button" type="button" disabled={exporting || count <= 0} onClick={onClick} title="Exporta el universo actualmente filtrado a Excel">{exporting ? 'Preparando Excel…' : `⇩ Exportar universo${count > 0 ? ` (${count.toLocaleString('es-CL')})` : ''}`}</button>;
+}
+'''
+          Path('src/lib/excelExport.tsx').write_text(excel)
+
+          css = r'''.atlas-export-button {
+  border: 1px solid rgba(84, 104, 124, .28);
+  background: rgba(255, 255, 255, .72);
+  color: #435160;
+  border-radius: 8px;
+  padding: 7px 10px;
+  min-height: 32px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+  white-space: nowrap;
+}
+.atlas-export-button:hover:not(:disabled) {
+  border-color: rgba(224, 112, 32, .55);
+  background: rgba(255, 248, 242, .95);
+  color: #a34d13;
+  transform: translateY(-1px);
+}
+.atlas-export-button:disabled { opacity: .48; cursor: default; }
+.atlas-export-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.atlas-export-inline { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+@media (max-width: 760px) {
+  .atlas-export-actions { width: 100%; justify-content: space-between; }
+  .atlas-export-button { white-space: normal; text-align: center; }
+}
+'''
+          Path('src/styles/export-button.css').write_text(css)
+
+          # OSFL
+          replace_once('src/views/Osfl.tsx',
+            "import { ErrorBox, Loading } from '../components/primitives';",
+            "import { ErrorBox, Loading } from '../components/primitives';\nimport { supabase } from '../lib/supabase';\nimport { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';\nimport '../styles/export-button.css';")
+          replace_once('src/views/Osfl.tsx',
+            "  const [tab, setTab] = useState<Tab>('timeline');",
+            "  const [tab, setTab] = useState<Tab>('timeline');\n  const [exporting, setExporting] = useState(false);")
+          replace_once('src/views/Osfl.tsx',
+            "  function focusSource(source: string) {\n    setFilters({ ...EMPTY, source });\n    setPage(0);\n  }",
+            "  function focusSource(source: string) {\n    setFilters({ ...EMPTY, source });\n    setPage(0);\n  }\n\n  async function exportUniverse() {\n    setExporting(true);\n    try {\n      const rows: EntityRow[] = [];\n      const limit = 500;\n      let offset = 0;\n      let total = totalResults;\n      do {\n        const { data: payload, error } = await supabase.rpc('obs_osfl_search', {\n          p_q: debouncedQuery || null,\n          p_region: filters.region || null,\n          p_type: filters.type || null,\n          p_activity: filters.activity || null,\n          p_source: filters.source || null,\n          p_uaf: filters.uaf,\n          p_public_funds: filters.publicFunds,\n          p_sanctions: filters.sanctions,\n          p_limit: limit,\n          p_offset: offset,\n        });\n        if (error) throw error;\n        const batch = (payload as SearchData | null)?.rows ?? [];\n        total = Number((payload as SearchData | null)?.total ?? total);\n        rows.push(...batch);\n        offset += batch.length;\n        if (!batch.length) break;\n      } while (offset < total);\n\n      downloadExcel({\n        filename: `ATLAS_OSFL_${exportDate()}.xls`,\n        sheetName: 'Universo',\n        rows,\n        columns: [\n          { header: 'Nombre / Razón social', value: (row) => row.name },\n          { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT' },\n          { header: 'Categoría OSFL', value: (row) => row.type },\n          { header: 'Región', value: (row) => row.region ?? '' },\n          { header: 'Comuna', value: (row) => row.commune ?? '' },\n          { header: 'Actividad / giro principal', value: (row) => row.main_activity ?? '' },\n          { header: 'Estado', value: (row) => row.status ?? '' },\n          { header: 'Fuentes / cruces', value: (row) => Object.entries(row.sources ?? {}).filter(([, present]) => present).map(([source]) => source).join(' · ') },\n        ],\n        metadata: [\n          { label: 'Monitor', value: 'OSFL' },\n          { label: 'Fecha de exportación', value: exportDate() },\n          { label: 'Registros exportados', value: rows.length },\n          { label: 'Consulta', value: debouncedQuery || 'Sin búsqueda de texto' },\n          ...filtersAsMetadata(filters),\n          { label: 'Fuente', value: 'ATLAS · obs_osfl_search' },\n        ],\n      });\n    } catch (error) {\n      window.alert(`No fue posible exportar OSFL: ${(error as Error).message}`);\n    } finally {\n      setExporting(false);\n    }\n  }")
+          replace_once('src/views/Osfl.tsx',
+            "            <div className=\"osfl-results-head\"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className=\"osfl-page-info\">Página {Math.min(page + 1, pages)} de {pages}</div></div>",
+            "            <div className=\"osfl-results-head\"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className=\"atlas-export-actions\"><ExportButton exporting={exporting} count={totalResults} onClick={exportUniverse} /><div className=\"osfl-page-info\">Página {Math.min(page + 1, pages)} de {pages}</div></div></div>")
+
+          # FINTECH
+          replace_once('src/views/Fintech.tsx',
+            "import { supabase } from '../lib/supabase';",
+            "import { supabase } from '../lib/supabase';\nimport { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';\nimport '../styles/export-button.css';")
+          old_export = """  async function exportSnapshot() {\n    setExporting(true);\n    try {\n      const { data: payload, error } = await supabase.rpc('obs_fintech_export');\n      if (error) throw error;\n      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `atlas-fintech-corte-${new Date().toISOString().slice(0, 10)}.json`;\n      a.click();\n      URL.revokeObjectURL(url);\n    } catch (error) {\n      window.alert(`No fue posible exportar el corte: ${(error as Error).message}`);\n    } finally { setExporting(false); }\n  }"""
+          new_export = """  async function exportSnapshot() {\n    setExporting(true);\n    try {\n      const rows: SearchRow[] = [];\n      const limit = 500;\n      let offset = 0;\n      let total = totalResults;\n      do {\n        const { data: payload, error } = await supabase.rpc('obs_fintech_search_v2', {\n          p_q: q || null,\n          p_region: filters.region || null,\n          p_vertical: filters.vertical || null,\n          p_model: filters.model || null,\n          p_source: filters.source || null,\n          p_regulator: filters.regulator,\n          p_psav: filters.psav,\n          p_operating: filters.operating,\n          p_limit: limit,\n          p_offset: offset,\n        });\n        if (error) throw error;\n        const batch = (payload as SearchData | null)?.rows ?? [];\n        total = Number((payload as SearchData | null)?.total ?? total);\n        rows.push(...batch);\n        offset += batch.length;\n        if (!batch.length) break;\n      } while (offset < total);\n\n      downloadExcel({\n        filename: `ATLAS_FINTECH_${exportDate()}.xls`,\n        sheetName: 'Universo',\n        rows,\n        columns: [\n          { header: 'Nombre / Razón social', value: (row) => row.brand || row.legal_name },\n          { header: 'Razón social legal', value: (row) => row.legal_name },\n          { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT chileno' },\n          { header: 'Categoría Fintech', value: (row) => row.vertical ?? 'Por clasificar' },\n          { header: 'Modelo de negocio', value: (row) => row.business_model ?? '' },\n          { header: 'Estado operativo', value: (row) => operatingLabel(row.operating_status) },\n          { header: 'PSAV', value: (row) => psavLabel(row.psav_status) },\n          { header: 'Región', value: (row) => row.region ?? '' },\n          { header: 'Comuna', value: (row) => row.commune ?? '' },\n          { header: 'Actividad principal SII', value: (row) => row.sii_main_activity ?? '' },\n          { header: 'Huella CMF', value: (row) => row.has_cmf_public },\n          { header: 'Huella UAF', value: (row) => row.has_uaf_public },\n          { header: 'Fuentes', value: (row) => (row.source_codes ?? []).join(' · ') },\n        ],\n        metadata: [\n          { label: 'Monitor', value: 'FINTECH' },\n          { label: 'Fecha de exportación', value: exportDate() },\n          { label: 'Registros exportados', value: rows.length },\n          { label: 'Consulta', value: q || 'Sin búsqueda de texto' },\n          ...filtersAsMetadata(filters),\n          { label: 'Fuente', value: 'ATLAS · obs_fintech_search_v2' },\n        ],\n      });\n    } catch (error) {\n      window.alert(`No fue posible exportar Fintech: ${(error as Error).message}`);\n    } finally { setExporting(false); }\n  }"""
+          replace_once('src/views/Fintech.tsx', old_export, new_export)
+          replace_once('src/views/Fintech.tsx',
+            "        <button onClick={exportSnapshot} disabled={exporting}>{exporting ? 'Exportando…' : 'Exportar corte'}</button>",
+            "        <ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} />")
+          replace_once('src/views/Fintech.tsx',
+            "          <div className=\"fintech-results-head\"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><span>Página {Math.min(page + 1,pages)} de {pages}</span></div>",
+            "          <div className=\"fintech-results-head\"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className=\"atlas-export-actions\"><ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} /><span>Página {Math.min(page + 1,pages)} de {pages}</span></div></div>")
+
+          # SANCIONES
+          replace_once('src/views/Sanciones.tsx',
+            "import '../styles/sanciones-detail-fit.css';",
+            "import '../styles/sanciones-detail-fit.css';\nimport { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';\nimport '../styles/export-button.css';")
+          replace_once('src/views/Sanciones.tsx',
+            "  const [reload, setReload] = useState(0);",
+            "  const [reload, setReload] = useState(0);\n  const [exporting, setExporting] = useState(false);")
+          replace_once('src/views/Sanciones.tsx',
+            "  function runSearch() { patch({ q: searchDraft.trim() }); }",
+            "  function runSearch() { patch({ q: searchDraft.trim() }); }\n\n  async function exportUniverse() {\n    setExporting(true);\n    try {\n      const rows: EventItem[] = [];\n      const limit = 500;\n      let exportOffset = 0;\n      let total = n(events?.page?.total);\n      do {\n        const payload = await sanctionsRpc<EventsResponse>({ kind: 'events', ...filters, limit, offset: exportOffset });\n        const batch = payload.items ?? [];\n        total = n(payload.page?.total ?? total);\n        rows.push(...batch);\n        exportOffset += batch.length;\n        if (!batch.length) break;\n      } while (exportOffset < total);\n\n      downloadExcel({\n        filename: `ATLAS_Sanciones_${exportDate()}.xls`,\n        sheetName: 'Universo',\n        rows,\n        columns: [\n          { header: 'Nombre / Razón social', value: (row) => row.canonical_name || row.source_entity_name || 'Entidad no resuelta' },\n          { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT' },\n          { header: 'Categoría', value: (row) => eventKindsOf(row).map(eventKindLabel).join(' · ') },\n          { header: 'Organismo sancionador', value: (row) => row.regulator ?? '' },\n          { header: 'Región', value: (row) => row.region ?? '' },\n          { header: 'Fecha sanción', value: (row) => row.event_date ?? '' },\n          { header: 'Monto CLP', value: (row) => n(row.amount_clp) || '' },\n          { header: 'Monto UF', value: (row) => n(row.amount_uf) || '' },\n          { header: 'Materia / infracción', value: (row) => (row.reasons?.length ? row.reasons.join(' · ') : row.reason) ?? '' },\n          { header: 'Resolución / referencia', value: (row) => row.resolution_ref ?? '' },\n          { header: 'Universo', value: (row) => universeLabel(row) },\n          { header: 'Prioridad Atlas', value: (row) => priority(row.priority_score)[0] },\n        ],\n        metadata: [\n          { label: 'Monitor', value: 'Sanciones' },\n          { label: 'Fecha de exportación', value: exportDate() },\n          { label: 'Registros exportados', value: rows.length },\n          ...filtersAsMetadata(filters),\n          { label: 'Fuente', value: 'ATLAS · atlas_v2_sanctions_query / events' },\n        ],\n      });\n    } catch (error) {\n      window.alert(`No fue posible exportar Sanciones: ${(error as Error).message}`);\n    } finally {\n      setExporting(false);\n    }\n  }")
+          replace_once('src/views/Sanciones.tsx',
+            "        <PanelHead title={`Casos prioritarios · ${count(page.total)}`} subtitle=\"Una fila por sanción/resolución y entidad. Las medidas asociadas se consolidan en la ficha.\" />",
+            "        <PanelHead title={`Casos prioritarios · ${count(page.total)}`} subtitle=\"Una fila por sanción/resolución y entidad. Las medidas asociadas se consolidan en la ficha.\" />\n        <div className=\"atlas-export-inline\"><ExportButton exporting={exporting} count={n(page.total)} onClick={exportUniverse} /></div>")
+          PY
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit application changes
+        shell: bash
+        run: |
+          rm .github/workflows/apply-monitor-excel-export.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/excelExport.tsx src/styles/export-button.css src/views/Osfl.tsx src/views/Sanciones.tsx src/views/Fintech.tsx .github/workflows/apply-monitor-excel-export.yml
+          git commit -m "feat: export filtered monitor universes to Excel"
+          git push origin HEAD:main
