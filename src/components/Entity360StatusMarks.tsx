@@ -62,6 +62,24 @@ type PublicFundsYear = {
   top_payer_name?: string | null;
 };
 
+type PublicFundsPayer = {
+  payer_key?: string;
+  payer_name?: string | null;
+  period_year: number;
+  role?: string | null;
+  amount?: number | string | null;
+  transaction_count?: number | string | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+};
+
+type PayerDetail = {
+  rows?: PublicFundsPayer[];
+  count?: number;
+  limit?: number;
+  offset?: number;
+};
+
 type StateRelation = {
   entity_id?: string;
   rut?: string;
@@ -92,6 +110,42 @@ const pct = (value: unknown) => {
   return Number.isFinite(n) ? `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(n * 100)}%` : '—';
 };
 
+function PublicFundsPayerRows({ entityId, enabled }: { entityId: string; enabled: boolean }) {
+  const { data, loading, error } = useRpc<PayerDetail>(
+    'obs_public_funds_payer_detail',
+    { p_entity_id: entityId, p_year: null, p_limit: 20, p_offset: 0 },
+    { skip: !enabled },
+  );
+
+  if (!enabled) return null;
+  if (loading) return <div className="entity360-state-payer-loading">Cargando detalle de pagadores…</div>;
+  if (error) return <div className="entity360-state-payer-loading">Detalle de pagadores no disponible.</div>;
+
+  const rows = data?.rows ?? [];
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="entity360-state-payers">
+      <div className="entity360-state-payers-head">
+        <strong>Pagadores y períodos</strong>
+        <span>20 registros principales · carga bajo demanda</span>
+      </div>
+      <div className="entity360-state-payers-list">
+        {rows.map((row, index) => (
+          <div className="entity360-state-payer-row" key={`${row.payer_key ?? row.payer_name}-${row.period_year}-${row.role ?? ''}-${index}`}>
+            <span className="entity360-state-payer-year">{row.period_year}</span>
+            <div>
+              <strong>{row.payer_name || row.payer_key || 'Organismo sin etiqueta'}</strong>
+              <small>{row.role || 'Receptor'} · {integer(row.transaction_count)} registros</small>
+            </div>
+            <b>{money(row.amount)}</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Estados compactos de Entidad 360. Las marcas regulatorias y la relación con
  * el Estado se leen mediante RPC livianos por entity_id/RUT y nunca fuerzan al
@@ -100,6 +154,7 @@ const pct = (value: unknown) => {
 export function Entity360StatusMarks({ entityId, role }: { entityId: string; role: AtlasRole }) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [lookupKey, setLookupKey] = useState('');
+  const [stateOpen, setStateOpen] = useState(false);
   const { data, loading, error } = useRpc<EntityUafStatus>(
     'obs_entity_uaf_status',
     { p_entity_id: lookupKey },
@@ -114,6 +169,7 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
   useEffect(() => {
     setTarget(null);
     setLookupKey('');
+    setStateOpen(false);
 
     const locate = () => {
       const root = document.querySelector<HTMLElement>('.entity360');
@@ -187,7 +243,7 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
         </Badge>
       )}
       {hasStateRelation && (
-        <details className="entity360-state-relation">
+        <details className="entity360-state-relation" onToggle={(event) => setStateOpen(event.currentTarget.open)}>
           <summary>Relación Estado</summary>
           <div className="entity360-state-relation-popover" role="note">
             <header>
@@ -240,6 +296,7 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
                     ))}
                   </div>
                 )}
+                <PublicFundsPayerRows entityId={entityId} enabled={stateOpen} />
               </section>
             )}
 
