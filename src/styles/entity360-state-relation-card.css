@@ -255,6 +255,12 @@
 /* Fondos públicos como hitos nativos de la línea de Hechos críticos. */
 .entity360-state-timeline-host { display: contents; }
 
+.entity360-timeline-rail:has(.entity360-state-timeline-host) {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(92px, 1fr);
+}
+
 .entity360-timeline-stop-state {
   width: 100%;
   border: 0;
@@ -321,5 +327,9 @@
 
   .entity360-state-kpi-cta {
     grid-template-columns: 6px 8px;
+  }
+
+  .entity360-timeline-rail:has(.entity360-state-timeline-host) {
+    grid-auto-columns: 105px;
   }
 }
