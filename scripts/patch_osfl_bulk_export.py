@@ -99,7 +99,7 @@ if old_button not in text:
 text = text.replace(old_button, new_button, 1)
 
 marker = "function formatNumber(value: number | null | undefined)"
-helper = "function csvCell(value: unknown) { const text = String(value ?? '').replace(/\r?\n/g, ' '); return `\"${text.replaceAll('\\\"', '\\\"\\\"')}\"`; }\n"
+helper = "function csvCell(value: unknown) { const text = String(value ?? '').replaceAll('\\r', ' ').replaceAll('\\n', ' '); return `\"${text.replaceAll('\\\"', '\\\"\\\"')}\"`; }\n"
 if helper not in text:
     text = text.replace(marker, helper + marker, 1)
 
