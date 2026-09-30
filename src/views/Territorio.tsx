@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import type { TerritoryCommune, TerritoryDetail, TerritoryMap } from '../lib/contracts';
-import { Meter, OrderedDistribution } from '../components/charts';
 import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primitives';
 import { ChileMap } from '../components/ChileMap';
 import { TerritoryCommuneWorkspace } from '../components/TerritoryCommuneWorkspace';
@@ -137,7 +136,6 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
     });
     return m;
   }, [comunas]);
-
 
   if (commune) {
     return (
@@ -338,9 +336,8 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
         />
       </div>
 
-      {/* El mapa reemplazó al panel de barras regionales: la unidad del índice es
-          la comuna, y un agregado regional no deja ver dónde está la amenaza. */}
-      <div className="grid grid-main" style={{ marginBottom: 16 }}>
+      {/* El mapa concentra ahora la lectura territorial principal. */}
+      <div style={{ marginBottom: 16 }}>
         <Panel
           title={region ? (regiones.find(([c]) => c === region)?.[1] ?? 'Región') : 'Mapa comunal del IGR'}
           pad={false}
@@ -388,37 +385,6 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
 
           <MapLegend porNivel={porNivel} comunas={comunas} onSelect={setCommune} />
         </Panel>
-
-        <div className="grid" style={{ gap: 16, alignContent: 'start' }}>
-          <Panel title="Distribución por banda" meta={`${n(cob.comunas)} comunas`}>
-            <OrderedDistribution
-              total={cob.comunas}
-              rows={data.niveles.map((x) => ({
-                label: x.igr_level,
-                value: x.comunas,
-                step: levelStep(x.igr_level),
-              }))}
-            />
-          </Panel>
-
-          <Panel title="Cómo se compone el índice">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Son pesos de composición, no puntajes: color constante. */}
-              <Meter value={m.capas.amenazas_precedentes_la * 100}
-                label="Amenazas precedentes LA" tone="var(--accent)" />
-              <Meter value={m.capas.economia_criminal_facilitadores * 100}
-                label="Economía criminal y facilitadores" tone="var(--accent)" />
-              <Meter value={m.capas.contexto_criminogeno * 100}
-                label="Contexto criminógeno" tone="var(--accent)" />
-            </div>
-            <div className="note" style={{ marginTop: 14 }}>
-              Cada capa se caracteriza con {n1(m.caracterizacion.intensidad * 100)}% intensidad,{' '}
-              {n1(m.caracterizacion.persistencia * 100)}% persistencia,{' '}
-              {n1(m.caracterizacion.tendencia * 100)}% tendencia y{' '}
-              {n1(m.caracterizacion.anomalia * 100)}% anomalía.
-            </div>
-          </Panel>
-        </div>
       </div>
 
       <Panel title="Comunas con mayor amenaza" meta="clic para abrir el detalle" pad={false}>
