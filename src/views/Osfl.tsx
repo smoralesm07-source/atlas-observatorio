@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { ErrorBox, Loading } from '../components/primitives';
 import { supabase } from '../lib/supabase';
-import { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';
+import { exportDate } from '../lib/excelExport';
 import '../styles/export-button.css';
 
 const PAGE_SIZE = 8;
@@ -63,6 +63,7 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('timeline');
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
 
   const search = useRpc<SearchData>('obs_osfl_search', {
     p_q: debouncedQuery || null,
@@ -103,39 +104,72 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
 
   async function exportUniverse() {
     setExporting(true);
+    setExportProgress(0);
     try {
-      const rows: EntityRow[] = [];
-      const limit = 500;
-      let offset = 0;
-      let total = totalResults;
-      do {
-        const { data: payload, error } = await supabase.rpc('obs_osfl_search', { p_q: debouncedQuery || null, p_region: filters.region || null, p_type: filters.type || null, p_activity: filters.activity || null, p_source: filters.source || null, p_uaf: filters.uaf, p_public_funds: filters.publicFunds, p_sanctions: filters.sanctions, p_limit: limit, p_offset: offset });
-        if (error) throw error;
-        const batch = (payload as SearchData | null)?.rows ?? [];
-        total = Number((payload as SearchData | null)?.total ?? total);
-        rows.push(...batch);
-        offset += batch.length;
-        if (!batch.length) break;
-      } while (offset < total);
+      type ExportPage = { rows: EntityRow[]; next_cursor: string | null; has_more: boolean };
+      const parts: BlobPart[] = [
+        '\ufeffsep=;\r\n',
+        ['Nombre / Razón social', 'RUT', 'Categoría OSFL', 'Región', 'Comuna', 'Actividad / giro principal', 'Estado', 'Fuentes / cruces']
+          .map(csvCell).join(';') + '\r\n',
+      ];
+      const limit = 10000;
+      let cursor: string | null = null;
+      let exported = 0;
+      let hasMore = true;
 
-      downloadExcel({ filename: `ATLAS_OSFL_${exportDate()}.xls`, sheetName: 'Universo', rows, columns: [
-        { header: 'Nombre / Razón social', value: (row) => row.name },
-        { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT' },
-        { header: 'Categoría OSFL', value: (row) => row.type },
-        { header: 'Región', value: (row) => row.region ?? '' },
-        { header: 'Comuna', value: (row) => row.commune ?? '' },
-        { header: 'Actividad / giro principal', value: (row) => row.main_activity ?? '' },
-        { header: 'Estado', value: (row) => row.status ?? '' },
-        { header: 'Fuentes / cruces', value: (row) => Object.entries(row.sources ?? {}).filter(([, present]) => present).map(([source]) => source).join(' · ') },
-      ], metadata: [
-        { label: 'Monitor', value: 'OSFL' },
-        { label: 'Fecha de exportación', value: exportDate() },
-        { label: 'Registros exportados', value: rows.length },
-        { label: 'Consulta', value: debouncedQuery || 'Sin búsqueda de texto' },
-        ...filtersAsMetadata(filters),
-        { label: 'Fuente', value: 'ATLAS · obs_osfl_search' },
-      ] });
-    } catch (error) { window.alert(`No fue posible exportar OSFL: ${(error as Error).message}`); } finally { setExporting(false); }
+      while (hasMore) {
+        const { data: payload, error } = await supabase.rpc('obs_osfl_export_page', {
+          p_q: debouncedQuery || null,
+          p_region: filters.region || null,
+          p_type: filters.type || null,
+          p_activity: filters.activity || null,
+          p_source: filters.source || null,
+          p_uaf: filters.uaf,
+          p_public_funds: filters.publicFunds,
+          p_sanctions: filters.sanctions,
+          p_after_entity_id: cursor,
+          p_limit: limit,
+        });
+        if (error) throw error;
+
+        const page = payload as ExportPage | null;
+        const batch = page?.rows ?? [];
+        if (!batch.length) break;
+
+        const chunk = batch.map((row) => [
+          row.name,
+          row.rut ?? 'Sin RUT',
+          row.type,
+          row.region ?? '',
+          row.commune ?? '',
+          row.main_activity ?? '',
+          row.status ?? '',
+          Object.entries(row.sources ?? {}).filter(([, present]) => present).map(([source]) => source).join(' · '),
+        ].map(csvCell).join(';')).join('\r\n');
+        parts.push(chunk + '\r\n');
+
+        exported += batch.length;
+        cursor = page?.next_cursor ?? null;
+        hasMore = Boolean(page?.has_more && cursor);
+        setExportProgress(totalResults > 0 ? Math.min(99, Math.round(exported / totalResults * 100)) : 0);
+      }
+
+      setExportProgress(100);
+      const blob = new Blob(parts, { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `ATLAS_OSFL_${exportDate()}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(`No fue posible exportar OSFL: ${(error as Error).message}`);
+    } finally {
+      setExporting(false);
+      setExportProgress(0);
+    }
   }
 
   if (dashboard.loading) return <Loading label="Construyendo panorama nacional de OSFL…" />;
@@ -221,7 +255,7 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
               {pageButtons(page, pages).map((item) => <button key={item} data-active={item === page} onClick={() => setPage(item)}>{item + 1}</button>)}
               <button disabled={page + 1 >= pages} onClick={() => setPage((current) => Math.min(pages - 1, current + 1))}>›</button>
             </div>
-            <div className="osfl-export-below"><ExportButton exporting={exporting} count={totalResults} onClick={exportUniverse} /></div>
+            <div className="osfl-export-below"><button className="atlas-export-button" type="button" disabled={exporting || totalResults <= 0} onClick={exportUniverse} title="Exporta el universo filtrado en un CSV optimizado para Excel">{exporting ? `Preparando archivo… ${exportProgress}%` : `⇩ Exportar universo (${formatNumber(totalResults)})`}</button></div>
           </div>
 
           <QuickPanel detail={detail.data} loading={detail.loading} error={detail.error} tab={tab} onTab={setTab} onRetry={detail.reload} onOpen={(id) => onNavigate(`#/entidad/${encodeURIComponent(id)}`)} />
@@ -364,6 +398,7 @@ function Icon({ name }: { name: string }) {
   return <svg {...common}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>;
 }
 
+function csvCell(value: unknown) { const text = String(value ?? '').replaceAll('\r', ' ').replaceAll('\n', ' '); return `"${text.replaceAll('\"', '\"\"')}"`; }
 function formatNumber(value: number | null | undefined) { return new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(Number(value ?? 0)); }
 function formatPct(value: number | null | undefined) { return `${Number(value ?? 0).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`; }
 function share(value: number, total: number) { return total ? `${(value / total * 100).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '0,0%'; }
