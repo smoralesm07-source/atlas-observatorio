@@ -214,13 +214,14 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
               <button className="osfl-clear" onClick={reset}>Limpiar</button>
             </div>
 
-            <div className="osfl-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className="atlas-export-actions"><ExportButton exporting={exporting} count={totalResults} onClick={exportUniverse} /><div className="osfl-page-info">Página {Math.min(page + 1, pages)} de {pages}</div></div></div>
+            <div className="osfl-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className="osfl-page-info">Página {Math.min(page + 1, pages)} de {pages}</div></div>
             {search.error ? <ErrorBox error={search.error} onRetry={search.reload} /> : <ResultTable rows={search.data?.rows ?? []} selectedId={selectedId} onSelect={setSelectedId} />}
             <div className="osfl-pagination">
               <button disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>‹</button>
               {pageButtons(page, pages).map((item) => <button key={item} data-active={item === page} onClick={() => setPage(item)}>{item + 1}</button>)}
               <button disabled={page + 1 >= pages} onClick={() => setPage((current) => Math.min(pages - 1, current + 1))}>›</button>
             </div>
+            <div className="osfl-export-below"><ExportButton exporting={exporting} count={totalResults} onClick={exportUniverse} /></div>
           </div>
 
           <QuickPanel detail={detail.data} loading={detail.loading} error={detail.error} tab={tab} onTab={setTab} onRetry={detail.reload} onOpen={(id) => onNavigate(`#/entidad/${encodeURIComponent(id)}`)} />
