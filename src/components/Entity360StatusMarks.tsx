@@ -91,6 +91,11 @@ type StateRelation = {
   source_status?: Record<string, unknown>;
 };
 
+type TimelineHost = {
+  year: number;
+  host: HTMLElement;
+};
+
 const rutKey = (value: string | null | undefined) =>
   String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
 
@@ -174,12 +179,14 @@ function PublicFundsPayerRows({ entityId, enabled }: { entityId: string; enabled
  *
  * La relación con el Estado se presenta en dos niveles: las marcas rápidas de
  * cabecera y una tarjeta prominente que ocupa visualmente el antiguo KPI
- * “Proveedor del Estado”. El detalle pesado de pagadores sigue siendo lazy.
+ * “Proveedor del Estado”. Los años con transferencias se integran directamente
+ * en la línea de Hechos críticos y el detalle pesado de pagadores sigue lazy.
  */
 export function Entity360StatusMarks({ entityId, role }: { entityId: string; role: AtlasRole }) {
   const [titleTarget, setTitleTarget] = useState<HTMLElement | null>(null);
   const [stateKpiTarget, setStateKpiTarget] = useState<HTMLElement | null>(null);
-  const [timelineTarget, setTimelineTarget] = useState<HTMLElement | null>(null);
+  const [timelineRailTarget, setTimelineRailTarget] = useState<HTMLElement | null>(null);
+  const [timelineHosts, setTimelineHosts] = useState<TimelineHost[]>([]);
   const [lookupKey, setLookupKey] = useState('');
   const [stateOpen, setStateOpen] = useState(false);
 
@@ -197,7 +204,8 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
   useEffect(() => {
     setTitleTarget(null);
     setStateKpiTarget(null);
-    setTimelineTarget(null);
+    setTimelineRailTarget(null);
+    setTimelineHosts([]);
     setLookupKey('');
     setStateOpen(false);
 
@@ -227,7 +235,7 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
       const timelineCard = cards.find((node) =>
         node.querySelector<HTMLElement>('header h2')?.textContent?.trim() === 'Hechos críticos'
       ) ?? null;
-      setTimelineTarget(timelineCard?.querySelector<HTMLElement>('.entity360-card-body') ?? null);
+      setTimelineRailTarget(timelineCard?.querySelector<HTMLElement>('.entity360-timeline-rail') ?? null);
     };
 
     locate();
@@ -272,9 +280,54 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
     [publicFundsMark, stateRelation?.public_funds_years],
   );
   const years = allYears.slice(0, 5);
-  const criticalYears = allYears.filter((row) => positive(row.amount_transfer)).slice(0, 4);
+  const criticalYears = allYears.filter((row) => positive(row.amount_transfer));
+  const criticalYearsKey = criticalYears
+    .map((row) => `${row.period_year}:${Number(row.amount_transfer) || 0}:${Number(row.payer_count) || 0}:${Number(row.transaction_count) || 0}`)
+    .join('|');
   const hasStateRelation = Boolean(stateSupplier || publicFundsMark);
   const sourcesComplete = stateSupplierMark?.status === 'ABSENT' && publicFundsStateMark?.status === 'ABSENT';
+
+  useEffect(() => {
+    const rail = timelineRailTarget;
+    if (!rail) {
+      setTimelineHosts([]);
+      return;
+    }
+
+    rail.querySelectorAll('.entity360-state-timeline-host').forEach((node) => node.remove());
+
+    if (criticalYears.length === 0) {
+      setTimelineHosts([]);
+      return;
+    }
+
+    const timelineYear = (node: Element): number | null => {
+      const value = node.querySelector('time')?.textContent ?? '';
+      const match = value.match(/\b(19|20)\d{2}\b/);
+      return match ? Number(match[0]) : null;
+    };
+
+    const hosts: TimelineHost[] = [];
+    [...criticalYears].sort((a, b) => a.period_year - b.period_year).forEach((row) => {
+      const host = document.createElement('span');
+      host.className = 'entity360-state-timeline-host';
+      const directStops = Array.from(rail.children).filter((node) =>
+        node instanceof HTMLElement && node.classList.contains('entity360-timeline-stop')
+      );
+      const anchor = directStops.find((node) => {
+        const year = timelineYear(node);
+        return year != null && year > row.period_year;
+      });
+      if (anchor) rail.insertBefore(host, anchor);
+      else rail.appendChild(host);
+      hosts.push({ year: row.period_year, host });
+    });
+
+    setTimelineHosts(hosts);
+    return () => {
+      hosts.forEach(({ host }) => host.remove());
+    };
+  }, [timelineRailTarget, criticalYearsKey, entityId]);
 
   const relationValue = stateSupplier && publicFundsMark
     ? '2 vínculos'
@@ -400,11 +453,11 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
               </div>
               <dl>
                 <dt>Monto histórico observado</dt><dd>{money(publicFunds.amount_total)}</dd>
-                <dt>Últimos 12 meses</dt><dd>{money(publicFunds.amount_12m)}</dd>
                 <dt>Organismos pagadores</dt><dd>{integer(publicFunds.payer_count)}</dd>
                 <dt>Registros</dt><dd>{integer(publicFunds.transaction_count)}</dd>
                 <dt>Principal pagador</dt><dd>{publicFunds.top_payer_name || '—'}</dd>
                 <dt>Monto principal pagador</dt><dd>{money(publicFunds.top_payer_amount)}</dd>
+                <dt>Período observado</dt><dd>{publicFunds.first_seen || '—'} → {publicFunds.last_seen || '—'}</dd>
               </dl>
               {years.length > 0 && (
                 <div className="entity360-state-years">
@@ -431,28 +484,26 @@ export function Entity360StatusMarks({ entityId, role }: { entityId: string; rol
     stateKpiTarget,
   ) : null;
 
-  const timelinePortal = timelineTarget && criticalYears.length > 0 ? createPortal(
-    <div className="entity360-state-critical-years">
-      <div className="entity360-state-critical-head">
-        <div>
-          <span>Hecho anual contextual</span>
-          <strong>Recepción de fondos públicos</strong>
-        </div>
-        <small>Presupuesto Abierto</small>
-      </div>
-      <div className="entity360-state-critical-list">
-        {criticalYears.slice().reverse().map((row) => (
-          <button type="button" key={row.period_year} onClick={openStateDetail} title="Abrir detalle de relación con el Estado">
-            <strong>{row.period_year}</strong>
-            <span>{compactMoney(row.amount_transfer)}</span>
-            <small>{integer(row.payer_count)} organismos · {integer(row.transaction_count)} registros</small>
-          </button>
-        ))}
-      </div>
-      <div className="entity360-state-critical-note">Se muestra por año para no atribuir una fecha exacta que la agregación anual no sostiene.</div>
-    </div>,
-    timelineTarget,
-  ) : null;
+  const timelinePortals = timelineHosts.map(({ year, host }) => {
+    const row = criticalYears.find((item) => item.period_year === year);
+    if (!row) return null;
+    return createPortal(
+      <button
+        type="button"
+        className="entity360-timeline-stop entity360-timeline-stop-state"
+        data-kind="state"
+        onClick={openStateDetail}
+        title={`${year}: fondos públicos recibidos · abrir detalle de relación con el Estado`}
+      >
+        <i />
+        <time>{year}</time>
+        <strong>Fondos públicos recibidos</strong>
+        <span>{compactMoney(row.amount_transfer)} · {integer(row.payer_count)} organismos</span>
+      </button>,
+      host,
+      `state-year-${year}`,
+    );
+  });
 
-  return <>{headerPortal}{kpiPortal}{timelinePortal}</>;
+  return <>{headerPortal}{kpiPortal}{timelinePortals}</>;
 }
