@@ -1,0 +1,381 @@
+/* Entidad 360 · relación transversal con el Estado.
+   Esta capa reemplaza visualmente el antiguo KPI “Proveedor del Estado” y
+   mantiene la relación como contexto descriptivo, no como señal de riesgo. */
+
+.entity360-kpi-state-host {
+  position: relative;
+  overflow: visible !important;
+  z-index: 24;
+}
+
+.entity360-state-kpi-overlay {
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: calc(100% + 2px);
+  min-height: calc(100% + 2px);
+  padding: 10px 11px;
+  border: 1px solid var(--e360-blue-line);
+  border-radius: 9px;
+  background: var(--e360-card);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: border-color .16s var(--ease), box-shadow .16s var(--ease), background .16s var(--ease), transform .16s var(--ease);
+}
+
+.entity360-state-kpi-overlay[data-active='true'] {
+  cursor: pointer;
+  border-color: color-mix(in srgb, var(--present) 48%, var(--e360-blue-line));
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--present) 7%, transparent), transparent 48%),
+    var(--e360-card);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--present) 7%, transparent), 0 8px 24px rgba(0, 0, 0, .12);
+}
+
+.entity360-state-kpi-overlay[data-active='true']:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--present) 68%, var(--e360-blue-line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--present) 10%, transparent), 0 12px 28px rgba(0, 0, 0, .16);
+}
+
+.entity360-state-kpi-overlay:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.entity360-state-kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--e360-blue-2) 13%, transparent);
+  color: var(--e360-blue-2);
+}
+
+.entity360-state-kpi-overlay[data-active='true'] .entity360-state-kpi-icon {
+  background: color-mix(in srgb, var(--present) 11%, transparent);
+  color: var(--present);
+}
+
+.entity360-state-kpi-icon svg { width: 21px; height: 21px; }
+
+.entity360-state-kpi-copy {
+  display: block;
+  min-width: 0;
+}
+
+.entity360-state-kpi-copy > span {
+  display: block;
+  color: var(--ink-3);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.entity360-state-kpi-copy > strong {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 760;
+  line-height: 1.25;
+  letter-spacing: -.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity360-state-kpi-copy > small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--ink-4);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity360-state-kpi-cta {
+  display: grid;
+  grid-template-columns: 6px auto 8px;
+  gap: 5px;
+  align-items: center;
+  align-self: stretch;
+  padding-left: 7px;
+  border-left: 1px solid color-mix(in srgb, var(--present) 20%, transparent);
+  color: color-mix(in srgb, var(--present) 84%, var(--ink));
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.entity360-state-kpi-cta i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--present);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--present) 10%, transparent);
+}
+
+.entity360-state-kpi-cta b {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.entity360-state-kpi-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(540px, 84vw);
+  max-height: min(640px, 74vh);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--e360-blue-2) 24%, var(--line-strong));
+  border-radius: 14px;
+  background: var(--bg-panel, #fff);
+  box-shadow: 0 22px 58px rgba(10, 20, 32, .23);
+  color: var(--ink-2);
+}
+
+.entity360-state-kpi-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink-4) 12%, transparent);
+}
+
+.entity360-state-kpi-panel > header span,
+.entity360-state-kpi-panel .entity360-state-section-title span {
+  display: block;
+  color: var(--ink-4);
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+.entity360-state-kpi-panel > header strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.entity360-state-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.entity360-state-panel-actions small {
+  white-space: nowrap;
+  color: var(--ink-4);
+  font-size: 9px;
+  border: 1px solid color-mix(in srgb, var(--ink-4) 16%, transparent);
+  border-radius: 999px;
+  padding: 4px 7px;
+}
+
+.entity360-state-panel-actions button {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink-4) 18%, transparent);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.entity360-state-panel-actions button:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink-4) 5%, transparent);
+}
+
+.entity360-state-kpi-panel section {
+  padding: 14px 0 3px;
+}
+
+.entity360-state-kpi-panel section + section {
+  margin-top: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--ink-4) 10%, transparent);
+}
+
+.entity360-state-kpi-panel .entity360-state-section-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.entity360-state-kpi-panel .entity360-state-section-title strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.entity360-state-kpi-panel dl {
+  display: grid;
+  grid-template-columns: minmax(155px, 1fr) minmax(150px, 1.2fr);
+  gap: 7px 16px;
+  margin: 12px 0 0;
+  font-size: 11px;
+}
+
+.entity360-state-kpi-panel dt { color: var(--ink-4); }
+.entity360-state-kpi-panel dd {
+  margin: 0;
+  color: var(--ink-2);
+  font-weight: 680;
+  text-align: right;
+}
+
+.entity360-state-kpi-panel footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--ink-4) 10%, transparent);
+  color: var(--ink-4);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+/* Hitos anuales de recepción de fondos dentro de Hechos críticos. */
+.entity360-state-critical-years {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--present) 16%, var(--line-strong));
+}
+
+.entity360-state-critical-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.entity360-state-critical-head span {
+  display: block;
+  color: var(--ink-4);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.entity360-state-critical-head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 10.5px;
+}
+
+.entity360-state-critical-head small {
+  color: var(--ink-4);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.entity360-state-critical-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 6px;
+}
+
+.entity360-state-critical-list button {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--present) 24%, var(--line-strong));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--present) 5%, var(--e360-card));
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s var(--ease), background .15s var(--ease), transform .15s var(--ease);
+}
+
+.entity360-state-critical-list button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--present) 52%, var(--line-strong));
+  background: color-mix(in srgb, var(--present) 9%, var(--e360-card));
+}
+
+.entity360-state-critical-list button > strong {
+  display: block;
+  color: var(--present);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.entity360-state-critical-list button > span {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity360-state-critical-list button > small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--ink-4);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity360-state-critical-note {
+  margin-top: 6px;
+  color: var(--ink-4);
+  font-size: 7.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1050px) {
+  .entity360-state-kpi-cta span { display: none; }
+  .entity360-state-kpi-cta { grid-template-columns: 6px 8px; padding-left: 6px; }
+}
+
+@media (max-width: 760px) {
+  .entity360-state-kpi-panel {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 12px;
+    width: auto;
+    max-height: 72vh;
+  }
+
+  .entity360-state-kpi-panel dl {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .entity360-state-kpi-panel dd {
+    margin-bottom: 6px;
+    text-align: left;
+  }
+
+  .entity360-state-kpi-cta {
+    grid-template-columns: 6px 8px;
+  }
+}
