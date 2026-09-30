@@ -88,7 +88,7 @@ replacement = r'''  async function exportUniverse() {
   }
 
   if (dashboard.loading)'''
-text, count = pattern.subn(replacement, text, count=1)
+text, count = pattern.subn(lambda _: replacement, text, count=1)
 if count != 1:
     raise SystemExit('No se pudo reemplazar exportUniverse')
 
