@@ -252,101 +252,45 @@
   line-height: 1.45;
 }
 
-/* Hitos anuales de recepción de fondos dentro de Hechos críticos. */
-.entity360-state-critical-years {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--present) 16%, var(--line-strong));
-}
+/* Fondos públicos como hitos nativos de la línea de Hechos críticos. */
+.entity360-state-timeline-host { display: contents; }
 
-.entity360-state-critical-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 7px;
-}
-
-.entity360-state-critical-head span {
-  display: block;
-  color: var(--ink-4);
-  font-size: 8px;
-  font-weight: 750;
-  letter-spacing: .09em;
-  text-transform: uppercase;
-}
-
-.entity360-state-critical-head strong {
-  display: block;
-  margin-top: 2px;
-  color: var(--ink-2);
-  font-size: 10.5px;
-}
-
-.entity360-state-critical-head small {
-  color: var(--ink-4);
-  font-size: 8px;
-  white-space: nowrap;
-}
-
-.entity360-state-critical-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-  gap: 6px;
-}
-
-.entity360-state-critical-list button {
-  min-width: 0;
-  padding: 8px 9px;
-  border: 1px solid color-mix(in srgb, var(--present) 24%, var(--line-strong));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--present) 5%, var(--e360-card));
+.entity360-timeline-stop-state {
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
   color: inherit;
   cursor: pointer;
-  text-align: left;
-  transition: border-color .15s var(--ease), background .15s var(--ease), transform .15s var(--ease);
+  font: inherit;
+  transition: background .15s var(--ease), box-shadow .15s var(--ease), transform .15s var(--ease);
 }
 
-.entity360-state-critical-list button:hover {
+.entity360-timeline-stop-state:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--present) 52%, var(--line-strong));
-  background: color-mix(in srgb, var(--present) 9%, var(--e360-card));
+  background: color-mix(in srgb, var(--present) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--present) 16%, transparent);
 }
 
-.entity360-state-critical-list button > strong {
-  display: block;
+.entity360-timeline-stop-state > i,
+.entity360-timeline-stop-state[data-kind='state'] > i {
+  border-color: var(--present);
+  background: color-mix(in srgb, var(--present) 8%, #0b2135);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--present) 8%, transparent);
+}
+
+.entity360-timeline-stop-state time,
+.entity360-timeline-stop-state[data-kind='state'] time {
   color: var(--present);
-  font-family: var(--mono);
-  font-size: 10px;
+  font-weight: 760;
 }
 
-.entity360-state-critical-list button > span {
-  display: block;
-  margin-top: 2px;
-  overflow: hidden;
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.entity360-timeline-stop-state strong {
+  color: var(--ink-2);
 }
 
-.entity360-state-critical-list button > small {
-  display: block;
-  margin-top: 2px;
-  overflow: hidden;
+.entity360-timeline-stop-state span {
   color: var(--ink-4);
-  font-size: 8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.entity360-state-critical-note {
-  margin-top: 6px;
-  color: var(--ink-4);
-  font-size: 7.5px;
-  line-height: 1.35;
 }
 
 @media (max-width: 1050px) {
