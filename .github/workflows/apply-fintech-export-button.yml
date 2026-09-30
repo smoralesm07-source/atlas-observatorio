@@ -1,0 +1,40 @@
+name: Apply Fintech export button alignment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-fintech-export-button.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply Fintech button patch
+        run: python3 scripts/patch_fintech_export_button.py
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit Fintech UI change
+        run: |
+          rm .github/workflows/apply-fintech-export-button.yml scripts/patch_fintech_export_button.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "ui(fintech): align export button with OSFL pagination"
+          git push origin HEAD:main
