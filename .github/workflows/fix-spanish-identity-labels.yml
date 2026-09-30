@@ -1,0 +1,48 @@
+name: Corregir etiquetas de identidad en español
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/fix_spanish_identity_labels.py'
+      - '.github/workflows/fix-spanish-identity-labels.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar traducciones visibles
+        run: python3 scripts/fix_spanish_identity_labels.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
+        run: npx vite build
+      - name: Guardar corrección verificada
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          rm scripts/fix_spanish_identity_labels.py .github/workflows/fix-spanish-identity-labels.yml
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "ui: traducir estados de identidad a español"
+            git push origin HEAD:main
+          fi
