@@ -104,6 +104,29 @@ const EVENT_KIND_LABELS: Record<string, string> = {
   REPARO: 'Reparo',
 };
 
+// Los estados internos de resolución de identidad son códigos técnicos del
+// pipeline. La interfaz no debe exponerlos en inglés ni obligar al usuario a
+// interpretar conceptos como "Resolved Conservative".
+const IDENTITY_STATUS_LABELS: Record<string, string> = {
+  RESOLVED_CONSERVATIVE: 'Identidad resuelta',
+  RESOLVED_STRONG: 'Identidad confirmada',
+  RESOLVED_EXACT: 'Identidad confirmada',
+  RESOLVED: 'Identidad resuelta',
+  MATCHED: 'Identidad vinculada',
+  VERIFIED: 'Identidad verificada',
+  AMBIGUOUS: 'Identidad por revisar',
+  PENDING: 'Identidad por revisar',
+  UNRESOLVED: 'Identidad no resuelta',
+  UNMATCHED: 'Sin coincidencia de identidad',
+  SOURCE_ONLY: 'Identidad según fuente',
+};
+
+function identityStatusLabel(status?: string | null): string {
+  if (!status) return 'Sin RUT resuelto';
+  const key = status.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return IDENTITY_STATUS_LABELS[key] ?? 'Identidad por revisar';
+}
+
 function n(v: unknown) { const x = Number(v); return Number.isFinite(x) ? x : 0; }
 function count(v: unknown) { return NF.format(n(v)); }
 function pct(v: unknown) { return `${n(v).toLocaleString('es-CL', { maximumFractionDigits: 1 })}%`; }
@@ -376,7 +399,7 @@ function EventRow({ item, onClick, active }: { item: EventItem; onClick: () => v
   const kinds = eventKindsOf(item);
   const typeText = kinds.length > 1 ? `${eventKindLabel(kinds[0])} +${kinds.length - 1}` : eventKindLabel(kinds[0]);
   const typeTitle = kinds.map(eventKindLabel).join(' · ');
-  return <button className={`san-event ${active ? 'active' : ''}`} onClick={onClick}><span className="san-cell entity"><strong>{item.canonical_name || item.source_entity_name || 'Entidad no resuelta'}</strong><small>{item.rut || item.identity_status || 'Sin RUT'}</small></span><span className="san-cell">{universeLabel(item)}</span><span className="san-cell">{item.regulator || '—'}</span><span className="san-cell">{item.region || 'Sin región'}</span><span className="san-cell type" title={typeTitle}>{typeText}</span><span className="san-cell">{amount}</span><span className="san-cell">{formatDate(item.event_date)}</span><span className={`san-priority ${cls}`}><i /><b>{label} {count(item.priority_score)}</b></span><span className="san-row-arrow">›</span></button>;
+  return <button className={`san-event ${active ? 'active' : ''}`} onClick={onClick}><span className="san-cell entity"><strong>{item.canonical_name || item.source_entity_name || 'Entidad no resuelta'}</strong><small>{item.rut || identityStatusLabel(item.identity_status)}</small></span><span className="san-cell">{universeLabel(item)}</span><span className="san-cell">{item.regulator || '—'}</span><span className="san-cell">{item.region || 'Sin región'}</span><span className="san-cell type" title={typeTitle}>{typeText}</span><span className="san-cell">{amount}</span><span className="san-cell">{formatDate(item.event_date)}</span><span className={`san-priority ${cls}`}><i /><b>{label} {count(item.priority_score)}</b></span><span className="san-row-arrow">›</span></button>;
 }
 
 function DetailCard({ detail, fallback, onNavigate }: { detail: DetailResponse | null; fallback: EventItem | null; onNavigate: (hash: string) => void }) {
@@ -390,7 +413,7 @@ function DetailCard({ detail, fallback, onNavigate }: { detail: DetailResponse |
   const cgrMeta = [...new Set([...(e.cgr_stages ?? []), ...(e.cgr_risk_families ?? []), ...(e.cgr_severities ?? []), e.cgr_stage, e.cgr_risk_family, e.cgr_severity].filter((v): v is string => Boolean(v)))];
 
   return <aside className="san-detail"><div className="san-detail-head"><div><small>{e.event_id || 'SANCIÓN'}</small><h2>Ficha de sanción</h2></div><span className={`san-priority ${cls}`}><i /><b>{label} · prioridad analítica</b></span></div>
-    <div className="san-detail-entity"><span className="san-icon cyan">▦</span><div><strong>{e.canonical_name || e.source_entity_name || 'Entidad no resuelta'}</strong><span>{e.rut || e.identity_status || 'Sin RUT resuelto'}</span></div></div>
+    <div className="san-detail-entity"><span className="san-icon cyan">▦</span><div><strong>{e.canonical_name || e.source_entity_name || 'Entidad no resuelta'}</strong><span>{e.rut || identityStatusLabel(e.identity_status)}</span></div></div>
     <div className="san-detail-grid"><DetailField label="Universo" value={universeLabel(e)} /><DetailField label="Supervisor" value={e.regulator} /><DetailField label="Región" value={e.region} /><DetailField label="Fecha" value={formatDate(e.event_date, true)} /><DetailField label="Medidas" value={kinds.length ? `${count(kinds.length)} ${kinds.length === 1 ? 'tipo' : 'tipos'}` : 'Sin clasificación'} /><DetailField label="Resolución" value={e.resolution_ref} /></div>
 
     <section className="san-detail-block"><h3>Tipos / medidas comprendidas</h3><div className="san-kind-chips">{kinds.length ? kinds.map((kind) => <span className="san-kind-chip" key={kind}>{eventKindLabel(kind)}</span>) : <span className="san-kind-chip muted">Sin clasificación</span>}</div></section>
