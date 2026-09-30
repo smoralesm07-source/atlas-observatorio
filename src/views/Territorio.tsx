@@ -6,6 +6,7 @@ import { Empty, ErrorBox, Loading, Panel, Semantics } from '../components/primit
 import { ChileMap } from '../components/ChileMap';
 import { TerritoryCommuneWorkspace } from '../components/TerritoryCommuneWorkspace';
 import { n, n1 } from '../lib/format';
+import '../styles/export-button.css';
 
 /** Paso de la rampa secuencial por nivel. El nombre del nivel acompaña siempre
  *  al color, porque los pasos bajos no alcanzan 3:1 contra la superficie. */
@@ -17,6 +18,98 @@ const levelStep = (l: string | null | undefined) => LEVEL_STEP[l ?? ''] ?? 1;
 /** Islas oceánicas: quedan fuera del encuadre continental y se ofrecen aparte
  *  para que no desaparezcan de la vista por una decisión cartográfica. */
 const INSULARES = ['05201', '05104'];
+
+const csvCell = (value: unknown) => {
+  if (value == null) return '';
+  const raw = typeof value === 'number' ? String(value).replace('.', ',') : String(value);
+  const normalized = raw.replace(/\r?\n/g, ' ').trim();
+  return /[;"\r\n]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized;
+};
+
+function exportTerritoryCsv(
+  comunas: TerritoryCommune[],
+  year: number | null,
+  methodVersion: string,
+) {
+  const ranked = comunas.slice().sort((a, b) => {
+    const scoreDiff = Number(b.igr_score ?? -1) - Number(a.igr_score ?? -1);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.commune_name.localeCompare(b.commune_name, 'es');
+  });
+
+  const nationalRank = new Map<string, number>();
+  ranked.forEach((row, index) => nationalRank.set(row.territory_id, index + 1));
+
+  const regionalRank = new Map<string, number>();
+  const byRegion = new Map<string, TerritoryCommune[]>();
+  ranked.forEach((row) => {
+    const key = row.region_code ?? row.region_name;
+    if (!byRegion.has(key)) byRegion.set(key, []);
+    byRegion.get(key)!.push(row);
+  });
+  byRegion.forEach((rows) => {
+    rows.forEach((row, index) => regionalRank.set(row.territory_id, index + 1));
+  });
+
+  const headers = [
+    'territory_id',
+    'commune_code',
+    'commune_name',
+    'region_code',
+    'region_name',
+    'year',
+    'method_version',
+    'igr_score',
+    'igr_percentile',
+    'igr_level',
+    'rank_nacional',
+    'rank_regional',
+    'igr_confidence',
+    'igr_confidence_level',
+    'igr_methodological_coverage',
+    'igr_boundary_status',
+    'igr_boundary_distance',
+    'ctx_entities',
+    'ctx_uaf_observed',
+    'ctx_sanctioned',
+    'ctx_alerted',
+  ];
+
+  const rows = ranked.map((row) => [
+    row.territory_id,
+    row.commune_code,
+    row.commune_name,
+    row.region_code,
+    row.region_name,
+    year,
+    methodVersion,
+    row.igr_score,
+    row.igr_percentile,
+    row.igr_level,
+    nationalRank.get(row.territory_id) ?? null,
+    regionalRank.get(row.territory_id) ?? null,
+    row.igr_confidence,
+    row.igr_confidence_level,
+    row.igr_methodological_coverage,
+    row.igr_boundary_status,
+    row.igr_boundary_distance,
+    row.ctx_entities,
+    row.ctx_uaf_observed,
+    row.ctx_sanctioned,
+    row.ctx_alerted,
+  ]);
+
+  const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(';')).join('\r\n')}`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `atlas_territorio_riesgo_comunal_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [commune, setCommune] = useState<string | null>(null);
@@ -72,147 +165,159 @@ export function Territorio({ onNavigate }: { onNavigate: (hash: string) => void 
         <h1 className="view-title">Territorio</h1>
       </header>
 
-      <details className="territory-method">
-        <summary className="territory-method-summary">
-          <div className="territory-method-summary-copy">
-            <strong>IGR · cobertura y confianza</strong>
-            <span>
-              IGR = amenaza territorial comunal · score + percentil nacional = lectura principal · confianza = robustez de la estimación.
-            </span>
-          </div>
-          <span className="territory-method-open">Metodología</span>
-          <span className="territory-method-chevron" aria-hidden>⌄</span>
-        </summary>
-
-        <div className="territory-method-body">
-          <div className="territory-method-lead">
-            <div>
-              <span className="territory-method-kicker">Lectura esencial</span>
-              <strong>El IGR describe el territorio, no a las entidades domiciliadas en él.</strong>
-              <p>
-                Un valor alto orienta dónde existe mayor amenaza territorial observada para LA. En el IGR vigente,
-                el 86% que antes se mostraba como “confianza” es en realidad <strong>cobertura metodológica</strong>:
-                indica cuánto del catálogo previsto está materializado y no diferencia por sí solo a una comuna de otra.
-              </p>
+      <div className="territory-method-export-row">
+        <details className="territory-method">
+          <summary className="territory-method-summary">
+            <div className="territory-method-summary-copy">
+              <strong>IGR · cobertura y confianza</strong>
+              <span>
+                IGR = amenaza territorial comunal · score + percentil nacional = lectura principal · confianza = robustez de la estimación.
+              </span>
             </div>
-            <div className="territory-method-scale">
-              <span>IGR</span>
-              <strong>0–100</strong>
-              <small>mayor valor = mayor amenaza observada</small>
+            <span className="territory-method-open">Metodología</span>
+            <span className="territory-method-chevron" aria-hidden>⌄</span>
+          </summary>
+
+          <div className="territory-method-body">
+            <div className="territory-method-lead">
+              <div>
+                <span className="territory-method-kicker">Lectura esencial</span>
+                <strong>El IGR describe el territorio, no a las entidades domiciliadas en él.</strong>
+                <p>
+                  Un valor alto orienta dónde existe mayor amenaza territorial observada para LA. En el IGR vigente,
+                  el 86% que antes se mostraba como “confianza” es en realidad <strong>cobertura metodológica</strong>:
+                  indica cuánto del catálogo previsto está materializado y no diferencia por sí solo a una comuna de otra.
+                </p>
+              </div>
+              <div className="territory-method-scale">
+                <span>IGR</span>
+                <strong>0–100</strong>
+                <small>mayor valor = mayor amenaza observada</small>
+              </div>
+            </div>
+
+            <div className="territory-method-grid">
+              <section className="territory-method-card territory-method-card-wide">
+                <span className="territory-method-kicker">1 · Fórmula publicada</span>
+                <div className="territory-method-formula mono">{m.formula}</div>
+                <p>
+                  La fórmula y los pesos se leen desde el contrato metodológico vigente. El <strong>score 0–100</strong> expresa magnitud
+                  de amenaza observada y el <strong>percentil nacional</strong> sitúa a cada comuna frente al resto del país sin crear una segunda fórmula.
+                </p>
+              </section>
+
+              <section className="territory-method-card">
+                <span className="territory-method-kicker">2 · Composición del IGR</span>
+                <div className="territory-method-equation mono">
+                  IGR = Σ (capa × peso)
+                </div>
+                <dl className="territory-method-dl">
+                  <dt>Amenazas precedentes LA</dt>
+                  <dd>{n1(m.capas.amenazas_precedentes_la * 100)}%</dd>
+                  <dt>Economía criminal y facilitadores</dt>
+                  <dd>{n1(m.capas.economia_criminal_facilitadores * 100)}%</dd>
+                  <dt>Contexto criminógeno</dt>
+                  <dd>{n1(m.capas.contexto_criminogeno * 100)}%</dd>
+                </dl>
+              </section>
+
+              <section className="territory-method-card">
+                <span className="territory-method-kicker">3 · Caracterización de cada capa</span>
+                <div className="territory-method-equation mono">
+                  C = I×{n1(m.caracterizacion.intensidad * 100)}% + P×{n1(m.caracterizacion.persistencia * 100)}% + T×{n1(m.caracterizacion.tendencia * 100)}% + A×{n1(m.caracterizacion.anomalia * 100)}%
+                </div>
+                <dl className="territory-method-dl compact">
+                  <dt>I · Intensidad</dt><dd>{n1(m.caracterizacion.intensidad * 100)}%</dd>
+                  <dt>P · Persistencia</dt><dd>{n1(m.caracterizacion.persistencia * 100)}%</dd>
+                  <dt>T · Tendencia</dt><dd>{n1(m.caracterizacion.tendencia * 100)}%</dd>
+                  <dt>A · Anomalía</dt><dd>{n1(m.caracterizacion.anomalia * 100)}%</dd>
+                </dl>
+              </section>
+
+              <section className="territory-method-card">
+                <span className="territory-method-kicker">4 · Cobertura metodológica vigente</span>
+                <p>
+                  El <strong>86%</strong> actual se obtiene por disponibilidad de capas y componentes. Es útil para
+                  advertir que el catálogo está incompleto, pero como hoy es igual para las 345 comunas
+                  <strong> no debe usarse para ordenarlas ni para expresar certeza estadística</strong>.
+                </p>
+                <div className="territory-method-callout">
+                  Cobertura ≠ confianza. Ausencia de una familia de datos tampoco equivale a menor amenaza.
+                </div>
+              </section>
+
+              <section className="territory-method-card">
+                <span className="territory-method-kicker">5 · Agregado regional</span>
+                <div className="territory-method-equation mono">
+                  IGR región = Σ IGR comuna / n comunas
+                </div>
+                <p>
+                  El agregado regional usa ahora <strong>media comunal simple</strong>. La cobertura se informa por
+                  separado: reducir el peso de una comuna por saber menos de ella podría ocultar justamente un territorio
+                  donde la evidencia es más débil.
+                </p>
+              </section>
+
+              <section className="territory-method-card territory-method-card-wide">
+                <span className="territory-method-kicker">6 · Cobertura y límites actuales</span>
+                <div className="territory-method-coverage">
+                  <div>
+                    <strong>Materializado hoy</strong>
+                    <p>{m.cobertura_delitos_base.materializadas.join(', ')}.</p>
+                  </div>
+                  <div>
+                    <strong>Aún no materializado con cobertura territorial suficiente</strong>
+                    <p>{m.cobertura_delitos_base.no_materializadas.join(', ')}.</p>
+                  </div>
+                </div>
+                <p className="territory-method-muted">
+                  Fuera del índice: {m.excluido_del_indice.join(', ')}. Las cifras de entidades, padrón y sanciones
+                  que aparecen junto a cada comuna son contexto descriptivo y no entran en el cálculo.
+                </p>
+              </section>
+
+              <section className="territory-method-card territory-method-card-wide">
+                <span className="territory-method-kicker">7 · Cómo leer el IGR</span>
+                <div className="territory-read-grid">
+                  <div>
+                    <strong>IGR · score</strong>
+                    <span>Magnitud de amenaza territorial observada en escala 0–100. Es la señal principal.</span>
+                  </div>
+                  <div>
+                    <strong>Percentil nacional</strong>
+                    <span>Posición relativa entre las comunas: P100 corresponde al extremo superior y P0 al inferior. No es probabilidad.</span>
+                  </div>
+                  <div>
+                    <strong>Confianza</strong>
+                    <span>Robustez de la estimación según cobertura temática, temporal, calidad de fuente y estabilidad. No modifica el score.</span>
+                  </div>
+                  <div>
+                    <strong>Banda</strong>
+                    <span>Apoyo secundario de lectura. Cerca de una frontera deben prevalecer score, percentil y evidencia.</span>
+                  </div>
+                  <div>
+                    <strong>Cobertura metodológica</strong>
+                    <span>Documenta cuánto del catálogo está materializado. No equivale a confianza ni a menor amenaza.</span>
+                  </div>
+                </div>
+                <p className="territory-method-muted">
+                  El IGR describe el territorio. Ninguno de estos elementos atribuye conducta, incumplimiento o probabilidad de LA/FT a una entidad domiciliada en la comuna.
+                </p>
+              </section>
             </div>
           </div>
+        </details>
 
-          <div className="territory-method-grid">
-            <section className="territory-method-card territory-method-card-wide">
-              <span className="territory-method-kicker">1 · Fórmula publicada</span>
-              <div className="territory-method-formula mono">{m.formula}</div>
-              <p>
-                La fórmula y los pesos se leen desde el contrato metodológico vigente. El <strong>score 0–100</strong> expresa magnitud
-                de amenaza observada y el <strong>percentil nacional</strong> sitúa a cada comuna frente al resto del país sin crear una segunda fórmula.
-              </p>
-            </section>
-
-            <section className="territory-method-card">
-              <span className="territory-method-kicker">2 · Composición del IGR</span>
-              <div className="territory-method-equation mono">
-                IGR = Σ (capa × peso)
-              </div>
-              <dl className="territory-method-dl">
-                <dt>Amenazas precedentes LA</dt>
-                <dd>{n1(m.capas.amenazas_precedentes_la * 100)}%</dd>
-                <dt>Economía criminal y facilitadores</dt>
-                <dd>{n1(m.capas.economia_criminal_facilitadores * 100)}%</dd>
-                <dt>Contexto criminógeno</dt>
-                <dd>{n1(m.capas.contexto_criminogeno * 100)}%</dd>
-              </dl>
-            </section>
-
-            <section className="territory-method-card">
-              <span className="territory-method-kicker">3 · Caracterización de cada capa</span>
-              <div className="territory-method-equation mono">
-                C = I×{n1(m.caracterizacion.intensidad * 100)}% + P×{n1(m.caracterizacion.persistencia * 100)}% + T×{n1(m.caracterizacion.tendencia * 100)}% + A×{n1(m.caracterizacion.anomalia * 100)}%
-              </div>
-              <dl className="territory-method-dl compact">
-                <dt>I · Intensidad</dt><dd>{n1(m.caracterizacion.intensidad * 100)}%</dd>
-                <dt>P · Persistencia</dt><dd>{n1(m.caracterizacion.persistencia * 100)}%</dd>
-                <dt>T · Tendencia</dt><dd>{n1(m.caracterizacion.tendencia * 100)}%</dd>
-                <dt>A · Anomalía</dt><dd>{n1(m.caracterizacion.anomalia * 100)}%</dd>
-              </dl>
-            </section>
-
-            <section className="territory-method-card">
-              <span className="territory-method-kicker">4 · Cobertura metodológica vigente</span>
-              <p>
-                El <strong>86%</strong> actual se obtiene por disponibilidad de capas y componentes. Es útil para
-                advertir que el catálogo está incompleto, pero como hoy es igual para las 345 comunas
-                <strong> no debe usarse para ordenarlas ni para expresar certeza estadística</strong>.
-              </p>
-              <div className="territory-method-callout">
-                Cobertura ≠ confianza. Ausencia de una familia de datos tampoco equivale a menor amenaza.
-              </div>
-            </section>
-
-            <section className="territory-method-card">
-              <span className="territory-method-kicker">5 · Agregado regional</span>
-              <div className="territory-method-equation mono">
-                IGR región = Σ IGR comuna / n comunas
-              </div>
-              <p>
-                El agregado regional usa ahora <strong>media comunal simple</strong>. La cobertura se informa por
-                separado: reducir el peso de una comuna por saber menos de ella podría ocultar justamente un territorio
-                donde la evidencia es más débil.
-              </p>
-            </section>
-
-            <section className="territory-method-card territory-method-card-wide">
-              <span className="territory-method-kicker">6 · Cobertura y límites actuales</span>
-              <div className="territory-method-coverage">
-                <div>
-                  <strong>Materializado hoy</strong>
-                  <p>{m.cobertura_delitos_base.materializadas.join(', ')}.</p>
-                </div>
-                <div>
-                  <strong>Aún no materializado con cobertura territorial suficiente</strong>
-                  <p>{m.cobertura_delitos_base.no_materializadas.join(', ')}.</p>
-                </div>
-              </div>
-              <p className="territory-method-muted">
-                Fuera del índice: {m.excluido_del_indice.join(', ')}. Las cifras de entidades, padrón y sanciones
-                que aparecen junto a cada comuna son contexto descriptivo y no entran en el cálculo.
-              </p>
-            </section>
-
-            <section className="territory-method-card territory-method-card-wide">
-              <span className="territory-method-kicker">7 · Cómo leer el IGR</span>
-              <div className="territory-read-grid">
-                <div>
-                  <strong>IGR · score</strong>
-                  <span>Magnitud de amenaza territorial observada en escala 0–100. Es la señal principal.</span>
-                </div>
-                <div>
-                  <strong>Percentil nacional</strong>
-                  <span>Posición relativa entre las comunas: P100 corresponde al extremo superior y P0 al inferior. No es probabilidad.</span>
-                </div>
-                <div>
-                  <strong>Confianza</strong>
-                  <span>Robustez de la estimación según cobertura temática, temporal, calidad de fuente y estabilidad. No modifica el score.</span>
-                </div>
-                <div>
-                  <strong>Banda</strong>
-                  <span>Apoyo secundario de lectura. Cerca de una frontera deben prevalecer score, percentil y evidencia.</span>
-                </div>
-                <div>
-                  <strong>Cobertura metodológica</strong>
-                  <span>Documenta cuánto del catálogo está materializado. No equivale a confianza ni a menor amenaza.</span>
-                </div>
-              </div>
-              <p className="territory-method-muted">
-                El IGR describe el territorio. Ninguno de estos elementos atribuye conducta, incumplimiento o probabilidad de LA/FT a una entidad domiciliada en la comuna.
-              </p>
-            </section>
-          </div>
-        </div>
-      </details>
+        <button
+          type="button"
+          className="atlas-export-button territory-export-button"
+          onClick={() => exportTerritoryCsv(comunas, cob.anio ?? null, m.version)}
+          disabled={comunas.length === 0}
+          title="Descargar el corte comunal completo sin ejecutar consultas adicionales"
+        >
+          ↓ Exportar CSV
+        </button>
+      </div>
 
       <div className="grid grid-4" style={{ marginBottom: 16 }}>
         <Stat label="Comunas evaluadas" value={n(cob.comunas)} foot={`año ${cob.anio ?? '—'}`} />
