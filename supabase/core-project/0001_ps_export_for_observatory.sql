@@ -3,24 +3,19 @@
 -- ESTE ARCHIVO NO CORRE EN EL PROYECTO DEL OBSERVATORIO. Vive aqui para que el
 -- puente quede versionado completo, pero se aplica en el proyecto core.
 --
--- Es lo unico que el Observatorio agrega al proyecto de ATLAS: una funcion de
--- solo lectura y un indice. No modifica ninguna tabla, ninguna vista y ninguna
--- funcion existente de ATLAS.
---
 -- AUTORIZACION. El token vive en Vault en los dos proyectos y se compara en
--- tiempo constante: una comparacion normal filtraria el prefijo correcto por el
--- tiempo de respuesta. La funcion es SECURITY DEFINER porque debe leer ps_* y
+-- tiempo constante. La función es SECURITY DEFINER porque debe leer ps_* y
 -- vault sin exponer privilegios al llamador.
 --
--- PAGINACION. El lado core responde por PostgREST, con statement_timeout de 8 s
--- en el rol authenticator. Ese tope es de la sentencia de nivel superior, asi
--- que un SET dentro de la funcion no lo levanta: la unica salida es que cada
--- pagina quepa. De ahi los limites y el indice de abajo.
+-- supplier_directory es deliberadamente distinto de suppliers: el primero
+-- exporta el universo completo por RUT para una marca contextual en Entity 360;
+-- suppliers conserva el orden analítico por prioridad usado por el monitor.
 
 create index if not exists ps_pair_metric_export_idx
   on public.ps_pair_metric (snapshot_id, review_priority desc nulls last, pair_id);
-comment on index public.ps_pair_metric_export_idx is
-  'Ordena exactamente como pagina el exportador. Sin el, cada pagina de 500 pares cuesta un seq scan sobre 494.867 filas (3,8 s) y el puente muere en el tope de 8 s; con el, 56 ms.';
+
+create index if not exists ps_supplier_metric_directory_idx
+  on public.ps_supplier_metric (snapshot_id, supplier_id);
 
 create or replace function public.ps_export_for_observatory(
   p_token text, p_section text default 'meta',
@@ -40,8 +35,6 @@ begin
   select decrypted_secret into v_expected
   from vault.decrypted_secrets where name = 'obs_bridge_token';
 
-  -- Comparacion de longitud constante: una comparacion normal filtra el prefijo
-  -- correcto por el tiempo de respuesta.
   if v_expected is null
      or p_token is null
      or length(p_token) <> length(v_expected)
@@ -97,6 +90,22 @@ begin
           order by review_priority desc nulls last, supplier_id
           limit v_limit offset v_offset) x;
 
+  elsif p_section = 'supplier_directory' then
+    select coalesce(jsonb_agg(to_jsonb(x)), '[]') into v_rows
+    from (
+      select s.snapshot_id, s.supplier_id, s.supplier_label,
+             s.amount_12m, s.order_count_12m, s.buyer_count,
+             s.top_buyer_id, b.buyer_label as top_buyer_label,
+             s.top_buyer_share, s.hhi, s.active_months,
+             s.first_seen, s.last_seen
+      from public.ps_supplier_metric s
+      left join public.ps_buyer_metric b
+        on b.snapshot_id = s.snapshot_id and b.buyer_id = s.top_buyer_id
+      where s.snapshot_id = v_snapshot
+      order by s.supplier_id
+      limit v_limit offset v_offset
+    ) x;
+
   elsif p_section = 'pairs' then
     select coalesce(jsonb_agg(to_jsonb(p)), '[]') into v_rows
     from (select snapshot_id, pair_id, buyer_id, supplier_id, buyer_label, supplier_label,
@@ -108,7 +117,6 @@ begin
           where snapshot_id = v_snapshot
           order by review_priority desc nulls last, pair_id
           limit v_limit offset v_offset) p;
-
   else
     return jsonb_build_object('ok', false, 'error', 'UNKNOWN_SECTION');
   end if;
