@@ -43,6 +43,7 @@ function metadataSheet(metadata: ExcelMeta[]): string {
   return `<Worksheet ss:Name="Metadatos"><Table>${row(['Campo', 'Valor'], true)}${rows}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal><TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane></WorksheetOptions></Worksheet>`;
 }
 
+// Reusable export for monitor universes; each monitor supplies its filtered rows and domain columns.
 export function downloadExcel<T>({ filename, sheetName, rows, columns, metadata }: {
   filename: string;
   sheetName: string;
