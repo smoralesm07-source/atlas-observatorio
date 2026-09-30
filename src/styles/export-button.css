@@ -27,6 +27,46 @@
   .atlas-export-button { white-space: normal; text-align: center; }
 }
 
+/* Territorio: la exportación acompaña a metodología sin ensanchar la cabecera
+   ni añadir consultas. El botón consume el mismo corte obs_territory_map ya cargado. */
+.territory-method-export-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 154px;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+.territory-method-export-row .territory-method {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.territory-export-button {
+  align-self: stretch;
+  min-width: 154px;
+  min-height: 54px;
+  padding-inline: 14px;
+  border-color: rgba(224, 112, 32, .38);
+  background: rgba(255, 250, 246, .86);
+  color: #9a4c18;
+  box-shadow: none;
+}
+.territory-export-button:hover:not(:disabled) {
+  border-color: rgba(224, 112, 32, .64);
+  background: rgba(255, 246, 238, .98);
+  color: #8d4213;
+  transform: none;
+}
+@media (max-width: 760px) {
+  .territory-method-export-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .territory-export-button {
+    width: 100%;
+    min-height: 38px;
+  }
+}
+
 /* Exportación de universos: misma jerarquía visual bajo la paginación */
 .osfl-export-below,
 .fintech-export-below {
