@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ErrorBox, Loading } from '../components/primitives';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
+import { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';
+import '../styles/export-button.css';
 
 const PAGE_SIZE = 8;
 
@@ -128,18 +130,43 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
   async function exportSnapshot() {
     setExporting(true);
     try {
-      const { data: payload, error } = await supabase.rpc('obs_fintech_export');
-      if (error) throw error;
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `atlas-fintech-corte-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      window.alert(`No fue posible exportar el corte: ${(error as Error).message}`);
-    } finally { setExporting(false); }
+      const rows: SearchRow[] = [];
+      const limit = 500;
+      let offset = 0;
+      let total = totalResults;
+      do {
+        const { data: payload, error } = await supabase.rpc('obs_fintech_search_v2', { p_q: q || null, p_region: filters.region || null, p_vertical: filters.vertical || null, p_model: filters.model || null, p_source: filters.source || null, p_regulator: filters.regulator, p_psav: filters.psav, p_operating: filters.operating, p_limit: limit, p_offset: offset });
+        if (error) throw error;
+        const batch = (payload as SearchData | null)?.rows ?? [];
+        total = Number((payload as SearchData | null)?.total ?? total);
+        rows.push(...batch);
+        offset += batch.length;
+        if (!batch.length) break;
+      } while (offset < total);
+
+      downloadExcel({ filename: `ATLAS_FINTECH_${exportDate()}.xls`, sheetName: 'Universo', rows, columns: [
+        { header: 'Nombre / Razón social', value: (row) => row.brand || row.legal_name },
+        { header: 'Razón social legal', value: (row) => row.legal_name },
+        { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT chileno' },
+        { header: 'Categoría Fintech', value: (row) => row.vertical ?? 'Por clasificar' },
+        { header: 'Modelo de negocio', value: (row) => row.business_model ?? '' },
+        { header: 'Estado operativo', value: (row) => operatingLabel(row.operating_status) },
+        { header: 'PSAV', value: (row) => psavLabel(row.psav_status) },
+        { header: 'Región', value: (row) => row.region ?? '' },
+        { header: 'Comuna', value: (row) => row.commune ?? '' },
+        { header: 'Actividad principal SII', value: (row) => row.sii_main_activity ?? '' },
+        { header: 'Huella CMF', value: (row) => row.has_cmf_public },
+        { header: 'Huella UAF', value: (row) => row.has_uaf_public },
+        { header: 'Fuentes', value: (row) => (row.source_codes ?? []).join(' · ') },
+      ], metadata: [
+        { label: 'Monitor', value: 'FINTECH' },
+        { label: 'Fecha de exportación', value: exportDate() },
+        { label: 'Registros exportados', value: rows.length },
+        { label: 'Consulta', value: q || 'Sin búsqueda de texto' },
+        ...filtersAsMetadata(filters),
+        { label: 'Fuente', value: 'ATLAS · obs_fintech_search_v2' },
+      ] });
+    } catch (error) { window.alert(`No fue posible exportar Fintech: ${(error as Error).message}`); } finally { setExporting(false); }
   }
 
   if (dashboard.loading) return <Loading label="Construyendo panorama del ecosistema Fintech…" />;
@@ -159,7 +186,7 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
       <div className="fintech-head-meta">
         <span><b>Corte de referencia</b>{formatDate(n.reference_date)}</span>
         <span><b>Atlas actualizado</b>{formatDateTime(n.refreshed_at)}</span>
-        <button onClick={exportSnapshot} disabled={exporting}>{exporting ? 'Exportando…' : 'Exportar corte'}</button>
+        <ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} />
       </div>
     </header>
 
@@ -222,7 +249,7 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
             <Select label="Estado operativo" value={filters.operating} options={['TODOS','ACTIVE','LIMITED','NO_NEW_BUSINESS','CEASED','UNKNOWN']} labels={{ TODOS:'Todos', ACTIVE:'Activa', LIMITED:'Limitada', NO_NEW_BUSINESS:'Sin nuevos negocios', CEASED:'Cesada', UNKNOWN:'Por validar' }} noEmpty onChange={(value) => setFilter('operating', value)} />
             <button className="fintech-clear" onClick={reset}>Limpiar</button>
           </div>
-          <div className="fintech-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><span>Página {Math.min(page + 1,pages)} de {pages}</span></div>
+          <div className="fintech-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className="atlas-export-actions"><ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} /><span>Página {Math.min(page + 1,pages)} de {pages}</span></div></div>
           {search.error ? <ErrorBox error={search.error} onRetry={search.reload} /> : <ResultTable rows={search.data?.rows ?? []} selected={selected} onSelect={(id) => { setSelected(id); setTab('timeline'); }} />}
           <div className="fintech-pagination">
             <button disabled={page===0} onClick={() => setPage((current) => Math.max(0,current-1))}>‹</button>

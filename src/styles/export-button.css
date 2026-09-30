@@ -1,0 +1,28 @@
+.atlas-export-button {
+  border: 1px solid rgba(84, 104, 124, .28);
+  background: rgba(255, 255, 255, .72);
+  color: #435160;
+  border-radius: 8px;
+  padding: 7px 10px;
+  min-height: 32px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+  white-space: nowrap;
+}
+.atlas-export-button:hover:not(:disabled) {
+  border-color: rgba(224, 112, 32, .55);
+  background: rgba(255, 248, 242, .95);
+  color: #a34d13;
+  transform: translateY(-1px);
+}
+.atlas-export-button:disabled { opacity: .48; cursor: default; }
+.atlas-export-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.atlas-export-inline { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+@media (max-width: 760px) {
+  .atlas-export-actions { width: 100%; justify-content: space-between; }
+  .atlas-export-button { white-space: normal; text-align: center; }
+}

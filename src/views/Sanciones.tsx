@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/sanciones.css';
 import '../styles/sanciones-detail-fit.css';
+import { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';
+import '../styles/export-button.css';
 
 type Filters = {
   q: string;
@@ -176,6 +178,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,6 +224,45 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
   function patch(next: Partial<Filters>) { setFilters((f) => ({ ...f, ...next })); setOffset(0); }
   function clear() { setFilters(EMPTY); setSearchDraft(''); setOffset(0); }
   function runSearch() { patch({ q: searchDraft.trim() }); }
+
+  async function exportUniverse() {
+    setExporting(true);
+    try {
+      const rows: EventItem[] = [];
+      const limit = 500;
+      let exportOffset = 0;
+      let total = n(events?.page?.total);
+      do {
+        const payload = await sanctionsRpc<EventsResponse>({ kind: 'events', ...filters, limit, offset: exportOffset });
+        const batch = payload.items ?? [];
+        total = n(payload.page?.total ?? total);
+        rows.push(...batch);
+        exportOffset += batch.length;
+        if (!batch.length) break;
+      } while (exportOffset < total);
+
+      downloadExcel({ filename: `ATLAS_Sanciones_${exportDate()}.xls`, sheetName: 'Universo', rows, columns: [
+        { header: 'Nombre / Razón social', value: (row) => row.canonical_name || row.source_entity_name || 'Entidad no resuelta' },
+        { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT' },
+        { header: 'Categoría', value: (row) => eventKindsOf(row).map(eventKindLabel).join(' · ') },
+        { header: 'Organismo sancionador', value: (row) => row.regulator ?? '' },
+        { header: 'Región', value: (row) => row.region ?? '' },
+        { header: 'Fecha sanción', value: (row) => row.event_date ?? '' },
+        { header: 'Monto CLP', value: (row) => n(row.amount_clp) || '' },
+        { header: 'Monto UF', value: (row) => n(row.amount_uf) || '' },
+        { header: 'Materia / infracción', value: (row) => (row.reasons?.length ? row.reasons.join(' · ') : row.reason) ?? '' },
+        { header: 'Resolución / referencia', value: (row) => row.resolution_ref ?? '' },
+        { header: 'Universo', value: (row) => universeLabel(row) },
+        { header: 'Prioridad Atlas', value: (row) => priority(row.priority_score)[0] },
+      ], metadata: [
+        { label: 'Monitor', value: 'Sanciones' },
+        { label: 'Fecha de exportación', value: exportDate() },
+        { label: 'Registros exportados', value: rows.length },
+        ...filtersAsMetadata(filters),
+        { label: 'Fuente', value: 'ATLAS · atlas_v2_sanctions_query / events' },
+      ] });
+    } catch (error) { window.alert(`No fue posible exportar Sanciones: ${(error as Error).message}`); } finally { setExporting(false); }
+  }
 
   if (loading && !dashboard) return <div className="san-loading"><span className="san-spinner" /><strong>Construyendo monitor de sanciones…</strong></div>;
   if (error && !dashboard) return <div className="san-error"><strong>No fue posible cargar Sanciones.</strong><span>{error}</span><button onClick={() => setReload((x) => x + 1)}>Reintentar</button></div>;
@@ -289,6 +331,7 @@ export function Sanciones({ onNavigate }: { onNavigate: (hash: string) => void }
     <div className="san-workspace">
       <section className="san-panel san-events">
         <PanelHead title={`Casos prioritarios · ${count(page.total)}`} subtitle="Una fila por sanción/resolución y entidad. Las medidas asociadas se consolidan en la ficha." />
+        <div className="atlas-export-inline"><ExportButton exporting={exporting} count={n(page.total)} onClick={exportUniverse} /></div>
         <div className="san-table-head"><span>Entidad / RUT</span><span>Universo</span><span>Supervisor</span><span>Región</span><span>Tipo de sanción</span><span>Monto</span><span>Fecha</span><span>Prioridad</span><span /></div>
         <div className="san-event-rows">{items.length ? items.map((item) => <EventRow key={item.event_id} item={item} onClick={() => setSelected(item)} active={selected?.event_id === item.event_id} />) : <div className="san-empty">Sin sanciones para los filtros seleccionados.</div>}</div>
         <div className="san-pager"><span>{n(page.total) ? `${count(n(page.offset) + 1)}–${count(Math.min(n(page.total), n(page.offset) + n(page.limit || PAGE_SIZE)))} de ${count(page.total)}` : '0 resultados'}</span><div><button disabled={n(page.offset) <= 0} onClick={() => setOffset(Math.max(0, n(page.offset) - n(page.limit || PAGE_SIZE)))}>← Anterior</button><button disabled={n(page.offset) + n(page.limit || PAGE_SIZE) >= n(page.total)} onClick={() => setOffset(n(page.offset) + n(page.limit || PAGE_SIZE))}>Siguiente →</button></div></div>

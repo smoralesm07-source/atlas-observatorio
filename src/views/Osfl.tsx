@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { ErrorBox, Loading } from '../components/primitives';
+import { supabase } from '../lib/supabase';
+import { downloadExcel, ExportButton, exportDate, filtersAsMetadata } from '../lib/excelExport';
+import '../styles/export-button.css';
 
 const PAGE_SIZE = 8;
 
@@ -59,6 +62,7 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('timeline');
+  const [exporting, setExporting] = useState(false);
 
   const search = useRpc<SearchData>('obs_osfl_search', {
     p_q: debouncedQuery || null,
@@ -95,6 +99,43 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
   function focusSource(source: string) {
     setFilters({ ...EMPTY, source });
     setPage(0);
+  }
+
+  async function exportUniverse() {
+    setExporting(true);
+    try {
+      const rows: EntityRow[] = [];
+      const limit = 500;
+      let offset = 0;
+      let total = totalResults;
+      do {
+        const { data: payload, error } = await supabase.rpc('obs_osfl_search', { p_q: debouncedQuery || null, p_region: filters.region || null, p_type: filters.type || null, p_activity: filters.activity || null, p_source: filters.source || null, p_uaf: filters.uaf, p_public_funds: filters.publicFunds, p_sanctions: filters.sanctions, p_limit: limit, p_offset: offset });
+        if (error) throw error;
+        const batch = (payload as SearchData | null)?.rows ?? [];
+        total = Number((payload as SearchData | null)?.total ?? total);
+        rows.push(...batch);
+        offset += batch.length;
+        if (!batch.length) break;
+      } while (offset < total);
+
+      downloadExcel({ filename: `ATLAS_OSFL_${exportDate()}.xls`, sheetName: 'Universo', rows, columns: [
+        { header: 'Nombre / Razón social', value: (row) => row.name },
+        { header: 'RUT', value: (row) => row.rut ?? 'Sin RUT' },
+        { header: 'Categoría OSFL', value: (row) => row.type },
+        { header: 'Región', value: (row) => row.region ?? '' },
+        { header: 'Comuna', value: (row) => row.commune ?? '' },
+        { header: 'Actividad / giro principal', value: (row) => row.main_activity ?? '' },
+        { header: 'Estado', value: (row) => row.status ?? '' },
+        { header: 'Fuentes / cruces', value: (row) => Object.entries(row.sources ?? {}).filter(([, present]) => present).map(([source]) => source).join(' · ') },
+      ], metadata: [
+        { label: 'Monitor', value: 'OSFL' },
+        { label: 'Fecha de exportación', value: exportDate() },
+        { label: 'Registros exportados', value: rows.length },
+        { label: 'Consulta', value: debouncedQuery || 'Sin búsqueda de texto' },
+        ...filtersAsMetadata(filters),
+        { label: 'Fuente', value: 'ATLAS · obs_osfl_search' },
+      ] });
+    } catch (error) { window.alert(`No fue posible exportar OSFL: ${(error as Error).message}`); } finally { setExporting(false); }
   }
 
   if (dashboard.loading) return <Loading label="Construyendo panorama nacional de OSFL…" />;
@@ -173,7 +214,7 @@ export function Osfl({ onNavigate }: { onNavigate: (hash: string) => void }) {
               <button className="osfl-clear" onClick={reset}>Limpiar</button>
             </div>
 
-            <div className="osfl-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className="osfl-page-info">Página {Math.min(page + 1, pages)} de {pages}</div></div>
+            <div className="osfl-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className="atlas-export-actions"><ExportButton exporting={exporting} count={totalResults} onClick={exportUniverse} /><div className="osfl-page-info">Página {Math.min(page + 1, pages)} de {pages}</div></div></div>
             {search.error ? <ErrorBox error={search.error} onRetry={search.reload} /> : <ResultTable rows={search.data?.rows ?? []} selectedId={selectedId} onSelect={setSelectedId} />}
             <div className="osfl-pagination">
               <button disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>‹</button>
