@@ -149,6 +149,54 @@
 .entity360-state-years span { font-size: 12px; font-weight: 750; }
 .entity360-state-years small { font-size: 9px; line-height: 1.3; color: var(--ink-4); }
 
+.entity360-state-payers {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid color-mix(in srgb, var(--ink-4) 10%, transparent);
+}
+
+.entity360-state-payers-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+
+.entity360-state-payers-head strong { font-size: 11px; color: var(--ink-3); }
+.entity360-state-payers-head span,
+.entity360-state-payer-loading { font-size: 9px; color: var(--ink-4); }
+.entity360-state-payer-loading { padding: 10px 0 2px; }
+
+.entity360-state-payers-list {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid color-mix(in srgb, var(--ink-4) 8%, transparent);
+}
+
+.entity360-state-payer-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink-4) 8%, transparent);
+}
+
+.entity360-state-payer-year { font-size: 10px; font-weight: 750; color: var(--ink-4); }
+.entity360-state-payer-row > div { min-width: 0; }
+.entity360-state-payer-row > div strong,
+.entity360-state-payer-row > div small { display: block; }
+.entity360-state-payer-row > div strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 650;
+}
+.entity360-state-payer-row > div small { margin-top: 2px; font-size: 9px; color: var(--ink-4); }
+.entity360-state-payer-row > b { font-size: 10px; font-variant-numeric: tabular-nums; }
+
 .entity360-state-relation-popover footer {
   margin-top: 12px;
   padding-top: 10px;
@@ -177,4 +225,5 @@
     text-align: left;
     margin-bottom: 6px;
   }
+  .entity360-state-payers-head { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
