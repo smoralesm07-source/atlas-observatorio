@@ -27,8 +27,7 @@
   .atlas-export-button { white-space: normal; text-align: center; }
 }
 
-
-/* OSFL: exportación asociada a la navegación de resultados */
+/* OSFL: exportación alineada bajo la paginación del universo */
 .osfl-export-below {
   display: flex;
   justify-content: center;
