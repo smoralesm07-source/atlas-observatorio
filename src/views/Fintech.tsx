@@ -186,7 +186,6 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
       <div className="fintech-head-meta">
         <span><b>Corte de referencia</b>{formatDate(n.reference_date)}</span>
         <span><b>Atlas actualizado</b>{formatDateTime(n.refreshed_at)}</span>
-        <ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} />
       </div>
     </header>
 
@@ -249,13 +248,14 @@ export function Fintech({ onNavigate }: { onNavigate: (hash: string) => void }) 
             <Select label="Estado operativo" value={filters.operating} options={['TODOS','ACTIVE','LIMITED','NO_NEW_BUSINESS','CEASED','UNKNOWN']} labels={{ TODOS:'Todos', ACTIVE:'Activa', LIMITED:'Limitada', NO_NEW_BUSINESS:'Sin nuevos negocios', CEASED:'Cesada', UNKNOWN:'Por validar' }} noEmpty onChange={(value) => setFilter('operating', value)} />
             <button className="fintech-clear" onClick={reset}>Limpiar</button>
           </div>
-          <div className="fintech-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><div className="atlas-export-actions"><ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} /><span>Página {Math.min(page + 1,pages)} de {pages}</span></div></div>
+          <div className="fintech-results-head"><div><b>Resultados</b><span>{search.loading ? 'Actualizando…' : `${formatNumber(totalResults)} entidades`}</span></div><span>Página {Math.min(page + 1,pages)} de {pages}</span></div>
           {search.error ? <ErrorBox error={search.error} onRetry={search.reload} /> : <ResultTable rows={search.data?.rows ?? []} selected={selected} onSelect={(id) => { setSelected(id); setTab('timeline'); }} />}
           <div className="fintech-pagination">
             <button disabled={page===0} onClick={() => setPage((current) => Math.max(0,current-1))}>‹</button>
             {pageButtons(page,pages).map((item) => <button key={item} data-active={item===page} onClick={() => setPage(item)}>{item+1}</button>)}
             <button disabled={page+1>=pages} onClick={() => setPage((current) => Math.min(pages-1,current+1))}>›</button>
           </div>
+          <div className="fintech-export-below"><ExportButton exporting={exporting} count={totalResults} onClick={exportSnapshot} /></div>
         </div>
         <QuickPanel detail={detail.data} functional={functional.data} loading={detail.loading || functional.loading} error={detail.error || functional.error} tab={tab} onTab={setTab} onRetry={() => { detail.reload(); functional.reload(); }} onOpen={(id) => onNavigate(`#/entidad/${encodeURIComponent(id)}`)} />
       </div>
