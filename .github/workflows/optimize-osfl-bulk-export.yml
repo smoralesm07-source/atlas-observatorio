@@ -1,0 +1,40 @@
+name: Optimize OSFL bulk export
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/optimize-osfl-bulk-export.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply export optimization
+        run: python3 scripts/patch_osfl_bulk_export.py
+
+      - name: Validate build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit optimized export
+        run: |
+          rm .github/workflows/optimize-osfl-bulk-export.yml scripts/patch_osfl_bulk_export.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "perf(osfl): optimize bulk export for large universes"
+          git push origin HEAD:main
