@@ -4,9 +4,11 @@ import { supabase } from '../lib/supabase';
 import { downloadExcel, exportDate, type ExcelColumn } from '../lib/excelExport';
 import '../styles/state-relations.css';
 import '../styles/state-relations-compact.css';
+import '../styles/huella-publica-export-progress.css';
 
 type Relation = 'ANY' | 'STATE_INTERACTION' | 'STATE_SUPPLIER' | 'PUBLIC_FUNDS' | 'PUBLIC_FUNDS_RECIPIENT' | 'PUBLIC_FUNDS_SUPPLIER';
 type MarkCode = 'OSFL' | 'SO' | 'POTENTIAL_SO' | 'RES_NEW' | 'SII' | 'SII_TG' | 'SII_NO_EMPLOYEES' | 'PRESS' | 'SANCTIONS' | 'FINTECH';
+type ExportKind = 'RUT' | 'FULL';
 
 type SampleRow = {
   entity_id: string;
@@ -58,6 +60,7 @@ type SampleFilterPayload = {
 
 const PAGE = 100;
 const EXPORT_MAX_ROWS = 100000;
+const EXPORT_CHUNK = 1000;
 
 const MARKS: { code: MarkCode; label: string }[] = [
   { code: 'OSFL', label: 'OSFL' },
@@ -125,6 +128,8 @@ export function HuellaSampleBuilder({
   const [appliedFilters, setAppliedFilters] = useState<SampleFilterPayload | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportKind, setExportKind] = useState<ExportKind | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportColumns, setExportColumns] = useState<Set<string>>(() => new Set(DEFAULT_EXPORT));
 
@@ -180,6 +185,8 @@ export function HuellaSampleBuilder({
     setAppliedFilters(null);
     setExportOpen(false);
     setExportError(null);
+    setExportProgress(0);
+    setExportKind(null);
   }
 
   function toggleMark(code: MarkCode) {
@@ -198,14 +205,19 @@ export function HuellaSampleBuilder({
   async function fetchAllRows(): Promise<SampleRow[]> {
     if (!appliedFilters || !resultsActive) return [];
     if (exportTooLarge) throw new Error(`La muestra contiene ${total.toLocaleString('es-CL')} entidades. Acótala a ${EXPORT_MAX_ROWS.toLocaleString('es-CL')} o menos antes de exportar.`);
+
     const all: SampleRow[] = [];
-    const chunk = 1000;
-    for (let offset = 0; offset < total; offset += chunk) {
-      const { data, error } = await supabase.rpc('obs_state_sample_query', { p_request: { ...appliedFilters, limit: chunk, offset } });
+    for (let offset = 0; offset < total; offset += EXPORT_CHUNK) {
+      const { data, error } = await supabase.rpc('obs_state_sample_query', {
+        p_request: { ...appliedFilters, limit: EXPORT_CHUNK, offset },
+      });
       if (error) throw error;
+
       const batch = ((data as SampleResponse)?.rows ?? []) as SampleRow[];
       all.push(...batch);
-      if (batch.length < chunk) break;
+      const fetched = Math.min(total, all.length);
+      setExportProgress(total > 0 ? Math.min(98, Math.max(1, Math.round((fetched / total) * 98))) : 0);
+      if (batch.length < EXPORT_CHUNK) break;
     }
     return all;
   }
@@ -213,10 +225,13 @@ export function HuellaSampleBuilder({
   async function exportRows(rutOnly = false) {
     if (!resultsActive || !total || exporting || exportTooLarge) return;
     setExportError(null);
+    setExportKind(rutOnly ? 'RUT' : 'FULL');
+    setExportProgress(1);
     setExporting(true);
     try {
       const all = await fetchAllRows();
       const selected = rutOnly ? new Set(['rut', 'rut_body']) : exportColumns;
+      setExportProgress(99);
       downloadExcel({
         filename: `atlas_huella_publica_${exportDate()}${rutOnly ? '_ruts' : ''}.xls`,
         sheetName: rutOnly ? 'RUT muestra' : 'Muestra',
@@ -232,10 +247,16 @@ export function HuellaSampleBuilder({
           { label: 'Criterio', value: 'La nómina exporta todas las entidades que cumplen los filtros aplicados, no sólo la página visible.' },
         ],
       });
+      setExportProgress(100);
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : 'No fue posible preparar la exportación.');
+      const detail = error instanceof Error ? error.message : 'No fue posible preparar la exportación.';
+      setExportError(/timeout|57014|canceling statement/i.test(detail)
+        ? 'Una página de la exportación excedió la ventana ampliada de consulta. Acota el universo y vuelve a intentarlo; las páginas ya descargadas no generan un archivo parcial.'
+        : detail);
     } finally {
       setExporting(false);
+      setExportKind(null);
+      setExportProgress(0);
     }
   }
 
@@ -275,10 +296,15 @@ export function HuellaSampleBuilder({
           <small>Atlas no ejecuta una consulta masiva de forma automática al abrir esta sección.</small>
         </div>
       ) : <>
-        <div className="sample-toolbar"><div><span>Resultado de la muestra</span><strong>{sample.loading ? 'Calculando…' : `${total.toLocaleString('es-CL')} entidades`}</strong><small className="sample-export-note">La exportación incluye toda la nómina filtrada, no sólo las filas de esta página.</small></div><div className="sample-actions"><button className="state-secondary" disabled={!total || exporting || exportTooLarge} onClick={() => void exportRows(true)}>⇩ Solo RUT</button><button className="state-primary" disabled={!total || exporting || exportTooLarge} onClick={() => setExportOpen((current) => !current)}>{exporting ? 'Preparando…' : '⇩ Exportar nómina filtrada'}</button></div></div>
+        <div className="sample-toolbar"><div><span>Resultado de la muestra</span><strong>{sample.loading ? 'Calculando…' : `${total.toLocaleString('es-CL')} entidades`}</strong><small className="sample-export-note">La exportación incluye toda la nómina filtrada, no sólo las filas de esta página.</small></div><div className="sample-actions"><button className="state-secondary" disabled={!total || exporting || exportTooLarge} onClick={() => void exportRows(true)}>{exporting && exportKind === 'RUT' ? `Preparando… ${exportProgress}%` : '⇩ Solo RUT'}</button><button className="state-primary" disabled={!total || exporting || exportTooLarge} onClick={() => setExportOpen((current) => !current)}>{exporting && exportKind === 'FULL' ? `Preparando… ${exportProgress}%` : '⇩ Exportar nómina filtrada'}</button></div></div>
+        {exporting && <div className="sample-export-progress" role="status" aria-live="polite">
+          <div><strong>{exportKind === 'RUT' ? 'Preparando nómina de RUT' : 'Preparando nómina filtrada'}</strong><span>{exportProgress}%</span></div>
+          <span className="sample-export-progress-track" aria-hidden="true"><i style={{ width: `${exportProgress}%` }} /></span>
+          <small>Atlas descarga la muestra por bloques para admitir nóminas extensas sin congelar la interfaz.</small>
+        </div>}
         {exportTooLarge && <div className="state-error">La muestra supera {EXPORT_MAX_ROWS.toLocaleString('es-CL')} entidades. Acota los filtros antes de exportar.</div>}
         {exportError && <div className="state-error">{exportError}</div>}
-        {exportOpen && !exportTooLarge && <div className="export-config"><div><strong>Columnas del archivo</strong><span>Selecciona sólo lo necesario para la consulta posterior.</span></div><div className="export-columns">{EXPORT_OPTIONS.map((column) => <label key={column.key}><input type="checkbox" checked={exportColumns.has(column.key)} onChange={() => toggleColumn(column.key)} />{column.label}</label>)}</div><button className="state-primary" disabled={!exportColumns.size || exporting} onClick={() => void exportRows(false)}>Generar Excel ({total.toLocaleString('es-CL')} entidades)</button></div>}
+        {exportOpen && !exportTooLarge && <div className="export-config"><div><strong>Columnas del archivo</strong><span>Selecciona sólo lo necesario para la consulta posterior.</span></div><div className="export-columns">{EXPORT_OPTIONS.map((column) => <label key={column.key}><input type="checkbox" checked={exportColumns.has(column.key)} onChange={() => toggleColumn(column.key)} />{column.label}</label>)}</div><button className="state-primary" disabled={!exportColumns.size || exporting} onClick={() => void exportRows(false)}>{exporting && exportKind === 'FULL' ? `Preparando… ${exportProgress}%` : `Generar Excel (${total.toLocaleString('es-CL')} entidades)`}</button></div>}
         {sample.error && <div className="state-error">{sample.error}</div>}
         {!sample.loading && !sample.error && rows.length === 0 && <div className="state-empty state-empty-large"><div className="state-empty-icon">⌁</div><strong>La combinación no devuelve entidades</strong><span>Ajusta los filtros y vuelve a aplicarlos.</span></div>}
         {rows.length > 0 && <div className="sample-table-wrap"><table className="sample-table"><thead><tr><th>Entidad</th><th>Marcas</th><th>Huella pública</th><th>Principal contraparte</th><th></th></tr></thead><tbody>{rows.map((row) => <tr key={row.entity_id}><td><strong>{row.name}</strong><small>{row.rut} · {row.region || 'Región s/d'}</small></td><td><div className="row-marks">{(row.marks ?? []).slice(0, 5).map((mark) => <span key={mark}>{markLabel(mark)}</span>)}</div>{row.is_osfl && <small>{row.osfl_confirmation_level || 'OSFL radar'}</small>}</td><td><div className="money-stack">{Number(row.public_funds_amount || 0) > 0 && <span><b>{clp(relevantFundsAmount(row, relation))}</b><small>Presupuesto Abierto · {fromYear}–{toYear}</small></span>}{row.is_state_supplier && <span><b>{clp(row.market_amount_12m)}</b><small>Mercado Público · 12m · {num(row.market_order_count_12m)} OC</small></span>}</div></td><td>{row.top_payer_name || row.top_buyer_label || '—'}{row.public_funds_payer_count ? <small>{num(row.public_funds_payer_count)} pagadores</small> : null}</td><td><button className="row-open" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(row.entity_id)}`)}>Entidad 360 →</button></td></tr>)}</tbody></table></div>}
