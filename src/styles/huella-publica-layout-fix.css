@@ -1,0 +1,2 @@
+.huella-workspace[data-mode='ENTITY']>.state-page .state-flow-chart + .detail-list{grid-area:buyers}
+.huella-workspace[data-mode='ENTITY']>.state-page .state-flow-chart + .detail-list + .detail-list{grid-area:payers}
