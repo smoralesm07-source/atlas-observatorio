@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { RelacionEstado } from './RelacionEstado';
+import { HuellaEntityExplorer } from './HuellaEntityExplorer';
+import { HuellaSampleBuilder } from './HuellaSampleBuilder';
 import { AgencyBeneficiaryUniverse } from './AgencyBeneficiaryUniverse';
 import '../styles/agency-beneficiaries.css';
 import '../styles/huella-publica-premium.css';
@@ -43,19 +44,19 @@ export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => vo
           </nav>
 
           <div className="huella-global-period" aria-label="Período de análisis">
-            <span>Período</span>
+            <span>Período de análisis</span>
             <div>
-              <input aria-label="Año inicial" type="number" min={FIRST_PUBLIC_FUNDS_YEAR} max={toYear} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || FIRST_PUBLIC_FUNDS_YEAR))} />
+              <input aria-label="Año inicial" type="number" min={FIRST_PUBLIC_FUNDS_YEAR} max={toYear} value={fromYear} onChange={(event) => setFromYear(Math.min(toYear, Number(event.target.value) || FIRST_PUBLIC_FUNDS_YEAR))} />
               <b>→</b>
-              <input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} />
+              <input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(event) => setToYear(Math.max(fromYear, Number(event.target.value) || CURRENT_YEAR))} />
             </div>
           </div>
         </div>
       </header>
 
-      {mode === 'PUBLIC_SERVICES'
-        ? <AgencyBeneficiaryUniverse onNavigate={onNavigate} fromYear={fromYear} toYear={toYear} compactShell />
-        : <RelacionEstado onNavigate={onNavigate} mode={mode === 'SAMPLE' ? 'sample' : 'entity'} fromYear={fromYear} toYear={toYear} compactShell />}
+      {mode === 'ENTITY' && <HuellaEntityExplorer onNavigate={onNavigate} fromYear={fromYear} toYear={toYear} />}
+      {mode === 'SAMPLE' && <HuellaSampleBuilder onNavigate={onNavigate} fromYear={fromYear} toYear={toYear} />}
+      {mode === 'PUBLIC_SERVICES' && <AgencyBeneficiaryUniverse onNavigate={onNavigate} fromYear={fromYear} toYear={toYear} compactShell />}
     </div>
   );
 }
