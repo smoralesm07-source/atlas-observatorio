@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { RelacionEstado } from './RelacionEstado';
 import { AgencyBeneficiaryUniverse } from './AgencyBeneficiaryUniverse';
 import '../styles/agency-beneficiaries.css';
@@ -6,31 +6,18 @@ import '../styles/huella-publica-premium.css';
 
 type AnalysisMode = 'ENTITY' | 'SAMPLE' | 'PUBLIC_SERVICES';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [mode, setMode] = useState<AnalysisMode>('ENTITY');
-
-  useEffect(() => {
-    if (mode === 'PUBLIC_SERVICES') return undefined;
-
-    const syncInnerMode = () => {
-      const page = document.querySelector<HTMLElement>('.huella-workspace > .state-page');
-      const buttons = page?.querySelectorAll<HTMLButtonElement>('.state-toolbar .state-tabs button');
-      if (!buttons || buttons.length < 2) return false;
-      const target = mode === 'ENTITY' ? buttons[0] : buttons[1];
-      if (target?.dataset.active !== 'true') target?.click();
-      return true;
-    };
-
-    if (syncInnerMode()) return undefined;
-    const timer = window.setTimeout(syncInnerMode, 0);
-    return () => window.clearTimeout(timer);
-  }, [mode]);
+  const [fromYear, setFromYear] = useState(2020);
+  const [toYear, setToYear] = useState(CURRENT_YEAR);
 
   const description = mode === 'PUBLIC_SERVICES'
     ? 'Parte desde un servicio público y reconstruye a quiénes compró, pagó o transfirió recursos durante el período consultado.'
     : mode === 'SAMPLE'
       ? 'Construye cohortes de entidades a partir de su relación económica con el Estado y las marcas disponibles en Atlas.'
-      : 'Reconstruye la relación económica observada de una entidad con el Estado: compras, pagos, traspasos, organismos y contrapartes.';
+      : 'Reconstruye la relación económica observada de una entidad con el Estado y concentra compras, pagos, organismos y contexto Atlas en una sola vista.';
 
   return (
     <div className="huella-workspace fade-in" data-mode={mode}>
@@ -41,34 +28,33 @@ export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => vo
           <p>{description}</p>
         </div>
 
-        <nav className="huella-analysis-tabs" role="tablist" aria-label="Opciones de análisis de Huella pública">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'ENTITY'}
-            data-active={mode === 'ENTITY'}
-            onClick={() => setMode('ENTITY')}
-          >Explorar entidad</button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'SAMPLE'}
-            data-active={mode === 'SAMPLE'}
-            onClick={() => setMode('SAMPLE')}
-          >Construir muestra</button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'PUBLIC_SERVICES'}
-            data-active={mode === 'PUBLIC_SERVICES'}
-            onClick={() => setMode('PUBLIC_SERVICES')}
-          >Servicios públicos</button>
-        </nav>
+        <div className="huella-top-controls">
+          <nav className="huella-analysis-tabs" role="tablist" aria-label="Opciones de análisis de Huella pública">
+            <button type="button" role="tab" aria-selected={mode === 'ENTITY'} data-active={mode === 'ENTITY'} onClick={() => setMode('ENTITY')}>
+              <i aria-hidden="true">⌕</i><span>Explorar entidad</span>
+            </button>
+            <button type="button" role="tab" aria-selected={mode === 'SAMPLE'} data-active={mode === 'SAMPLE'} onClick={() => setMode('SAMPLE')}>
+              <i aria-hidden="true">▦</i><span>Construir muestra</span>
+            </button>
+            <button type="button" role="tab" aria-selected={mode === 'PUBLIC_SERVICES'} data-active={mode === 'PUBLIC_SERVICES'} onClick={() => setMode('PUBLIC_SERVICES')}>
+              <i aria-hidden="true">⌂</i><span>Servicios públicos</span>
+            </button>
+          </nav>
+
+          <div className="huella-global-period" aria-label="Período de análisis">
+            <span>Período</span>
+            <div>
+              <input aria-label="Año inicial" type="number" min={2016} max={toYear} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || 2020))} />
+              <b>→</b>
+              <input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} />
+            </div>
+          </div>
+        </div>
       </header>
 
       {mode === 'PUBLIC_SERVICES'
-        ? <AgencyBeneficiaryUniverse onNavigate={onNavigate} />
-        : <RelacionEstado onNavigate={onNavigate} />}
+        ? <AgencyBeneficiaryUniverse onNavigate={onNavigate} fromYear={fromYear} toYear={toYear} compactShell />
+        : <RelacionEstado onNavigate={onNavigate} mode={mode === 'SAMPLE' ? 'sample' : 'entity'} fromYear={fromYear} toYear={toYear} compactShell />}
     </div>
   );
 }
