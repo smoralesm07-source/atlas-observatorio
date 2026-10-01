@@ -49,6 +49,10 @@ export type ProviderCounterpartyHistorySummary = {
   share_pct?: number | null;
   rank?: number | null;
   buyer_count?: number | null;
+  buyer_amount_clp?: number | null;
+  buyer_share_pct?: number | null;
+  buyer_supplier_rank?: number | null;
+  buyer_supplier_count?: number | null;
 };
 
 export type ProviderCounterpartyHistoryYear = {
@@ -57,6 +61,10 @@ export type ProviderCounterpartyHistoryYear = {
   order_count?: number | null;
   supplier_amount_clp?: number | null;
   share_pct?: number | null;
+  buyer_amount_clp?: number | null;
+  buyer_share_pct?: number | null;
+  buyer_supplier_rank?: number | null;
+  buyer_supplier_count?: number | null;
 };
 
 export type ProviderCounterpartyHistoryResponse = {
