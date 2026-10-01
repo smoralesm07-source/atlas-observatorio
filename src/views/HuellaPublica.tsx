@@ -1,50 +1,74 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RelacionEstado } from './RelacionEstado';
 import { AgencyBeneficiaryUniverse } from './AgencyBeneficiaryUniverse';
 import '../styles/agency-beneficiaries.css';
 import '../styles/huella-publica-premium.css';
 
-type Orientation = 'ENTITY_TO_STATE' | 'STATE_TO_ENTITY';
+type AnalysisMode = 'ENTITY' | 'SAMPLE' | 'PUBLIC_SERVICES';
 
 export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => void }) {
-  const [orientation, setOrientation] = useState<Orientation>('ENTITY_TO_STATE');
+  const [mode, setMode] = useState<AnalysisMode>('ENTITY');
+
+  useEffect(() => {
+    if (mode === 'PUBLIC_SERVICES') return undefined;
+
+    const syncInnerMode = () => {
+      const page = document.querySelector<HTMLElement>('.huella-workspace > .state-page');
+      const buttons = page?.querySelectorAll<HTMLButtonElement>('.state-toolbar .state-tabs button');
+      if (!buttons || buttons.length < 2) return false;
+      const target = mode === 'ENTITY' ? buttons[0] : buttons[1];
+      if (target?.dataset.active !== 'true') target?.click();
+      return true;
+    };
+
+    if (syncInnerMode()) return undefined;
+    const timer = window.setTimeout(syncInnerMode, 0);
+    return () => window.clearTimeout(timer);
+  }, [mode]);
+
+  const description = mode === 'PUBLIC_SERVICES'
+    ? 'Parte desde un servicio público y reconstruye a quiénes compró, pagó o transfirió recursos durante el período consultado.'
+    : mode === 'SAMPLE'
+      ? 'Construye cohortes de entidades a partir de su relación económica con el Estado y las marcas disponibles en Atlas.'
+      : 'Reconstruye la relación económica observada de una entidad con el Estado: compras, pagos, traspasos, organismos y contrapartes.';
 
   return (
-    <>
-      <div className="huella-mode-shell fade-in">
-        <div className="huella-mode-card">
-          <div className="huella-mode-copy">
-            <span>Modo de análisis</span>
-            <strong>Define desde dónde quieres reconstruir la relación con el Estado</strong>
-            <small>La vista principal prioriza los flujos económicos. La prensa y otras marcas quedan como contexto bajo demanda.</small>
-          </div>
-          <div className="huella-mode-options" role="tablist" aria-label="Modo de análisis de Huella pública">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={orientation === 'ENTITY_TO_STATE'}
-              data-active={orientation === 'ENTITY_TO_STATE'}
-              onClick={() => setOrientation('ENTITY_TO_STATE')}
-            >
-              <i aria-hidden="true">↗</i>
-              <span><strong>Huella de una entidad</strong><small>Entidad → Estado · compras, pagos y contrapartes</small></span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={orientation === 'STATE_TO_ENTITY'}
-              data-active={orientation === 'STATE_TO_ENTITY'}
-              onClick={() => setOrientation('STATE_TO_ENTITY')}
-            >
-              <i aria-hidden="true">⌂</i>
-              <span><strong>Beneficiarios de organismos públicos</strong><small>Estado → entidades · pagos, compras y transferencias</small></span>
-            </button>
-          </div>
+    <div className="huella-workspace fade-in" data-mode={mode}>
+      <header className="huella-topbar">
+        <div className="huella-title-block">
+          <span>ATLAS · vínculo con organismos públicos</span>
+          <h1>Huella pública</h1>
+          <p>{description}</p>
         </div>
-      </div>
-      {orientation === 'ENTITY_TO_STATE'
-        ? <RelacionEstado onNavigate={onNavigate} />
-        : <AgencyBeneficiaryUniverse onNavigate={onNavigate} />}
-    </>
+
+        <nav className="huella-analysis-tabs" role="tablist" aria-label="Opciones de análisis de Huella pública">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'ENTITY'}
+            data-active={mode === 'ENTITY'}
+            onClick={() => setMode('ENTITY')}
+          >Explorar entidad</button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'SAMPLE'}
+            data-active={mode === 'SAMPLE'}
+            onClick={() => setMode('SAMPLE')}
+          >Construir muestra</button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'PUBLIC_SERVICES'}
+            data-active={mode === 'PUBLIC_SERVICES'}
+            onClick={() => setMode('PUBLIC_SERVICES')}
+          >Servicios públicos</button>
+        </nav>
+      </header>
+
+      {mode === 'PUBLIC_SERVICES'
+        ? <AgencyBeneficiaryUniverse onNavigate={onNavigate} />
+        : <RelacionEstado onNavigate={onNavigate} />}
+    </div>
   );
 }
