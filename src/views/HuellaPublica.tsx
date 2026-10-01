@@ -6,11 +6,12 @@ import '../styles/huella-publica-premium.css';
 
 type AnalysisMode = 'ENTITY' | 'SAMPLE' | 'PUBLIC_SERVICES';
 
+const FIRST_PUBLIC_FUNDS_YEAR = 2016;
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [mode, setMode] = useState<AnalysisMode>('ENTITY');
-  const [fromYear, setFromYear] = useState(2020);
+  const [fromYear, setFromYear] = useState(FIRST_PUBLIC_FUNDS_YEAR);
   const [toYear, setToYear] = useState(CURRENT_YEAR);
 
   const description = mode === 'PUBLIC_SERVICES'
@@ -44,7 +45,7 @@ export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => vo
           <div className="huella-global-period" aria-label="Período de análisis">
             <span>Período</span>
             <div>
-              <input aria-label="Año inicial" type="number" min={2016} max={toYear} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || 2020))} />
+              <input aria-label="Año inicial" type="number" min={FIRST_PUBLIC_FUNDS_YEAR} max={toYear} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || FIRST_PUBLIC_FUNDS_YEAR))} />
               <b>→</b>
               <input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} />
             </div>
