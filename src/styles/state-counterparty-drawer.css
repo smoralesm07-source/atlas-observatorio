@@ -2,10 +2,10 @@
   position:fixed;
   inset:0;
   z-index:80;
-  background:rgba(15,23,42,.14);
-  backdrop-filter:blur(2px);
-  -webkit-backdrop-filter:blur(2px);
-  animation:state-layer-in .16s ease-out;
+  background:transparent;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+  animation:none;
 }
 
 .state-counterparty-drawer{
@@ -343,11 +343,6 @@
 
 .detail-row-button:hover{background:color-mix(in srgb,var(--orange,#d86d2b) 4%,var(--panel))}
 .detail-row-button:focus-visible{outline:2px solid color-mix(in srgb,var(--orange,#d86d2b) 48%,transparent);outline-offset:-2px}
-
-@keyframes state-layer-in{
-  from{background:rgba(15,23,42,0)}
-  to{background:rgba(15,23,42,.14)}
-}
 
 @keyframes state-drawer-in{
   from{transform:translate3d(18px,6px,0) scale(.992);opacity:.45}
