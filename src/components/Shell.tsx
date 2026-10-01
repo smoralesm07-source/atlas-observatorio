@@ -18,7 +18,7 @@ function readThemePreference(): 'dark' | 'light' {
 }
 
 const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
-  { label: 'Relación con el Estado', route: { view: 'relacionEstado' }, match: ['relacionEstado'] },
+  { label: 'Huella estatal', route: { view: 'relacionEstado' }, match: ['relacionEstado'] },
   { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
 ];
 
