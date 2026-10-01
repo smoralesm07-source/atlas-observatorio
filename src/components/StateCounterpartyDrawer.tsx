@@ -99,33 +99,37 @@ export function StateCounterpartyDrawer({
     }
 
     setResolution({ status: 'loading', candidates: [] });
-    void supabase.rpc('atlas_v2_entity_search_cascade', {
-      p_request: {
-        kind: 'results',
-        search,
-        limit: 5,
-        offset: 0,
-        region: '',
-        entity_type: '',
-        uaf: false,
-        sanctioned: false,
-        min_sources: 0,
-      },
-    }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
-        setResolution({ status: 'error', candidates: [], error: error.message });
-        return;
+    const run = async () => {
+      try {
+        const { data, error } = await supabase.rpc('atlas_v2_entity_search_cascade', {
+          p_request: {
+            kind: 'results',
+            search,
+            limit: 5,
+            offset: 0,
+            region: '',
+            entity_type: '',
+            uaf: false,
+            sanctioned: false,
+            min_sources: 0,
+          },
+        });
+        if (cancelled) return;
+        if (error) {
+          setResolution({ status: 'error', candidates: [], error: error.message });
+          return;
+        }
+        const candidates = ((data as SearchResponse | null)?.items ?? []).slice(0, 5);
+        setResolution({ status: 'done', candidates });
+      } catch (error) {
+        if (cancelled) return;
+        setResolution({
+          status: 'error', candidates: [],
+          error: error instanceof Error ? error.message : 'No fue posible resolver la contraparte.',
+        });
       }
-      const candidates = ((data as SearchResponse | null)?.items ?? []).slice(0, 5);
-      setResolution({ status: 'done', candidates });
-    }).catch((error: unknown) => {
-      if (cancelled) return;
-      setResolution({
-        status: 'error', candidates: [],
-        error: error instanceof Error ? error.message : 'No fue posible resolver la contraparte.',
-      });
-    });
+    };
+    void run();
 
     return () => { cancelled = true; };
   }, [item]);
