@@ -18,6 +18,12 @@ function normalizeRut(value: unknown): string {
   return String(value ?? "").toUpperCase().replace(/[^0-9K]/g, "");
 }
 
+function optionalText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text || null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
@@ -30,7 +36,7 @@ Deno.serve(async (req: Request) => {
   try {
     const response = await fetch(`${BASE}/${prefix}.json`, { headers: { accept: "application/json" } });
     if (response.status === 404) {
-      return json({ ok: true, rut, rows: [], source: "RADAR_SII_TAX_HISTORY_WEB_V1", status: "NOT_PUBLISHED" });
+      return json({ ok: true, rut, rows: [], source: "RADAR_SII_TAX_HISTORY_WEB_V2", status: "NOT_PUBLISHED" });
     }
     if (!response.ok) return json({ ok: false, error: "UPSTREAM_ERROR", status: response.status }, 502);
 
@@ -41,7 +47,13 @@ Deno.serve(async (req: Request) => {
         commercial_year: Number(row?.[0]),
         sales_band_rank: row?.[1] == null ? null : Number(row[1]),
         workers_numeric: row?.[2] == null ? null : Number(row[2]),
-        source: "RADAR_SII_TAX_HISTORY_WEB_V1",
+        // V2 adds the governed annual principal activity and economic hierarchy.
+        // V1 shards remain backward compatible and simply return null here.
+        main_activity: optionalText(row?.[3]),
+        economic_sector: optionalText(row?.[4]),
+        economic_subsector: optionalText(row?.[5]),
+        activity_coverage: optionalText(row?.[3]) ? "ANNUAL_PRINCIPAL_ACTIVITY" : null,
+        source: "RADAR_SII_TAX_HISTORY_WEB_V2",
       }))
       .filter((row: { commercial_year: number }) => Number.isFinite(row.commercial_year))
       .sort((a: { commercial_year: number }, b: { commercial_year: number }) => a.commercial_year - b.commercial_year);
@@ -50,8 +62,11 @@ Deno.serve(async (req: Request) => {
       ok: true,
       rut,
       rows,
-      source: "RADAR_SII_TAX_HISTORY_WEB_V1",
+      source: "RADAR_SII_TAX_HISTORY_WEB_V2",
       source_schema: payload?.schema ?? null,
+      semantics: {
+        main_activity: "Principal economic activity for the commercial year from governed Radar SII history; not the complete current ACTECO list.",
+      },
     });
   } catch (error) {
     return json({
