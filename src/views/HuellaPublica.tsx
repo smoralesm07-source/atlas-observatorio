@@ -27,7 +27,7 @@ export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => vo
               onClick={() => setOrientation('ENTITY_TO_STATE')}
             >
               <i aria-hidden="true">↗</i>
-              <span><strong>Explorar entidad</strong><small>Entidad → Estado</small></span>
+              <span><strong>Huella de una entidad</strong><small>Entidad → Estado · compras, pagos y contrapartes</small></span>
             </button>
             <button
               type="button"
