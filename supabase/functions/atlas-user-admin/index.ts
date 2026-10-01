@@ -6,8 +6,11 @@ const CORS = {
   'access-control-allow-methods': 'POST, OPTIONS',
 };
 
+const ACTIVITY_WINDOW_DAYS = 10;
+const ACTIVITY_LIMIT = 1000;
+
 type Role = 'viewer' | 'analyst' | 'admin';
-type Action = 'list' | 'grant' | 'set_role' | 'set_enabled' | 'reject' | 'reopen';
+type Action = 'list' | 'presence' | 'grant' | 'set_role' | 'set_enabled' | 'reject' | 'reopen';
 
 class AppError extends Error {
   constructor(public code: string, message: string, public status = 400) {
@@ -70,8 +73,21 @@ Deno.serve(async (req) => {
     }
 
     const action = body.action as Action;
-    if (!['list', 'grant', 'set_role', 'set_enabled', 'reject', 'reopen'].includes(action)) {
+    if (!['list', 'presence', 'grant', 'set_role', 'set_enabled', 'reject', 'reopen'].includes(action)) {
       throw new AppError('INVALID_ACTION', 'La acción solicitada no es válida.');
+    }
+
+    async function readPresence() {
+      const { data: presence, error: presenceError } = await admin
+        .from('atlas_user_presence')
+        .select('user_id, email, current_route, current_section, last_seen_at, first_seen_at, is_online, signed_out_at')
+        .order('last_seen_at', { ascending: false });
+      if (presenceError) throw new AppError('LIST_PRESENCE_FAILED', presenceError.message, 500);
+      return presence ?? [];
+    }
+
+    if (action === 'presence') {
+      return json({ ok: true, presence: await readPresence() });
     }
 
     async function snapshot() {
@@ -100,17 +116,14 @@ Deno.serve(async (req) => {
         .limit(50);
       if (auditError) throw new AppError('LIST_AUDIT_FAILED', auditError.message, 500);
 
-      const { data: presence, error: presenceError } = await admin
-        .from('atlas_user_presence')
-        .select('user_id, email, current_route, current_section, last_seen_at, first_seen_at, is_online, signed_out_at')
-        .order('last_seen_at', { ascending: false });
-      if (presenceError) throw new AppError('LIST_PRESENCE_FAILED', presenceError.message, 500);
-
+      const presence = await readPresence();
+      const activitySince = new Date(Date.now() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
       const { data: activity, error: activityError } = await admin
         .from('atlas_user_activity')
         .select('id, user_id, email, route, section, operation, metadata, created_at')
+        .gte('created_at', activitySince)
         .order('created_at', { ascending: false })
-        .limit(250);
+        .limit(ACTIVITY_LIMIT);
       if (activityError) throw new AppError('LIST_ACTIVITY_FAILED', activityError.message, 500);
 
       const byId = new Map((allowed ?? []).map((row: any) => [row.user_id, row]));
@@ -136,8 +149,10 @@ Deno.serve(async (req) => {
         actor: { id: actor.id, email: actor.email ?? actorAccess.email, role: actorAccess.role },
         users,
         audit: audit ?? [],
-        presence: presence ?? [],
+        presence,
         activity: activity ?? [],
+        activity_window_days: ACTIVITY_WINDOW_DAYS,
+        activity_truncated: (activity?.length ?? 0) >= ACTIVITY_LIMIT,
       };
     }
 
