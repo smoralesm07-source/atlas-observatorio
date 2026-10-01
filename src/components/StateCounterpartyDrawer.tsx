@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import '../styles/state-counterparty-drawer.css';
 
+// La resolución se ejecuta sólo al abrir la ficha: no agrega consultas al render inicial de Huella pública.
 export type StateCounterpartySelection = {
   kind: 'buyer' | 'payer';
   label: string;
