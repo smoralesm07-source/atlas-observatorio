@@ -13,7 +13,7 @@ import { Sanciones } from './views/Sanciones';
 import { Senales } from './views/Senales';
 import { Entidades } from './views/Entidades';
 import { EntityExpediente } from './views/EntityExpediente';
-import { RelacionEstado } from './views/RelacionEstado';
+import { HuellaPublica } from './views/HuellaPublica';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
 import { ReportesDirectivosV3 } from './views/ReportesDirectivosV3';
@@ -74,7 +74,7 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
           <Entity360StatusMarks entityId={route.entityId} role={role} />
         </>
       )}
-      {route.view === 'relacionEstado' && <RelacionEstado onNavigate={go} />}
+      {route.view === 'relacionEstado' && <HuellaPublica onNavigate={go} />}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
       {route.view === 'reportes' && <ReportesDirectivosV3 />}
       {route.view === 'fuentes' && <Fuentes />}
