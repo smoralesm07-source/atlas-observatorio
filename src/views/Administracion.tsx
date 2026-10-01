@@ -75,8 +75,11 @@ type Snapshot = {
   audit: AuditEntry[];
   presence: PresenceEntry[];
   activity: ActivityEntry[];
+  activity_window_days?: number;
+  activity_truncated?: boolean;
 };
 
+type PresenceSnapshot = { ok: true; presence: PresenceEntry[] };
 type ApiFailure = { ok: false; error?: { code?: string; message?: string } };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -96,11 +99,15 @@ function formatDate(value: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Sin registro';
   return new Intl.DateTimeFormat('es-CL', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  }).format(date);
+}
+
+function formatLogDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('es-CL', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
   }).format(date);
 }
 
@@ -114,8 +121,7 @@ function relativeTime(value: string | null, now = Date.now()) {
   if (minutes < 60) return `hace ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `hace ${hours} h`;
-  const days = Math.floor(hours / 24);
-  return `hace ${days} d`;
+  return `hace ${Math.floor(hours / 24)} d`;
 }
 
 function presenceIsOnline(presence: PresenceEntry | undefined, now: number) {
@@ -125,9 +131,7 @@ function presenceIsOnline(presence: PresenceEntry | undefined, now: number) {
 }
 
 function disconnectedSince(presence: PresenceEntry) {
-  return !presence.is_online && presence.signed_out_at
-    ? presence.signed_out_at
-    : presence.last_seen_at;
+  return !presence.is_online && presence.signed_out_at ? presence.signed_out_at : presence.last_seen_at;
 }
 
 function providerLabel(provider: string | null) {
@@ -136,9 +140,8 @@ function providerLabel(provider: string | null) {
   return provider ?? 'Identidad verificada';
 }
 
-async function invokeAdmin(body: Record<string, unknown>): Promise<Snapshot> {
-  const { data, error } = await supabase.functions.invoke<Snapshot | ApiFailure>('atlas-user-admin', { body });
-
+async function invokeAdmin<T extends { ok: true }>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke<T | ApiFailure>('atlas-user-admin', { body });
   if (error) {
     let message = error.message || 'No fue posible completar la operación.';
     const context = (error as { context?: unknown }).context;
@@ -152,12 +155,10 @@ async function invokeAdmin(body: Record<string, unknown>): Promise<Snapshot> {
     }
     throw new Error(message);
   }
-
   if (!data || data.ok !== true) {
     throw new Error((data as ApiFailure | null)?.error?.message ?? 'La administración respondió sin datos válidos.');
   }
-
-  return data;
+  return data as T;
 }
 
 export function Administracion({ session }: { session: Session }) {
@@ -167,13 +168,15 @@ export function Administracion({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [pendingRoles, setPendingRoles] = useState<Record<string, Role>>({});
+  const [activityUser, setActivityUser] = useState('ALL');
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      setSnapshot(await invokeAdmin({ action: 'list' }));
+      setSnapshot(await invokeAdmin<Snapshot>({ action: 'list' }));
       setNow(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -182,17 +185,15 @@ export function Administracion({ session }: { session: Session }) {
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, []);
+  useEffect(() => { void load(); }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setNow(Date.now());
-      void invokeAdmin({ action: 'list' })
-        .then((next) => setSnapshot(next))
+      void invokeAdmin<PresenceSnapshot>({ action: 'presence' })
+        .then((next) => setSnapshot((current) => current ? { ...current, presence: next.presence } : current))
         .catch(() => {
-          // Conserva el último estado válido; el botón Actualizar permite reintentar con error visible.
+          // Conserva el último estado válido; el refresco completo queda disponible en el botón Actualizar.
         });
     }, 60_000);
     return () => window.clearInterval(timer);
@@ -213,10 +214,7 @@ export function Administracion({ session }: { session: Session }) {
     return users.filter((user) => user.email.toLocaleLowerCase('es-CL').includes(q));
   }, [query, users]);
 
-  const presenceByUser = useMemo(
-    () => new Map(presence.map((entry) => [entry.user_id, entry])),
-    [presence],
-  );
+  const presenceByUser = useMemo(() => new Map(presence.map((entry) => [entry.user_id, entry])), [presence]);
 
   const recentSectionsByUser = useMemo(() => {
     const result = new Map<string, string[]>();
@@ -231,17 +229,20 @@ export function Administracion({ session }: { session: Session }) {
     return result;
   }, [activity]);
 
-  const activityUsers = useMemo(() => {
-    return [...enabled].sort((left, right) => {
-      const leftPresence = presenceByUser.get(left.id);
-      const rightPresence = presenceByUser.get(right.id);
-      const onlineDiff = Number(presenceIsOnline(rightPresence, now)) - Number(presenceIsOnline(leftPresence, now));
-      if (onlineDiff !== 0) return onlineDiff;
-      const leftTime = leftPresence ? new Date(leftPresence.last_seen_at).getTime() : 0;
-      const rightTime = rightPresence ? new Date(rightPresence.last_seen_at).getTime() : 0;
-      return rightTime - leftTime || left.email.localeCompare(right.email);
-    });
-  }, [enabled, presenceByUser, now]);
+  const activityUsers = useMemo(() => [...enabled].sort((left, right) => {
+    const leftPresence = presenceByUser.get(left.id);
+    const rightPresence = presenceByUser.get(right.id);
+    const onlineDiff = Number(presenceIsOnline(rightPresence, now)) - Number(presenceIsOnline(leftPresence, now));
+    if (onlineDiff !== 0) return onlineDiff;
+    const leftTime = leftPresence ? new Date(leftPresence.last_seen_at).getTime() : 0;
+    const rightTime = rightPresence ? new Date(rightPresence.last_seen_at).getTime() : 0;
+    return rightTime - leftTime || left.email.localeCompare(right.email);
+  }), [enabled, presenceByUser, now]);
+
+  const activityLog = useMemo(() => {
+    const rows = activity.filter((entry) => entry.operation === 'page_view' && (activityUser === 'ALL' || entry.user_id === activityUser));
+    return rows.slice(0, activityExpanded ? 240 : 60);
+  }, [activity, activityUser, activityExpanded]);
 
   const connectedCount = presence.filter((entry) => presenceIsOnline(entry, now)).length;
   const disconnectedCount = presence.filter((entry) => !presenceIsOnline(entry, now)).length;
@@ -251,7 +252,7 @@ export function Administracion({ session }: { session: Session }) {
     setBusyId(user.id);
     setError(null);
     try {
-      setSnapshot(await invokeAdmin({ ...body, target_user_id: user.id }));
+      setSnapshot(await invokeAdmin<Snapshot>({ ...body, target_user_id: user.id }));
       setNow(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -280,12 +281,7 @@ export function Administracion({ session }: { session: Session }) {
         </button>
       </div>
 
-      {error && (
-        <div className="admin-alert" role="alert">
-          <strong>No fue posible completar la operación.</strong>
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <div className="admin-alert" role="alert"><strong>No fue posible completar la operación.</strong><span>{error}</span></div>}
 
       <div className="admin-metrics" aria-label="Resumen de accesos">
         <Metric label="Identidades" value={users.length} foot="Identidades verificadas o autorizadas" />
@@ -298,7 +294,7 @@ export function Administracion({ session }: { session: Session }) {
         <div className="admin-section-head admin-activity-head">
           <div>
             <h2 id="activity-title">Actividad de usuarios</h2>
-            <p>Presencia del piloto y recorrido reciente por secciones. “Conectado” exige una señal recibida durante los últimos 3 minutos.</p>
+            <p>Presencia actual y bitácora de secciones de los últimos {snapshot?.activity_window_days ?? 10} días.</p>
           </div>
           <div className="admin-presence-summary" aria-label="Resumen de presencia">
             <span><strong>{connectedCount}</strong> conectados</span>
@@ -309,15 +305,7 @@ export function Administracion({ session }: { session: Session }) {
 
         <div className="admin-table-wrap">
           <table className="admin-table admin-activity-table">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Presencia</th>
-                <th>Sección actual / última</th>
-                <th>Última señal</th>
-                <th>Recorrido reciente</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Usuario</th><th>Presencia</th><th>Sección actual / última</th><th>Última señal</th><th>Recorrido reciente</th></tr></thead>
             <tbody>
               {activityUsers.map((user) => {
                 const userPresence = presenceByUser.get(user.id);
@@ -325,159 +313,76 @@ export function Administracion({ session }: { session: Session }) {
                 const recentSections = recentSectionsByUser.get(user.id) ?? [];
                 return (
                   <tr key={`activity-${user.id}`}>
-                    <td>
-                      <div className="admin-user-cell">
-                        <div className="admin-user-avatar admin-user-avatar-small">{user.email.slice(0, 1).toUpperCase()}</div>
-                        <div>
-                          <strong>{user.email || 'Cuenta sin correo'}</strong>
-                          <span className="admin-activity-role">{user.authorization ? ROLE_LABEL[user.authorization.role] : 'Sin rol'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {userPresence ? (
-                        isOnline ? (
-                          <span className="admin-status admin-status-active"><i /> Conectado</span>
-                        ) : (
-                          <span className="admin-status admin-status-off"><i /> Desconectado · {relativeTime(disconnectedSince(userPresence), now)}</span>
-                        )
-                      ) : (
-                        <span className="admin-status admin-status-off"><i /> Sin actividad registrada</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="admin-current-section">
-                        <strong>{userPresence?.current_section ?? 'Sin registro'}</strong>
-                        {userPresence && <span>{isOnline ? 'En esta sección ahora' : 'Última sección observada'}</span>}
-                      </div>
-                    </td>
-                    <td>
-                      {userPresence ? (
-                        <time className="admin-last-signal" title={formatDate(userPresence.last_seen_at)}>
-                          {relativeTime(userPresence.last_seen_at, now)}
-                        </time>
-                      ) : (
-                        <span className="admin-muted">Sin señal</span>
-                      )}
-                    </td>
-                    <td>
-                      {recentSections.length > 0 ? (
-                        <div className="admin-route-chips">
-                          {recentSections.map((section) => <span key={`${user.id}-${section}`}>{section}</span>)}
-                        </div>
-                      ) : (
-                        <span className="admin-muted">Sin recorrido registrado</span>
-                      )}
-                    </td>
+                    <td><div className="admin-user-cell"><div className="admin-user-avatar admin-user-avatar-small">{user.email.slice(0, 1).toUpperCase()}</div><div><strong>{user.email || 'Cuenta sin correo'}</strong><span className="admin-activity-role">{user.authorization ? ROLE_LABEL[user.authorization.role] : 'Sin rol'}</span></div></div></td>
+                    <td>{userPresence ? (isOnline ? <span className="admin-status admin-status-active"><i /> Conectado</span> : <span className="admin-status admin-status-off"><i /> Desconectado · {relativeTime(disconnectedSince(userPresence), now)}</span>) : <span className="admin-status admin-status-off"><i /> Sin actividad registrada</span>}</td>
+                    <td><div className="admin-current-section"><strong>{userPresence?.current_section ?? 'Sin registro'}</strong>{userPresence && <span>{isOnline ? 'En esta sección ahora' : 'Última sección observada'}</span>}</div></td>
+                    <td>{userPresence ? <time className="admin-last-signal" title={formatDate(userPresence.last_seen_at)}>{relativeTime(userPresence.last_seen_at, now)}</time> : <span className="admin-muted">Sin señal</span>}</td>
+                    <td>{recentSections.length > 0 ? <div className="admin-route-chips">{recentSections.map((section) => <span key={`${user.id}-${section}`}>{section}</span>)}</div> : <span className="admin-muted">Sin recorrido registrado</span>}</td>
                   </tr>
                 );
               })}
-              {!loading && activityUsers.length === 0 && (
-                <tr><td colSpan={5} className="admin-table-empty">La actividad comenzará a aparecer cuando los usuarios vuelvan a navegar por ATLAS.</td></tr>
-              )}
+              {!loading && activityUsers.length === 0 && <tr><td colSpan={5} className="admin-table-empty">La actividad comenzará a aparecer cuando los usuarios vuelvan a navegar por ATLAS.</td></tr>}
             </tbody>
           </table>
         </div>
+
+        <div className="admin-history-head">
+          <div><strong>Bitácora · últimos 10 días</strong><span>Registra sólo cambios de sección; no guarda búsquedas, RUT ni entidades consultadas.</span></div>
+          <label className="admin-history-filter">Usuario
+            <select value={activityUser} onChange={(event) => { setActivityUser(event.target.value); setActivityExpanded(false); }}>
+              <option value="ALL">Todos</option>
+              {enabled.map((user) => <option key={user.id} value={user.id}>{user.email}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="admin-history-list">
+          {activityLog.map((entry) => (
+            <div className="admin-history-row" key={entry.id}>
+              <time title={formatDate(entry.created_at)}>{formatLogDate(entry.created_at)}</time>
+              <span className="admin-history-user">{entry.email}</span>
+              <span className="admin-history-section">{entry.section}</span>
+            </div>
+          ))}
+          {!loading && activityLog.length === 0 && <div className="admin-empty">Sin navegación registrada para este filtro durante la ventana disponible.</div>}
+        </div>
+        {activity.filter((entry) => entry.operation === 'page_view' && (activityUser === 'ALL' || entry.user_id === activityUser)).length > 60 && (
+          <button className="admin-history-more" type="button" onClick={() => setActivityExpanded((value) => !value)}>
+            {activityExpanded ? 'Mostrar menos' : 'Ver más actividad'}
+          </button>
+        )}
         <div className="admin-table-foot">
-          <span>La vista se actualiza automáticamente cada minuto.</span>
-          <span>No se registran búsquedas, RUT ni entidades consultadas.</span>
+          <span>La presencia se actualiza cada minuto con una consulta liviana; la bitácora completa sólo se recarga al abrir o actualizar Administración.</span>
+          <span>{snapshot?.activity_truncated ? 'Se muestran los 1.000 eventos más recientes de la ventana.' : `${activity.filter((entry) => entry.operation === 'page_view').length} eventos de navegación en memoria.`}</span>
         </div>
       </section>
 
       <section className="admin-section" aria-labelledby="pending-title">
-        <div className="admin-section-head">
-          <div>
-            <h2 id="pending-title">Solicitudes pendientes</h2>
-            <p>Identidades verificadas por Microsoft o correo institucional que todavía no están en la lista de habilitación.</p>
-          </div>
-          <span className="admin-count">{pending.length}</span>
-        </div>
-
-        {loading && !snapshot ? (
-          <div className="admin-empty">Consultando identidades y permisos…</div>
-        ) : pending.length === 0 ? (
-          <div className="admin-empty admin-empty-ok">
-            <span className="admin-empty-dot" />
-            No hay solicitudes pendientes.
-          </div>
+        <div className="admin-section-head"><div><h2 id="pending-title">Solicitudes pendientes</h2><p>Identidades verificadas por Microsoft o correo institucional que todavía no están en la lista de habilitación.</p></div><span className="admin-count">{pending.length}</span></div>
+        {loading && !snapshot ? <div className="admin-empty">Consultando identidades y permisos…</div> : pending.length === 0 ? (
+          <div className="admin-empty admin-empty-ok"><span className="admin-empty-dot" />No hay solicitudes pendientes.</div>
         ) : (
-          <div className="admin-pending-grid">
-            {pending.map((user) => (
-              <article className="admin-pending-card" key={user.id}>
-                <div className="admin-user-avatar">{user.email.slice(0, 1).toUpperCase()}</div>
-                <div className="admin-user-main">
-                  <strong>{user.email || 'Cuenta sin correo'}</strong>
-                  <span>{providerLabel(user.provider)} · {formatDate(user.created_at)}</span>
-                </div>
-                <div className="admin-pending-actions">
-                  <select
-                    aria-label={`Rol para ${user.email}`}
-                    value={requestedRole(user)}
-                    onChange={(event) => setPendingRoles((current) => ({ ...current, [user.id]: event.target.value as Role }))}
-                    disabled={busyId === user.id}
-                  >
-                    <option value="viewer">Viewer</option>
-                    <option value="analyst">Analyst</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <button
-                    className="btn admin-danger-btn"
-                    type="button"
-                    disabled={busyId === user.id}
-                    onClick={() => void mutate(
-                      user,
-                      { action: 'reject' },
-                      `¿Rechazar la solicitud de ${user.email}? El usuario no podrá reabrirla por sí mismo; un administrador deberá hacerlo.`,
-                    )}
-                  >
-                    Rechazar
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    disabled={busyId === user.id}
-                    onClick={() => void mutate(
-                      user,
-                      { action: 'grant', role: requestedRole(user) },
-                      requestedRole(user) === 'admin' ? `¿Habilitar a ${user.email} como administrador?` : undefined,
-                    )}
-                  >
-                    {busyId === user.id ? 'Guardando…' : 'Habilitar'}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <div className="admin-pending-grid">{pending.map((user) => (
+            <article className="admin-pending-card" key={user.id}>
+              <div className="admin-user-avatar">{user.email.slice(0, 1).toUpperCase()}</div>
+              <div className="admin-user-main"><strong>{user.email || 'Cuenta sin correo'}</strong><span>{providerLabel(user.provider)} · {formatDate(user.created_at)}</span></div>
+              <div className="admin-pending-actions">
+                <select aria-label={`Rol para ${user.email}`} value={requestedRole(user)} onChange={(event) => setPendingRoles((current) => ({ ...current, [user.id]: event.target.value as Role }))} disabled={busyId === user.id}><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Admin</option></select>
+                <button className="btn admin-danger-btn" type="button" disabled={busyId === user.id} onClick={() => void mutate(user, { action: 'reject' }, `¿Rechazar la solicitud de ${user.email}? El usuario no podrá reabrirla por sí mismo; un administrador deberá hacerlo.`)}>Rechazar</button>
+                <button className="btn btn-primary" type="button" disabled={busyId === user.id} onClick={() => void mutate(user, { action: 'grant', role: requestedRole(user) }, requestedRole(user) === 'admin' ? `¿Habilitar a ${user.email} como administrador?` : undefined)}>{busyId === user.id ? 'Guardando…' : 'Habilitar'}</button>
+              </div>
+            </article>
+          ))}</div>
         )}
       </section>
 
       <section className="admin-section" aria-labelledby="users-title">
         <div className="admin-section-head admin-section-head-search">
-          <div>
-            <h2 id="users-title">Usuarios y permisos</h2>
-            <p>Cambiar el rol no modifica la identidad. Deshabilitar conserva el historial y la trazabilidad.</p>
-          </div>
-          <label className="admin-search">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.7" />
-              <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-            </svg>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por correo" />
-          </label>
+          <div><h2 id="users-title">Usuarios y permisos</h2><p>Cambiar el rol no modifica la identidad. Deshabilitar conserva el historial y la trazabilidad.</p></div>
+          <label className="admin-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.7" /><path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por correo" /></label>
         </div>
-
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Estado</th>
-                <th>Rol</th>
-                <th>Último acceso</th>
-                <th>Identidad</th>
-                <th className="admin-action-col">Acción</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Usuario</th><th>Estado</th><th>Rol</th><th>Último acceso</th><th>Identidad</th><th className="admin-action-col">Acción</th></tr></thead>
             <tbody>
               {filtered.map((user) => {
                 const access = user.authorization;
@@ -485,131 +390,27 @@ export function Administracion({ session }: { session: Session }) {
                 const isBusy = busyId === user.id;
                 return (
                   <tr key={user.id}>
-                    <td>
-                      <div className="admin-user-cell">
-                        <div className="admin-user-avatar admin-user-avatar-small">{user.email.slice(0, 1).toUpperCase()}</div>
-                        <div>
-                          <strong>{user.email || 'Cuenta sin correo'}</strong>
-                          {isSelf && <span className="admin-you">Tú</span>}
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {!access ? (
-                        user.request?.status === 'rejected' ? (
-                          <span className="admin-status admin-status-rejected"><i /> Rechazado</span>
-                        ) : user.request?.status === 'pending' ? (
-                          <span className="admin-status admin-status-pending"><i /> Pendiente</span>
-                        ) : (
-                          <span className="admin-status admin-status-off"><i /> Sin solicitud</span>
-                        )
-                      ) : access.enabled ? (
-                        <span className="admin-status admin-status-active"><i /> Activo</span>
-                      ) : (
-                        <span className="admin-status admin-status-off"><i /> Deshabilitado</span>
-                      )}
-                    </td>
-                    <td>
-                      {access ? (
-                        <div className="admin-role-control">
-                          <select
-                            value={access.role}
-                            disabled={isBusy}
-                            aria-label={`Rol de ${user.email}`}
-                            onChange={(event) => {
-                              const next = event.target.value as Role;
-                              if (next === access.role) return;
-                              const prompt = next === 'admin'
-                                ? `¿Asignar privilegios de administrador a ${user.email}?`
-                                : access.role === 'admin'
-                                  ? `¿Cambiar a ${user.email} desde Admin a ${ROLE_LABEL[next]}?`
-                                  : undefined;
-                              void mutate(user, { action: 'set_role', role: next }, prompt);
-                            }}
-                          >
-                            <option value="viewer">Viewer</option>
-                            <option value="analyst">Analyst</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <small>{ROLE_HELP[access.role]}</small>
-                        </div>
-                      ) : (
-                        <span className="admin-muted">Sin asignar</span>
-                      )}
-                    </td>
+                    <td><div className="admin-user-cell"><div className="admin-user-avatar admin-user-avatar-small">{user.email.slice(0, 1).toUpperCase()}</div><div><strong>{user.email || 'Cuenta sin correo'}</strong>{isSelf && <span className="admin-you">Tú</span>}</div></div></td>
+                    <td>{!access ? (user.request?.status === 'rejected' ? <span className="admin-status admin-status-rejected"><i /> Rechazado</span> : user.request?.status === 'pending' ? <span className="admin-status admin-status-pending"><i /> Pendiente</span> : <span className="admin-status admin-status-off"><i /> Sin solicitud</span>) : access.enabled ? <span className="admin-status admin-status-active"><i /> Activo</span> : <span className="admin-status admin-status-off"><i /> Deshabilitado</span>}</td>
+                    <td>{access ? <div className="admin-role-control"><select value={access.role} disabled={isBusy} aria-label={`Rol de ${user.email}`} onChange={(event) => { const next = event.target.value as Role; if (next === access.role) return; const prompt = next === 'admin' ? `¿Asignar privilegios de administrador a ${user.email}?` : access.role === 'admin' ? `¿Cambiar a ${user.email} desde Admin a ${ROLE_LABEL[next]}?` : undefined; void mutate(user, { action: 'set_role', role: next }, prompt); }}><option value="viewer">Viewer</option><option value="analyst">Analyst</option><option value="admin">Admin</option></select><small>{ROLE_HELP[access.role]}</small></div> : <span className="admin-muted">Sin asignar</span>}</td>
                     <td className="admin-date">{formatDate(user.last_sign_in_at)}</td>
                     <td><span className="admin-provider">{providerLabel(user.provider)}</span></td>
-                    <td className="admin-action-col">
-                      {!access ? (
-                        user.request?.status === 'rejected' ? (
-                          <button
-                            className="btn admin-inline-btn"
-                            type="button"
-                            onClick={() => void mutate(user, { action: 'reopen' }, `¿Reabrir la solicitud de ${user.email}?`)}
-                            disabled={isBusy}
-                          >
-                            {isBusy ? 'Guardando…' : 'Reabrir'}
-                          </button>
-                        ) : (
-                          <button className="btn btn-primary admin-inline-btn" type="button" onClick={() => void mutate(user, { action: 'grant', role: 'viewer' })} disabled={isBusy}>
-                            Habilitar
-                          </button>
-                        )
-                      ) : (
-                        <button
-                          className={`btn admin-inline-btn ${access.enabled ? 'admin-danger-btn' : ''}`}
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => void mutate(
-                            user,
-                            { action: 'set_enabled', enabled: !access.enabled },
-                            access.enabled ? `¿Deshabilitar el acceso de ${user.email}?` : undefined,
-                          )}
-                        >
-                          {isBusy ? 'Guardando…' : access.enabled ? 'Deshabilitar' : 'Reactivar'}
-                        </button>
-                      )}
-                    </td>
+                    <td className="admin-action-col">{!access ? (user.request?.status === 'rejected' ? <button className="btn admin-inline-btn" type="button" onClick={() => void mutate(user, { action: 'reopen' }, `¿Reabrir la solicitud de ${user.email}?`)} disabled={isBusy}>{isBusy ? 'Guardando…' : 'Reabrir'}</button> : <button className="btn btn-primary admin-inline-btn" type="button" onClick={() => void mutate(user, { action: 'grant', role: 'viewer' })} disabled={isBusy}>Habilitar</button>) : <button className={`btn admin-inline-btn ${access.enabled ? 'admin-danger-btn' : ''}`} type="button" disabled={isBusy} onClick={() => void mutate(user, { action: 'set_enabled', enabled: !access.enabled }, access.enabled ? `¿Deshabilitar el acceso de ${user.email}?` : undefined)}>{isBusy ? 'Guardando…' : access.enabled ? 'Deshabilitar' : 'Reactivar'}</button>}</td>
                   </tr>
                 );
               })}
-              {!loading && filtered.length === 0 && (
-                <tr><td colSpan={6} className="admin-table-empty">No hay usuarios que coincidan con la búsqueda.</td></tr>
-              )}
+              {!loading && filtered.length === 0 && <tr><td colSpan={6} className="admin-table-empty">No hay usuarios que coincidan con la búsqueda.</td></tr>}
             </tbody>
           </table>
         </div>
-        <div className="admin-table-foot">
-          <span>{enabled.length} habilitados · {disabled.length} deshabilitados · {pending.length} pendientes · {rejected.length} rechazados</span>
-          <span>No se eliminan identidades desde Observatorio.</span>
-        </div>
+        <div className="admin-table-foot"><span>{enabled.length} habilitados · {disabled.length} deshabilitados · {pending.length} pendientes · {rejected.length} rechazados</span><span>No se eliminan identidades desde Observatorio.</span></div>
       </section>
 
       <section className="admin-section" aria-labelledby="audit-title">
-        <div className="admin-section-head">
-          <div>
-            <h2 id="audit-title">Actividad administrativa</h2>
-            <p>Últimos cambios de habilitación, rol y estado registrados por la capa de gobierno.</p>
-          </div>
-          <span className="admin-count">{snapshot?.audit.length ?? 0}</span>
-        </div>
+        <div className="admin-section-head"><div><h2 id="audit-title">Actividad administrativa</h2><p>Últimos cambios de habilitación, rol y estado registrados por la capa de gobierno.</p></div><span className="admin-count">{snapshot?.audit.length ?? 0}</span></div>
         <div className="admin-audit-list">
-          {(snapshot?.audit ?? []).slice(0, 12).map((entry) => (
-            <div className="admin-audit-row" key={entry.id}>
-              <span className={`admin-audit-icon admin-audit-${entry.action}`} aria-hidden />
-              <div className="admin-audit-copy">
-                <strong>{auditLabel(entry)}</strong>
-                <span>{entry.target_email}</span>
-              </div>
-              <div className="admin-audit-meta">
-                <span>por {entry.actor_email ?? 'administrador'}</span>
-                <time>{formatDate(entry.created_at)}</time>
-              </div>
-            </div>
-          ))}
-          {!loading && (snapshot?.audit.length ?? 0) === 0 && (
-            <div className="admin-empty">Aún no hay cambios administrativos registrados.</div>
-          )}
+          {(snapshot?.audit ?? []).slice(0, 12).map((entry) => <div className="admin-audit-row" key={entry.id}><span className={`admin-audit-icon admin-audit-${entry.action}`} aria-hidden /><div className="admin-audit-copy"><strong>{auditLabel(entry)}</strong><span>{entry.target_email}</span></div><div className="admin-audit-meta"><span>por {entry.actor_email ?? 'administrador'}</span><time>{formatDate(entry.created_at)}</time></div></div>)}
+          {!loading && (snapshot?.audit.length ?? 0) === 0 && <div className="admin-empty">Aún no hay cambios administrativos registrados.</div>}
         </div>
       </section>
     </div>
@@ -617,13 +418,7 @@ export function Administracion({ session }: { session: Session }) {
 }
 
 function Metric({ label, value, foot, emphasis = false }: { label: string; value: number; foot: string; emphasis?: boolean }) {
-  return (
-    <div className={`admin-metric ${emphasis ? 'admin-metric-emphasis' : ''}`}>
-      <div className="admin-metric-label">{label}</div>
-      <div className="admin-metric-value num">{value}</div>
-      <div className="admin-metric-foot">{foot}</div>
-    </div>
-  );
+  return <div className={`admin-metric ${emphasis ? 'admin-metric-emphasis' : ''}`}><div className="admin-metric-label">{label}</div><div className="admin-metric-value num">{value}</div><div className="admin-metric-foot">{foot}</div></div>;
 }
 
 function auditLabel(entry: AuditEntry) {
