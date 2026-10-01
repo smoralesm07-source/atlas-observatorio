@@ -1,5 +1,6 @@
--- Completa el universo source-native para FINTECH y evita abrir Entidad 360
--- cuando el RUT todavía no existe en obs_entity.
+-- Completa el universo source-native para FINTECH y agrega una señal diagnóstica
+-- de materialización canónica en obs_entity. La navegación a Entidad 360 se mantiene
+-- porque obs_entity_detail puede resolver también determinados RUT source-native.
 
 do $$
 declare
