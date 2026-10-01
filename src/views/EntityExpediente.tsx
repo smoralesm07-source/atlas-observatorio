@@ -33,6 +33,11 @@ type ActivityRow = {
   code: string | null;
   name: string;
   principal: boolean;
+  coverage?: 'CURRENT_ACTECO_LIST' | 'ANNUAL_PRINCIPAL_ACTIVITY';
+  commercialYear?: number | null;
+  economicSector?: string | null;
+  economicSubsector?: string | null;
+  source?: string | null;
 };
 
 type EntityTaxHistoryRow = {
@@ -43,6 +48,10 @@ type EntityTaxHistoryRow = {
   sales_band_uf?: string | null;
   size_label?: string | null;
   workers_numeric?: number | null;
+  main_activity?: string | null;
+  economic_sector?: string | null;
+  economic_subsector?: string | null;
+  activity_coverage?: string | null;
   source?: string | null;
 };
 
@@ -232,8 +241,29 @@ function activitiesFor(data: EntityDetail): ActivityRow[] {
   if (main && !rows.some((row) => row.principal)) {
     rows.unshift({ name: titleCase(main), code: codes[0] ?? null, principal: true });
   }
-  if (rows.length === 0 && main) return [{ name: titleCase(main), code: codes[0] ?? null, principal: true }];
-  return rows;
+  if (rows.length === 0 && main) return [{
+    name: titleCase(main), code: codes[0] ?? null, principal: true,
+    coverage: 'CURRENT_ACTECO_LIST', source: text(tax.economic_data_source),
+  }];
+  return rows.map((row) => ({ ...row, coverage: 'CURRENT_ACTECO_LIST' as const, source: text(tax.economic_data_source) }));
+}
+
+function activitiesFromAnnualHistory(annual: EntityTaxHistoryRow[] | null): ActivityRow[] {
+  const latest = [...(annual ?? [])]
+    .filter((row) => text(row.main_activity))
+    .sort((a, b) => Number(b.commercial_year) - Number(a.commercial_year))[0];
+  const main = text(latest?.main_activity);
+  if (!latest || !main) return [];
+  return [{
+    code: null,
+    name: titleCase(main),
+    principal: true,
+    coverage: 'ANNUAL_PRINCIPAL_ACTIVITY',
+    commercialYear: Number(latest.commercial_year),
+    economicSector: text(latest.economic_sector),
+    economicSubsector: text(latest.economic_subsector),
+    source: text(latest.source) ?? 'RADAR_SII_TAX_HISTORY_WEB_V2',
+  }];
 }
 
 function salesHistory(data: EntityDetail, annual: EntityTaxHistoryRow[] | null): TaxEvolutionRow[] {
@@ -429,13 +459,14 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const uaf = record(data.uaf);
   const res = record(data.res);
   const osfl = record(data.osfl);
-  const activities = activitiesFor(data);
+  const materializedActivities = activitiesFor(data);
   const byYear = new Map<number, EntityTaxHistoryRow>();
   (taxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));
   (liveTaxHistory ?? []).forEach((row) => byYear.set(Number(row.commercial_year), row));
   const mergedTaxHistory = [...byYear.values()]
     .filter((row) => Number.isFinite(Number(row.commercial_year)))
     .sort((a, b) => Number(a.commercial_year) - Number(b.commercial_year));
+  const activities = materializedActivities.length ? materializedActivities : activitiesFromAnnualHistory(mergedTaxHistory);
   const history = salesHistory(data, mergedTaxHistory);
   const finding = mainFinding(data);
   const marketFootprint = stateMarket.data?.supplier ?? null;
@@ -520,7 +551,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
             <div className="entity360-meta">
               <span className="mono">{entity.rut ? rutFormat(entity.rut) : 'Sin RUT'}</span>
               {entity.entity_type && <span>{entity.entity_type}</span>}
-              {text(tax.main_activity) && <span className="entity360-meta-activity">{titleCase(String(tax.main_activity))}</span>}
+              {(text(tax.main_activity) ?? activities[0]?.name) && <span className="entity360-meta-activity">{titleCase(String(text(tax.main_activity) ?? activities[0]?.name))}</span>}
             </div>
             {(entity.commune || entity.region) && <div className="entity360-location"><span>⌖</span>{entity.commune ? titleCase(entity.commune) : null}{entity.commune && entity.region ? ', ' : ''}{entity.region ? titleCase(entity.region) : null}</div>}
           </div>
@@ -768,8 +799,13 @@ function SalesBandCard({ history, currentBand, dataStatus }: { history: ReturnTy
 function ActivitiesCard({ rows }: { rows: ActivityRow[] }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? rows : rows.slice(0, 5);
-  return <Card title="Actividades y giros (SII)" meta={`${n(rows.length)} materializados`}>
-    {rows.length ? <div className="entity360-activity-list">{visible.map((row, index) => <div className="entity360-activity" key={`${row.code ?? index}-${row.name}`}><div className="entity360-activity-rank">{String(index + 1).padStart(2, '0')}</div><div className="entity360-activity-text"><strong>{row.name}</strong><span>{row.code ? `Código ${row.code}` : 'Código no materializado'}</span></div>{row.principal && <Badge tone="present">Principal</Badge>}</div>)}{rows.length > 5 && <button className="entity360-linkbtn" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Mostrar menos' : `Ver ${rows.length - 5} actividades más`} →</button>}</div> : <Empty title="Sin actividades materializadas" hint="Atlas no tiene giros materializados para esta entidad en el corte actual; esto no equivale a ausencia de actividades en SII." />}
+  const annualFallback = rows.length > 0 && rows.every((row) => row.coverage === 'ANNUAL_PRINCIPAL_ACTIVITY');
+  const fallbackYear = annualFallback ? Math.max(...rows.map((row) => Number(row.commercialYear ?? 0))) : null;
+  const meta = annualFallback
+    ? `actividad principal SII · ${fallbackYear || 'histórico'}`
+    : `${n(rows.length)} materializados`;
+  return <Card title="Actividades y giros (SII)" meta={meta}>
+    {rows.length ? <><div className="entity360-activity-list">{visible.map((row, index) => <div className="entity360-activity" key={`${row.code ?? index}-${row.name}`}><div className="entity360-activity-rank">{String(index + 1).padStart(2, '0')}</div><div className="entity360-activity-text"><strong>{row.name}</strong><span>{row.code ? `Código ${row.code}` : row.coverage === 'ANNUAL_PRINCIPAL_ACTIVITY' ? `Actividad principal · año comercial ${row.commercialYear ?? '—'}` : 'Código no materializado'}</span></div>{row.principal && <Badge tone="present">Principal</Badge>}</div>)}{rows.length > 5 && <button className="entity360-linkbtn" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Mostrar menos' : `Ver ${rows.length - 5} actividades más`} →</button>}</div>{annualFallback && <div className="entity360-card-footnote">Radar SII aporta la actividad económica principal del último año comercial disponible. No se presenta como listado completo de giros vigentes cuando la nómina ACTECO actual no está materializada.</div>}</> : <Empty title="Sin actividad económica disponible" hint="Atlas no encontró actividades en la nómina ACTECO vigente ni una actividad principal en la historia anual publicada por Radar SII." />}
   </Card>;
 }
 
@@ -821,14 +857,17 @@ function TributarioTab({ data, activities, history }: { data: EntityDetail; acti
   const annualGap = text(tax.economic_data_status) === 'ATLAS_ANNUAL_NOT_MATERIALIZED';
   const annualMissing = annualGap && !latestHistory;
   const annualAvailableLive = annualGap && Boolean(latestHistory);
+  const principalActivity = activities.find((row) => row.principal) ?? activities[0];
+  const economicSector = text(tax.economic_sector) ?? principalActivity?.economicSector ?? null;
+  const economicSubsector = text(tax.economic_subsector) ?? principalActivity?.economicSubsector ?? null;
   return <div className="entity360-tabgrid entity360-tabgrid-tax"><Card title="Perfil tributario" meta="Servicio de Impuestos Internos"><dl className="entity360-kv entity360-kv-wide">
     <dt>Estado</dt><dd>{text(tax.current_status) ? titleCase(String(tax.current_status).replace(/_/g, ' ')) : '—'}</dd>
     <dt>Inicio de actividades</dt><dd>{fecha(text(tax.activity_start_date))}</dd>
     <dt>Término de giro</dt><dd>{fecha(text(tax.termination_date))}</dd>
     <dt>Tipo de contribuyente</dt><dd>{text(tax.taxpayer_type) ? titleCase(String(tax.taxpayer_type)) : '—'}</dd>
     <dt>Tipo de sociedad</dt><dd>{text(tax.society_type) ? titleCase(String(tax.society_type)) : '—'}</dd>
-    <dt>Sector económico</dt><dd>{text(tax.economic_sector) ? titleCase(String(tax.economic_sector)) : '—'}</dd>
-    <dt>Subsector</dt><dd>{text(tax.economic_subsector) ? titleCase(String(tax.economic_subsector)) : '—'}</dd>
+    <dt>Sector económico</dt><dd>{economicSector ? titleCase(String(economicSector)) : '—'}</dd>
+    <dt>Subsector</dt><dd>{economicSubsector ? titleCase(String(economicSubsector)) : '—'}</dd>
     <dt>Región / comuna</dt><dd>{[text(tax.region), text(tax.commune)].filter(Boolean).map((value) => titleCase(String(value))).join(' · ') || '—'}</dd>
     <dt>Tramo ventas UF</dt><dd>{salesBand.value}</dd>
     <dt>Trabajadores</dt><dd className={workers.value === 'No cargado en Atlas' ? undefined : 'mono'}>{workers.value}</dd>
