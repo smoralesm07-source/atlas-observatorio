@@ -17,6 +17,14 @@
 .state-period-inline input:focus{border-color:color-mix(in srgb,var(--state-accent) 62%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--state-accent) 10%,transparent)}
 .state-period-inline b{color:var(--ink-3);font-size:10px;font-weight:500}
 
+/* Huella publica: make the async entity search unmistakable while both sources settle. */
+.state-search-card:has(> .state-muted) .huella-search-summary strong{font-size:0}
+.state-search-card:has(> .state-muted) .huella-search-summary strong::after{content:'Buscando…';font-size:12px;font-weight:760;color:var(--ink-2)}
+.state-search-card>.state-muted{display:flex;align-items:center;gap:8px;min-height:30px;margin:3px 0 5px;color:var(--ink-3)}
+.state-search-card>.state-muted::before{content:'';width:13px;height:13px;box-sizing:border-box;flex:0 0 13px;border:2px solid color-mix(in srgb,var(--state-accent) 22%,var(--line));border-top-color:var(--state-accent);border-radius:50%;animation:huella-search-spin .72s linear infinite}
+@keyframes huella-search-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.state-search-card>.state-muted::before{animation-duration:1.6s}}
+
 @media (max-width:760px){
   .state-head{padding:16px 16px 14px}
   .state-capabilities{grid-template-columns:1fr}
