@@ -22,6 +22,7 @@ export type ProviderHistoryYear = {
 
 export type ProviderHistoryBuyer = {
   buyer_id: string;
+  buyer_label?: string | null;
   amount_clp?: number | null;
   order_count?: number | null;
 };
@@ -30,6 +31,7 @@ export type ProviderHistoryResponse = {
   ok?: boolean;
   schema?: string;
   rut?: string;
+  label?: string | null;
   period?: { from_year?: number; to_year?: number };
   summary?: ProviderHistorySummary | null;
   years?: ProviderHistoryYear[];
@@ -37,9 +39,41 @@ export type ProviderHistoryResponse = {
   semantics?: Record<string, unknown>;
 };
 
+export type ProviderCounterpartyHistorySummary = {
+  first_year?: number | null;
+  last_year?: number | null;
+  active_years?: number | null;
+  amount_clp?: number | null;
+  order_count?: number | null;
+  supplier_amount_clp?: number | null;
+  share_pct?: number | null;
+  rank?: number | null;
+  buyer_count?: number | null;
+};
+
+export type ProviderCounterpartyHistoryYear = {
+  year: number;
+  amount_clp?: number | null;
+  order_count?: number | null;
+  supplier_amount_clp?: number | null;
+  share_pct?: number | null;
+};
+
+export type ProviderCounterpartyHistoryResponse = {
+  ok?: boolean;
+  schema?: string;
+  rut?: string;
+  buyer_id?: string;
+  buyer_label?: string | null;
+  period?: { from_year?: number; to_year?: number };
+  summary?: ProviderCounterpartyHistorySummary | null;
+  years?: ProviderCounterpartyHistoryYear[];
+  semantics?: Record<string, unknown>;
+};
+
 const PROVIDER_HISTORY_ENDPOINT = 'https://bzqxvidggykkdouotylg.supabase.co/functions/v1/provider-entity-history';
 
-export async function fetchProviderHistory(rut: string, fromYear: number, toYear: number): Promise<ProviderHistoryResponse> {
+async function postProviderHistory<T>(body: Record<string, unknown>): Promise<T> {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) throw sessionError;
   if (!session?.access_token) throw new Error('Sesión Atlas no disponible para consultar el histórico de Mercado Público.');
@@ -50,12 +84,12 @@ export async function fetchProviderHistory(rut: string, fromYear: number, toYear
       Authorization: `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ rut, from_year: fromYear, to_year: toYear }),
+    body: JSON.stringify(body),
   });
 
-  let payload: ProviderHistoryResponse & { error?: string };
+  let payload: (T & { ok?: boolean; error?: string });
   try {
-    payload = await response.json() as ProviderHistoryResponse & { error?: string };
+    payload = await response.json() as T & { ok?: boolean; error?: string };
   } catch {
     throw new Error('El histórico de Mercado Público devolvió una respuesta no válida.');
   }
@@ -66,4 +100,22 @@ export async function fetchProviderHistory(rut: string, fromYear: number, toYear
   }
 
   return payload;
+}
+
+export function fetchProviderHistory(rut: string, fromYear: number, toYear: number): Promise<ProviderHistoryResponse> {
+  return postProviderHistory<ProviderHistoryResponse>({ rut, from_year: fromYear, to_year: toYear });
+}
+
+export function fetchProviderCounterpartyHistory(
+  rut: string,
+  buyerId: string,
+  fromYear: number,
+  toYear: number,
+): Promise<ProviderCounterpartyHistoryResponse> {
+  return postProviderHistory<ProviderCounterpartyHistoryResponse>({
+    rut,
+    buyer_id: buyerId,
+    from_year: fromYear,
+    to_year: toYear,
+  });
 }
