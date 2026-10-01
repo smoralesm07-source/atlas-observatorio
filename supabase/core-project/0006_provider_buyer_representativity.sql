@@ -7,7 +7,6 @@
 
 create index if not exists pair_month_buyer_period_idx
   on provider_analyzer.pair_month (buyer_id, year, supplier_id)
-  include (amount_total_clp, order_count)
   where year >= 2016;
 
 create or replace function public.provider_counterparty_history_v1(
