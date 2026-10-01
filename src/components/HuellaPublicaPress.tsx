@@ -17,6 +17,7 @@ type Props = {
   fromYear: number;
   toYear: number;
   onNavigate: (hash: string) => void;
+  showPreview?: boolean;
 };
 
 const TOPICS: Array<{ label: string; pattern: RegExp }> = [
@@ -105,7 +106,7 @@ function sourceInitials(value: string | null | undefined) {
   return initials || 'P';
 }
 
-export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, toYear, onNavigate }: Props) {
+export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, toYear, onNavigate, showPreview = false }: Props) {
   const [state, setState] = useState<PressState>({ status: 'idle', matches: [] });
   const [open, setOpen] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('RECENT');
@@ -179,6 +180,23 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
         </span>
         <span className="state-press-alert-arrow" aria-hidden="true">›</span>
       </button>
+
+      {showPreview && <section className="state-press-preview" aria-label="Vista previa de prensa relevante">
+        <header><div><span>Contexto Atlas</span><h3>Prensa relevante</h3></div><button type="button" onClick={() => setOpen(true)}>Ver todas →</button></header>
+        {state.status === 'loading' && <div className="state-press-preview-status">Consultando Radar Prensa…</div>}
+        {state.status === 'error' && <div className="state-press-preview-status">Prensa no disponible en esta consulta.</div>}
+        {state.status === 'done' && periodArticles.length === 0 && <div className="state-press-preview-status">Sin menciones directas en {fromYear}–{toYear}.</div>}
+        {state.status === 'done' && periodArticles.length > 0 && <div className="state-press-preview-list">
+          {periodArticles.slice(0, 4).map((article) => {
+            const relevance = relevanceFor(article);
+            return <button type="button" key={article.id} className="state-press-preview-row" onClick={() => setOpen(true)}>
+              <span className="state-press-preview-source">{sourceInitials(article.media)}</span>
+              <span className="state-press-preview-copy"><small>{article.media || 'Prensa abierta'} · {dateLabel(article.date)}</small><strong>{article.title}</strong></span>
+              <span className="state-press-preview-relevance" data-level={relevance === 'Alta relevancia' ? 'high' : 'medium'}><i />{relevance}</span>
+            </button>;
+          })}
+        </div>}
+      </section>}
 
       {open && <div className="state-press-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
         <aside className="state-press-drawer" role="dialog" aria-modal="true" aria-label={`Prensa relevante de ${entityName}`}>
