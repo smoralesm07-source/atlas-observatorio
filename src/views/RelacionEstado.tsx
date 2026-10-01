@@ -67,6 +67,7 @@ type SampleRow = {
   commune?: string | null;
   marks?: string[];
   is_osfl?: boolean;
+  osfl_confirmation_level?: string | null;
   is_so?: boolean;
   is_potential_so?: boolean;
   is_res_new?: boolean;
@@ -106,6 +107,7 @@ type SampleResponse = {
 
 const CURRENT_YEAR = new Date().getFullYear();
 const PAGE = 100;
+const EXPORT_MAX_ROWS = 100000;
 const MARKS: { code: MarkCode; label: string; group: string }[] = [
   { code: 'OSFL', label: 'OSFL', group: 'Tipo / universo' },
   { code: 'SO', label: 'Sujeto obligado', group: 'Tipo / universo' },
@@ -130,7 +132,7 @@ const RELATIONS: { value: Relation; label: string; hint: string }[] = [
 
 const EXPORT_OPTIONS: { key: string; label: string }[] = [
   ['rut', 'RUT'], ['rut_body', 'Cuerpo RUT'], ['name', 'Nombre'], ['entity_type', 'Tipo entidad'],
-  ['region', 'Región'], ['commune', 'Comuna'], ['marks', 'Marcas'],
+  ['region', 'Región'], ['commune', 'Comuna'], ['marks', 'Marcas'], ['osfl_confirmation_level', 'Calidad marca OSFL'],
   ['public_funds_amount', 'Pagos Estado período'], ['public_funds_recipient_amount', 'Traspasos / receptor'],
   ['public_funds_supplier_amount', 'Pagos como proveedor'], ['public_funds_payer_count', 'N° pagadores'],
   ['top_payer_name', 'Principal pagador'], ['top_payer_amount', 'Monto principal pagador'],
@@ -140,7 +142,7 @@ const EXPORT_OPTIONS: { key: string; label: string }[] = [
   ['res_event_date', 'Fecha RES nueva'],
 ].map(([key, label]) => ({ key, label }));
 
-const DEFAULT_EXPORT = new Set(['rut', 'name', 'entity_type', 'region', 'marks', 'public_funds_amount', 'public_funds_recipient_amount', 'public_funds_supplier_amount', 'public_funds_payer_count', 'top_payer_name', 'market_amount_12m', 'market_order_count_12m']);
+const DEFAULT_EXPORT = new Set(['rut', 'name', 'entity_type', 'region', 'marks', 'osfl_confirmation_level', 'public_funds_amount', 'public_funds_recipient_amount', 'public_funds_supplier_amount', 'public_funds_payer_count', 'top_payer_name', 'market_amount_12m', 'market_order_count_12m']);
 
 function normRut(v: string) { return v.toUpperCase().replace(/[^0-9K]/g, ''); }
 function rutBody(v: string) { const n = normRut(v); return n.length > 1 ? n.slice(0, -1) : n; }
@@ -265,6 +267,7 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
   const [page, setPage] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [exportColumns, setExportColumns] = useState<Set<string>>(() => new Set(DEFAULT_EXPORT));
 
   const request = useMemo(() => ({
@@ -278,14 +281,16 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
   const rows = sample.data?.rows ?? [];
   const total = Number(sample.data?.total ?? 0);
   const pages = Math.max(1, Math.ceil(total / PAGE));
+  const exportTooLarge = total > EXPORT_MAX_ROWS;
 
   function toggleMark(code: MarkCode) { setPage(0); setMarks((current) => current.includes(code) ? current.filter((m) => m !== code) : [...current, code]); }
   function toggleColumn(key: string) { setExportColumns((current) => { const next = new Set(current); next.has(key) ? next.delete(key) : next.add(key); return next; }); }
 
   async function fetchAllRows(): Promise<SampleRow[]> {
+    if (exportTooLarge) throw new Error(`La muestra contiene ${total.toLocaleString('es-CL')} entidades. Acótala a ${EXPORT_MAX_ROWS.toLocaleString('es-CL')} o menos antes de exportar.`);
     const all: SampleRow[] = [];
     const chunk = 1000;
-    for (let offset = 0; offset < Math.min(total, 100000); offset += chunk) {
+    for (let offset = 0; offset < total; offset += chunk) {
       const { data, error } = await supabase.rpc('obs_state_sample_query', { p_request: { ...request, limit: chunk, offset } });
       if (error) throw error;
       const batch = ((data as SampleResponse)?.rows ?? []) as SampleRow[];
@@ -296,7 +301,8 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
   }
 
   async function exportRows(rutOnly = false) {
-    if (!total || exporting) return;
+    if (!total || exporting || exportTooLarge) return;
+    setExportError(null);
     setExporting(true);
     try {
       const all = await fetchAllRows();
@@ -310,8 +316,11 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
           { label: 'Marcas', value: marks.length ? `${markMode}: ${marks.join(', ')}` : 'Sin filtro de marcas' },
           { label: 'Región', value: region || 'Todas' }, { label: 'Pagador contiene', value: payer || 'Todos' },
           { label: 'Total muestra', value: total }, { label: 'Nota Mercado Público', value: 'La muestra masiva usa el directorio vigente resumido de 12 meses; el histórico detallado se consulta por entidad.' },
+          { label: 'Nota OSFL', value: 'La capa de muestras excluye entidades públicas evidentes cuando la clasificación OSFL depende sólo de SII/core. La calidad de confirmación queda disponible como columna.' },
         ],
       });
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'No fue posible preparar la exportación.');
     } finally { setExporting(false); }
   }
 
@@ -332,13 +341,15 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
     </aside>
 
     <section className="state-card sample-results">
-      <div className="sample-toolbar"><div><span>Resultado de la muestra</span><strong>{sample.loading ? 'Calculando…' : `${total.toLocaleString('es-CL')} entidades`}</strong></div><div className="sample-actions"><button className="state-secondary" disabled={!total || exporting} onClick={() => void exportRows(true)}>⇩ Solo RUT</button><button className="state-primary" disabled={!total || exporting} onClick={() => setExportOpen((v) => !v)}>{exporting ? 'Preparando…' : '⇩ Exportar muestra'}</button></div></div>
-      {exportOpen && <div className="export-config"><div><strong>Columnas del archivo</strong><span>Selecciona sólo lo que necesites para la consulta posterior.</span></div><div className="export-columns">{EXPORT_OPTIONS.map((c) => <label key={c.key}><input type="checkbox" checked={exportColumns.has(c.key)} onChange={() => toggleColumn(c.key)} />{c.label}</label>)}</div><button className="state-primary" disabled={!exportColumns.size || exporting} onClick={() => void exportRows(false)}>Generar Excel ({total.toLocaleString('es-CL')})</button></div>}
+      <div className="sample-toolbar"><div><span>Resultado de la muestra</span><strong>{sample.loading ? 'Calculando…' : `${total.toLocaleString('es-CL')} entidades`}</strong></div><div className="sample-actions"><button className="state-secondary" disabled={!total || exporting || exportTooLarge} onClick={() => void exportRows(true)}>⇩ Solo RUT</button><button className="state-primary" disabled={!total || exporting || exportTooLarge} onClick={() => setExportOpen((v) => !v)}>{exporting ? 'Preparando…' : '⇩ Exportar muestra'}</button></div></div>
+      {exportTooLarge && <div className="state-error">La muestra supera {EXPORT_MAX_ROWS.toLocaleString('es-CL')} entidades. Acota período, relación o marcas antes de exportar para evitar una nómina parcial.</div>}
+      {exportError && <div className="state-error">{exportError}</div>}
+      {exportOpen && !exportTooLarge && <div className="export-config"><div><strong>Columnas del archivo</strong><span>Selecciona sólo lo que necesites para la consulta posterior.</span></div><div className="export-columns">{EXPORT_OPTIONS.map((c) => <label key={c.key}><input type="checkbox" checked={exportColumns.has(c.key)} onChange={() => toggleColumn(c.key)} />{c.label}</label>)}</div><button className="state-primary" disabled={!exportColumns.size || exporting} onClick={() => void exportRows(false)}>Generar Excel ({total.toLocaleString('es-CL')})</button></div>}
       {sample.error && <div className="state-error">{sample.error}</div>}
       {!sample.loading && !sample.error && rows.length === 0 && <div className="state-empty state-empty-large"><strong>La combinación no devuelve entidades</strong><span>Amplía el período o retira una marca para probar otra cohorte.</span></div>}
-      {rows.length > 0 && <div className="sample-table-wrap"><table className="sample-table"><thead><tr><th>Entidad</th><th>Marcas</th><th>Interacción estatal</th><th>Principal contraparte</th><th></th></tr></thead><tbody>{rows.map((row) => <tr key={row.entity_id}><td><strong>{row.name}</strong><small>{row.rut} · {row.region || 'Región s/d'}</small></td><td><div className="row-marks">{(row.marks ?? []).slice(0, 5).map((m) => <span key={m}>{markLabel(m)}</span>)}</div></td><td><div className="money-stack">{Number(row.public_funds_amount || 0) > 0 && <span><b>{clp(relevantFundsAmount(row, relation))}</b><small>Presupuesto Abierto · {fromYear}–{toYear}</small></span>}{row.is_state_supplier && <span><b>{clp(row.market_amount_12m)}</b><small>Mercado Público · 12m · {num(row.market_order_count_12m)} OC</small></span>}</div></td><td>{row.top_payer_name || row.top_buyer_label || '—'}{row.public_funds_payer_count ? <small>{num(row.public_funds_payer_count)} pagadores</small> : null}</td><td><button className="row-open" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(row.entity_id)}`)}>Entidad 360 →</button></td></tr>)}</tbody></table></div>}
+      {rows.length > 0 && <div className="sample-table-wrap"><table className="sample-table"><thead><tr><th>Entidad</th><th>Marcas</th><th>Interacción estatal</th><th>Principal contraparte</th><th></th></tr></thead><tbody>{rows.map((row) => <tr key={row.entity_id}><td><strong>{row.name}</strong><small>{row.rut} · {row.region || 'Región s/d'}</small></td><td><div className="row-marks">{(row.marks ?? []).slice(0, 5).map((m) => <span key={m}>{markLabel(m)}</span>)}</div>{row.is_osfl && <small>{row.osfl_confirmation_level || 'OSFL radar'}</small>}</td><td><div className="money-stack">{Number(row.public_funds_amount || 0) > 0 && <span><b>{clp(relevantFundsAmount(row, relation))}</b><small>Presupuesto Abierto · {fromYear}–{toYear}</small></span>}{row.is_state_supplier && <span><b>{clp(row.market_amount_12m)}</b><small>Mercado Público · 12m · {num(row.market_order_count_12m)} OC</small></span>}</div></td><td>{row.top_payer_name || row.top_buyer_label || '—'}{row.public_funds_payer_count ? <small>{num(row.public_funds_payer_count)} pagadores</small> : null}</td><td><button className="row-open" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(row.entity_id)}`)}>Entidad 360 →</button></td></tr>)}</tbody></table></div>}
       {total > PAGE && <div className="sample-pagination"><button disabled={page <= 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>← Anterior</button><span>{page + 1} / {pages}</span><button disabled={page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>Siguiente →</button></div>}
-      <div className="sample-semantics"><b>Lectura:</b> Presupuesto Abierto se filtra por el período seleccionado. Mercado Público usa el directorio resumido vigente para construir muestras y carga su historia por entidad a demanda. Los montos de ambas fuentes no se suman.</div>
+      <div className="sample-semantics"><b>Lectura:</b> Presupuesto Abierto se filtra por el período seleccionado. Mercado Público usa el directorio resumido vigente para construir muestras y carga su historia por entidad a demanda. Los montos de ambas fuentes no se suman. En OSFL, la capa de muestras excluye entidades públicas evidentes clasificadas sólo por SII/core y conserva el nivel de confirmación para trazabilidad.</div>
     </section>
   </div>;
 }
@@ -353,7 +364,7 @@ function exportColumnsFor(selected: Set<string>): ExcelColumn<SampleRow>[] {
   const all: Record<string, ExcelColumn<SampleRow>> = {
     rut: { header: 'RUT', value: (r) => r.rut }, rut_body: { header: 'Cuerpo RUT', value: (r) => rutBody(r.rut) }, name: { header: 'Nombre', value: (r) => r.name },
     entity_type: { header: 'Tipo entidad', value: (r) => r.entity_type }, region: { header: 'Región', value: (r) => r.region }, commune: { header: 'Comuna', value: (r) => r.commune },
-    marks: { header: 'Marcas Atlas', value: (r) => (r.marks ?? []).map(markLabel).join(' | ') }, public_funds_amount: { header: 'Pagos Estado período', value: (r) => r.public_funds_amount },
+    marks: { header: 'Marcas Atlas', value: (r) => (r.marks ?? []).map(markLabel).join(' | ') }, osfl_confirmation_level: { header: 'Calidad marca OSFL', value: (r) => r.osfl_confirmation_level }, public_funds_amount: { header: 'Pagos Estado período', value: (r) => r.public_funds_amount },
     public_funds_recipient_amount: { header: 'Traspasos / receptor', value: (r) => r.public_funds_recipient_amount }, public_funds_supplier_amount: { header: 'Pagos como proveedor', value: (r) => r.public_funds_supplier_amount },
     public_funds_payer_count: { header: 'N° pagadores', value: (r) => r.public_funds_payer_count }, top_payer_name: { header: 'Principal pagador', value: (r) => r.top_payer_name }, top_payer_amount: { header: 'Monto principal pagador', value: (r) => r.top_payer_amount },
     market_amount_12m: { header: 'Mercado Público 12m', value: (r) => r.market_amount_12m }, market_order_count_12m: { header: 'N° OC 12m', value: (r) => r.market_order_count_12m }, market_buyer_count: { header: 'N° compradores 12m', value: (r) => r.market_buyer_count }, top_buyer_label: { header: 'Principal comprador', value: (r) => r.top_buyer_label },
