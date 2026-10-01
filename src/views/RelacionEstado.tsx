@@ -115,7 +115,7 @@ const MARKS: { code: MarkCode; label: string; group: string }[] = [
   { code: 'OSFL', label: 'OSFL', group: 'Tipo / universo' },
   { code: 'SO', label: 'Sujeto obligado', group: 'Tipo / universo' },
   { code: 'POTENTIAL_SO', label: 'Potencial SO', group: 'Tipo / universo' },
-  { code: 'RES_NEW', label: 'RES nueva en el período', group: 'Tipo / universo' },
+  { code: 'RES_NEW', label: 'RES nueva', group: 'Tipo / universo' },
   { code: 'SII', label: 'Presencia SII', group: 'SII' },
   { code: 'SII_TG', label: 'Término de giro', group: 'SII' },
   { code: 'SII_NO_EMPLOYEES', label: 'Sin empleados', group: 'SII' },
