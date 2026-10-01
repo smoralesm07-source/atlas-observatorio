@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/apply_huella_publica_counterparties.py'
+      - 'scripts/fix_huella_publica_patch.py'
       - '.github/workflows/apply-huella-publica-counterparties.yml'
 
 permissions:
@@ -23,7 +24,9 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Aplicar cambios de Huella pública
-        run: python3 scripts/apply_huella_publica_counterparties.py
+        run: |
+          python3 scripts/apply_huella_publica_counterparties.py
+          python3 scripts/fix_huella_publica_patch.py
       - name: Instalar dependencias
         run: npm ci
       - name: Verificar tipos
