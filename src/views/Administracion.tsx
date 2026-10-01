@@ -168,8 +168,8 @@ export function Administracion({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [pendingRoles, setPendingRoles] = useState<Record<string, Role>>({});
-  const [activityUser, setActivityUser] = useState('ALL');
-  const [activityExpanded, setActivityExpanded] = useState(false);
+  const [historyUserId, setHistoryUserId] = useState<string | null>(null);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   async function load() {
@@ -239,10 +239,21 @@ export function Administracion({ session }: { session: Session }) {
     return rightTime - leftTime || left.email.localeCompare(right.email);
   }), [enabled, presenceByUser, now]);
 
-  const activityLog = useMemo(() => {
-    const rows = activity.filter((entry) => entry.operation === 'page_view' && (activityUser === 'ALL' || entry.user_id === activityUser));
-    return rows.slice(0, activityExpanded ? 240 : 60);
-  }, [activity, activityUser, activityExpanded]);
+  const selectedHistoryUser = useMemo(
+    () => enabled.find((user) => user.id === historyUserId) ?? null,
+    [enabled, historyUserId],
+  );
+
+  const selectedHistory = useMemo(() => {
+    if (!historyUserId) return [];
+    const rows = activity.filter((entry) => entry.operation === 'page_view' && entry.user_id === historyUserId);
+    return rows.slice(0, historyExpanded ? 240 : 60);
+  }, [activity, historyUserId, historyExpanded]);
+
+  const selectedHistoryCount = useMemo(
+    () => historyUserId ? activity.filter((entry) => entry.operation === 'page_view' && entry.user_id === historyUserId).length : 0,
+    [activity, historyUserId],
+  );
 
   const connectedCount = presence.filter((entry) => presenceIsOnline(entry, now)).length;
   const disconnectedCount = presence.filter((entry) => !presenceIsOnline(entry, now)).length;
@@ -263,6 +274,11 @@ export function Administracion({ session }: { session: Session }) {
 
   function requestedRole(user: AdminUser): Role {
     return pendingRoles[user.id] ?? 'viewer';
+  }
+
+  function openHistory(userId: string) {
+    setHistoryUserId((current) => current === userId ? null : userId);
+    setHistoryExpanded(false);
   }
 
   return (
@@ -294,7 +310,7 @@ export function Administracion({ session }: { session: Session }) {
         <div className="admin-section-head admin-activity-head">
           <div>
             <h2 id="activity-title">Actividad de usuarios</h2>
-            <p>Presencia actual y bitácora de secciones de los últimos {snapshot?.activity_window_days ?? 10} días.</p>
+            <p>Presencia actual. El historial de navegación de los últimos {snapshot?.activity_window_days ?? 10} días se abre a demanda por usuario.</p>
           </div>
           <div className="admin-presence-summary" aria-label="Resumen de presencia">
             <span><strong>{connectedCount}</strong> conectados</span>
@@ -305,54 +321,79 @@ export function Administracion({ session }: { session: Session }) {
 
         <div className="admin-table-wrap">
           <table className="admin-table admin-activity-table">
-            <thead><tr><th>Usuario</th><th>Presencia</th><th>Sección actual / última</th><th>Última señal</th><th>Recorrido reciente</th></tr></thead>
+            <thead><tr><th>Usuario</th><th>Presencia</th><th>Sección actual / última</th><th>Última señal</th><th>Recorrido reciente</th><th className="admin-action-col">Historial</th></tr></thead>
             <tbody>
               {activityUsers.map((user) => {
                 const userPresence = presenceByUser.get(user.id);
                 const isOnline = presenceIsOnline(userPresence, now);
                 const recentSections = recentSectionsByUser.get(user.id) ?? [];
+                const isHistoryOpen = historyUserId === user.id;
                 return (
-                  <tr key={`activity-${user.id}`}>
+                  <tr key={`activity-${user.id}`} className={isHistoryOpen ? 'admin-activity-row-selected' : ''}>
                     <td><div className="admin-user-cell"><div className="admin-user-avatar admin-user-avatar-small">{user.email.slice(0, 1).toUpperCase()}</div><div><strong>{user.email || 'Cuenta sin correo'}</strong><span className="admin-activity-role">{user.authorization ? ROLE_LABEL[user.authorization.role] : 'Sin rol'}</span></div></div></td>
                     <td>{userPresence ? (isOnline ? <span className="admin-status admin-status-active"><i /> Conectado</span> : <span className="admin-status admin-status-off"><i /> Desconectado · {relativeTime(disconnectedSince(userPresence), now)}</span>) : <span className="admin-status admin-status-off"><i /> Sin actividad registrada</span>}</td>
                     <td><div className="admin-current-section"><strong>{userPresence?.current_section ?? 'Sin registro'}</strong>{userPresence && <span>{isOnline ? 'En esta sección ahora' : 'Última sección observada'}</span>}</div></td>
                     <td>{userPresence ? <time className="admin-last-signal" title={formatDate(userPresence.last_seen_at)}>{relativeTime(userPresence.last_seen_at, now)}</time> : <span className="admin-muted">Sin señal</span>}</td>
                     <td>{recentSections.length > 0 ? <div className="admin-route-chips">{recentSections.map((section) => <span key={`${user.id}-${section}`}>{section}</span>)}</div> : <span className="admin-muted">Sin recorrido registrado</span>}</td>
+                    <td className="admin-action-col">
+                      <button
+                        className={`btn admin-history-btn ${isHistoryOpen ? 'admin-history-btn-active' : ''}`}
+                        type="button"
+                        aria-expanded={isHistoryOpen}
+                        onClick={() => openHistory(user.id)}
+                      >
+                        {isHistoryOpen ? 'Cerrar' : 'Historial'}
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
-              {!loading && activityUsers.length === 0 && <tr><td colSpan={5} className="admin-table-empty">La actividad comenzará a aparecer cuando los usuarios vuelvan a navegar por ATLAS.</td></tr>}
+              {!loading && activityUsers.length === 0 && <tr><td colSpan={6} className="admin-table-empty">La actividad comenzará a aparecer cuando los usuarios vuelvan a navegar por ATLAS.</td></tr>}
             </tbody>
           </table>
         </div>
 
-        <div className="admin-history-head">
-          <div><strong>Bitácora · últimos 10 días</strong><span>Registra sólo cambios de sección; no guarda búsquedas, RUT ni entidades consultadas.</span></div>
-          <label className="admin-history-filter">Usuario
-            <select value={activityUser} onChange={(event) => { setActivityUser(event.target.value); setActivityExpanded(false); }}>
-              <option value="ALL">Todos</option>
-              {enabled.map((user) => <option key={user.id} value={user.id}>{user.email}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="admin-history-list">
-          {activityLog.map((entry) => (
-            <div className="admin-history-row" key={entry.id}>
-              <time title={formatDate(entry.created_at)}>{formatLogDate(entry.created_at)}</time>
-              <span className="admin-history-user">{entry.email}</span>
-              <span className="admin-history-section">{entry.section}</span>
+        {selectedHistoryUser && (
+          <div className="admin-history-panel">
+            <div className="admin-history-panel-head">
+              <div className="admin-history-identity">
+                <div className="admin-user-avatar admin-user-avatar-small">{selectedHistoryUser.email.slice(0, 1).toUpperCase()}</div>
+                <div>
+                  <strong>Historial · {selectedHistoryUser.email}</strong>
+                  <span>Últimos {snapshot?.activity_window_days ?? 10} días · sólo cambios de sección</span>
+                </div>
+              </div>
+              <button className="admin-history-close" type="button" onClick={() => setHistoryUserId(null)} aria-label="Cerrar historial">×</button>
             </div>
-          ))}
-          {!loading && activityLog.length === 0 && <div className="admin-empty">Sin navegación registrada para este filtro durante la ventana disponible.</div>}
-        </div>
-        {activity.filter((entry) => entry.operation === 'page_view' && (activityUser === 'ALL' || entry.user_id === activityUser)).length > 60 && (
-          <button className="admin-history-more" type="button" onClick={() => setActivityExpanded((value) => !value)}>
-            {activityExpanded ? 'Mostrar menos' : 'Ver más actividad'}
-          </button>
+
+            <div className="admin-history-grid admin-history-grid-head" aria-hidden>
+              <span>Fecha y hora</span>
+              <span>Sección</span>
+            </div>
+            <div className="admin-history-list">
+              {selectedHistory.map((entry) => (
+                <div className="admin-history-grid admin-history-row" key={entry.id}>
+                  <time title={formatDate(entry.created_at)}>{formatLogDate(entry.created_at)}</time>
+                  <span className="admin-history-section">{entry.section}</span>
+                </div>
+              ))}
+              {!loading && selectedHistory.length === 0 && <div className="admin-empty">Sin navegación registrada para este usuario durante la ventana disponible.</div>}
+            </div>
+            {selectedHistoryCount > 60 && (
+              <button className="admin-history-more" type="button" onClick={() => setHistoryExpanded((value) => !value)}>
+                {historyExpanded ? 'Mostrar menos' : `Ver más actividad (${selectedHistoryCount})`}
+              </button>
+            )}
+            <div className="admin-history-note">
+              <span>No se guardan búsquedas, RUT ni entidades consultadas.</span>
+              <span>{snapshot?.activity_truncated ? 'La ventana general alcanzó el límite de 1.000 eventos.' : `${selectedHistoryCount} eventos disponibles para este usuario.`}</span>
+            </div>
+          </div>
         )}
+
         <div className="admin-table-foot">
-          <span>La presencia se actualiza cada minuto con una consulta liviana; la bitácora completa sólo se recarga al abrir o actualizar Administración.</span>
-          <span>{snapshot?.activity_truncated ? 'Se muestran los 1.000 eventos más recientes de la ventana.' : `${activity.filter((entry) => entry.operation === 'page_view').length} eventos de navegación en memoria.`}</span>
+          <span>La presencia se actualiza cada minuto con una consulta liviana.</span>
+          <span>La bitácora se mantiene cerrada hasta que se solicita.</span>
         </div>
       </section>
 
