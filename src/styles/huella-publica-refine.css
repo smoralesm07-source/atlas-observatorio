@@ -32,6 +32,12 @@
 .huella-workspace[data-mode='ENTITY']>.state-page .detail-row-button{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(128px,auto)!important;align-items:center!important;gap:12px!important;min-height:45px!important;width:100%;box-sizing:border-box;text-align:left}
 .huella-workspace[data-mode='ENTITY']>.state-page .detail-row-button>span{min-width:0}.huella-workspace[data-mode='ENTITY']>.state-page .detail-row-button>span:first-child b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.huella-workspace[data-mode='ENTITY']>.state-page .detail-row-button>span:last-child{text-align:right}.huella-workspace[data-mode='ENTITY']>.state-page .detail-row-button>span:last-child b,.huella-workspace[data-mode='ENTITY']>.state-page .detail-row-button>span:last-child small{white-space:nowrap}
 
+/* Ficha lateral de prensa: fondo claro y atenuación muy leve de la app. */
+.state-press-backdrop{background:rgba(15,23,42,.12)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;z-index:1300!important}
+.state-press-drawer{background:var(--panel,#fff)!important;box-shadow:-18px 0 42px rgba(15,23,42,.16)!important;border-left:1px solid color-mix(in srgb,var(--line) 90%,transparent)!important}
+.state-press-drawer-head,.state-press-drawer-actions,.state-press-list-head,.state-press-drawer-body{background:var(--panel,#fff)}
+.state-press-drawer-metrics{background:var(--panel,#fff)!important}.state-press-drawer-row{background:var(--panel,#fff)!important}.state-press-rule{background:var(--surface-2,#f5f6f7)!important}
+
 /* Construir muestra: no hay consulta ni nómina hasta aplicar filtros explícitamente. */
 .huella-workspace[data-mode='SAMPLE']>.state-page .sample-filters{padding-bottom:12px!important}
 .sample-apply-zone{display:flex;flex-direction:column;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.sample-apply-zone .sample-apply{width:100%;min-height:39px;border-radius:10px}.sample-apply-zone small{font-size:8.3px;line-height:1.4;color:var(--ink-3);text-align:center}
