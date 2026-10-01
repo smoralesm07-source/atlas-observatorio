@@ -112,7 +112,9 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
       ? String(b.date ?? '').localeCompare(String(a.date ?? ''))
       : String(a.date ?? '').localeCompare(String(b.date ?? '')));
   }, [periodArticles, sortMode]);
-  const lastArticle = periodArticles[0] ?? null;
+  const previewArticles = periodArticles.length > 0 ? periodArticles : allArticles;
+  const lastArticle = allArticles[0] ?? null;
+  const historicalDirectCount = allArticles.filter((article) => article.evidence === 'directa').length;
   const directCount = periodArticles.filter((article) => article.evidence === 'directa').length;
   const contextCount = periodArticles.filter((article) => article.evidence === 'contexto').length;
   const reviewCount = periodArticles.filter((article) => article.evidence === 'revision').length;
@@ -121,11 +123,19 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
     ? 'Consultando…'
     : state.status === 'error'
       ? 'No disponible'
-      : periodArticles.length === 0
+      : allArticles.length === 0
         ? 'Sin coincidencias de prensa'
-        : directCount > 0
-          ? `${periodArticles.length.toLocaleString('es-CL')} coincidencias · ${directCount.toLocaleString('es-CL')} directas`
-          : `${periodArticles.length.toLocaleString('es-CL')} coincidencias de prensa`;
+        : historicalDirectCount > 0
+          ? `${allArticles.length.toLocaleString('es-CL')} coincidencias históricas · ${historicalDirectCount.toLocaleString('es-CL')} directas`
+          : `${allArticles.length.toLocaleString('es-CL')} coincidencias históricas`;
+
+  const periodLabel = allArticles.length > 0 && periodArticles.length === 0
+    ? `Sin coincidencias en ${fromYear}–${toYear} · última ${dateLabel(lastArticle?.date)}`
+    : lastArticle
+      ? `Última: ${dateLabel(lastArticle.date)} · ${periodArticles.length.toLocaleString('es-CL')} en ${fromYear}–${toYear}`
+      : state.status === 'done'
+        ? `Sin coincidencias en ${fromYear}–${toYear}`
+        : 'Radar Prensa';
 
   return (
     <div className="state-press-root">
@@ -135,7 +145,7 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
           <small>Contexto Atlas</small>
           <b>Prensa relevante</b>
           <strong>{countLabel}</strong>
-          <em>{lastArticle ? `Última: ${dateLabel(lastArticle.date)}` : state.status === 'done' ? `Sin coincidencias en ${fromYear}–${toYear}` : 'Radar Prensa'}</em>
+          <em>{periodLabel}</em>
         </span>
         <span className="state-press-alert-arrow" aria-hidden="true">›</span>
       </button>
@@ -144,9 +154,10 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
         <header><div><span>Contexto Atlas</span><h3>Prensa relevante</h3></div><button type="button" onClick={() => setOpen(true)}>Ver todas →</button></header>
         {state.status === 'loading' && <div className="state-press-preview-status">Consultando Radar Prensa…</div>}
         {state.status === 'error' && <div className="state-press-preview-status">Prensa no disponible en esta consulta.</div>}
-        {state.status === 'done' && periodArticles.length === 0 && <div className="state-press-preview-status">Sin coincidencias de prensa en {fromYear}–{toYear}.</div>}
-        {state.status === 'done' && periodArticles.length > 0 && <div className="state-press-preview-list">
-          {periodArticles.slice(0, 4).map((article) => {
+        {state.status === 'done' && allArticles.length === 0 && <div className="state-press-preview-status">Sin coincidencias de prensa para esta entidad.</div>}
+        {state.status === 'done' && allArticles.length > 0 && periodArticles.length === 0 && <div className="state-press-preview-status">Hay {allArticles.length.toLocaleString('es-CL')} coincidencia{allArticles.length === 1 ? '' : 's'} histórica{allArticles.length === 1 ? '' : 's'}; ninguna cae en {fromYear}–{toYear}. Se muestran las más recientes.</div>}
+        {state.status === 'done' && previewArticles.length > 0 && <div className="state-press-preview-list">
+          {previewArticles.slice(0, 4).map((article) => {
             const relevance = relevanceFor(article);
             return <button type="button" key={article.id} className="state-press-preview-row" onClick={() => setOpen(true)}>
               <span className="state-press-preview-source">{sourceInitials(article.media)}</span>
@@ -165,7 +176,7 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
               <div>
                 <small>Contexto Atlas · Radar Prensa</small>
                 <h2>Prensa relevante</h2>
-                <p>Coincidencias asociadas a <strong>{entityName}</strong> con la misma resolución de identidad usada por Entidad 360. Atlas distingue coincidencia directa, contexto y casos que requieren corroboración.</p>
+                <p>Coincidencias asociadas a <strong>{entityName}</strong> con la misma resolución de identidad usada por Entidad 360. La relación con prensa es histórica; el período de Huella pública sólo filtra el detalle económico-temporal.</p>
               </div>
             </div>
             <button type="button" className="state-press-close" onClick={() => setOpen(false)} aria-label="Cerrar ficha de prensa">×</button>
@@ -173,18 +184,18 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
 
           <div className="state-press-drawer-actions">
             {entityId && <button type="button" className="state-secondary" onClick={() => { setOpen(false); onNavigate(`#/entidad/${encodeURIComponent(entityId)}?tab=prensa`); }}>Ver expediente completo →</button>}
-            <span>{fromYear}–{toYear}</span>
+            <span>{fromYear}–{toYear} · {periodArticles.length.toLocaleString('es-CL')} en período · {allArticles.length.toLocaleString('es-CL')} históricas</span>
           </div>
 
           <div className="state-press-drawer-metrics">
-            <div><i>◎</i><span><strong>{periodArticles.length.toLocaleString('es-CL')}</strong><small>Coincidencias</small></span></div>
-            <div><i>●</i><span><strong>{directCount.toLocaleString('es-CL')}</strong><small>Directas</small></span></div>
+            <div><i>◎</i><span><strong>{allArticles.length.toLocaleString('es-CL')}</strong><small>Históricas</small></span></div>
+            <div><i>●</i><span><strong>{directCount.toLocaleString('es-CL')}</strong><small>Directas en período</small></span></div>
             <div><i>◇</i><span><strong>{(contextCount + reviewCount).toLocaleString('es-CL')}</strong><small>Contexto / revisar</small></span></div>
             <div><i>▦</i><span><strong>{lastArticle ? dateLabel(lastArticle.date) : '—'}</strong><small>Última mención</small></span></div>
           </div>
 
           <div className="state-press-list-head">
-            <div><span>Noticias</span><strong>{periodArticles.length.toLocaleString('es-CL')}</strong></div>
+            <div><span>Noticias en período</span><strong>{periodArticles.length.toLocaleString('es-CL')}</strong></div>
             <label>Ordenar por
               <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
                 <option value="RECENT">Fecha (más reciente)</option>
@@ -196,7 +207,7 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
           <div className="state-press-drawer-body">
             {state.status === 'loading' && <div className="state-press-status"><span className="state-press-loader" />Consultando Radar Prensa para esta entidad…</div>}
             {state.status === 'error' && <div className="state-press-status state-press-status-error">Radar Prensa no está disponible en esta consulta. La información económica de Huella pública permanece operativa.</div>}
-            {state.status === 'done' && articles.length === 0 && <div className="state-press-empty"><span>○</span><div><strong>Sin coincidencias de prensa en {fromYear}–{toYear}</strong><p>{allArticles.length > 0 ? `Radar Prensa registra ${allArticles.length.toLocaleString('es-CL')} coincidencia${allArticles.length === 1 ? '' : 's'} fuera del período seleccionado.` : 'Entidad 360 y Huella pública no registran coincidencias periodísticas para esta entidad en el índice vigente.'}</p></div></div>}
+            {state.status === 'done' && articles.length === 0 && <div className="state-press-empty"><span>○</span><div><strong>Sin coincidencias de prensa en {fromYear}–{toYear}</strong><p>{allArticles.length > 0 ? `La relación con prensa sí existe: Radar Prensa registra ${allArticles.length.toLocaleString('es-CL')} coincidencia${allArticles.length === 1 ? '' : 's'} histórica${allArticles.length === 1 ? '' : 's'}, fuera del período seleccionado. Entidad 360 conserva el expediente completo.` : 'Entidad 360 y Huella pública no registran coincidencias periodísticas para esta entidad en el índice vigente.'}</p></div></div>}
 
             {state.status === 'done' && articles.length > 0 && <div className="state-press-drawer-feed">
               {articles.map((article) => {
@@ -219,7 +230,7 @@ export function HuellaPublicaPress({ entityRut, entityName, entityId, fromYear, 
             </div>}
           </div>
 
-          <footer className="state-press-rule"><strong>Regla de lectura.</strong> Huella pública y Entidad 360 utilizan la misma resolución de Radar Prensa. Una noticia acredita una publicación asociada, no la veracidad del hecho ni responsabilidad. Las coincidencias de contexto y por revisar se distinguen explícitamente para evitar atribuciones automáticas.</footer>
+          <footer className="state-press-rule"><strong>Regla de lectura.</strong> Huella pública y Entidad 360 utilizan la misma resolución de Radar Prensa. La existencia de relación con prensa se evalúa sobre el histórico común; el selector temporal de Huella sólo acota el detalle mostrado. Una noticia acredita una publicación asociada, no la veracidad del hecho ni responsabilidad.</footer>
         </aside>
       </div>}
     </div>

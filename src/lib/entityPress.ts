@@ -17,6 +17,34 @@ function compactRut(value: unknown): string {
   return String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
 }
 
+function hasExactRut(match: PressMatch, rut: string): boolean {
+  return Boolean(rut) && (match.ruts ?? []).some((candidate) => compactRut(candidate) === rut);
+}
+
+function mergePressMatches(groups: PressMatch[][], limit: number): PressMatch[] {
+  const byId = new Map<string, PressMatch>();
+  for (const group of groups) {
+    for (const match of group) {
+      const current = byId.get(match.press_entity_id);
+      if (!current) {
+        byId.set(match.press_entity_id, match);
+        continue;
+      }
+      const articleById = new Map((current.articles ?? []).map((article) => [article.id, article]));
+      for (const article of match.articles ?? []) articleById.set(article.id, article);
+      byId.set(match.press_entity_id, {
+        ...current,
+        ...match,
+        match_score: Math.max(Number(current.match_score ?? 0), Number(match.match_score ?? 0)),
+        articles: [...articleById.values()].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))),
+      });
+    }
+  }
+  return [...byId.values()]
+    .sort((a, b) => Number(b.match_score ?? 0) - Number(a.match_score ?? 0))
+    .slice(0, Math.max(1, limit));
+}
+
 /**
  * Única regla de enlace Entidad Atlas -> Radar Prensa para las vistas de entidad.
  * Conserva el umbral histórico de Entidad 360: RUT exacto o nombre con score >= .94.
@@ -26,7 +54,7 @@ export function resolveEntityPressMatches(entityRut: string | null | undefined, 
   const strongName = matches.filter((match) => Number(match.match_score ?? 0) >= 0.94);
   if (!rut) return strongName;
 
-  const byRut = matches.filter((match) => (match.ruts ?? []).some((candidate) => compactRut(candidate) === rut));
+  const byRut = matches.filter((match) => hasExactRut(match, rut));
   const seen = new Set(byRut.map((match) => match.press_entity_id));
   return [...byRut, ...strongName.filter((match) => !seen.has(match.press_entity_id))];
 }
@@ -85,9 +113,10 @@ export function entityPressArticleRows(matches: PressMatch[]): EntityPressArticl
 
 /**
  * Recuperación común para Entidad 360 y Huella pública.
- * Se consulta primero la razón social y, sólo si no resuelve una identidad,
- * se usa el RUT como fallback. De esta forma ambas pantallas parten del mismo
- * conjunto de coincidencias y no pueden divergir por usar rutas de búsqueda distintas.
+ * El RUT es el ancla estable entre fuentes. Cuando existe también una razón social
+ * útil, se consulta para conservar alias y contexto de grupo; ambos resultados se
+ * fusionan y deduplican. Así una etiqueta distinta en Mercado Público o Presupuesto
+ * Abierto no puede ocultar una relación que Entidad 360 ya resuelve por el mismo RUT.
  */
 export async function searchEntityPress(
   entityName: string | null | undefined,
@@ -96,12 +125,18 @@ export async function searchEntityPress(
 ): Promise<PressMatch[]> {
   const name = String(entityName ?? '').trim();
   const rut = String(entityRut ?? '').trim();
+  const rutKey = compactRut(rut);
+  const usableName = Boolean(name && !/^consultar rut\b/i.test(name) && compactRut(name) !== rutKey);
 
-  if (name && !/^consultar rut\b/i.test(name) && compactRut(name) !== compactRut(rut)) {
-    const byName = resolveEntityPressMatches(rut, await searchPressDossier(name, limit));
-    if (byName.length) return byName;
-  }
+  const [rawByRut, rawByName] = await Promise.all([
+    rut ? searchPressDossier(rut, limit) : Promise.resolve([] as PressMatch[]),
+    usableName ? searchPressDossier(name, limit) : Promise.resolve([] as PressMatch[]),
+  ]);
 
-  if (!rut) return [];
-  return resolveEntityPressMatches(rut, await searchPressDossier(rut, limit));
+  const byRut = resolveEntityPressMatches(rut, rawByRut);
+  const byName = resolveEntityPressMatches(rut, rawByName);
+
+  // El vínculo por RUT nunca puede desaparecer por una variante de nombre.
+  // La búsqueda nominal sólo agrega evidencia/contexto que pase la misma regla.
+  return mergePressMatches([byRut, byName], limit);
 }
