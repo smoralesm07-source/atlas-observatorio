@@ -58,6 +58,10 @@ type HistorySummary = {
   amount_as_recipient?: number | null;
   supplier_role?: boolean | null;
   recipient_role?: boolean | null;
+  buyer_amount_clp?: number | null;
+  buyer_share_pct?: number | null;
+  buyer_supplier_rank?: number | null;
+  buyer_supplier_count?: number | null;
 };
 
 type HistoryYear = {
@@ -73,6 +77,10 @@ type HistoryYear = {
   last_seen?: string | null;
   supplier_role?: boolean | null;
   recipient_role?: boolean | null;
+  buyer_amount_clp?: number | null;
+  buyer_share_pct?: number | null;
+  buyer_supplier_rank?: number | null;
+  buyer_supplier_count?: number | null;
 };
 
 type HistoryResponse = {
@@ -115,7 +123,10 @@ function count(value: number | null | undefined) {
 
 function pct(value: number | null | undefined) {
   if (value == null || !Number.isFinite(Number(value))) return '—';
-  return `${Number(value).toLocaleString('es-CL', { maximumFractionDigits: 1 })}%`;
+  const n = Number(value);
+  const abs = Math.abs(n);
+  const digits = abs > 0 && abs < 0.1 ? 3 : abs < 1 ? 2 : 1;
+  return `${n.toLocaleString('es-CL', { maximumFractionDigits: digits })}%`;
 }
 
 function dateLabel(value: string | null | undefined) {
@@ -293,9 +304,14 @@ export function StateCounterpartyDrawer({
   const roles = [item.supplierRole ? 'Pago como proveedor' : null, item.recipientRole ? 'Traspaso / receptor' : null].filter(Boolean);
   const historySummary = history.summary;
   const rank = historySummary?.rank == null ? null : Number(historySummary.rank);
-  const universe = item.kind === 'buyer' ? historySummary?.buyer_count : historySummary?.payer_count;
+  const universe = historySummary?.payer_count;
+  const buyerSupplierRank = historySummary?.buyer_supplier_rank == null ? null : Number(historySummary.buyer_supplier_rank);
+  const buyerSupplierCount = historySummary?.buyer_supplier_count == null ? null : Number(historySummary.buyer_supplier_count);
   const average = item.amount != null && item.count != null && Number(item.count) > 0 ? Number(item.amount) / Number(item.count) : null;
   const activeYears = historySummary?.active_years == null ? null : Number(historySummary.active_years);
+  const representativityHint = buyerSupplierRank != null && buyerSupplierCount != null
+    ? `del total comprado · #${count(buyerSupplierRank)} de ${count(buyerSupplierCount)} proveedores`
+    : 'del total comprado por el organismo';
 
   const open = (candidate: Candidate) => {
     onClose();
@@ -332,8 +348,12 @@ export function StateCounterpartyDrawer({
               <div><span>Lectura de la relación</span><strong>Contexto dentro de la huella pública</strong></div>
             </div>
             <div className="state-counterparty-context-grid">
-              <div><span>Participación</span><strong>{pct(historySummary.share_pct)}</strong><small>del monto público observado en el período</small></div>
-              <div><span>Posición</span><strong>{rank != null ? `#${rank}` : '—'}</strong><small>{universe != null ? `de ${count(universe)} contrapartes` : 'según monto acumulado'}</small></div>
+              {item.kind === 'buyer'
+                ? <div><span>Dependencia</span><strong>{pct(historySummary.share_pct)}</strong><small>de las ventas públicas de la entidad</small></div>
+                : <div><span>Participación</span><strong>{pct(historySummary.share_pct)}</strong><small>del monto público observado en el período</small></div>}
+              {item.kind === 'buyer'
+                ? <div><span>Representatividad</span><strong>{pct(historySummary.buyer_share_pct)}</strong><small>{representativityHint}</small></div>
+                : <div><span>Posición</span><strong>{rank != null ? `#${rank}` : '—'}</strong><small>{universe != null ? `de ${count(universe)} contrapartes` : 'según monto acumulado'}</small></div>}
               <div><span>Promedio</span><strong>{clp(average)}</strong><small>por {item.kind === 'buyer' ? 'orden de compra' : 'transacción'}</small></div>
               <div><span>Años activos</span><strong>{activeYears == null ? '—' : count(activeYears)}</strong><small>{historySummary.first_year && historySummary.last_year ? `${historySummary.first_year}–${historySummary.last_year}` : 'en el período consultado'}</small></div>
             </div>
@@ -353,7 +373,7 @@ export function StateCounterpartyDrawer({
               <em>{history.years.length} {history.years.length === 1 ? 'año' : 'años'}</em>
             </div>
             <div className="state-counterparty-year-head">
-              <span>Año</span><span>Monto</span><span>{item.kind === 'buyer' ? 'OC' : 'Mov.'}</span><span>{item.kind === 'buyer' ? 'Peso' : 'Rol'}</span>
+              <span>Año</span><span>Monto</span><span>{item.kind === 'buyer' ? 'OC' : 'Mov.'}</span><span>{item.kind === 'buyer' ? 'Rep.' : 'Rol'}</span>
             </div>
             <div className="state-counterparty-years">
               {history.years.map((year) => {
@@ -364,13 +384,13 @@ export function StateCounterpartyDrawer({
                     <strong>{year.year}</strong>
                     <b>{clp(amount)}</b>
                     <span>{count(records)}</span>
-                    <small>{item.kind === 'buyer' ? pct(year.share_pct) : roleLabel(year)}</small>
+                    <small>{item.kind === 'buyer' ? pct(year.buyer_share_pct) : roleLabel(year)}</small>
                   </div>
                 );
               })}
             </div>
             <p className="state-counterparty-history-note">{item.kind === 'buyer'
-              ? 'Agregado anual de Mercado Público. El peso corresponde a la participación de este comprador en las ventas públicas observadas de la entidad durante ese año.'
+              ? 'Agregado anual de Mercado Público. Rep. corresponde a la participación de este proveedor en el monto total comprado por el organismo durante ese año.'
               : 'Agregado anual de Presupuesto Abierto. Se conserva la clasificación observada entre pago como proveedor y traspaso/receptor.'}</p>
           </section>
         )}
