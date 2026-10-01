@@ -4,6 +4,7 @@ import { HuellaSampleBuilder } from './HuellaSampleBuilder';
 import { AgencyBeneficiaryUniverse } from './AgencyBeneficiaryUniverse';
 import '../styles/agency-beneficiaries.css';
 import '../styles/huella-publica-premium.css';
+import '../styles/huella-publica-refine.css';
 
 type AnalysisMode = 'ENTITY' | 'SAMPLE' | 'PUBLIC_SERVICES';
 
