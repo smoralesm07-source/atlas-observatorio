@@ -3,6 +3,12 @@ from pathlib import Path
 path = Path('src/views/EntityExpediente.tsx')
 text = path.read_text(encoding='utf-8')
 
+# The maintenance workflow may run again after the verified patch has already
+# been committed. In that case it must be a safe no-op rather than fail.
+if 'function activitiesFromAnnualHistory' in text:
+    print('EntityExpediente.tsx ya contiene el fallback universal de actividad SII; sin cambios.')
+    raise SystemExit(0)
+
 
 def replace_once(old: str, new: str, label: str) -> None:
     global text
