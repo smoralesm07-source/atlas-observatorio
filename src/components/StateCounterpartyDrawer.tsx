@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { fetchProviderCounterpartyHistory } from '../lib/providerHistory';
 import { supabase } from '../lib/supabase';
 import '../styles/state-counterparty-drawer.css';
 
-// La resolución se ejecuta sólo al abrir la ficha: no agrega consultas al render inicial de Huella pública.
+// Las consultas de identidad e histórico se ejecutan sólo al abrir la ficha:
+// no agregan costo al render inicial de Huella pública.
 export type StateCounterpartySelection = {
   kind: 'buyer' | 'payer';
   label: string;
@@ -13,6 +15,7 @@ export type StateCounterpartySelection = {
   lastYear?: number | null;
   supplierRole?: boolean | null;
   recipientRole?: boolean | null;
+  entityRut?: string | null;
 };
 
 type Candidate = {
@@ -34,6 +37,54 @@ type SearchResponse = { items?: Candidate[] };
 type ResolutionState = {
   status: 'idle' | 'loading' | 'done' | 'error';
   candidates: Candidate[];
+  error?: string;
+};
+
+type HistorySummary = {
+  first_year?: number | null;
+  last_year?: number | null;
+  active_years?: number | null;
+  amount_clp?: number | null;
+  amount_paid?: number | null;
+  order_count?: number | null;
+  transaction_count?: number | null;
+  share_pct?: number | null;
+  rank?: number | null;
+  buyer_count?: number | null;
+  payer_count?: number | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  amount_as_supplier?: number | null;
+  amount_as_recipient?: number | null;
+  supplier_role?: boolean | null;
+  recipient_role?: boolean | null;
+};
+
+type HistoryYear = {
+  year: number;
+  amount_clp?: number | null;
+  amount_paid?: number | null;
+  order_count?: number | null;
+  transaction_count?: number | null;
+  share_pct?: number | null;
+  amount_as_supplier?: number | null;
+  amount_as_recipient?: number | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  supplier_role?: boolean | null;
+  recipient_role?: boolean | null;
+};
+
+type HistoryResponse = {
+  ok?: boolean;
+  summary?: HistorySummary | null;
+  years?: HistoryYear[];
+};
+
+type HistoryState = {
+  status: 'idle' | 'loading' | 'done' | 'error';
+  summary: HistorySummary | null;
+  years: HistoryYear[];
   error?: string;
 };
 
@@ -62,6 +113,18 @@ function count(value: number | null | undefined) {
   return value == null ? '—' : Number(value).toLocaleString('es-CL');
 }
 
+function pct(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return '—';
+  return `${Number(value).toLocaleString('es-CL', { maximumFractionDigits: 1 })}%`;
+}
+
+function dateLabel(value: string | null | undefined) {
+  if (!value) return '—';
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+}
+
 function period(item: StateCounterpartySelection) {
   if (!item.firstYear && !item.lastYear) return '—';
   if (item.firstYear === item.lastYear) return String(item.firstYear ?? item.lastYear);
@@ -71,8 +134,24 @@ function period(item: StateCounterpartySelection) {
 function scoreLabel(candidate: Candidate) {
   const score = Number(candidate.match_score ?? 0);
   if (!Number.isFinite(score) || score <= 0) return null;
-  const pct = score <= 1 ? score * 100 : score;
-  return `${Math.round(pct)}% coincidencia`;
+  const value = score <= 1 ? score * 100 : score;
+  return `${Math.round(value)}% coincidencia`;
+}
+
+function subjectRutFromView(item: StateCounterpartySelection) {
+  if (item.entityRut && normRut(item.entityRut).length >= 7) return item.entityRut;
+  if (typeof document === 'undefined') return '';
+  const text = document.querySelector<HTMLElement>('.state-detail-title small')?.textContent ?? '';
+  return normRut(text).length >= 7 ? text.trim() : '';
+}
+
+function roleLabel(year: HistoryYear) {
+  const supplier = Boolean(year.supplier_role) || Number(year.amount_as_supplier ?? 0) > 0;
+  const recipient = Boolean(year.recipient_role) || Number(year.amount_as_recipient ?? 0) > 0;
+  if (supplier && recipient) return 'Proveedor + receptor';
+  if (supplier) return 'Proveedor';
+  if (recipient) return 'Traspaso / receptor';
+  return 'Pago observado';
 }
 
 export function StateCounterpartyDrawer({
@@ -85,6 +164,7 @@ export function StateCounterpartyDrawer({
   onNavigate: (hash: string) => void;
 }) {
   const [resolution, setResolution] = useState<ResolutionState>({ status: 'idle', candidates: [] });
+  const [history, setHistory] = useState<HistoryState>({ status: 'idle', summary: null, years: [] });
 
   useEffect(() => {
     if (!item) {
@@ -136,6 +216,59 @@ export function StateCounterpartyDrawer({
   }, [item]);
 
   useEffect(() => {
+    if (!item) {
+      setHistory({ status: 'idle', summary: null, years: [] });
+      return;
+    }
+
+    const subjectRut = subjectRutFromView(item);
+    const identifier = String(item.identifier ?? '').trim();
+    if (!subjectRut || !identifier) {
+      setHistory({ status: 'done', summary: null, years: [] });
+      return;
+    }
+
+    let cancelled = false;
+    const currentYear = new Date().getFullYear();
+    const fromYear = Math.max(2016, Number(item.firstYear ?? 2020) || 2020);
+    const toYear = Math.min(currentYear, Math.max(fromYear, Number(item.lastYear ?? currentYear) || currentYear));
+    setHistory({ status: 'loading', summary: null, years: [] });
+
+    const run = async () => {
+      try {
+        let payload: HistoryResponse;
+        if (item.kind === 'buyer') {
+          payload = await fetchProviderCounterpartyHistory(subjectRut, identifier, fromYear, toYear) as HistoryResponse;
+        } else {
+          const { data, error } = await supabase.rpc('obs_state_public_funds_counterparty_history', {
+            p_rut: subjectRut,
+            p_payer_key: identifier,
+            p_from_year: fromYear,
+            p_to_year: toYear,
+          });
+          if (error) throw error;
+          payload = (data ?? {}) as HistoryResponse;
+        }
+        if (cancelled) return;
+        setHistory({
+          status: 'done',
+          summary: payload.summary ?? null,
+          years: Array.isArray(payload.years) ? payload.years : [],
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setHistory({
+          status: 'error', summary: null, years: [],
+          error: error instanceof Error ? error.message : 'No fue posible recuperar la evolución anual.',
+        });
+      }
+    };
+    void run();
+
+    return () => { cancelled = true; };
+  }, [item]);
+
+  useEffect(() => {
     if (!item) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -158,6 +291,11 @@ export function StateCounterpartyDrawer({
   const source = item.kind === 'buyer' ? 'Mercado Público' : 'Presupuesto Abierto';
   const recordLabel = item.kind === 'buyer' ? 'órdenes de compra' : 'transacciones';
   const roles = [item.supplierRole ? 'Pago como proveedor' : null, item.recipientRole ? 'Traspaso / receptor' : null].filter(Boolean);
+  const historySummary = history.summary;
+  const rank = historySummary?.rank == null ? null : Number(historySummary.rank);
+  const universe = item.kind === 'buyer' ? historySummary?.buyer_count : historySummary?.payer_count;
+  const average = item.amount != null && item.count != null && Number(item.count) > 0 ? Number(item.amount) / Number(item.count) : null;
+  const activeYears = historySummary?.active_years == null ? null : Number(historySummary.active_years);
 
   const open = (candidate: Candidate) => {
     onClose();
@@ -181,6 +319,67 @@ export function StateCounterpartyDrawer({
           <div><span>{recordLabel}</span><strong>{count(item.count)}</strong></div>
           <div><span>Período</span><strong>{period(item)}</strong></div>
         </section>
+
+        {history.status === 'loading' && (
+          <section className="state-counterparty-context">
+            <div className="state-counterparty-status">Construyendo detalle histórico de esta relación…</div>
+          </section>
+        )}
+
+        {history.status === 'done' && historySummary && (
+          <section className="state-counterparty-context">
+            <div className="state-counterparty-section-title">
+              <div><span>Lectura de la relación</span><strong>Contexto dentro de la huella pública</strong></div>
+            </div>
+            <div className="state-counterparty-context-grid">
+              <div><span>Participación</span><strong>{pct(historySummary.share_pct)}</strong><small>del monto público observado en el período</small></div>
+              <div><span>Posición</span><strong>{rank != null ? `#${rank}` : '—'}</strong><small>{universe != null ? `de ${count(universe)} contrapartes` : 'según monto acumulado'}</small></div>
+              <div><span>Promedio</span><strong>{clp(average)}</strong><small>por {item.kind === 'buyer' ? 'orden de compra' : 'transacción'}</small></div>
+              <div><span>Años activos</span><strong>{activeYears == null ? '—' : count(activeYears)}</strong><small>{historySummary.first_year && historySummary.last_year ? `${historySummary.first_year}–${historySummary.last_year}` : 'en el período consultado'}</small></div>
+            </div>
+            {item.kind === 'payer' && (historySummary.first_seen || historySummary.last_seen) && (
+              <div className="state-counterparty-observed-dates">
+                <span>Primera observación <b>{dateLabel(historySummary.first_seen)}</b></span>
+                <span>Última observación <b>{dateLabel(historySummary.last_seen)}</b></span>
+              </div>
+            )}
+          </section>
+        )}
+
+        {history.status === 'done' && history.years.length > 0 && (
+          <section className="state-counterparty-history">
+            <div className="state-counterparty-section-title">
+              <div><span>Evolución anual</span><strong>Detalle de esta contraparte por año</strong></div>
+              <em>{history.years.length} {history.years.length === 1 ? 'año' : 'años'}</em>
+            </div>
+            <div className="state-counterparty-year-head">
+              <span>Año</span><span>Monto</span><span>{item.kind === 'buyer' ? 'OC' : 'Mov.'}</span><span>{item.kind === 'buyer' ? 'Peso' : 'Rol'}</span>
+            </div>
+            <div className="state-counterparty-years">
+              {history.years.map((year) => {
+                const amount = item.kind === 'buyer' ? year.amount_clp : year.amount_paid;
+                const records = item.kind === 'buyer' ? year.order_count : year.transaction_count;
+                return (
+                  <div className="state-counterparty-year" key={`${item.kind}-${year.year}`}>
+                    <strong>{year.year}</strong>
+                    <b>{clp(amount)}</b>
+                    <span>{count(records)}</span>
+                    <small>{item.kind === 'buyer' ? pct(year.share_pct) : roleLabel(year)}</small>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="state-counterparty-history-note">{item.kind === 'buyer'
+              ? 'Agregado anual de Mercado Público. El peso corresponde a la participación de este comprador en las ventas públicas observadas de la entidad durante ese año.'
+              : 'Agregado anual de Presupuesto Abierto. Se conserva la clasificación observada entre pago como proveedor y traspaso/receptor.'}</p>
+          </section>
+        )}
+
+        {history.status === 'error' && (
+          <section className="state-counterparty-context">
+            <div className="state-counterparty-status" data-tone="error">El detalle histórico no estuvo disponible en esta consulta. Los datos principales de la contraparte siguen siendo válidos.</div>
+          </section>
+        )}
 
         {item.kind === 'payer' && (
           <section className="state-counterparty-source-note">
@@ -227,8 +426,8 @@ export function StateCounterpartyDrawer({
 
         <footer>
           {item.kind === 'payer'
-            ? 'La resolución por nombre es deliberadamente conservadora: una similitud textual no se transforma automáticamente en identidad.'
-            : 'Cuando el RUT del comprador coincide con una entidad Atlas, la navegación a Entidad 360 es directa.'}
+            ? 'La ficha agrega historia anual y contexto de la relación. El detalle de cada pago individual aún no está materializado en el hot path de Atlas.'
+            : 'La ficha agrega historia anual y contexto de la relación. El detalle de cada orden individual se mantiene fuera del hot path y se resolverá a demanda.'}
         </footer>
       </aside>
     </div>
