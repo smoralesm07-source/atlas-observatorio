@@ -6,7 +6,8 @@ import type { CoverageRow, EntityDetail } from '../lib/contracts';
 import { Badge, Empty, ErrorBox, Loading } from '../components/primitives';
 import { EntityPressDossier } from '../components/EntityPressDossier';
 import { bandLabel, fecha, n, n1, rutFormat, titleCase } from '../lib/format';
-import { searchPressDossier, type PressMatch } from '../lib/press';
+import type { PressMatch } from '../lib/press';
+import { searchEntityPress } from '../lib/entityPress';
 
 type Tab = 'resumen' | 'tributario' | 'uaf' | 'sanciones' | 'prensa' | 'registros' | 'historico' | 'fuentes';
 type GlyphName = 'sales' | 'people' | 'activity' | 'public' | 'sanction' | 'uaf' | 'osfl' | 'res' | 'press' | 'sii' | 'alert' | 'copy' | 'external';
@@ -102,9 +103,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'fuentes', label: 'Fuentes' },
 ];
 
-function compactRut(value: string | null | undefined): string {
-  return String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
-}
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -277,15 +275,6 @@ function pressArticles(matches: PressMatch[]) {
     .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
 }
 
-function strictPressMatches(entity: EntityDetail['entity'], matches: PressMatch[]): PressMatch[] {
-  const rut = compactRut(entity.rut);
-  const strongName = matches.filter((match) => match.match_score >= 0.94);
-  if (!rut) return strongName;
-  const byRut = matches.filter((match) => match.ruts.some((candidate) => compactRut(candidate) === rut));
-  const seen = new Set(byRut.map((match) => match.press_entity_id));
-  return [...byRut, ...strongName.filter((match) => !seen.has(match.press_entity_id))];
-}
-
 function timelineFor(data: EntityDetail, press: PressMatch[]): TimelineRow[] {
   const rows: TimelineRow[] = [];
   data.lifecycle.forEach((milestone, index) => {
@@ -418,8 +407,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     setPress({ status: 'loading', matches: [] });
     const run = async () => {
       try {
-        let matches = strictPressMatches(entity, await searchPressDossier(entity.name, 10));
-        if (!matches.length && entity.rut) matches = strictPressMatches(entity, await searchPressDossier(entity.rut, 10));
+        const matches = await searchEntityPress(entity.name, entity.rut, 10);
         if (!cancelled) setPress({ status: 'done', matches });
       } catch (e) {
         if (!cancelled) setPress({ status: 'error', matches: [], error: (e as Error).message });

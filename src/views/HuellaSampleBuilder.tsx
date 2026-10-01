@@ -70,7 +70,7 @@ const MARKS: { code: MarkCode; label: string }[] = [
   { code: 'SII', label: 'Presencia SII' },
   { code: 'SII_TG', label: 'Término de giro' },
   { code: 'SII_NO_EMPLOYEES', label: 'Sin empleados' },
-  { code: 'PRESS', label: 'Presencia en prensa' },
+  { code: 'PRESS', label: 'Prensa resuelta' },
   { code: 'SANCTIONS', label: 'Sanciones' },
   { code: 'FINTECH', label: 'Fintech' },
 ];
