@@ -239,6 +239,37 @@ export function Administracion({ session }: { session: Session }) {
     return rightTime - leftTime || left.email.localeCompare(right.email);
   }), [enabled, presenceByUser, now]);
 
+  const usageStats = useMemo(() => {
+    const views = activity.filter((entry) => entry.operation === 'page_view');
+    const grouped = new Map<string, { visits: number; users: Set<string> }>();
+    const activeUsers = new Set<string>();
+
+    for (const entry of views) {
+      activeUsers.add(entry.user_id);
+      const current = grouped.get(entry.section) ?? { visits: 0, users: new Set<string>() };
+      current.visits += 1;
+      current.users.add(entry.user_id);
+      grouped.set(entry.section, current);
+    }
+
+    const sections = [...grouped.entries()]
+      .map(([section, value]) => ({
+        section,
+        visits: value.visits,
+        users: value.users.size,
+        share: views.length > 0 ? value.visits / views.length : 0,
+      }))
+      .sort((left, right) => right.visits - left.visits || right.users - left.users || left.section.localeCompare(right.section))
+      .slice(0, 8);
+
+    return {
+      interactions: views.length,
+      activeUsers: activeUsers.size,
+      sectionCount: grouped.size,
+      sections,
+    };
+  }, [activity]);
+
   const selectedHistoryUser = useMemo(
     () => enabled.find((user) => user.id === historyUserId) ?? null,
     [enabled, historyUserId],
@@ -317,6 +348,47 @@ export function Administracion({ session }: { session: Session }) {
             <span><strong>{disconnectedCount}</strong> desconectados</span>
             <span><strong>{presence.length}</strong> con seguimiento</span>
           </div>
+        </div>
+
+        <div className="admin-usage" aria-label="Estadísticas de uso por sección">
+          <div className="admin-usage-head">
+            <div>
+              <strong>Secciones más visitadas</strong>
+              <span>Últimos {snapshot?.activity_window_days ?? 10} días. Una interacción corresponde a un cambio de sección registrado.</span>
+            </div>
+            <div className="admin-usage-summary">
+              <span><strong>{usageStats.interactions}</strong> interacciones</span>
+              <span><strong>{usageStats.activeUsers}</strong> usuarios</span>
+              <span><strong>{usageStats.sectionCount}</strong> secciones</span>
+            </div>
+          </div>
+          {usageStats.sections.length > 0 ? (
+            <div className="admin-usage-list">
+              {usageStats.sections.map((item, index) => (
+                <div className="admin-usage-row" key={item.section}>
+                  <span className="admin-usage-rank">{index + 1}</span>
+                  <div className="admin-usage-main">
+                    <div className="admin-usage-label">
+                      <strong>{item.section}</strong>
+                      <span>{item.users} {item.users === 1 ? 'usuario' : 'usuarios'}</span>
+                    </div>
+                    <div className="admin-usage-track" aria-hidden>
+                      <span style={{ width: `${Math.max(4, item.share * 100)}%` }} />
+                    </div>
+                  </div>
+                  <div className="admin-usage-value">
+                    <strong>{item.visits}</strong>
+                    <span>{Math.round(item.share * 100)}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-empty">Las estadísticas aparecerán cuando exista navegación registrada en la ventana disponible.</div>
+          )}
+          {snapshot?.activity_truncated && (
+            <div className="admin-usage-note">La ventana alcanzó el límite de 1.000 eventos; las estadísticas se calculan sobre los eventos disponibles más recientes.</div>
+          )}
         </div>
 
         <div className="admin-table-wrap">
