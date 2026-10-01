@@ -62,6 +62,7 @@ type FundsSummary = {
 
 type SummaryResponse<T> = { ok?: boolean; summary?: T | null; supplier?: T | null; rows?: any[]; requested_period?: { from_year?: number; to_year?: number } };
 type RowsResponse<T> = { ok?: boolean; rows?: T[]; requested_period?: { from_year?: number; to_year?: number } };
+type MarketNamesResponse = { ok?: boolean; rows?: { rut: string; label?: string | null }[] };
 
 type SampleRow = {
   entity_id: string;
@@ -241,6 +242,10 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
   const fundsTimeline = useRpc<RowsResponse<PublicFundsTrendYear>>('obs_state_public_funds_entity', {
     p_action: 'timeline', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 100, p_offset: 0,
   }, { skip: !selectedRut });
+  const historicalBuyerRuts = useMemo(() => [...new Set((marketHistory?.buyers ?? []).map((row) => String(row.buyer_id ?? '')).filter(Boolean))], [marketHistory]);
+  const historicalBuyerNames = useRpc<MarketNamesResponse>('obs_state_market_names', {
+    p_ruts: historicalBuyerRuts,
+  }, { skip: historicalBuyerRuts.length === 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -282,14 +287,18 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
   const fs = fundsSummary.data?.summary ?? null;
   const currentBuyerRows = (marketBuyers.data?.rows ?? []) as any[];
   const buyerLabels = new Map<string, string>();
+  for (const row of historicalBuyerNames.data?.rows ?? []) {
+    const key = normRut(String(row.rut ?? ''));
+    if (key && row.label) buyerLabels.set(key, String(row.label));
+  }
   for (const row of currentBuyerRows) {
     const key = normRut(String(row.buyer_id ?? ''));
-    if (key && row.buyer_label) buyerLabels.set(key, String(row.buyer_label));
+    if (key && row.buyer_label && !buyerLabels.has(key)) buyerLabels.set(key, String(row.buyer_label));
   }
   const marketBuyerRows = historySummary
     ? (marketHistory?.buyers ?? []).map((row) => ({
         ...row,
-        buyer_label: buyerLabels.get(normRut(row.buyer_id)) || row.buyer_id,
+        buyer_label: buyerLabels.get(normRut(row.buyer_id)) || (row as any).buyer_label || row.buyer_id,
         first_year: historySummary.first_year,
         last_year: historySummary.last_year,
       }))
