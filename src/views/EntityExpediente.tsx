@@ -53,6 +53,44 @@ type TaxEvolutionRow = {
   source: string | null;
 };
 
+type StateMarketSummary = {
+  rut?: string | null;
+  label?: string | null;
+  first_year?: number | null;
+  last_year?: number | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  amount_clp?: number | null;
+  order_count?: number | null;
+  buyer_count?: number | null;
+};
+
+type StateFundsSummary = {
+  rut?: string | null;
+  label?: string | null;
+  first_year?: number | null;
+  last_year?: number | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  amount_paid?: number | null;
+  amount_as_supplier?: number | null;
+  amount_as_recipient?: number | null;
+  transaction_count?: number | null;
+  payer_count?: number | null;
+};
+
+type StateSummaryResponse<T> = { summary?: T | null; supplier?: T | null };
+type PublicFootprintState = {
+  market: StateMarketSummary | null;
+  funds: StateFundsSummary | null;
+  loading: boolean;
+  error: boolean;
+  fromYear: number;
+  toYear: number;
+  marketCoverage: boolean;
+  fundsCoverage: boolean;
+};
+
 const TABS: { id: Tab; label: string }[] = [
   { id: 'resumen', label: 'Resumen' },
   { id: 'tributario', label: 'Tributario' },
@@ -168,10 +206,6 @@ function formatClp(value: number | null | undefined): string {
 function splitPipe(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
   return String(value ?? '').split('|').map((item) => item.trim()).filter(Boolean);
-}
-
-function coverageByCode(data: EntityDetail, ...codes: string[]): CoverageRow | undefined {
-  return data.coverage.find((row) => codes.includes(row.source_code));
 }
 
 function coverageStatus(row: CoverageRow | undefined): 'present' | 'absent' | 'unknown' {
@@ -343,6 +377,17 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const [press, setPress] = useState<PressState>({ status: 'idle', matches: [] });
   const { data, error, loading, reload } = useRpc<EntityDetail | null>('obs_entity_detail', { p_entity_id: entityId });
   const { data: taxHistory } = useRpc<EntityTaxHistoryRow[]>('obs_entity_tax_history', { p_entity_id: entityId });
+  const stateRut = data?.entity.rut ?? null;
+  const stateFromYear = 2020;
+  const stateToYear = new Date().getFullYear();
+  const publishedMarketPresent = Boolean(data?.coverage.some((row) => row.source_code === 'MERCADO_PUBLICO' && row.status === 'PRESENT'));
+  const publishedFundsPresent = Boolean(data?.coverage.some((row) => row.source_code === 'PRESUPUESTO_ABIERTO' && row.status === 'PRESENT'));
+  const stateMarket = useRpc<StateSummaryResponse<StateMarketSummary>>('obs_state_interaction_entity', {
+    p_action: 'summary', p_rut: stateRut, p_query: null, p_from_year: stateFromYear, p_to_year: stateToYear, p_limit: 20, p_offset: 0,
+  }, { skip: !stateRut || publishedMarketPresent });
+  const stateFunds = useRpc<StateSummaryResponse<StateFundsSummary>>('obs_state_public_funds_entity', {
+    p_action: 'summary', p_rut: stateRut, p_query: null, p_from_year: stateFromYear, p_to_year: stateToYear, p_limit: 20, p_offset: 0,
+  }, { skip: !stateRut || publishedFundsPresent });
   const [liveTaxHistory, setLiveTaxHistory] = useState<EntityTaxHistoryRow[] | null>(null);
 
   useEffect(() => {
@@ -405,13 +450,35 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     .sort((a, b) => Number(a.commercial_year) - Number(b.commercial_year));
   const history = salesHistory(data, mergedTaxHistory);
   const finding = mainFinding(data);
-  const purchase = coverageByCode(data, 'MERCADO_PUBLICO');
-  const uafCoverage = coverageByCode(data, 'RADAR_UAF');
-  const siiCoverage = coverageByCode(data, 'RADAR_SII');
-  const osflCoverage = coverageByCode(data, 'RADAR_OSFL', 'REGISTRO_CIVIL_OSFL');
-  const resCoverage = coverageByCode(data, 'RES');
-  const pressCoverage = coverageByCode(data, 'RADAR_PRENSA');
-  const sanctionCoverage = coverageByCode(data, 'RADAR_SANCIONES');
+  const marketFootprint = stateMarket.data?.supplier ?? null;
+  const fundsFootprint = stateFunds.data?.summary ?? null;
+  const reconciledCoverage: CoverageRow[] = data.coverage.map((row) => {
+    if (row.source_code === 'MERCADO_PUBLICO' && marketFootprint) return {
+      ...row, status: 'PRESENT' as const, record_count: marketFootprint.order_count ?? row.record_count,
+      last_event_at: marketFootprint.last_seen ?? row.last_event_at,
+      detail: { ...row.detail, unidad: 'órdenes de compra', monto_clp: marketFootprint.amount_clp ?? undefined },
+    };
+    if (row.source_code === 'PRESUPUESTO_ABIERTO' && fundsFootprint) return {
+      ...row, status: 'PRESENT' as const, record_count: fundsFootprint.transaction_count ?? row.record_count,
+      last_event_at: fundsFootprint.last_seen ?? row.last_event_at,
+      detail: { ...row.detail, unidad: 'pagos / transferencias', monto_clp: fundsFootprint.amount_paid ?? undefined },
+    };
+    return row;
+  });
+  const coverage = (...codes: string[]) => reconciledCoverage.find((row) => codes.includes(row.source_code));
+  const publicFootprint: PublicFootprintState = {
+    market: marketFootprint, funds: fundsFootprint,
+    loading: stateMarket.loading || stateFunds.loading, error: Boolean(stateMarket.error || stateFunds.error),
+    fromYear: stateFromYear, toYear: stateToYear,
+    marketCoverage: coverage('MERCADO_PUBLICO')?.status === 'PRESENT',
+    fundsCoverage: coverage('PRESUPUESTO_ABIERTO')?.status === 'PRESENT',
+  };
+  const uafCoverage = coverage('RADAR_UAF');
+  const siiCoverage = coverage('RADAR_SII');
+  const osflCoverage = coverage('RADAR_OSFL', 'REGISTRO_CIVIL_OSFL');
+  const resCoverage = coverage('RES');
+  const pressCoverage = coverage('RADAR_PRENSA');
+  const sanctionCoverage = coverage('RADAR_SANCIONES');
   const taxStatus = (text(tax.current_status) ?? '').toUpperCase();
   const active = !text(tax.termination_date) && (taxStatus.includes('ACTIVE') || taxStatus.includes('VIGENTE'));
   const score = entity.ipa3_score;
@@ -443,7 +510,7 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     prensa: articles.length > 0 || pressCoverage?.status === 'PRESENT',
     registros: osflCoverage?.status === 'PRESENT' || resCoverage?.status === 'PRESENT' || hasRecordData(osfl) || hasRecordData(res),
     historico: timeline.length > 0,
-    fuentes: data.coverage.some((row) => row.status === 'PRESENT'),
+    fuentes: reconciledCoverage.some((row) => row.status === 'PRESENT'),
   };
 
   return (
@@ -575,35 +642,50 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
         ))}
       </nav>
 
-      {tab === 'resumen' && <ResumenTab data={data} press={press} articles={articles} timeline={timeline} activities={activities} history={history} purchase={purchase} registry={{ uaf: uafCoverage, sii: siiCoverage, osfl: osflCoverage, res: resCoverage, press: pressCoverage, sanctions: sanctionCoverage }} />}
+      {tab === 'resumen' && <ResumenTab data={data} press={press} articles={articles} timeline={timeline} activities={activities} history={history} publicFootprint={publicFootprint} registry={{ uaf: uafCoverage, sii: siiCoverage, osfl: osflCoverage, res: resCoverage, press: pressCoverage, sanctions: sanctionCoverage }} />}
       {tab === 'tributario' && <TributarioTab data={data} activities={activities} history={history} />}
       {tab === 'uaf' && <UafTab data={data} uaf={uaf} coverage={uafCoverage} />}
       {tab === 'sanciones' && <SancionesTab data={data} />}
       {tab === 'prensa' && <EntityPressDossier entityName={entity.name} status={press.status} matches={press.matches} error={press.error} />}
       {tab === 'registros' && <RegistrosTab data={data} osfl={osfl} res={res} osflCoverage={osflCoverage} resCoverage={resCoverage} />}
       {tab === 'historico' && <HistoricoTab rows={timeline} />}
-      {tab === 'fuentes' && <FuentesTab coverage={data.coverage} />}
+      {tab === 'fuentes' && <FuentesTab coverage={reconciledCoverage} />}
 
       <div className="entity360-semantics"><strong>Lectura analítica.</strong> Esta vista reúne evidencia observada y prioriza revisión. Presencia, ausencia, score o coincidencia de prensa no acreditan por sí solos una conducta ilícita. Corte <span className="mono">{entity.snapshot_id}</span> · actualizado {fecha(entity.refreshed_at)}.</div>
     </div>
   );
 }
 
-function ResumenTab({ data, press, articles, timeline, activities, history, purchase, registry }: {
+function ResumenTab({ data, press, articles, timeline, activities, history, publicFootprint, registry }: {
   data: EntityDetail;
   press: PressState;
   articles: ReturnType<typeof pressArticles>;
   timeline: TimelineRow[];
   activities: ActivityRow[];
   history: ReturnType<typeof salesHistory>;
-  purchase: CoverageRow | undefined;
+  publicFootprint: PublicFootprintState;
   registry: { uaf: CoverageRow | undefined; sii: CoverageRow | undefined; osfl: CoverageRow | undefined; res: CoverageRow | undefined; press: CoverageRow | undefined; sanctions: CoverageRow | undefined };
 }) {
   const tax = record(data.tax);
   const latestHistory = history.length ? history[history.length - 1] : null;
   const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);
   const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);
-  const purchasePresent = purchase?.status === 'PRESENT';
+  const marketPresent = Boolean(publicFootprint.market || publicFootprint.marketCoverage);
+  const fundsPresent = Boolean(publicFootprint.funds || publicFootprint.fundsCoverage);
+  const footprintPresent = marketPresent || fundsPresent;
+  const footprintUnknown = !footprintPresent && (publicFootprint.loading || publicFootprint.error);
+  const footprintValue = publicFootprint.loading && !footprintPresent ? 'Consultando…' : footprintPresent ? 'Sí registra' : publicFootprint.error ? 'No disponible' : 'No registra';
+  const footprintSub = marketPresent && fundsPresent
+    ? `Mercado Público + Presupuesto Abierto · ${publicFootprint.fromYear}–${publicFootprint.toYear}`
+    : publicFootprint.market
+      ? `Mercado Público · ${formatClp(publicFootprint.market.amount_clp)} · ${n(publicFootprint.market.order_count ?? 0)} OC`
+      : publicFootprint.funds
+        ? `Presupuesto Abierto · ${formatClp(publicFootprint.funds.amount_paid)} · ${n(publicFootprint.funds.transaction_count ?? 0)} transacciones`
+        : marketPresent
+          ? 'Mercado Público · presencia materializada'
+          : fundsPresent
+            ? 'Presupuesto Abierto · presencia materializada'
+            : footprintUnknown ? 'Verificando fuentes consolidadas' : `Sin compras ni pagos observados · ${publicFootprint.fromYear}–${publicFootprint.toYear}`;
   const indexedPressCount = press.matches.reduce((best, match) => Math.max(best, match.article_count ?? 0), 0);
   const pressCount = Math.max(articles.length, indexedPressCount, registry.press?.record_count ?? 0);
   return (
@@ -612,11 +694,11 @@ function ResumenTab({ data, press, articles, timeline, activities, history, purc
         <Kpi icon="sales" label="Tramo ventas (UF)" value={salesBand.value} sub={salesBand.sub} compact />
         <Kpi icon="people" label="Trabajadores" value={workers.value} sub={workers.sub} compact={workers.value === 'No cargado en Atlas'} />
         <Kpi icon="activity" label="Actividades SII" value={n(activities.length || numberValue(tax.activity_count) || 0)} sub={activities[0]?.name ?? 'Sin actividades materializadas'} />
-        <Kpi icon="public" label="Proveedor del Estado" value={purchasePresent ? 'Sí' : coverageLabel(purchase)} sub="ChileCompra · señal de presencia" tone={purchasePresent ? 'present' : 'neutral'} />
+        <Kpi icon="public" label="Huella pública" value={footprintValue} sub={footprintSub} tone={footprintPresent ? 'present' : 'neutral'} />
         <Kpi icon="sanction" label="Sanciones" value={n(data.sanctions.length)} sub={data.sanctions.length ? `${data.sanctions[0]?.regulator ?? 'Supervisor'} · última ${fecha(data.sanctions[0]?.event_date)}` : 'Sin eventos materializados'} tone={data.sanctions.length ? 'critical' : 'neutral'} />
       </div>
       <div className="entity360-row entity360-row-top"><BaseCard data={data} /><SalesBandCard history={history} currentBand={salesBand.value} dataStatus={text(tax.sales_data_status)} /><ActivitiesCard rows={activities} /></div>
-      <div className="entity360-row entity360-row-middle"><RegistryCard data={data} pressStatus={press.status} pressCount={Number(pressCount)} registry={registry} purchase={purchase} /><TimelineCard rows={timeline} /></div>
+      <div className="entity360-row entity360-row-middle"><RegistryCard data={data} pressStatus={press.status} pressCount={Number(pressCount)} registry={registry} publicFootprint={publicFootprint} /><TimelineCard rows={timeline} /></div>
       <div className="entity360-row entity360-row-bottom"><SanctionsCard data={data} /><PressCard press={press} articles={articles} /></div>
     </div>
   );
@@ -703,20 +785,25 @@ function ActivitiesCard({ rows }: { rows: ActivityRow[] }) {
   </Card>;
 }
 
-function RegistryCard({ data, pressStatus, pressCount, registry, purchase }: {
+function RegistryCard({ data, pressStatus, pressCount, registry, publicFootprint }: {
   data: EntityDetail;
   pressStatus: PressState['status'];
   pressCount: number;
   registry: { uaf: CoverageRow | undefined; sii: CoverageRow | undefined; osfl: CoverageRow | undefined; res: CoverageRow | undefined; press: CoverageRow | undefined; sanctions: CoverageRow | undefined };
-  purchase: CoverageRow | undefined;
+  publicFootprint: PublicFootprintState;
 }) {
   const pressTone = pressStatus === 'loading' ? 'unknown' : pressCount > 0 ? 'present' : coverageStatus(registry.press);
+  const marketPresent = Boolean(publicFootprint.market || publicFootprint.marketCoverage);
+  const fundsPresent = Boolean(publicFootprint.funds || publicFootprint.fundsCoverage);
+  const publicPresent = marketPresent || fundsPresent;
+  const publicUnknown = !publicPresent && (publicFootprint.loading || publicFootprint.error);
+  const publicSources = [marketPresent ? 'Mercado Público' : null, fundsPresent ? 'Presupuesto Abierto' : null].filter(Boolean).join(' + ');
   return <Card title="Presencia en registros" meta="estado del corte vigente"><div className="entity360-registry-grid">
     <RegistryTile icon="sii" label="SII" status={coverageStatus(registry.sii)} value={coverageLabel(registry.sii)} detail={data.entity.tax_status ? titleCase(data.entity.tax_status.replace(/_/g, ' ')) : 'Perfil tributario'} />
     <RegistryTile icon="uaf" label="UAF" status={coverageStatus(registry.uaf)} value={coverageLabel(registry.uaf)} detail={data.entity.uaf_sector ? titleCase(data.entity.uaf_sector) : 'Padrón de SO'} />
     <RegistryTile icon="osfl" label="OSFL" status={coverageStatus(registry.osfl)} value={coverageLabel(registry.osfl)} detail="Registro Civil / SII" />
     <RegistryTile icon="res" label="RES / Empresa en un Día" status={coverageStatus(registry.res)} value={coverageLabel(registry.res)} detail="Registro de Empresas y Sociedades" />
-    <RegistryTile icon="public" label="Proveedor del Estado" status={coverageStatus(purchase)} value={purchase?.status === 'PRESENT' ? 'Sí' : coverageLabel(purchase)} detail="ChileCompra · presencia como proveedor" />
+    <RegistryTile icon="public" label="Huella pública" status={publicPresent ? 'present' : publicUnknown ? 'unknown' : 'absent'} value={publicFootprint.loading && !publicPresent ? 'Consultando…' : publicPresent ? 'Sí registra' : publicFootprint.error ? 'No disponible' : 'No registra'} detail={publicSources || `Mercado Público + Presupuesto Abierto · ${publicFootprint.fromYear}–${publicFootprint.toYear}`} />
     <RegistryTile icon="sanction" label="Sanciones" status={coverageStatus(registry.sanctions)} value={data.sanctions.length ? `${n(data.sanctions.length)} registro${data.sanctions.length === 1 ? '' : 's'}` : coverageLabel(registry.sanctions)} detail="UAF · CMF · SCJ · CGR" />
     <RegistryTile icon="press" label="Prensa" status={pressTone} value={pressStatus === 'loading' ? 'Consultando…' : pressCount > 0 ? `${n(pressCount)} noticia${pressCount === 1 ? '' : 's'}` : coverageLabel(registry.press)} detail="Radar Prensa" />
   </div></Card>;

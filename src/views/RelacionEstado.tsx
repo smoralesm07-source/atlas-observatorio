@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { fetchProviderHistory, type ProviderHistoryResponse } from '../lib/providerHistory';
 import { downloadExcel, exportDate, type ExcelColumn } from '../lib/excelExport';
 import { HuellaPublicaTrends, type PublicFundsTrendYear } from '../components/HuellaPublicaTrends';
+import { StateCounterpartyDrawer, type StateCounterpartySelection } from '../components/StateCounterpartyDrawer';
 import '../styles/state-relations.css';
 import '../styles/state-relations-compact.css';
 
@@ -197,6 +198,7 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
   const [selectedRut, setSelectedRut] = useState<string | null>(null);
   const [marketHistory, setMarketHistory] = useState<ProviderHistoryResponse | null>(null);
   const [marketHistoryState, setMarketHistoryState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [counterparty, setCounterparty] = useState<StateCounterpartySelection | null>(null);
   const debounced = useDebounced(q, 280).trim();
   const enabled = debounced.length >= 3;
   const directRut = normRut(debounced);
@@ -308,7 +310,7 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
       ? 'Mercado Público · cargando histórico'
       : 'Mercado Público · resumen vigente 12m';
 
-  return <div className="state-entity-layout">
+  return <><div className="state-entity-layout">
     <section className="state-card state-search-card">
       <div className="state-card-kicker">Explorador de entidades</div>
       <label className="state-label" htmlFor="state-entity-search">RUT o nombre</label>
@@ -351,12 +353,23 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
           fundsLoading={fundsTimeline.loading}
         />
         <div className="state-dual-detail">
-          <DetailTable title="¿A quién ha vendido?" source={marketSource} rows={marketBuyerRows.slice(0, 10)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" />
-          <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={fundPayerRows.slice(0, 10)} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" />
+          <DetailTable title="¿A quién ha vendido?" source={marketSource} rows={marketBuyerRows.slice(0, 10)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" onOpen={(row) => setCounterparty({
+            kind: 'buyer', label: String(row.buyer_label || row.buyer_id || 'Organismo comprador'), identifier: row.buyer_id ? String(row.buyer_id) : null,
+            amount: row.amount_clp == null ? null : Number(row.amount_clp), count: row.order_count == null ? null : Number(row.order_count),
+            firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
+          })} />
+          <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={fundPayerRows.slice(0, 10)} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" onOpen={(row) => setCounterparty({
+            kind: 'payer', label: String(row.payer_name || row.payer_key || 'Organismo pagador'), identifier: row.payer_key ? String(row.payer_key) : null,
+            amount: row.amount_paid == null ? null : Number(row.amount_paid), count: row.transaction_count == null ? null : Number(row.transaction_count),
+            firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
+            supplierRole: Boolean(row.supplier_role), recipientRole: Boolean(row.recipient_role),
+          })} />
         </div>
       </>}
     </section>
-  </div>;
+  </div>
+  <StateCounterpartyDrawer item={counterparty} onClose={() => setCounterparty(null)} onNavigate={onNavigate} />
+  </>;
 }
 
 function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toYear: number; onNavigate: (hash: string) => void }) {
@@ -483,6 +496,6 @@ function markLabel(code: string) {
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) { return <div className="state-kpi"><span>{label}</span><strong>{value}</strong><small>{sub}</small></div>; }
 function Insight({ label, value, sub }: { label: string; value: string; sub: string }) { return <div className="state-insight"><span>{label}</span><strong title={value}>{value}</strong><small>{sub}</small></div>; }
-function DetailTable({ title, source, rows, nameKey, fallbackKey, amountKey, countKey }: { title: string; source: string; rows: any[]; nameKey: string; fallbackKey: string; amountKey: string; countKey: string }) {
-  return <div className="detail-list"><div className="detail-list-head"><strong>{title}</strong><span>{source}</span></div>{rows.length === 0 ? <div className="state-empty">Sin detalle para el período.</div> : rows.map((r, i) => <div className="detail-row" key={`${r[fallbackKey]}-${i}`}><span><b>{r[nameKey] || r[fallbackKey]}</b><small>{yearRange(r.first_year, r.last_year)}</small></span><span><b>{clp(r[amountKey])}</b><small>{num(r[countKey])} registros</small></span></div>)}</div>;
+function DetailTable({ title, source, rows, nameKey, fallbackKey, amountKey, countKey, onOpen }: { title: string; source: string; rows: any[]; nameKey: string; fallbackKey: string; amountKey: string; countKey: string; onOpen: (row: any) => void }) {
+  return <div className="detail-list"><div className="detail-list-head"><strong>{title}</strong><span>{source}</span></div>{rows.length === 0 ? <div className="state-empty">Sin detalle para el período.</div> : rows.map((r, i) => <button type="button" className="detail-row detail-row-button" key={`${r[fallbackKey]}-${i}`} onClick={() => onOpen(r)}><span><b>{r[nameKey] || r[fallbackKey]}</b><small>{yearRange(r.first_year, r.last_year)}</small></span><span><b>{clp(r[amountKey])}</b><small>{num(r[countKey])} registros · ver ficha</small></span></button>)}</div>;
 }
