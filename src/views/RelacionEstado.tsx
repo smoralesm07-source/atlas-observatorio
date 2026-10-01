@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDebounced, useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
+import { fetchProviderHistory, type ProviderHistoryResponse } from '../lib/providerHistory';
 import { downloadExcel, exportDate, type ExcelColumn } from '../lib/excelExport';
 import '../styles/state-relations.css';
 
@@ -184,8 +185,12 @@ export function RelacionEstado({ onNavigate }: { onNavigate: (hash: string) => v
 function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: number; toYear: number; onNavigate: (hash: string) => void }) {
   const [q, setQ] = useState('');
   const [selectedRut, setSelectedRut] = useState<string | null>(null);
+  const [marketHistory, setMarketHistory] = useState<ProviderHistoryResponse | null>(null);
+  const [marketHistoryState, setMarketHistoryState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const debounced = useDebounced(q, 280).trim();
   const enabled = debounced.length >= 3;
+  const directRut = normRut(debounced);
+  const directRutCandidate = /^[0-9]{6,8}[0-9K]$/.test(directRut);
 
   const marketSearch = useRpc<SearchResponse>('obs_state_interaction_entity', {
     p_action: 'search', p_query: debounced, p_rut: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 20, p_offset: 0,
@@ -203,8 +208,11 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
       const k = normRut(row.rut); const prev = map.get(k);
       map.set(k, { rut: row.rut, label: row.label || prev?.label || row.rut, market: prev?.market, funds: row });
     }
+    if (directRutCandidate && !map.has(directRut)) {
+      map.set(directRut, { rut: directRut, label: `Consultar RUT ${directRut}` });
+    }
     return [...map.values()].slice(0, 30);
-  }, [marketSearch.data, fundsSearch.data]);
+  }, [marketSearch.data, fundsSearch.data, directRutCandidate, directRut]);
 
   const marketSummary = useRpc<SummaryResponse<MarketSummary>>('obs_state_interaction_entity', {
     p_action: 'summary', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 100, p_offset: 0,
@@ -219,20 +227,75 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
     p_action: 'payers', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 50, p_offset: 0,
   }, { skip: !selectedRut });
 
-  const ms = marketSummary.data?.supplier ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedRut) {
+      setMarketHistory(null);
+      setMarketHistoryState('idle');
+      return () => { cancelled = true; };
+    }
+    setMarketHistory(null);
+    setMarketHistoryState('loading');
+    void fetchProviderHistory(selectedRut, fromYear, toYear)
+      .then((data) => {
+        if (cancelled) return;
+        setMarketHistory(data);
+        setMarketHistoryState('done');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMarketHistory(null);
+        setMarketHistoryState('error');
+      });
+    return () => { cancelled = true; };
+  }, [selectedRut, fromYear, toYear]);
+
+  const fallbackMs = marketSummary.data?.supplier ?? null;
+  const historySummary = marketHistory?.summary ?? null;
+  const ms: MarketSummary | null = historySummary ? {
+    ...(fallbackMs ?? {}),
+    rut: selectedRut ?? fallbackMs?.rut,
+    is_state_supplier: true,
+    first_year: historySummary.first_year ?? undefined,
+    last_year: historySummary.last_year ?? undefined,
+    first_seen: historySummary.first_seen ?? undefined,
+    last_seen: historySummary.last_seen ?? undefined,
+    amount_clp: historySummary.amount_clp ?? undefined,
+    order_count: historySummary.order_count ?? undefined,
+    buyer_count: historySummary.buyer_count ?? undefined,
+  } : fallbackMs;
   const fs = fundsSummary.data?.summary ?? null;
+  const currentBuyerRows = (marketBuyers.data?.rows ?? []) as any[];
+  const buyerLabels = new Map<string, string>();
+  for (const row of currentBuyerRows) {
+    const key = normRut(String(row.buyer_id ?? ''));
+    if (key && row.buyer_label) buyerLabels.set(key, String(row.buyer_label));
+  }
+  const marketBuyerRows = historySummary
+    ? (marketHistory?.buyers ?? []).map((row) => ({
+        ...row,
+        buyer_label: buyerLabels.get(normRut(row.buyer_id)) || row.buyer_id,
+        first_year: historySummary.first_year,
+        last_year: historySummary.last_year,
+      }))
+    : currentBuyerRows;
+  const marketSource = historySummary
+    ? `Mercado Público · histórico ${fromYear}–${toYear}`
+    : marketHistoryState === 'loading'
+      ? 'Mercado Público · cargando histórico'
+      : 'Mercado Público · resumen vigente 12m';
 
   return <div className="state-entity-layout">
     <section className="state-card state-search-card">
       <label className="state-label" htmlFor="state-entity-search">RUT o nombre</label>
       <input id="state-entity-search" className="state-search-input" value={q} onChange={(e) => { setQ(e.target.value); setSelectedRut(null); }} placeholder="Ej. 76.123.456-7 o nombre de la entidad" />
-      <div className="state-search-help">La búsqueda admite RUT con o sin puntos, guion o DV.</div>
+      <div className="state-search-help">La búsqueda admite RUT con o sin puntos, guion o DV. Un RUT histórico puede consultarse aunque no tenga actividad reciente.</div>
       {(marketSearch.loading || fundsSearch.loading) && <div className="state-muted">Buscando en ambas fuentes…</div>}
       {enabled && !marketSearch.loading && !fundsSearch.loading && merged.length === 0 && <div className="state-empty">Sin coincidencias en Mercado Público o Presupuesto Abierto.</div>}
       <div className="state-search-results">
         {merged.map((row) => <button key={normRut(row.rut)} className="state-search-result" data-active={selectedRut === row.rut} onClick={() => setSelectedRut(row.rut)}>
           <span><strong>{row.label}</strong><small>{row.rut}</small></span>
-          <span className="state-source-pills">{row.market && <em>Proveedor</em>}{row.funds && <em>Pagos Estado</em>}</span>
+          <span className="state-source-pills">{row.market && <em>Proveedor</em>}{row.funds && <em>Pagos Estado</em>}{!row.market && !row.funds && <em>Histórico por RUT</em>}</span>
         </button>)}
       </div>
     </section>
@@ -246,8 +309,15 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
           <Kpi label="Pagos del Estado" value={clp(fs?.amount_paid)} sub={fs ? `${num(fs.payer_count)} pagadores · ${yearRange(fs.first_year, fs.last_year)}` : 'Presupuesto Abierto'} />
           <Kpi label="Traspasos / receptor" value={clp(fs?.amount_as_recipient)} sub="Presupuesto Abierto · rol receptor" />
         </div>
+        <div className="state-muted">{historySummary
+          ? `Mercado Público calculado sobre historia compacta ChileCompra para ${fromYear}–${toYear}.`
+          : marketHistoryState === 'loading'
+            ? 'Cargando historia de Mercado Público; mientras tanto se conserva el resumen vigente.'
+            : marketHistoryState === 'error'
+              ? 'Histórico de Mercado Público no disponible en esta consulta; se muestra el resumen vigente de 12 meses.'
+              : 'Mercado Público: resumen vigente.'}</div>
         <div className="state-dual-detail">
-          <DetailTable title="¿A quién ha vendido?" source="Mercado Público" rows={(marketBuyers.data?.rows ?? []).slice(0, 10)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" />
+          <DetailTable title="¿A quién ha vendido?" source={marketSource} rows={marketBuyerRows.slice(0, 10)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" />
           <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={(fundPayers.data?.rows ?? []).slice(0, 10)} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" />
         </div>
       </>}
