@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { fetchProviderHistory, type ProviderHistoryResponse } from '../lib/providerHistory';
 import { downloadExcel, exportDate, type ExcelColumn } from '../lib/excelExport';
 import { HuellaPublicaTrends, type PublicFundsTrendYear } from '../components/HuellaPublicaTrends';
+import { HuellaPublicaPress } from '../components/HuellaPublicaPress';
 import { StateCounterpartyDrawer, type StateCounterpartySelection } from '../components/StateCounterpartyDrawer';
 import '../styles/state-relations.css';
 import '../styles/state-relations-compact.css';
@@ -318,6 +319,9 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
     : marketHistoryState === 'loading'
       ? 'Mercado Público · cargando histórico'
       : 'Mercado Público · resumen vigente 12m';
+  const selectedSearchRow = selectedRut ? merged.find((row) => normRut(row.rut) === normRut(selectedRut)) ?? null : null;
+  const selectedEntityName = selectedSearchRow?.label || ms?.label || fs?.label || selectedRut || '';
+  const selectedEntityId = fs?.entity_id || selectedSearchRow?.funds?.entity_id || selectedSearchRow?.market?.entity_id || null;
 
   return <><div className="state-entity-layout">
     <section className="state-card state-search-card">
@@ -337,7 +341,7 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
 
     <section className="state-card state-detail-card">
       {!selectedRut ? <div className="state-empty state-empty-large"><div className="state-empty-icon">⌁</div><strong>Selecciona una entidad</strong><span>Atlas reconstruirá su huella pública con compras, pagos y principales contrapartes.</span><small>El detalle histórico se solicita sólo para la entidad seleccionada.</small></div> : <>
-        <div className="state-detail-title"><div><span>Huella pública observada</span><h2>{ms?.label || fs?.label || selectedRut}</h2><small>{selectedRut} · {fromYear}–{toYear}</small></div>{fs?.entity_id && <button className="state-secondary" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(fs.entity_id as string)}`)}>Abrir Entidad 360</button>}</div>
+        <div className="state-detail-title"><div><span>Huella pública observada</span><h2>{selectedEntityName}</h2><small>{selectedRut} · {fromYear}–{toYear}</small></div>{selectedEntityId && <button className="state-secondary" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(selectedEntityId)}`)}>Abrir Entidad 360</button>}</div>
         <div className="state-kpis">
           <Kpi label="Proveedor del Estado" value={ms ? 'Sí' : 'No observado'} sub={ms ? `${yearRange(ms.first_year, ms.last_year)} · ${num(ms.order_count)} OC` : 'Mercado Público'} />
           <Kpi label="Ventas observadas" value={clp(ms?.amount_clp)} sub={ms ? `${num(ms.buyer_count)} organismos compradores` : '—'} />
@@ -360,6 +364,14 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
           marketYears={marketHistory?.years ?? []}
           fundsYears={fundsTimeline.data?.rows ?? []}
           fundsLoading={fundsTimeline.loading}
+        />
+        <HuellaPublicaPress
+          entityRut={selectedRut}
+          entityName={selectedEntityName}
+          entityId={selectedEntityId}
+          fromYear={fromYear}
+          toYear={toYear}
+          onNavigate={onNavigate}
         />
         <div className="state-dual-detail">
           <DetailTable title="¿A quién ha vendido?" source={marketSource} rows={marketBuyerRows.slice(0, 10)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" onOpen={(row) => setCounterparty({
