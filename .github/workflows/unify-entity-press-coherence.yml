@@ -1,0 +1,48 @@
+name: Unificar prensa Entidad 360 y Huella
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/unify_entity_press_coherence.py'
+      - '.github/workflows/unify-entity-press-coherence.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar resolvedor único de prensa
+        run: python3 scripts/unify_entity_press_coherence.py
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Verificar build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_REDIRECT_TO: https://atlasobservatorio.app/
+        run: npm run build
+      - name: Guardar cambios verificados
+        run: |
+          git config user.name "Atlas maintenance bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/lib/entityPress.ts src/views/EntityExpediente.tsx src/components/HuellaPublicaPress.tsx src/views/HuellaSampleBuilder.tsx src/styles/huella-publica-press.css
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "fix: unifica prensa entre Entidad 360 y Huella publica"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
