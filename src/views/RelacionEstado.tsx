@@ -3,13 +3,14 @@ import { useDebounced, useRpc } from '../lib/rpc';
 import { supabase } from '../lib/supabase';
 import { fetchProviderHistory, type ProviderHistoryResponse } from '../lib/providerHistory';
 import { downloadExcel, exportDate, type ExcelColumn } from '../lib/excelExport';
-import { HuellaPublicaTrends, type PublicFundsTrendYear } from '../components/HuellaPublicaTrends';
+import { HuellaPublicaFlowChart, type PublicFundsTrendYear } from '../components/HuellaPublicaFlowChart';
 import { HuellaPublicaPress } from '../components/HuellaPublicaPress';
 import { StateCounterpartyDrawer, type StateCounterpartySelection } from '../components/StateCounterpartyDrawer';
 import '../styles/state-relations.css';
 import '../styles/state-relations-compact.css';
 
 type Mode = 'entity' | 'sample';
+type SourceFilter = 'ALL' | 'MARKET' | 'FUNDS' | 'BOTH';
 type Relation = 'ANY' | 'STATE_INTERACTION' | 'STATE_SUPPLIER' | 'PUBLIC_FUNDS' | 'PUBLIC_FUNDS_RECIPIENT' | 'PUBLIC_FUNDS_SUPPLIER';
 type MarkCode = 'OSFL' | 'SO' | 'POTENTIAL_SO' | 'RES_NEW' | 'SII' | 'SII_TG' | 'SII_NO_EMPLOYEES' | 'PRESS' | 'SANCTIONS' | 'FINTECH';
 
@@ -157,14 +158,29 @@ function clp(v: number | null | undefined) { return v == null ? '—' : new Intl
 function num(v: number | null | undefined) { return v == null ? '—' : Number(v).toLocaleString('es-CL'); }
 function yearRange(a?: number | null, b?: number | null) { if (!a && !b) return '—'; return a === b ? String(a ?? b) : `${a ?? '…'}–${b ?? '…'}`; }
 
-export function RelacionEstado({ onNavigate }: { onNavigate: (hash: string) => void }) {
-  const [mode, setMode] = useState<Mode>('entity');
-  const [fromYear, setFromYear] = useState(2020);
-  const [toYear, setToYear] = useState(CURRENT_YEAR);
+export function RelacionEstado({
+  onNavigate,
+  mode: controlledMode,
+  fromYear: controlledFromYear,
+  toYear: controlledToYear,
+  compactShell = false,
+}: {
+  onNavigate: (hash: string) => void;
+  mode?: Mode;
+  fromYear?: number;
+  toYear?: number;
+  compactShell?: boolean;
+}) {
+  const [internalMode, setInternalMode] = useState<Mode>('entity');
+  const [internalFromYear, setInternalFromYear] = useState(2020);
+  const [internalToYear, setInternalToYear] = useState(CURRENT_YEAR);
+  const mode = controlledMode ?? internalMode;
+  const fromYear = controlledFromYear ?? internalFromYear;
+  const toYear = controlledToYear ?? internalToYear;
 
   return (
     <div className="state-page fade-in">
-      <div className="state-head">
+      {!compactShell && <div className="state-head">
         <div className="state-head-copy">
           <div className="eyebrow">ATLAS · vínculo con organismos públicos</div>
           <h1>Huella pública</h1>
@@ -175,18 +191,18 @@ export function RelacionEstado({ onNavigate }: { onNavigate: (hash: string) => v
             <span><i data-tone="atlas" /><b>Contexto Atlas</b><small>OSFL · SO · SII · prensa · sanciones</small></span>
           </div>
         </div>
-      </div>
+      </div>}
 
-      <div className="state-toolbar">
+      {!compactShell && <div className="state-toolbar">
         <div className="state-tabs">
-          <button data-active={mode === 'entity'} onClick={() => setMode('entity')}>Explorar entidad</button>
-          <button data-active={mode === 'sample'} onClick={() => setMode('sample')}>Construir muestra</button>
+          <button data-active={mode === 'entity'} onClick={() => setInternalMode('entity')}>Explorar entidad</button>
+          <button data-active={mode === 'sample'} onClick={() => setInternalMode('sample')}>Construir muestra</button>
         </div>
         <div className="state-period-inline" aria-label="Período de análisis">
           <span>Período</span>
-          <div><input aria-label="Año inicial" type="number" min={2016} max={CURRENT_YEAR} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || 2020))} /><b>→</b><input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} /></div>
+          <div><input aria-label="Año inicial" type="number" min={2016} max={CURRENT_YEAR} value={fromYear} onChange={(e) => setInternalFromYear(Math.min(toYear, Number(e.target.value) || 2020))} /><b>→</b><input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setInternalToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} /></div>
         </div>
-      </div>
+      </div>}
 
       {mode === 'entity'
         ? <EntityRelationSearch fromYear={fromYear} toYear={toYear} onNavigate={onNavigate} />
@@ -198,6 +214,7 @@ export function RelacionEstado({ onNavigate }: { onNavigate: (hash: string) => v
 function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: number; toYear: number; onNavigate: (hash: string) => void }) {
   const [q, setQ] = useState('');
   const [selectedRut, setSelectedRut] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('ALL');
   const [marketHistory, setMarketHistory] = useState<ProviderHistoryResponse | null>(null);
   const [marketHistoryState, setMarketHistoryState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [counterparty, setCounterparty] = useState<StateCounterpartySelection | null>(null);
@@ -227,6 +244,13 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
     }
     return [...map.values()].slice(0, 30);
   }, [marketSearch.data, fundsSearch.data, directRutCandidate, directRut]);
+
+  const visibleRows = useMemo(() => merged.filter((row) => {
+    if (sourceFilter === 'MARKET') return Boolean(row.market);
+    if (sourceFilter === 'FUNDS') return Boolean(row.funds);
+    if (sourceFilter === 'BOTH') return Boolean(row.market && row.funds);
+    return true;
+  }), [merged, sourceFilter]);
 
   const marketSummary = useRpc<SummaryResponse<MarketSummary>>('obs_state_interaction_entity', {
     p_action: 'summary', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 100, p_offset: 0,
@@ -307,13 +331,6 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
   const fundPayerRows = (fundPayers.data?.rows ?? []) as any[];
   const topBuyer = marketBuyerRows[0] ?? null;
   const topPayer = fundPayerRows[0] ?? null;
-  const footprintReading = ms && fs
-    ? 'Compras y pagos públicos observados'
-    : ms
-      ? 'Compras públicas observadas'
-      : fs
-        ? 'Pagos públicos observados'
-        : 'Sin huella observada en el período';
   const marketSource = historySummary
     ? `Mercado Público · histórico ${fromYear}–${toYear}`
     : marketHistoryState === 'loading'
@@ -325,33 +342,46 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
 
   return <><div className="state-entity-layout">
     <section className="state-card state-search-card">
-      <div className="state-card-kicker">Explorador de entidades</div>
+      <div className="huella-sidebar-title"><strong>Buscar entidad</strong><span>Busca una empresa, persona u organización.</span></div>
       <label className="state-label" htmlFor="state-entity-search">RUT o nombre</label>
-      <input id="state-entity-search" className="state-search-input" value={q} onChange={(e) => { setQ(e.target.value); setSelectedRut(null); }} placeholder="Ej. 76.123.456-7 o nombre de la entidad" />
-      <div className="state-search-help">La búsqueda admite RUT con o sin puntos, guion o DV. Un RUT histórico puede consultarse aunque no tenga actividad reciente.</div>
+      <input id="state-entity-search" className="state-search-input" value={q} onChange={(e) => { setQ(e.target.value); setSelectedRut(null); }} placeholder="Nombre, RUT o palabra clave" />
+      <div className="state-search-help">Admite RUT con o sin puntos, guion o DV.</div>
+      <div className="huella-search-filters" aria-label="Filtros rápidos de resultados">
+        <button type="button" data-active={sourceFilter === 'ALL'} onClick={() => setSourceFilter('ALL')}>Todos</button>
+        <button type="button" data-active={sourceFilter === 'MARKET'} onClick={() => setSourceFilter('MARKET')}>Proveedores</button>
+        <button type="button" data-active={sourceFilter === 'FUNDS'} onClick={() => setSourceFilter('FUNDS')}>Pagos Estado</button>
+        <button type="button" data-active={sourceFilter === 'BOTH'} onClick={() => setSourceFilter('BOTH')}>Ambas fuentes</button>
+      </div>
+      <div className="huella-search-summary"><strong>{enabled ? `${visibleRows.length} resultados` : 'Resultados'}</strong><span>Más relevantes</span></div>
       {(marketSearch.loading || fundsSearch.loading) && <div className="state-muted">Buscando en ambas fuentes…</div>}
-      {enabled && !marketSearch.loading && !fundsSearch.loading && merged.length === 0 && <div className="state-empty">Sin coincidencias en Mercado Público o Presupuesto Abierto.</div>}
+      {enabled && !marketSearch.loading && !fundsSearch.loading && visibleRows.length === 0 && <div className="state-empty">Sin coincidencias para este filtro.</div>}
       <div className="state-search-results">
-        {merged.map((row) => <button key={normRut(row.rut)} className="state-search-result" data-active={selectedRut === row.rut} onClick={() => setSelectedRut(row.rut)}>
-          <span><strong>{row.label}</strong><small>{row.rut}</small></span>
-          <span className="state-source-pills">{row.market && <em>Proveedor</em>}{row.funds && <em>Pagos Estado</em>}{!row.market && !row.funds && <em>Histórico por RUT</em>}</span>
+        {visibleRows.map((row) => <button key={normRut(row.rut)} className="state-search-result" data-active={selectedRut === row.rut} onClick={() => setSelectedRut(row.rut)}>
+          <span className="huella-result-avatar" aria-hidden="true">▦</span>
+          <span className="huella-result-copy"><strong>{row.label}</strong><small>{row.rut}</small><span className="state-source-pills">{row.market && <em>Proveedor</em>}{row.funds && <em>Pagos Estado</em>}{!row.market && !row.funds && <em>Histórico por RUT</em>}</span></span>
+          <span className="huella-result-arrow" aria-hidden="true">›</span>
         </button>)}
       </div>
     </section>
 
     <section className="state-card state-detail-card">
       {!selectedRut ? <div className="state-empty state-empty-large"><div className="state-empty-icon">⌁</div><strong>Selecciona una entidad</strong><span>Atlas reconstruirá su huella pública con compras, pagos y principales contrapartes.</span><small>El detalle histórico se solicita sólo para la entidad seleccionada.</small></div> : <>
-        <div className="state-detail-title"><div><span>Huella pública observada</span><h2>{selectedEntityName}</h2><small>{selectedRut} · {fromYear}–{toYear}</small></div>{selectedEntityId && <button className="state-secondary" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(selectedEntityId)}`)}>Abrir Entidad 360</button>}</div>
+        <div className="state-detail-title">
+          <div className="state-detail-identity">
+            <span className="state-entity-avatar" aria-hidden="true">▦</span>
+            <div><span>Entidad seleccionada</span><h2>{selectedEntityName}</h2><small>{selectedRut}</small><div className="state-detail-badges">{ms && <em>Proveedor Estado</em>}{fs && <em>Pagos Estado</em>}{Number(fs?.amount_as_recipient || 0) > 0 && <em>Receptor / traspasos</em>}</div></div>
+          </div>
+          {selectedEntityId && <button className="state-secondary state-entity360-button" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(selectedEntityId)}`)}>Ver en Entidad 360 →</button>}
+        </div>
         <div className="state-kpis">
-          <Kpi label="Proveedor del Estado" value={ms ? 'Sí' : 'No observado'} sub={ms ? `${yearRange(ms.first_year, ms.last_year)} · ${num(ms.order_count)} OC` : 'Mercado Público'} />
-          <Kpi label="Ventas observadas" value={clp(ms?.amount_clp)} sub={ms ? `${num(ms.buyer_count)} organismos compradores` : '—'} />
-          <Kpi label="Pagos del Estado" value={clp(fs?.amount_paid)} sub={fs ? `${num(fs.payer_count)} pagadores · ${yearRange(fs.first_year, fs.last_year)}` : 'Presupuesto Abierto'} />
-          <Kpi label="Traspasos / receptor" value={clp(fs?.amount_as_recipient)} sub="Presupuesto Abierto · rol receptor" />
+          <Kpi label="Ventas Mercado Público" value={clp(ms?.amount_clp)} sub={ms ? `${num(ms.order_count)} OC · ${yearRange(ms.first_year, ms.last_year)}` : 'Sin compras observadas'} />
+          <Kpi label="Pagos del Estado" value={clp(fs?.amount_paid)} sub={fs ? `${num(fs.transaction_count)} pagos · ${num(fs.payer_count)} pagadores` : 'Sin pagos observados'} />
+          <Kpi label="Organismos compradores" value={num(ms?.buyer_count)} sub={Number(fs?.amount_as_recipient || 0) > 0 ? `Traspasos: ${clp(fs?.amount_as_recipient)}` : `${num(fs?.payer_count)} pagadores observados`} />
         </div>
         <div className="state-insight-grid">
           <Insight label="Principal comprador" value={topBuyer ? (topBuyer.buyer_label || topBuyer.buyer_id || '—') : '—'} sub={topBuyer ? `${clp(topBuyer.amount_clp)} · Mercado Público` : 'Sin comprador observado'} />
           <Insight label="Principal pagador" value={topPayer ? (topPayer.payer_name || topPayer.payer_key || '—') : '—'} sub={topPayer ? `${clp(topPayer.amount_paid)} · Presupuesto Abierto` : 'Sin pagador observado'} />
-          <Insight label="Lectura rápida" value={footprintReading} sub="Síntesis descriptiva · no es un indicador de riesgo" />
+          <Insight label="Traspasos / receptor" value={clp(fs?.amount_as_recipient)} sub="Presupuesto Abierto · rol receptor" />
         </div>
         <div className="state-muted state-data-note">{historySummary
           ? `Mercado Público calculado sobre historia compacta ChileCompra para ${fromYear}–${toYear}.`
@@ -360,7 +390,7 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
             : marketHistoryState === 'error'
               ? 'Histórico de Mercado Público no disponible en esta consulta; se muestra el resumen vigente de 12 meses.'
               : 'Mercado Público: resumen vigente.'}</div>
-        <HuellaPublicaTrends
+        <HuellaPublicaFlowChart
           marketYears={marketHistory?.years ?? []}
           fundsYears={fundsTimeline.data?.rows ?? []}
           fundsLoading={fundsTimeline.loading}
@@ -372,14 +402,15 @@ function EntityRelationSearch({ fromYear, toYear, onNavigate }: { fromYear: numb
           fromYear={fromYear}
           toYear={toYear}
           onNavigate={onNavigate}
+          showPreview
         />
         <div className="state-dual-detail">
-          <DetailTable title="¿A quién ha vendido?" source={marketSource} rows={marketBuyerRows.slice(0, 10)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" onOpen={(row) => setCounterparty({
+          <DetailTable title="Principales organismos compradores" source={marketSource} rows={marketBuyerRows.slice(0, 7)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" onOpen={(row) => setCounterparty({
             kind: 'buyer', label: String(row.buyer_label || row.buyer_id || 'Organismo comprador'), identifier: row.buyer_id ? String(row.buyer_id) : null,
             amount: row.amount_clp == null ? null : Number(row.amount_clp), count: row.order_count == null ? null : Number(row.order_count),
             firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
           })} />
-          <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={fundPayerRows.slice(0, 10)} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" onOpen={(row) => setCounterparty({
+          <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={fundPayerRows.slice(0, 7)} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" onOpen={(row) => setCounterparty({
             kind: 'payer', label: String(row.payer_name || row.payer_key || 'Organismo pagador'), identifier: row.payer_key ? String(row.payer_key) : null,
             amount: row.amount_paid == null ? null : Number(row.amount_paid), count: row.transaction_count == null ? null : Number(row.transaction_count),
             firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
@@ -453,7 +484,8 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
           { label: 'Período', value: `${fromYear}-${toYear}` }, { label: 'Relación', value: RELATIONS.find((r) => r.value === relation)?.label ?? relation },
           { label: 'Marcas', value: marks.length ? `${markMode}: ${marks.join(', ')}` : 'Sin filtro de marcas' },
           { label: 'Región', value: region || 'Todas' }, { label: 'Pagador contiene', value: payer || 'Todos' },
-          { label: 'Total muestra', value: total }, { label: 'Nota Mercado Público', value: 'La muestra masiva usa el directorio vigente resumido de 12 meses; el histórico detallado se consulta por entidad.' },
+          { label: 'Total exportado', value: total }, { label: 'Criterio', value: 'La nómina exporta todas las entidades que cumplen los filtros activos, no sólo la página visible.' },
+          { label: 'Nota Mercado Público', value: 'La muestra masiva usa el directorio vigente resumido de 12 meses; el histórico detallado se consulta por entidad.' },
           { label: 'Nota OSFL', value: 'La capa de muestras excluye entidades públicas evidentes cuando la clasificación OSFL depende sólo de SII/core. La calidad de confirmación queda disponible como columna.' },
         ],
       });
@@ -479,10 +511,10 @@ function SampleBuilder({ fromYear, toYear, onNavigate }: { fromYear: number; toY
     </aside>
 
     <section className="state-card sample-results">
-      <div className="sample-toolbar"><div><span>Resultado de la muestra</span><strong>{sample.loading ? 'Calculando…' : `${total.toLocaleString('es-CL')} entidades`}</strong></div><div className="sample-actions"><button className="state-secondary" disabled={!total || exporting || exportTooLarge} onClick={() => void exportRows(true)}>⇩ Solo RUT</button><button className="state-primary" disabled={!total || exporting || exportTooLarge} onClick={() => setExportOpen((v) => !v)}>{exporting ? 'Preparando…' : '⇩ Exportar muestra'}</button></div></div>
+      <div className="sample-toolbar"><div><span>Resultado de la muestra</span><strong>{sample.loading ? 'Calculando…' : `${total.toLocaleString('es-CL')} entidades`}</strong><small className="sample-export-note">La exportación incluye toda la nómina filtrada, no sólo las filas de esta página.</small></div><div className="sample-actions"><button className="state-secondary" disabled={!total || exporting || exportTooLarge} onClick={() => void exportRows(true)}>⇩ Solo RUT</button><button className="state-primary" disabled={!total || exporting || exportTooLarge} onClick={() => setExportOpen((v) => !v)}>{exporting ? 'Preparando…' : '⇩ Exportar nómina filtrada'}</button></div></div>
       {exportTooLarge && <div className="state-error">La muestra supera {EXPORT_MAX_ROWS.toLocaleString('es-CL')} entidades. Acota período, relación o marcas antes de exportar para evitar una nómina parcial.</div>}
       {exportError && <div className="state-error">{exportError}</div>}
-      {exportOpen && !exportTooLarge && <div className="export-config"><div><strong>Columnas del archivo</strong><span>Selecciona sólo lo que necesites para la consulta posterior.</span></div><div className="export-columns">{EXPORT_OPTIONS.map((c) => <label key={c.key}><input type="checkbox" checked={exportColumns.has(c.key)} onChange={() => toggleColumn(c.key)} />{c.label}</label>)}</div><button className="state-primary" disabled={!exportColumns.size || exporting} onClick={() => void exportRows(false)}>Generar Excel ({total.toLocaleString('es-CL')})</button></div>}
+      {exportOpen && !exportTooLarge && <div className="export-config"><div><strong>Columnas del archivo</strong><span>Selecciona sólo lo que necesites para la consulta posterior.</span></div><div className="export-columns">{EXPORT_OPTIONS.map((c) => <label key={c.key}><input type="checkbox" checked={exportColumns.has(c.key)} onChange={() => toggleColumn(c.key)} />{c.label}</label>)}</div><button className="state-primary" disabled={!exportColumns.size || exporting} onClick={() => void exportRows(false)}>Generar Excel ({total.toLocaleString('es-CL')} entidades)</button></div>}
       {sample.error && <div className="state-error">{sample.error}</div>}
       {!sample.loading && !sample.error && rows.length === 0 && <div className="state-empty state-empty-large"><div className="state-empty-icon">⌁</div><strong>La combinación no devuelve entidades</strong><span>Amplía el período o retira una marca para probar otra cohorte.</span></div>}
       {rows.length > 0 && <div className="sample-table-wrap"><table className="sample-table"><thead><tr><th>Entidad</th><th>Marcas</th><th>Huella pública</th><th>Principal contraparte</th><th></th></tr></thead><tbody>{rows.map((row) => <tr key={row.entity_id}><td><strong>{row.name}</strong><small>{row.rut} · {row.region || 'Región s/d'}</small></td><td><div className="row-marks">{(row.marks ?? []).slice(0, 5).map((m) => <span key={m}>{markLabel(m)}</span>)}</div>{row.is_osfl && <small>{row.osfl_confirmation_level || 'OSFL radar'}</small>}</td><td><div className="money-stack">{Number(row.public_funds_amount || 0) > 0 && <span><b>{clp(relevantFundsAmount(row, relation))}</b><small>Presupuesto Abierto · {fromYear}–{toYear}</small></span>}{row.is_state_supplier && <span><b>{clp(row.market_amount_12m)}</b><small>Mercado Público · 12m · {num(row.market_order_count_12m)} OC</small></span>}</div></td><td>{row.top_payer_name || row.top_buyer_label || '—'}{row.public_funds_payer_count ? <small>{num(row.public_funds_payer_count)} pagadores</small> : null}</td><td><button className="row-open" onClick={() => onNavigate(`#/entidad/${encodeURIComponent(row.entity_id)}`)}>Entidad 360 →</button></td></tr>)}</tbody></table></div>}
