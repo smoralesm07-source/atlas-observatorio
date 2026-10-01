@@ -9,22 +9,25 @@
 }
 
 .state-counterparty-drawer{
-  --drawer-accent:var(--orange,#d86d2b);
+  --drawer-accent:var(--orange,var(--accent,#d86d2b));
   position:absolute;
   top:18px;
   right:18px;
-  width:min(446px,calc(100vw - 36px));
+  width:min(480px,calc(100vw - 36px));
   max-height:calc(100vh - 36px);
   overflow:auto;
   box-sizing:border-box;
   padding:18px;
-  border:1px solid color-mix(in srgb,var(--line) 90%,transparent);
+  border:1px solid var(--line,#d7dde3);
   border-radius:20px;
-  background:linear-gradient(180deg,var(--panel) 0%,color-mix(in srgb,var(--surface-2,#f4f5f6) 28%,var(--panel)) 100%);
+  background:var(--bg-panel,#fff);
+  background-color:var(--bg-panel,#fff);
+  opacity:1;
   box-shadow:0 24px 70px rgba(15,23,42,.20),0 8px 24px rgba(15,23,42,.08);
   animation:state-drawer-in .2s cubic-bezier(.2,.8,.2,1);
   scrollbar-width:thin;
   scrollbar-color:color-mix(in srgb,var(--ink-3) 25%,transparent) transparent;
+  isolation:isolate;
 }
 
 .state-counterparty-drawer:before{
@@ -43,7 +46,7 @@
   align-items:flex-start;
   gap:16px;
   padding:3px 1px 15px;
-  border-bottom:1px solid color-mix(in srgb,var(--line) 90%,transparent);
+  border-bottom:1px solid var(--line,#d7dde3);
 }
 
 .state-counterparty-head>div{min-width:0}
@@ -62,7 +65,7 @@
 
 .state-counterparty-head h3{
   margin:5px 0 6px;
-  color:var(--ink-1);
+  color:var(--ink-1,var(--ink));
   font-size:18px;
   line-height:1.16;
   letter-spacing:-.018em;
@@ -83,9 +86,9 @@
   place-items:center;
   width:32px;
   height:32px;
-  border:1px solid var(--line);
+  border:1px solid var(--line,#d7dde3);
   border-radius:10px;
-  background:var(--surface-1,var(--panel));
+  background:var(--bg-panel,#fff);
   color:var(--ink-3);
   font-size:18px;
   line-height:1;
@@ -94,9 +97,9 @@
 }
 
 .state-counterparty-head>button:hover{
-  color:var(--ink-1);
+  color:var(--ink-1,var(--ink));
   border-color:color-mix(in srgb,var(--ink-3) 34%,var(--line));
-  background:var(--surface-2,#f4f5f6);
+  background:var(--bg-panel-2,#f3f5f6);
   transform:translateY(-1px);
 }
 
@@ -111,9 +114,9 @@
   position:relative;
   min-width:0;
   padding:11px 11px 10px;
-  border:1px solid color-mix(in srgb,var(--line) 92%,transparent);
+  border:1px solid var(--line,#d7dde3);
   border-radius:12px;
-  background:var(--surface-1,var(--panel));
+  background:var(--bg-panel-2,#f3f5f6);
   box-shadow:0 3px 10px rgba(15,23,42,.028);
   overflow:hidden;
 }
@@ -139,7 +142,7 @@
 .state-counterparty-facts strong{
   display:block;
   margin-top:6px;
-  color:var(--ink-1);
+  color:var(--ink-1,var(--ink));
   font-size:13.2px;
   line-height:1.2;
   font-weight:730;
@@ -150,23 +153,37 @@
 }
 
 .state-counterparty-source-note,
-.state-counterparty-resolution{
-  border:1px solid color-mix(in srgb,var(--line) 90%,transparent);
+.state-counterparty-resolution,
+.state-counterparty-context,
+.state-counterparty-history{
+  border:1px solid var(--line,#d7dde3);
   border-radius:14px;
-  background:color-mix(in srgb,var(--panel) 94%,var(--surface-2,#f4f5f6));
+  background:var(--bg-panel,#fff);
+  background-color:var(--bg-panel,#fff);
   box-shadow:0 4px 14px rgba(15,23,42,.025);
+  opacity:1;
+}
+
+.state-counterparty-context,
+.state-counterparty-history,
+.state-counterparty-source-note{
+  margin-bottom:10px;
+}
+
+.state-counterparty-context,
+.state-counterparty-history,
+.state-counterparty-resolution{
+  padding:13px 14px 14px;
 }
 
 .state-counterparty-source-note{
   padding:13px 14px;
-  margin-bottom:10px;
   border-color:color-mix(in srgb,var(--drawer-accent) 18%,var(--line));
-  background:linear-gradient(135deg,color-mix(in srgb,var(--drawer-accent) 4%,var(--panel)),var(--panel));
 }
 
 .state-counterparty-source-note strong{
   font-size:11.3px;
-  color:var(--ink-1);
+  color:var(--ink-1,var(--ink));
   font-weight:720;
 }
 
@@ -187,16 +204,12 @@
   display:inline-flex;
   align-items:center;
   padding:4px 7px;
-  border:1px solid color-mix(in srgb,var(--line) 84%,transparent);
+  border:1px solid var(--line,#d7dde3);
   border-radius:999px;
-  background:var(--surface-2,#eef0f2);
+  background:var(--bg-panel-2,#eef0f2);
   color:var(--ink-2);
   font-size:9px;
   font-weight:720;
-}
-
-.state-counterparty-resolution{
-  padding:13px 14px 14px;
 }
 
 .state-counterparty-section-title{
@@ -210,7 +223,7 @@
 .state-counterparty-section-title strong{
   display:block;
   margin-top:3px;
-  color:var(--ink-1);
+  color:var(--ink-1,var(--ink));
   font-size:12.6px;
   line-height:1.25;
   font-weight:730;
@@ -228,11 +241,148 @@
   color:#28744b;
 }
 
+.state-counterparty-context-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+
+.state-counterparty-context-grid>div{
+  min-width:0;
+  padding:9px 10px;
+  border:1px solid var(--line,#d7dde3);
+  border-radius:10px;
+  background:var(--bg-panel-2,#f3f5f6);
+}
+
+.state-counterparty-context-grid span{
+  display:block;
+  color:var(--ink-3);
+  font-size:8.5px;
+  font-weight:720;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+}
+
+.state-counterparty-context-grid strong{
+  display:block;
+  margin-top:4px;
+  color:var(--ink-1,var(--ink));
+  font-size:14px;
+  line-height:1.2;
+  font-weight:750;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.state-counterparty-context-grid small{
+  display:block;
+  margin-top:3px;
+  color:var(--ink-3);
+  font-size:8.9px;
+  line-height:1.3;
+}
+
+.state-counterparty-observed-dates{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:9px;
+  padding:8px 10px;
+  border-radius:9px;
+  background:var(--bg-panel-2,#f3f5f6);
+  color:var(--ink-3);
+  font-size:9px;
+}
+
+.state-counterparty-observed-dates b{
+  margin-left:4px;
+  color:var(--ink-2);
+  font-weight:720;
+}
+
+.state-counterparty-year-head,
+.state-counterparty-year{
+  display:grid;
+  grid-template-columns:46px minmax(110px,1fr) 48px minmax(90px,.72fr);
+  gap:8px;
+  align-items:center;
+}
+
+.state-counterparty-year-head{
+  padding:0 8px 6px;
+  color:var(--ink-3);
+  font-size:8px;
+  font-weight:720;
+  text-transform:uppercase;
+  letter-spacing:.045em;
+}
+
+.state-counterparty-year-head span:nth-child(n+2){text-align:right}
+
+.state-counterparty-years{
+  overflow:hidden;
+  border:1px solid var(--line,#d7dde3);
+  border-radius:10px;
+  background:var(--bg-panel,#fff);
+}
+
+.state-counterparty-year{
+  min-height:37px;
+  padding:7px 8px;
+  border-top:1px solid var(--line,#d7dde3);
+  font-size:9.5px;
+}
+
+.state-counterparty-year:first-child{border-top:0}
+.state-counterparty-year:nth-child(even){background:var(--bg-panel-2,#f3f5f6)}
+
+.state-counterparty-year strong{
+  color:var(--ink-2);
+  font-size:10px;
+  font-weight:760;
+  font-variant-numeric:tabular-nums;
+}
+
+.state-counterparty-year b,
+.state-counterparty-year>span,
+.state-counterparty-year>small{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+
+.state-counterparty-year b{
+  color:var(--ink-1,var(--ink));
+  font-size:9.7px;
+  font-weight:720;
+  white-space:nowrap;
+}
+
+.state-counterparty-year>span{
+  color:var(--ink-2);
+  font-weight:680;
+}
+
+.state-counterparty-year>small{
+  color:var(--ink-3);
+  font-size:8.6px;
+  line-height:1.2;
+}
+
+.state-counterparty-history-note{
+  margin:8px 1px 0;
+  color:var(--ink-3);
+  font-size:8.8px;
+  line-height:1.4;
+}
+
 .state-counterparty-status{
   padding:11px 12px;
-  border:1px dashed color-mix(in srgb,var(--line) 92%,transparent);
+  border:1px dashed var(--line,#d7dde3);
   border-radius:10px;
-  background:color-mix(in srgb,var(--surface-2,#f4f5f6) 55%,transparent);
+  background:var(--bg-panel-2,#f3f5f6);
   color:var(--ink-3);
   font-size:10.4px;
   line-height:1.45;
@@ -255,8 +405,8 @@
   padding:11px 12px;
   border:1px solid color-mix(in srgb,var(--drawer-accent) 20%,var(--line));
   border-radius:11px;
-  background:linear-gradient(135deg,color-mix(in srgb,var(--drawer-accent) 4%,var(--panel)),var(--surface-1,var(--panel)));
-  color:var(--ink-1);
+  background:var(--bg-panel,#fff);
+  color:var(--ink-1,var(--ink));
   text-align:left;
   cursor:pointer;
   transition:background .14s ease,border-color .14s ease,box-shadow .14s ease,transform .14s ease;
@@ -265,7 +415,7 @@
 .state-counterparty-exact:hover,
 .state-counterparty-candidates button:hover{
   border-color:color-mix(in srgb,var(--drawer-accent) 42%,var(--line));
-  background:color-mix(in srgb,var(--drawer-accent) 6%,var(--panel));
+  background:var(--bg-panel-2,#f3f5f6);
   box-shadow:0 5px 14px rgba(15,23,42,.055);
   transform:translateY(-1px);
 }
@@ -276,7 +426,7 @@
 .state-counterparty-exact strong,
 .state-counterparty-candidates button strong{
   display:block;
-  color:var(--ink-1);
+  color:var(--ink-1,var(--ink));
   font-size:10.9px;
   line-height:1.3;
   white-space:nowrap;
@@ -325,7 +475,7 @@
 .state-counterparty-drawer>footer{
   margin-top:10px;
   padding:10px 2px 1px;
-  border-top:1px solid color-mix(in srgb,var(--line) 88%,transparent);
+  border-top:1px solid var(--line,#d7dde3);
   color:var(--ink-3);
   font-size:9.4px;
   line-height:1.45;
@@ -341,12 +491,12 @@
   cursor:pointer;
 }
 
-.detail-row-button:hover{background:color-mix(in srgb,var(--orange,#d86d2b) 4%,var(--panel))}
+.detail-row-button:hover{background:var(--bg-panel-2,#f3f5f6)}
 .detail-row-button:focus-visible{outline:2px solid color-mix(in srgb,var(--orange,#d86d2b) 48%,transparent);outline-offset:-2px}
 
 @keyframes state-drawer-in{
-  from{transform:translate3d(18px,6px,0) scale(.992);opacity:.45}
-  to{transform:translate3d(0,0,0) scale(1);opacity:1}
+  from{transform:translate3d(18px,6px,0) scale(.992)}
+  to{transform:translate3d(0,0,0) scale(1)}
 }
 
 @media(max-width:760px){
@@ -362,7 +512,7 @@
     top:auto;
     right:auto;
     width:100%;
-    max-height:min(82vh,720px);
+    max-height:min(86vh,760px);
     padding:16px;
     border-radius:18px;
     animation:state-sheet-in .2s cubic-bezier(.2,.8,.2,1);
@@ -373,10 +523,13 @@
 @media(max-width:520px){
   .state-counterparty-facts{grid-template-columns:1fr 1fr}
   .state-counterparty-facts>div:last-child{grid-column:1/-1}
+  .state-counterparty-context-grid{grid-template-columns:1fr 1fr}
+  .state-counterparty-year-head,.state-counterparty-year{grid-template-columns:40px minmax(90px,1fr) 38px minmax(72px,.75fr);gap:5px}
   .state-counterparty-head h3{font-size:16px}
+  .state-counterparty-observed-dates{flex-direction:column;gap:4px}
 }
 
 @keyframes state-sheet-in{
-  from{transform:translateY(18px);opacity:.55}
-  to{transform:translateY(0);opacity:1}
+  from{transform:translateY(18px)}
+  to{transform:translateY(0)}
 }
