@@ -60,8 +60,12 @@ export function activityLocation(route: Route): ActivityLocation {
       return { route: 'entidades', section: 'Entidades' };
     case 'ficha':
       return { route: 'ficha', section: 'Ficha de entidad' };
+    case 'relacionEstado':
+      return { route: 'relacion-estado', section: 'Huella pública' };
     case 'territorio':
       return { route: 'territorio', section: 'Territorio' };
+    case 'reportes':
+      return { route: 'reportes', section: 'Reportes' };
     case 'fuentes':
       return { route: 'fuentes', section: 'Fuentes' };
     case 'metodologia':
