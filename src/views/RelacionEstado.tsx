@@ -5,6 +5,7 @@ import { fetchProviderHistory, type ProviderHistoryResponse } from '../lib/provi
 import { downloadExcel, exportDate, type ExcelColumn } from '../lib/excelExport';
 import { HuellaPublicaTrends, type PublicFundsTrendYear } from '../components/HuellaPublicaTrends';
 import '../styles/state-relations.css';
+import '../styles/state-relations-compact.css';
 
 type Mode = 'entity' | 'sample';
 type Relation = 'ANY' | 'STATE_INTERACTION' | 'STATE_SUPPLIER' | 'PUBLIC_FUNDS' | 'PUBLIC_FUNDS_RECIPIENT' | 'PUBLIC_FUNDS_SUPPLIER';
@@ -171,16 +172,17 @@ export function RelacionEstado({ onNavigate }: { onNavigate: (hash: string) => v
             <span><i data-tone="atlas" /><b>Contexto Atlas</b><small>OSFL · SO · SII · prensa · sanciones</small></span>
           </div>
         </div>
-        <div className="state-period">
-          <span>Período de análisis</span>
-          <div><input type="number" min={2016} max={CURRENT_YEAR} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || 2020))} /><b>→</b><input type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} /></div>
-          <small>La historia detallada se carga sólo al seleccionar una entidad.</small>
-        </div>
       </div>
 
-      <div className="state-tabs">
-        <button data-active={mode === 'entity'} onClick={() => setMode('entity')}>Explorar entidad</button>
-        <button data-active={mode === 'sample'} onClick={() => setMode('sample')}>Construir muestra</button>
+      <div className="state-toolbar">
+        <div className="state-tabs">
+          <button data-active={mode === 'entity'} onClick={() => setMode('entity')}>Explorar entidad</button>
+          <button data-active={mode === 'sample'} onClick={() => setMode('sample')}>Construir muestra</button>
+        </div>
+        <div className="state-period-inline" aria-label="Período de análisis">
+          <span>Período</span>
+          <div><input aria-label="Año inicial" type="number" min={2016} max={CURRENT_YEAR} value={fromYear} onChange={(e) => setFromYear(Math.min(toYear, Number(e.target.value) || 2020))} /><b>→</b><input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(e) => setToYear(Math.max(fromYear, Number(e.target.value) || CURRENT_YEAR))} /></div>
+        </div>
       </div>
 
       {mode === 'entity'
