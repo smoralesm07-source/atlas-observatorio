@@ -8,7 +8,9 @@ export type { AtlasRole } from './Auth';
 
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
 const OTP_CODE_LENGTH = 8;
-const SESSION_BOOT_TIMEOUT_MS = 6000;
+const SESSION_BOOT_TIMEOUT_MS = 12000;
+const SESSION_RETRY_DELAYS_MS = [0, 500, 1500] as const;
+const OTP_RETRY_DELAYS_MS = [0, 600, 1600] as const;
 
 function normalizedEmail(value: string) {
   return value.trim().toLowerCase();
@@ -17,6 +19,10 @@ function normalizedEmail(value: string) {
 function validEmail(value: string) {
   const email = normalizedEmail(value);
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isTransportError(error: { message?: string } | null | undefined) {
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(String(error?.message ?? ''));
 }
 
 function isRateLimitError(error: { code?: string; message?: string } | null | undefined) {
@@ -31,10 +37,17 @@ function emailAuthErrorMessage(error: { code?: string; message?: string } | null
   if (isRateLimitError(error)) {
     return 'Se alcanzó temporalmente el límite de envío de códigos. Espera antes de solicitar otro. Si continúa, la cuota horaria de correo todavía no se ha liberado.';
   }
+  if (isTransportError(error)) {
+    return 'No fue posible conectar con el servicio de acceso. ATLAS reintentó automáticamente y tu cuenta no fue rechazada. Comprueba tu conexión y vuelve a intentarlo.';
+  }
   if (/token has expired or is invalid/i.test(String(error?.message ?? ''))) {
     return `El código venció o no es válido. Solicita uno nuevo e ingresa los ${OTP_CODE_LENGTH} dígitos.`;
   }
   return error?.message || 'No fue posible completar la autenticación por correo.';
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function AuthGate({ children }: { children: (session: Session, role: AtlasRole) => ReactNode }) {
@@ -47,17 +60,42 @@ export function AuthGate({ children }: { children: (session: Session, role: Atla
       setSession(null);
     }, SESSION_BOOT_TIMEOUT_MS);
 
-    supabase.auth.getSession()
-      .then(({ data }) => {
+    async function restoreSession() {
+      for (const waitMs of SESSION_RETRY_DELAYS_MS) {
+        if (waitMs) await delay(waitMs);
         if (!live) return;
-        window.clearTimeout(bootTimeout);
-        setSession(data.session);
-      })
-      .catch(() => {
-        if (!live) return;
-        window.clearTimeout(bootTimeout);
-        setSession(null);
-      });
+
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (!live) return;
+
+          if (!error) {
+            window.clearTimeout(bootTimeout);
+            setSession(data.session);
+            return;
+          }
+
+          if (!isTransportError(error)) {
+            window.clearTimeout(bootTimeout);
+            setSession(null);
+            return;
+          }
+        } catch (error) {
+          const normalized = error instanceof Error ? error : new Error(String(error));
+          if (!isTransportError(normalized)) {
+            window.clearTimeout(bootTimeout);
+            setSession(null);
+            return;
+          }
+        }
+      }
+
+      if (!live) return;
+      window.clearTimeout(bootTimeout);
+      setSession(null);
+    }
+
+    void restoreSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!live) return;
@@ -106,23 +144,39 @@ function OpenSignIn() {
 
     setEmailBusy(true);
     setError(null);
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: value,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
 
-    if (otpError) {
-      if (isRateLimitError(otpError)) setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
-      setError(emailAuthErrorMessage(otpError));
-      setEmailBusy(false);
-      return;
+    let lastError: { code?: string; message?: string } | null = null;
+
+    for (const waitMs of OTP_RETRY_DELAYS_MS) {
+      if (waitMs) await delay(waitMs);
+
+      try {
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          email: value,
+          options: {
+            shouldCreateUser: true,
+          },
+        });
+
+        if (!otpError) {
+          setCode('');
+          setCodeSent(true);
+          setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+          setEmailBusy(false);
+          return;
+        }
+
+        lastError = otpError;
+        if (!isTransportError(otpError)) break;
+      } catch (requestError) {
+        const normalized = requestError instanceof Error ? requestError : new Error(String(requestError));
+        lastError = normalized;
+        if (!isTransportError(normalized)) break;
+      }
     }
 
-    setCode('');
-    setCodeSent(true);
-    setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+    if (lastError && isRateLimitError(lastError)) setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+    setError(emailAuthErrorMessage(lastError));
     setEmailBusy(false);
   }
 
@@ -182,7 +236,7 @@ function OpenSignIn() {
         {!codeSent ? (
           <button className="btn" style={{ width: '100%' }} onClick={() => void sendCode()} disabled={locked || resendCooldown > 0}>
             {emailBusy
-              ? 'Enviando…'
+              ? 'Conectando y enviando…'
               : resendCooldown > 0
                 ? `Intentar nuevamente en ${resendCooldown}s`
                 : `Enviar código de ${OTP_CODE_LENGTH} dígitos`}
