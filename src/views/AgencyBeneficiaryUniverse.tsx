@@ -48,10 +48,15 @@ type BeneficiaryRow = {
 type BeneficiarySummary = {
   beneficiary_count?: number;
   resolved_count?: number;
-  public_funds_amount?: number;
-  public_funds_transactions?: number;
-  market_amount?: number;
-  market_orders?: number;
+  public_funds_amount?: number | null;
+  public_funds_transactions?: number | null;
+  public_funds_execution_amount?: number | null;
+  public_funds_personnel_amount?: number | null;
+  public_funds_execution_transactions?: number | null;
+  public_funds_personnel_share?: number | null;
+  public_funds_flow_execution_share?: number | null;
+  market_amount?: number | null;
+  market_orders?: number | null;
   top10_public_funds_share?: number | null;
   top10_market_share?: number | null;
 };
@@ -74,6 +79,8 @@ type BeneficiaryResponse = {
   semantics?: Record<string, string>;
   market_incomplete?: boolean;
   market_coverage?: MarketCoverage;
+  public_funds_incomplete?: boolean;
+  public_funds_coverage_status?: string;
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -164,7 +171,9 @@ export function AgencyBeneficiaryUniverse({
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const exportTooLarge = total > EXPORT_MAX_ROWS;
   const marketIncomplete = Boolean(result.data?.market_incomplete);
+  const publicFundsIncomplete = Boolean(result.data?.public_funds_incomplete);
   const marketHistory = result.data?.market_coverage?.history;
+  const publicFundsCoverageMessage = result.data?.semantics?.public_funds_coverage;
 
   function resetAgencySearch(value = '') {
     setQ(value);
@@ -208,10 +217,10 @@ export function AgencyBeneficiaryUniverse({
         { header: 'Identidad Atlas', value: (r) => hasResolvedIdentity(r) ? 'Resuelta' : 'Parcial / sólo RUT' },
         { header: 'Tipo entidad', value: (r) => r.entity_type },
         { header: 'Región', value: (r) => r.region },
-        { header: 'Presupuesto Abierto - total', value: (r) => r.public_funds_amount },
-        { header: 'Presupuesto Abierto - proveedor', value: (r) => r.public_funds_supplier_amount },
-        { header: 'Presupuesto Abierto - receptor/traspaso', value: (r) => r.public_funds_recipient_amount },
-        { header: 'Registros Presupuesto Abierto', value: (r) => r.public_funds_transaction_count },
+        { header: 'Flujos PA - total', value: (r) => r.public_funds_amount },
+        { header: 'Flujos PA - proveedor', value: (r) => r.public_funds_supplier_amount },
+        { header: 'Flujos PA - receptor/traspaso', value: (r) => r.public_funds_recipient_amount },
+        { header: 'Registros de flujos PA', value: (r) => r.public_funds_transaction_count },
         { header: 'Mercado Público - monto', value: (r) => r.market_amount },
         { header: 'Órdenes de compra', value: (r) => r.market_order_count },
         { header: 'Primer año', value: (r) => r.first_year },
@@ -232,10 +241,15 @@ export function AgencyBeneficiaryUniverse({
           { label: 'Rol Presupuesto Abierto', value: source === 'MARKET' ? 'No aplica' : flow },
           { label: 'Beneficiarios únicos exportados', value: total },
           { label: 'Criterio', value: 'La nómina incluye todas las entidades que cumplen los filtros activos, no sólo la página visible.' },
-          { label: 'Monto Presupuesto Abierto', value: summary.public_funds_amount ?? 0 },
+          { label: 'Ejecución presupuestaria devengada', value: summary.public_funds_execution_amount ?? '' },
+          { label: 'Gastos en personal devengados', value: summary.public_funds_personnel_amount ?? '' },
+          { label: 'Flujos a contrapartes (pagos)', value: summary.public_funds_amount ?? '' },
+          { label: 'Flujos / ejecución devengada', value: summary.public_funds_flow_execution_share == null ? '' : `${summary.public_funds_flow_execution_share}%` },
           { label: 'Monto Mercado Público', value: summary.market_amount ?? 0 },
+          { label: 'Cobertura Presupuesto Abierto', value: publicFundsIncomplete ? 'Parcial / fuente municipal no integrada' : 'Gobierno Central integrado' },
           { label: 'Cobertura Mercado Público', value: marketIncomplete ? 'Parcial: monto observado, no total del período' : 'Completa para el período consultado' },
-          { label: 'Nota', value: 'Los montos de Presupuesto Abierto y Mercado Público se mantienen separados para evitar doble contabilización.' },
+          { label: 'Nota metodológica', value: 'Ejecución usa monto devengado; flujos a contrapartes usan pagos positivos con RUT identificado y excluyen intra-Estado. El porcentaje flujos/ejecución es una referencia analítica, no una conciliación contable.' },
+          { label: 'Nota fuentes', value: 'Presupuesto Abierto y Mercado Público se mantienen separados y no se suman para evitar doble contabilización.' },
         ],
       });
     } catch (e) {
@@ -259,7 +273,7 @@ export function AgencyBeneficiaryUniverse({
           <h1>Beneficiarios de organismos públicos</h1>
           <p>Parte desde un servicio público y reconstruye el universo observado de entidades a las que compró, pagó o transfirió recursos durante el período consultado.</p>
           <div className="state-capabilities" aria-label="Cobertura de la consulta">
-            <span><i data-tone="funds" /><b>Presupuesto Abierto</b><small>Pagos · proveedores · receptores</small></span>
+            <span><i data-tone="funds" /><b>Presupuesto Abierto</b><small>Ejecución · pagos · receptores</small></span>
             <span><i data-tone="market" /><b>Mercado Público</b><small>Comprador → proveedor</small></span>
             <span><i data-tone="atlas" /><b>Identidad Atlas</b><small>Entidad 360 cuando está resuelta</small></span>
           </div>
@@ -347,22 +361,26 @@ export function AgencyBeneficiaryUniverse({
 
           <div className="state-kpis agency-kpis">
             <div className="state-kpi"><span>Beneficiarios únicos</span><strong>{result.loading ? '…' : num(summary.beneficiary_count)}</strong><small>Unión por RUT · sin ocultar no resueltos</small></div>
-            <div className="state-kpi"><span>Presupuesto Abierto</span><strong>{result.loading ? '…' : clp(summary.public_funds_amount)}</strong><small>{num(summary.public_funds_transactions)} registros observados</small></div>
+            <div className="state-kpi"><span>Ejecución devengada</span><strong>{result.loading ? '…' : clp(summary.public_funds_execution_amount)}</strong><small>Personal {clp(summary.public_funds_personnel_amount)} · {pct(summary.public_funds_personnel_share)}</small></div>
+            <div className="state-kpi"><span>Flujos a contrapartes</span><strong>{result.loading ? '…' : clp(summary.public_funds_amount)}</strong><small>{publicFundsIncomplete ? 'Cobertura municipal pendiente' : `${num(summary.public_funds_transactions)} pagos · ${pct(summary.public_funds_flow_execution_share)} de ejecución`}</small></div>
             <div className="state-kpi"><span>Mercado Público</span><strong>{result.loading ? '…' : clp(summary.market_amount)}</strong><small>{num(summary.market_orders)} órdenes observadas{marketIncomplete ? ' · cobertura parcial' : ''}</small></div>
-            <div className="state-kpi"><span>Concentración top 10</span><strong>{result.loading ? '…' : top10Label}</strong><small>Participación de los 10 principales receptores</small></div>
           </div>
 
+          {publicFundsIncomplete && source !== 'MARKET' && (
+            <div className="agency-semantics"><b>Cobertura Presupuesto Abierto:</b> {publicFundsCoverageMessage ?? 'La fuente municipal aún no está integrada. Un guion no equivale a cero gasto ni a cero flujos.'}</div>
+          )}
+
           <div className="agency-semantics">
-            <b>Lectura:</b> los montos de Presupuesto Abierto y Mercado Público se muestran por separado y no se suman. La ausencia en una fuente no elimina al beneficiario del universo si existe en la otra.
+            <b>Lectura:</b> ejecución y flujos no son la misma métrica. La ejecución usa devengo del organismo; los flujos a contrapartes usan pagos positivos con RUT identificado y excluyen intra-Estado. El porcentaje flujos/ejecución es referencial y no una conciliación contable. Presupuesto Abierto y Mercado Público se muestran por separado y no se suman. <b>Concentración top 10:</b> {top10Label}.
             {marketIncomplete && <><br /><b>Mercado Público:</b> cobertura parcial. Los montos visibles corresponden sólo a las órdenes actualmente normalizadas y no deben interpretarse como el total del período{marketHistory?.discovered_months ? ` (${num(marketHistory.normalized_months)} de ${num(marketHistory.discovered_months)} meses normalizados${Number(marketHistory.error_months ?? 0) > 0 ? `; ${num(marketHistory.error_months)} con error` : ''})` : ''}.</>}
           </div>
 
           {!result.loading && !result.error && rows.length === 0 ? (
-            <div className="state-empty state-empty-large"><strong>Sin beneficiarios observados</strong><span>Prueba ampliar el período, cambiar la fuente o revisar el tipo de flujo.</span></div>
+            <div className="state-empty state-empty-large"><strong>Sin beneficiarios observados</strong><span>Prueba ampliar el período, cambiar la fuente o revisar el tipo de flujo. Si es una municipalidad, revisa también el aviso de cobertura de Presupuesto Abierto.</span></div>
           ) : (
             <div className="agency-table-wrap">
               <table className="agency-table">
-                <thead><tr><th>Beneficiario</th><th>Presupuesto Abierto</th><th>Mercado Público</th><th>Operaciones</th><th>Período</th><th>Fuente</th><th></th></tr></thead>
+                <thead><tr><th>Beneficiario</th><th>Flujos Presupuesto Abierto</th><th>Mercado Público</th><th>Operaciones</th><th>Período</th><th>Fuente</th><th></th></tr></thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.rut}>
