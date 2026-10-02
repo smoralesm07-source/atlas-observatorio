@@ -11,12 +11,14 @@ import '../styles/huella-publica-controls-refresh.css';
 type AnalysisMode = 'ENTITY' | 'SAMPLE' | 'PUBLIC_SERVICES';
 
 const FIRST_PUBLIC_FUNDS_YEAR = 2016;
+const DEFAULT_FROM_YEAR = 2020;
+const DEFAULT_TO_YEAR = 2026;
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const [mode, setMode] = useState<AnalysisMode>('ENTITY');
-  const [fromYear, setFromYear] = useState(FIRST_PUBLIC_FUNDS_YEAR);
-  const [toYear, setToYear] = useState(CURRENT_YEAR);
+  const [fromYear, setFromYear] = useState(DEFAULT_FROM_YEAR);
+  const [toYear, setToYear] = useState(DEFAULT_TO_YEAR);
 
   const description = mode === 'PUBLIC_SERVICES'
     ? 'Parte desde un servicio público y reconstruye a quiénes compró, pagó o transfirió recursos durante el período consultado.'
@@ -69,9 +71,9 @@ export function HuellaPublica({ onNavigate }: { onNavigate: (hash: string) => vo
           <div className="huella-global-period" aria-label="Período de análisis">
             <span>Período de análisis</span>
             <div>
-              <input aria-label="Año inicial" type="number" min={FIRST_PUBLIC_FUNDS_YEAR} max={toYear} value={fromYear} onChange={(event) => setFromYear(Math.min(toYear, Number(event.target.value) || FIRST_PUBLIC_FUNDS_YEAR))} />
+              <input aria-label="Año inicial" type="number" min={FIRST_PUBLIC_FUNDS_YEAR} max={toYear} value={fromYear} onChange={(event) => setFromYear(Math.min(toYear, Number(event.target.value) || DEFAULT_FROM_YEAR))} />
               <b aria-hidden="true">→</b>
-              <input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(event) => setToYear(Math.max(fromYear, Number(event.target.value) || CURRENT_YEAR))} />
+              <input aria-label="Año final" type="number" min={fromYear} max={CURRENT_YEAR} value={toYear} onChange={(event) => setToYear(Math.max(fromYear, Number(event.target.value) || DEFAULT_TO_YEAR))} />
             </div>
           </div>
         </div>
