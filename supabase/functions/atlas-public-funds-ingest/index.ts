@@ -7,7 +7,7 @@ const ALLOWED_REPOS = new Set(['smoralesm07-source/Rada_Presupuesto_Abierto']);
 const JWKS = createRemoteJWKSet(new URL('https://token.actions.githubusercontent.com/.well-known/jwks'));
 const headers = {'content-type':'application/json; charset=utf-8','cache-control':'no-store'};
 
-type Kind = 'entity'|'year'|'payer_year';
+type Kind = 'entity'|'year'|'payer_year'|'execution_year';
 
 async function authenticate(req: Request) {
   const h = req.headers.get('authorization') || '';
@@ -33,8 +33,16 @@ function tableFor(kind: Kind) {
   if (kind === 'entity') return 'obs_public_funds_entity_stage';
   if (kind === 'year') return 'obs_public_funds_year_stage';
   if (kind === 'payer_year') return 'obs_public_funds_payer_year_stage';
+  if (kind === 'execution_year') return 'obs_public_funds_execution_year_stage';
   throw new Error('INVALID_KIND');
 }
+
+const stageTables = [
+  'obs_public_funds_entity_stage',
+  'obs_public_funds_year_stage',
+  'obs_public_funds_payer_year_stage',
+  'obs_public_funds_execution_year_stage',
+];
 
 async function retireSupersededSnapshots(sb: ReturnType<typeof createClient>, currentSnapshot: string) {
   const { data, error } = await sb
@@ -46,7 +54,7 @@ async function retireSupersededSnapshots(sb: ReturnType<typeof createClient>, cu
 
   const stale = (data ?? []).map((row) => String(row.snapshot_id || '')).filter(Boolean);
   for (const snapshot of stale) {
-    for (const table of ['obs_public_funds_entity_stage','obs_public_funds_year_stage','obs_public_funds_payer_year_stage']) {
+    for (const table of stageTables) {
       const { error: deleteError } = await sb.from(table).delete().eq('snapshot_id', snapshot);
       if (deleteError) throw deleteError;
     }
@@ -75,14 +83,21 @@ Deno.serve(async (req: Request) => {
       const expected_entity = Number(body.expected_entity);
       const expected_year = Number(body.expected_year);
       const expected_payer_year = Number(body.expected_payer_year);
-      if (![expected_entity,expected_year,expected_payer_year].every(Number.isSafeInteger) || expected_entity <= 0 || expected_year <= 0 || expected_payer_year <= 0) throw new Error('INVALID_EXPECTED_COUNTS');
+      const expected_execution_year = Number(body.expected_execution_year);
+      if (![expected_entity,expected_year,expected_payer_year,expected_execution_year].every(Number.isSafeInteger)
+          || expected_entity <= 0 || expected_year <= 0 || expected_payer_year <= 0 || expected_execution_year <= 0) {
+        throw new Error('INVALID_EXPECTED_COUNTS');
+      }
 
       const retired = await retireSupersededSnapshots(sb, snapshot);
-      for (const table of ['obs_public_funds_entity_stage','obs_public_funds_year_stage','obs_public_funds_payer_year_stage']) {
+      for (const table of stageTables) {
         const {error} = await sb.from(table).delete().eq('snapshot_id', snapshot);
         if (error) throw error;
       }
-      const {error} = await sb.from('obs_public_funds_ingest_state').upsert({snapshot_id:snapshot,expected_entity,expected_year,expected_payer_year,status:'LOADING',created_at:new Date().toISOString(),finalized_at:null},{onConflict:'snapshot_id'});
+      const {error} = await sb.from('obs_public_funds_ingest_state').upsert({
+        snapshot_id:snapshot, expected_entity, expected_year, expected_payer_year, expected_execution_year,
+        status:'LOADING', created_at:new Date().toISOString(), finalized_at:null,
+      },{onConflict:'snapshot_id'});
       if (error) throw error;
       return new Response(JSON.stringify({ok:true,operation,snapshot_id:snapshot,retired_snapshots:retired}),{headers});
     }
@@ -92,7 +107,10 @@ Deno.serve(async (req: Request) => {
       const rows = asRows(body.rows).map(r => ({...r,snapshot_id:snapshot,refreshed_at:new Date().toISOString()}));
       const table = tableFor(kind);
       const conflicts: Record<Kind,string> = {
-        entity:'snapshot_id,rut', year:'snapshot_id,rut,period_year', payer_year:'snapshot_id,rut,payer_key,period_year,role'
+        entity:'snapshot_id,rut',
+        year:'snapshot_id,rut,period_year',
+        payer_year:'snapshot_id,rut,payer_key,period_year,role',
+        execution_year:'snapshot_id,payer_key,period_year',
       };
       const {error} = await sb.from(table).upsert(rows,{onConflict:conflicts[kind]});
       if (error) throw error;
