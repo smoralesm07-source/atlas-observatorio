@@ -49,6 +49,9 @@ function message(e: unknown, fn?: string): string {
   if ((fn === 'atlas_v2_entity_search' || fn === 'atlas_v2_entity_search_cascade') && isTransientRpcError(err)) {
     return 'Atlas no pudo completar esta consulta después de dos intentos automáticos. Puedes reintentar; si persiste, combina filtros para acotar el universo.';
   }
+  if (fn === 'obs_state_agency_beneficiaries' && isStatementTimeout(err)) {
+    return 'La reconstrucción de este organismo tardó más de lo permitido. Reintenta o acota el período o la fuente; el organismo seleccionado se mantiene.';
+  }
   if (isStatementTimeout(err)) {
     return 'La consulta excedió el tiempo máximo. Atlas detuvo ese intento para proteger el servicio; reintenta o completa más caracteres del nombre.';
   }
