@@ -56,12 +56,24 @@ type BeneficiarySummary = {
   top10_market_share?: number | null;
 };
 
+type MarketCoverage = {
+  status?: string;
+  history?: {
+    discovered_months?: number;
+    normalized_months?: number;
+    pending_months?: number;
+    error_months?: number;
+  };
+};
+
 type BeneficiaryResponse = {
   ok?: boolean;
   total?: number;
   rows?: BeneficiaryRow[];
   summary?: BeneficiarySummary;
   semantics?: Record<string, string>;
+  market_incomplete?: boolean;
+  market_coverage?: MarketCoverage;
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -151,6 +163,8 @@ export function AgencyBeneficiaryUniverse({
   const total = Number(result.data?.total ?? 0);
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const exportTooLarge = total > EXPORT_MAX_ROWS;
+  const marketIncomplete = Boolean(result.data?.market_incomplete);
+  const marketHistory = result.data?.market_coverage?.history;
 
   function resetAgencySearch(value = '') {
     setQ(value);
@@ -220,6 +234,7 @@ export function AgencyBeneficiaryUniverse({
           { label: 'Criterio', value: 'La nómina incluye todas las entidades que cumplen los filtros activos, no sólo la página visible.' },
           { label: 'Monto Presupuesto Abierto', value: summary.public_funds_amount ?? 0 },
           { label: 'Monto Mercado Público', value: summary.market_amount ?? 0 },
+          { label: 'Cobertura Mercado Público', value: marketIncomplete ? 'Parcial: monto observado, no total del período' : 'Completa para el período consultado' },
           { label: 'Nota', value: 'Los montos de Presupuesto Abierto y Mercado Público se mantienen separados para evitar doble contabilización.' },
         ],
       });
@@ -333,12 +348,13 @@ export function AgencyBeneficiaryUniverse({
           <div className="state-kpis agency-kpis">
             <div className="state-kpi"><span>Beneficiarios únicos</span><strong>{result.loading ? '…' : num(summary.beneficiary_count)}</strong><small>Unión por RUT · sin ocultar no resueltos</small></div>
             <div className="state-kpi"><span>Presupuesto Abierto</span><strong>{result.loading ? '…' : clp(summary.public_funds_amount)}</strong><small>{num(summary.public_funds_transactions)} registros observados</small></div>
-            <div className="state-kpi"><span>Mercado Público</span><strong>{result.loading ? '…' : clp(summary.market_amount)}</strong><small>{num(summary.market_orders)} órdenes observadas</small></div>
+            <div className="state-kpi"><span>Mercado Público</span><strong>{result.loading ? '…' : clp(summary.market_amount)}</strong><small>{num(summary.market_orders)} órdenes observadas{marketIncomplete ? ' · cobertura parcial' : ''}</small></div>
             <div className="state-kpi"><span>Concentración top 10</span><strong>{result.loading ? '…' : top10Label}</strong><small>Participación de los 10 principales receptores</small></div>
           </div>
 
           <div className="agency-semantics">
             <b>Lectura:</b> los montos de Presupuesto Abierto y Mercado Público se muestran por separado y no se suman. La ausencia en una fuente no elimina al beneficiario del universo si existe en la otra.
+            {marketIncomplete && <><br /><b>Mercado Público:</b> cobertura parcial. Los montos visibles corresponden sólo a las órdenes actualmente normalizadas y no deben interpretarse como el total del período{marketHistory?.discovered_months ? ` (${num(marketHistory.normalized_months)} de ${num(marketHistory.discovered_months)} meses normalizados${Number(marketHistory.error_months ?? 0) > 0 ? `; ${num(marketHistory.error_months)} con error` : ''})` : ''}.</>}
           </div>
 
           {!result.loading && !result.error && rows.length === 0 ? (
