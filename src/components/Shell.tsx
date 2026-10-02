@@ -17,11 +17,6 @@ function readThemePreference(): 'dark' | 'light' {
   }
 }
 
-const NAV: { label: string; route: Route; match: Route['view'][] }[] = [
-  { label: 'Huella pública', route: { view: 'relacionEstado' }, match: ['relacionEstado'] },
-  { label: 'Fuentes', route: { view: 'fuentes' }, match: ['fuentes'] },
-];
-
 const MONITORS: { label: string; route: Route; view: 'osfl' | 'fintech' | 'sanciones' }[] = [
   { label: 'OSFL', route: { view: 'osfl' }, view: 'osfl' },
   { label: 'Fintech', route: { view: 'fintech' }, view: 'fintech' },
@@ -161,13 +156,10 @@ export function Shell({
         </a>
 
         <nav className="nav" aria-label="Navegación principal" ref={navRef}>
-          <a href={hrefFor({ view: 'pulso' })} data-active={route.view === 'pulso'}>
-            Pulso
-          </a>
-
-          <a href={hrefFor({ view: 'entidades' })} data-active={['entidades', 'ficha'].includes(route.view)}>
-            Entidades
-          </a>
+          <a href={hrefFor({ view: 'pulso' })} data-active={route.view === 'pulso'}>Pulso</a>
+          <a href={hrefFor({ view: 'entidades' })} data-active={['entidades', 'ficha'].includes(route.view)}>Entidades</a>
+          <a href={hrefFor({ view: 'territorio' })} data-active={route.view === 'territorio'}>Territorio</a>
+          <a href={hrefFor({ view: 'relacionEstado' })} data-active={route.view === 'relacionEstado'}>Huella pública</a>
 
           <div className="monitor-nav">
             <button
@@ -195,10 +187,7 @@ export function Shell({
                   onClick={() => setOpenMenu(null)}
                 >
                   <span className="monitor-menu-icon"><UniversoGlyph mode="padron" /></span>
-                  <span className="monitor-menu-copy">
-                    <strong>Padrón SO</strong>
-                    <small>Caracterización, territorio, reportabilidad y evolución</small>
-                  </span>
+                  <span className="monitor-menu-copy"><strong>Padrón SO</strong><small>Caracterización, territorio, reportabilidad y evolución</small></span>
                   <span className="monitor-menu-arrow" aria-hidden>›</span>
                 </a>
                 {role !== 'viewer' && (
@@ -210,20 +199,13 @@ export function Shell({
                     onClick={() => setOpenMenu(null)}
                   >
                     <span className="monitor-menu-icon"><UniversoGlyph mode="casos" /></span>
-                    <span className="monitor-menu-copy">
-                      <strong>Gestión SO</strong>
-                      <small>Potenciales SO, términos de giro y cartera compartida</small>
-                    </span>
+                    <span className="monitor-menu-copy"><strong>Gestión SO</strong><small>Potenciales SO, términos de giro y cartera compartida</small></span>
                     <span className="monitor-menu-arrow" aria-hidden>›</span>
                   </a>
                 )}
               </div>
             )}
           </div>
-
-          <a href={hrefFor({ view: 'territorio' })} data-active={route.view === 'territorio'}>
-            Territorio
-          </a>
 
           <div className="monitor-nav">
             <button
@@ -267,20 +249,11 @@ export function Shell({
             )}
           </div>
 
-          {NAV.map((item) => (
-            <a
-              key={item.label}
-              href={hrefFor(item.route)}
-              data-active={item.match.includes(route.view)}
-            >
-              {item.label}
-            </a>
-          ))}
+          <a href={hrefFor({ view: 'nominas' })} data-active={route.view === 'nominas'}>Nóminas</a>
+          <a href={hrefFor({ view: 'reportes' })} data-active={route.view === 'reportes'}>Informes</a>
 
           {role === 'admin' && (
-            <a href={hrefFor({ view: 'administracion' })} data-active={route.view === 'administracion'}>
-              Administración
-            </a>
+            <a href={hrefFor({ view: 'administracion' })} data-active={route.view === 'administracion'}>Administración</a>
           )}
         </nav>
 
@@ -299,20 +272,17 @@ export function Shell({
             {theme === 'dark' ? (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.7" />
-                <path d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"
-                  stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                <path d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
             ) : (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M20 14.4A8.4 8.4 0 1 1 9.6 4a6.9 6.9 0 0 0 10.4 10.4Z"
-                  stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                <path d="M20 14.4A8.4 8.4 0 1 1 9.6 4a6.9 6.9 0 0 0 10.4 10.4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
               </svg>
             )}
           </button>
           <button className="icon-btn" title="Cerrar sesión" onClick={() => void handleSignOut()}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M14 8V5.6A1.6 1.6 0 0 0 12.4 4H5.6A1.6 1.6 0 0 0 4 5.6v12.8A1.6 1.6 0 0 0 5.6 20h6.8a1.6 1.6 0 0 0 1.6-1.6V16M17 15l3-3-3-3M20 12H9"
-                stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M14 8V5.6A1.6 1.6 0 0 0 12.4 4H5.6A1.6 1.6 0 0 0 4 5.6v12.8A1.6 1.6 0 0 0 5.6 20h6.8a1.6 1.6 0 0 0 1.6-1.6V16M17 15l3-3-3-3M20 12H9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
