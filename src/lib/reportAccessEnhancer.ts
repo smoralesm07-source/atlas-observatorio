@@ -2,7 +2,6 @@ import { supabase } from './supabase';
 
 export {};
 
-const MENU_ATTR = 'data-atlas-report-nav';
 let scheduled = false;
 let roleLoaded = false;
 
@@ -16,31 +15,6 @@ function installGuardedAiRoute() {
     return originalInvoke.call(this, name === 'atlas-report-narrative' ? 'atlas-report-narrative-guarded' : name, options);
   };
   prototype.__atlasReportGuarded = true;
-}
-
-function isReportsRoute() {
-  return window.location.hash.startsWith('#/reportes');
-}
-
-function ensureReportsMenu() {
-  const nav = document.querySelector<HTMLElement>('.topbar .nav');
-  if (!nav) return;
-
-  let link = nav.querySelector<HTMLAnchorElement>(`a[${MENU_ATTR}="true"]`);
-  if (!link) {
-    link = document.createElement('a');
-    link.setAttribute(MENU_ATTR, 'true');
-    link.href = '#/reportes';
-    link.textContent = 'Informes';
-    link.title = 'Informes institucionales UAF';
-
-    const directLinks = Array.from(nav.children).filter((node): node is HTMLAnchorElement => node instanceof HTMLAnchorElement);
-    const fuentes = directLinks.find((item) => item.textContent?.trim() === 'Fuentes');
-    if (fuentes) nav.insertBefore(link, fuentes);
-    else nav.append(link);
-  }
-
-  link.dataset.active = isReportsRoute() ? 'true' : 'false';
 }
 
 function applyAiAccess(allowed: boolean) {
@@ -85,7 +59,6 @@ async function resolveAiAccess() {
 
 function scan() {
   scheduled = false;
-  ensureReportsMenu();
   const access = document.documentElement.dataset.atlasReportAiAccess;
   if (access === 'allowed') applyAiAccess(true);
   else if (access === 'denied') applyAiAccess(false);
