@@ -64,6 +64,8 @@ export function activityLocation(route: Route): ActivityLocation {
       return { route: 'relacion-estado', section: 'Huella pública' };
     case 'territorio':
       return { route: 'territorio', section: 'Territorio' };
+    case 'nominas':
+      return { route: 'nominas', section: 'Nóminas' };
     case 'reportes':
       return { route: 'reportes', section: 'Reportes' };
     case 'fuentes':
