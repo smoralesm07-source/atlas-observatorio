@@ -206,6 +206,12 @@
   transform: translateX(1px);
 }
 
+/* Defensa de navegación: si por una composición antigua o caché se renderiza
+   más de un acceso a Informes, se conserva sólo el primero. */
+.nav > a[href='#/informes'] ~ a[href='#/informes'] {
+  display: none !important;
+}
+
 @media (max-width: 1180px) {
   .monitor-menu {
     width: 254px;
