@@ -16,7 +16,7 @@ import { EntityExpediente } from './views/EntityExpediente';
 import { HuellaPublica } from './views/HuellaPublica';
 import { Fuentes } from './views/Fuentes';
 import { Territorio } from './views/Territorio';
-import { Nominas } from './views/Nominas';
+import { NominasV2 } from './views/NominasV2';
 import { ReportesDirectivosV3 } from './views/ReportesDirectivosV3';
 import { Metodologia } from './views/Metodologia';
 import { Administracion } from './views/Administracion';
@@ -77,7 +77,7 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
       )}
       {route.view === 'relacionEstado' && <HuellaPublica onNavigate={go} />}
       {route.view === 'territorio' && <Territorio onNavigate={go} />}
-      {route.view === 'nominas' && <Nominas />}
+      {route.view === 'nominas' && <NominasV2 />}
       {route.view === 'reportes' && <ReportesDirectivosV3 />}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
