@@ -85,9 +85,20 @@ Deno.serve(async (req: Request) => {
     }
 
     if (operation === 'finalize') {
-      const {data,error} = await sb.rpc('obs_public_funds_finalize',{p_snapshot_id:snapshot});
+      const {data,error} = await sb.rpc('obs_public_funds_request_finalize',{p_snapshot_id:snapshot});
       if (error) throw error;
-      return new Response(JSON.stringify(data ?? {ok:true,snapshot_id:snapshot}),{headers});
+      return new Response(JSON.stringify(data ?? {ok:true,accepted:true,status:'LOADING',snapshot_id:snapshot}),{headers});
+    }
+
+    if (operation === 'status') {
+      const {data,error} = await sb
+        .from('obs_public_funds_ingest_state')
+        .select('snapshot_id,status,finalized_at,expected_entity,expected_year,expected_payer_year,expected_execution_year')
+        .eq('snapshot_id',snapshot)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('SNAPSHOT_NOT_FOUND');
+      return new Response(JSON.stringify({ok:true,operation,...data}),{headers});
     }
 
     throw new Error('UNKNOWN_OPERATION');
