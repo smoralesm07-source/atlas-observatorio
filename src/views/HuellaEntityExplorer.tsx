@@ -4,11 +4,13 @@ import { fetchProviderHistory, type ProviderHistoryResponse } from '../lib/provi
 import { HuellaPublicaFlowChart, type PublicFundsTrendYear } from '../components/HuellaPublicaFlowChart';
 import { HuellaPublicaPress } from '../components/HuellaPublicaPress';
 import { HuellaPublicaPayerAnalytics } from '../components/HuellaPublicaPayerAnalytics';
+import { HuellaCounterpartyExplorer } from '../components/HuellaCounterpartyExplorer';
 import { StateCounterpartyDrawer, type StateCounterpartySelection } from '../components/StateCounterpartyDrawer';
 import '../styles/state-relations.css';
 import '../styles/state-relations-compact.css';
 
 type SourceFilter = 'ALL' | 'MARKET' | 'FUNDS';
+type CounterpartyExplorerState = { kind: 'buyer' | 'payer'; excludeTop?: number } | null;
 
 type SearchRow = {
   rut: string;
@@ -62,6 +64,15 @@ function yearRange(first?: number | null, last?: number | null) {
   return first === last ? String(first ?? last) : `${first ?? '…'}–${last ?? '…'}`;
 }
 
+function normalizeSearch(value: unknown) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9k]+/g, ' ')
+    .trim();
+}
+
 export function HuellaEntityExplorer({
   fromYear,
   toYear,
@@ -77,6 +88,7 @@ export function HuellaEntityExplorer({
   const [marketHistory, setMarketHistory] = useState<ProviderHistoryResponse | null>(null);
   const [marketHistoryState, setMarketHistoryState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [counterparty, setCounterparty] = useState<StateCounterpartySelection | null>(null);
+  const [counterpartyExplorer, setCounterpartyExplorer] = useState<CounterpartyExplorerState>(null);
 
   const debounced = useDebounced(q, 280).trim();
   const enabled = debounced.length >= 3;
@@ -115,13 +127,13 @@ export function HuellaEntityExplorer({
     p_action: 'summary', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 100, p_offset: 0,
   }, { skip: !selectedRut });
   const marketBuyers = useRpc<SummaryResponse<any>>('obs_state_interaction_entity', {
-    p_action: 'buyers', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 50, p_offset: 0,
+    p_action: 'buyers', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 500, p_offset: 0,
   }, { skip: !selectedRut });
   const fundsSummary = useRpc<SummaryResponse<FundsSummary>>('obs_state_public_funds_entity', {
     p_action: 'summary', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 100, p_offset: 0,
   }, { skip: !selectedRut });
   const fundPayers = useRpc<SummaryResponse<any>>('obs_state_public_funds_entity', {
-    p_action: 'payers', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 50, p_offset: 0,
+    p_action: 'payers', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 500, p_offset: 0,
   }, { skip: !selectedRut });
   const fundsTimeline = useRpc<RowsResponse<PublicFundsTrendYear>>('obs_state_public_funds_entity', {
     p_action: 'timeline', p_rut: selectedRut, p_query: null, p_from_year: fromYear, p_to_year: toYear, p_limit: 100, p_offset: 0,
@@ -203,6 +215,19 @@ export function HuellaEntityExplorer({
       ? 'Mercado Público · cargando histórico'
       : 'Mercado Público · resumen vigente 12m';
 
+  const openBuyer = (row: any) => setCounterparty({
+    kind: 'buyer', label: String(row.buyer_label || row.buyer_id || 'Organismo comprador'), identifier: row.buyer_id ? String(row.buyer_id) : null,
+    amount: row.amount_clp == null ? null : Number(row.amount_clp), count: row.order_count == null ? null : Number(row.order_count),
+    firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
+  });
+
+  const openPayer = (row: any) => setCounterparty({
+    kind: 'payer', label: String(row.payer_name || row.payer_key || 'Organismo pagador'), identifier: row.payer_key ? String(row.payer_key) : null,
+    amount: row.amount_paid == null ? null : Number(row.amount_paid), count: row.transaction_count == null ? null : Number(row.transaction_count),
+    firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
+    supplierRole: Boolean(row.supplier_role), recipientRole: Boolean(row.recipient_role),
+  });
+
   return <div className="state-page fade-in"><div className="state-entity-layout">
     <section className="state-card state-search-card">
       <div className="huella-sidebar-title"><strong>Buscar entidad</strong><span>Busca una empresa, persona u organización.</span></div>
@@ -251,20 +276,11 @@ export function HuellaEntityExplorer({
 
         <HuellaPublicaFlowChart marketYears={marketHistory?.years ?? []} fundsYears={fundsTimeline.data?.rows ?? []} fundsLoading={fundsTimeline.loading} />
 
-        <DetailTable title="Principales organismos compradores" source={marketSource} rows={marketBuyerRows.slice(0, 7)} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" onOpen={(row) => setCounterparty({
-          kind: 'buyer', label: String(row.buyer_label || row.buyer_id || 'Organismo comprador'), identifier: row.buyer_id ? String(row.buyer_id) : null,
-          amount: row.amount_clp == null ? null : Number(row.amount_clp), count: row.order_count == null ? null : Number(row.order_count),
-          firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
-        })} />
+        <DetailTable title="Principales organismos compradores" source={marketSource} rows={marketBuyerRows} nameKey="buyer_label" fallbackKey="buyer_id" amountKey="amount_clp" countKey="order_count" totalCount={market?.buyer_count} onOpen={openBuyer} onShowAll={() => setCounterpartyExplorer({ kind: 'buyer' })} />
 
-        <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={fundPayerRows.slice(0, 7)} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" onOpen={(row) => setCounterparty({
-          kind: 'payer', label: String(row.payer_name || row.payer_key || 'Organismo pagador'), identifier: row.payer_key ? String(row.payer_key) : null,
-          amount: row.amount_paid == null ? null : Number(row.amount_paid), count: row.transaction_count == null ? null : Number(row.transaction_count),
-          firstYear: row.first_year == null ? fromYear : Number(row.first_year), lastYear: row.last_year == null ? toYear : Number(row.last_year),
-          supplierRole: Boolean(row.supplier_role), recipientRole: Boolean(row.recipient_role),
-        })} />
+        <DetailTable title="¿Quién le ha pagado?" source="Presupuesto Abierto" rows={fundPayerRows} nameKey="payer_name" fallbackKey="payer_key" amountKey="amount_paid" countKey="transaction_count" totalCount={funds?.payer_count} onOpen={openPayer} onShowAll={() => setCounterpartyExplorer({ kind: 'payer' })} />
 
-        <HuellaPublicaPayerAnalytics rows={fundPayerRows} />
+        <HuellaPublicaPayerAnalytics rows={fundPayerRows} onOpenOthers={() => setCounterpartyExplorer({ kind: 'payer', excludeTop: 5 })} />
 
         <div className="state-muted state-data-note">{historySummary
           ? `Mercado Público calculado sobre historia compacta ChileCompra para ${fromYear}–${toYear}.`
@@ -277,6 +293,19 @@ export function HuellaEntityExplorer({
     </section>
   </div>
   <StateCounterpartyDrawer item={counterparty} onClose={() => setCounterparty(null)} onNavigate={onNavigate} />
+  <HuellaCounterpartyExplorer
+    open={Boolean(counterpartyExplorer)}
+    kind={counterpartyExplorer?.kind ?? 'payer'}
+    rows={counterpartyExplorer?.kind === 'buyer' ? marketBuyerRows : fundPayerRows}
+    fromYear={fromYear}
+    toYear={toYear}
+    excludeTop={counterpartyExplorer?.excludeTop ?? 0}
+    onClose={() => setCounterpartyExplorer(null)}
+    onOpen={(row) => {
+      if (counterpartyExplorer?.kind === 'buyer') openBuyer(row); else openPayer(row);
+      setCounterpartyExplorer(null);
+    }}
+  />
   </div>;
 }
 
@@ -285,7 +314,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
 }
 
 function DetailTable({
-  title, source, rows, nameKey, fallbackKey, amountKey, countKey, onOpen,
+  title, source, rows, nameKey, fallbackKey, amountKey, countKey, totalCount, onOpen, onShowAll,
 }: {
   title: string;
   source: string;
@@ -294,15 +323,35 @@ function DetailTable({
   fallbackKey: string;
   amountKey: string;
   countKey: string;
+  totalCount?: number | null;
   onOpen: (row: any) => void;
+  onShowAll: () => void;
 }) {
-  return <div className="detail-list">
-    <div className="detail-list-head"><strong>{title}</strong><span>{source}</span></div>
-    {rows.length === 0 ? <div className="state-empty">Sin detalle para el período.</div> : rows.map((row, index) => (
+  const [query, setQuery] = useState('');
+  const needle = normalizeSearch(query);
+  const filtered = needle
+    ? rows.filter((row) => normalizeSearch(`${row[nameKey] || ''} ${row[fallbackKey] || ''}`).includes(needle))
+    : rows;
+  const visible = filtered.slice(0, 7);
+  const universeCount = Number(totalCount ?? rows.length);
+
+  return <div className="detail-list huella-detail-list">
+    <div className="detail-list-head huella-detail-list-head">
+      <div><strong>{title}</strong><span>{source}</span></div>
+      <div className="huella-detail-actions">
+        <label className="huella-detail-search">
+          <span aria-hidden="true">⌕</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar organismo…" aria-label={`Buscar en ${title.toLowerCase()}`} />
+        </label>
+        <button type="button" className="huella-detail-show-all" onClick={onShowAll}>Ver todos ({num(universeCount)})</button>
+      </div>
+    </div>
+    {visible.length === 0 ? <div className="state-empty">{needle ? 'Sin coincidencias en este universo.' : 'Sin detalle para el período.'}</div> : visible.map((row, index) => (
       <button type="button" className="detail-row detail-row-button" key={`${row[fallbackKey]}-${index}`} onClick={() => onOpen(row)}>
         <span><b>{row[nameKey] || row[fallbackKey]}</b><small>{yearRange(row.first_year, row.last_year)}</small></span>
         <span><b>{clp(row[amountKey])}</b><small>{num(row[countKey])} registros · ver ficha</small></span>
       </button>
     ))}
+    {needle && filtered.length > visible.length && <button type="button" className="huella-detail-more-results" onClick={onShowAll}>Ver {num(filtered.length - visible.length)} coincidencias adicionales →</button>}
   </div>;
 }
