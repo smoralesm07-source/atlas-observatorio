@@ -13,6 +13,7 @@ type Slice = {
   value: number;
   share: number;
   tone: number;
+  isRest?: boolean;
 };
 
 const compactMoney = new Intl.NumberFormat('es-CL', { notation: 'compact', maximumFractionDigits: 1 });
@@ -25,7 +26,7 @@ function pct(value: number) {
   return `${value.toLocaleString('es-CL', { maximumFractionDigits: 1 })}%`;
 }
 
-export function HuellaPublicaPayerAnalytics({ rows }: { rows: PayerRow[] }) {
+export function HuellaPublicaPayerAnalytics({ rows, onOpenOthers }: { rows: PayerRow[]; onOpenOthers?: () => void }) {
   const model = useMemo(() => {
     const normalized = rows
       .map((row) => ({
@@ -45,7 +46,7 @@ export function HuellaPublicaPayerAnalytics({ rows }: { rows: PayerRow[] }) {
       share: total > 0 ? (row.value / total) * 100 : 0,
       tone: index + 1,
     }));
-    if (rest > 0) slices.push({ label: 'Otros pagadores', value: rest, share: (rest / total) * 100, tone: 6 });
+    if (rest > 0) slices.push({ label: 'Otros pagadores', value: rest, share: (rest / total) * 100, tone: 6, isRest: true });
 
     const top1Share = total > 0 ? ((normalized[0]?.value || 0) / total) * 100 : 0;
     const top3Value = normalized.slice(0, 3).reduce((sum, row) => sum + row.value, 0);
@@ -82,7 +83,14 @@ export function HuellaPublicaPayerAnalytics({ rows }: { rows: PayerRow[] }) {
               <div><strong>{money(model.total)}</strong><small>Total pagado</small></div>
             </div>
             <div className="payer-legend">
-              {model.slices.map((slice) => (
+              {model.slices.map((slice) => slice.isRest && onOpenOthers ? (
+                <button type="button" className="payer-legend-row payer-legend-action" key={`${slice.label}-${slice.tone}`} onClick={onOpenOthers} title="Explorar pagadores de menor monto">
+                  <i data-tone={slice.tone} />
+                  <span title={slice.label}>{slice.label}</span>
+                  <b>{pct(slice.share)}</b>
+                  <em aria-hidden="true">›</em>
+                </button>
+              ) : (
                 <div className="payer-legend-row" key={`${slice.label}-${slice.tone}`}>
                   <i data-tone={slice.tone} />
                   <span title={slice.label}>{slice.label}</span>
