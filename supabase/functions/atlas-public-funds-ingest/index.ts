@@ -37,37 +37,6 @@ function tableFor(kind: Kind) {
   throw new Error('INVALID_KIND');
 }
 
-const stageTables = [
-  'obs_public_funds_entity_stage',
-  'obs_public_funds_year_stage',
-  'obs_public_funds_payer_year_stage',
-  'obs_public_funds_execution_year_stage',
-];
-
-async function retireSupersededSnapshots(sb: ReturnType<typeof createClient>, currentSnapshot: string) {
-  const { data, error } = await sb
-    .from('obs_public_funds_ingest_state')
-    .select('snapshot_id')
-    .eq('status', 'LOADING')
-    .neq('snapshot_id', currentSnapshot);
-  if (error) throw error;
-
-  const stale = (data ?? []).map((row) => String(row.snapshot_id || '')).filter(Boolean);
-  for (const snapshot of stale) {
-    for (const table of stageTables) {
-      const { error: deleteError } = await sb.from(table).delete().eq('snapshot_id', snapshot);
-      if (deleteError) throw deleteError;
-    }
-    const { error: stateError } = await sb
-      .from('obs_public_funds_ingest_state')
-      .update({status:'ABORTED', finalized_at:new Date().toISOString()})
-      .eq('snapshot_id', snapshot)
-      .eq('status', 'LOADING');
-    if (stateError) throw stateError;
-  }
-  return stale.length;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response(JSON.stringify({ok:false,error:'METHOD_NOT_ALLOWED'}),{status:405,headers});
   try { await authenticate(req); }
@@ -89,17 +58,15 @@ Deno.serve(async (req: Request) => {
         throw new Error('INVALID_EXPECTED_COUNTS');
       }
 
-      const retired = await retireSupersededSnapshots(sb, snapshot);
-      for (const table of stageTables) {
-        const {error} = await sb.from(table).delete().eq('snapshot_id', snapshot);
-        if (error) throw error;
-      }
-      const {error} = await sb.from('obs_public_funds_ingest_state').upsert({
-        snapshot_id:snapshot, expected_entity, expected_year, expected_payer_year, expected_execution_year,
-        status:'LOADING', created_at:new Date().toISOString(), finalized_at:null,
-      },{onConflict:'snapshot_id'});
+      const {data,error} = await sb.rpc('obs_public_funds_prepare_snapshot', {
+        p_snapshot_id:snapshot,
+        p_expected_entity:expected_entity,
+        p_expected_year:expected_year,
+        p_expected_payer_year:expected_payer_year,
+        p_expected_execution_year:expected_execution_year,
+      });
       if (error) throw error;
-      return new Response(JSON.stringify({ok:true,operation,snapshot_id:snapshot,retired_snapshots:retired}),{headers});
+      return new Response(JSON.stringify(data ?? {ok:true,operation,snapshot_id:snapshot}),{headers});
     }
 
     if (operation === 'batch') {
