@@ -43,6 +43,21 @@ function rowsOf(value: RowsPayload): JsonRow[] {
   return value && Array.isArray(value.rows) ? value.rows : [];
 }
 
+function hasMarketEvidence(market: ProviderHistoryResponse | null): boolean {
+  if (!market) return false;
+  const summary = market.summary;
+  return numberValue(summary?.order_count) > 0
+    || numberValue(summary?.buyer_count) > 0
+    || numberValue(summary?.amount_clp) !== 0
+    || (market.buyers ?? []).some((row) => numberValue(row.order_count) > 0 || numberValue(row.amount_clp) !== 0)
+    || (market.years ?? []).some((row) => numberValue(row.order_count) > 0 || numberValue(row.amount_clp) !== 0);
+}
+
+function hasFundsEvidence(payers: JsonRow[], years: JsonRow[]): boolean {
+  return payers.some((row) => numberValue(row.transaction_count) > 0 || numberValue(row.amount_paid) !== 0)
+    || years.some((row) => numberValue(row.transaction_count) > 0 || numberValue(row.amount_paid) !== 0);
+}
+
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
   if (className) element.className = className;
@@ -158,7 +173,7 @@ function yearSection(market: ProviderHistoryResponse | null, fundsRows: JsonRow[
     .slice(0, 6);
 
   if (!years.length) {
-    section.append(node('div', 'atlas-footprint-quicklook-empty', 'La presencia está materializada, pero no hay serie anual disponible en esta consulta.'));
+    section.append(node('div', 'atlas-footprint-quicklook-empty', 'No hay movimientos anuales observados para este RUT en el período consultado.'));
     return section;
   }
 
@@ -200,7 +215,7 @@ async function loadQuickLook(rut: string) {
   });
 
   const [marketResult, payersResult, timelineResult] = await Promise.allSettled([marketPromise, payersPromise, timelinePromise]);
-  const market = marketResult.status === 'fulfilled' ? marketResult.value : null;
+  const marketRaw = marketResult.status === 'fulfilled' ? marketResult.value : null;
 
   let payers: JsonRow[] = [];
   if (payersResult.status === 'fulfilled' && !payersResult.value.error) {
@@ -212,11 +227,24 @@ async function loadQuickLook(rut: string) {
     fundsYears = rowsOf(timelineResult.value.data as RowsPayload);
   }
 
-  if (!market && !payers.length && !fundsYears.length) {
+  const everyRequestFailed = marketResult.status === 'rejected'
+    && (payersResult.status === 'rejected' || Boolean(payersResult.value.error))
+    && (timelineResult.status === 'rejected' || Boolean(timelineResult.value.error));
+  if (everyRequestFailed) {
     throw new Error('No fue posible recuperar el detalle de Huella pública en esta consulta.');
   }
 
-  return { market, payers, fundsYears, toYear };
+  const marketEvidence = hasMarketEvidence(marketRaw);
+  const fundsEvidence = hasFundsEvidence(payers, fundsYears);
+
+  return {
+    market: marketEvidence ? marketRaw : null,
+    payers: fundsEvidence ? payers : [],
+    fundsYears: fundsEvidence ? fundsYears : [],
+    marketEvidence,
+    fundsEvidence,
+    toYear,
+  };
 }
 
 function renderLoaded(body: HTMLElement, data: Awaited<ReturnType<typeof loadQuickLook>>) {
@@ -242,11 +270,25 @@ function renderLoaded(body: HTMLElement, data: Awaited<ReturnType<typeof loadQui
 
   const chips = node('div', 'atlas-footprint-quicklook-chips');
   chips.append(
-    summaryChip('Mercado Público', market ? `${clp(marketTotal)} · ${integer(marketCount)} OC` : 'Sin detalle'),
-    summaryChip('Presupuesto Abierto', data.fundsYears.length ? `${clp(fundsTotal)} · ${integer(fundsCount)} registros` : 'Sin detalle'),
+    summaryChip('Mercado Público', data.marketEvidence ? `${clp(marketTotal)} · ${integer(marketCount)} OC` : 'No registra'),
+    summaryChip('Presupuesto Abierto', data.fundsEvidence ? `${clp(fundsTotal)} · ${integer(fundsCount)} registros` : 'No registra'),
     summaryChip('Período consultado', `${FROM_YEAR}–${data.toYear}`),
   );
   body.append(chips);
+
+  if (!data.marketEvidence && !data.fundsEvidence) {
+    const section = node('section', 'atlas-footprint-quicklook-section');
+    const head = node('header');
+    const titleBox = node('div');
+    titleBox.append(node('strong', '', 'Sin huella económica observada'), node('span', '', 'Mercado Público + Presupuesto Abierto'));
+    head.append(titleBox);
+    section.append(head);
+    section.append(node('div', 'atlas-footprint-quicklook-empty', `No se observaron órdenes de compra, pagos, transferencias ni contrapartes asociadas a este RUT entre ${FROM_YEAR} y ${data.toYear}.`));
+    body.append(section);
+    body.append(node('p', 'atlas-footprint-quicklook-note', 'La cobertura o disponibilidad de una fuente no se interpreta como presencia de la entidad. “Sí registra” requiere movimientos materializados para el RUT consultado.'));
+    return;
+  }
+
   body.append(counterpartySection('Principales compradores', 'Mercado Público', marketBuyers));
   body.append(counterpartySection('Principales pagadores', 'Presupuesto Abierto', fundPayers));
   body.append(yearSection(market, data.fundsYears));
