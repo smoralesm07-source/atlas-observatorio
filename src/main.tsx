@@ -10,6 +10,7 @@ import './lib/reportRecentContextEnhancer';
 import './lib/reportAccessEnhancer';
 import './lib/reportPotentialSoEnhancer';
 import './lib/municipalDteEnhancer';
+import './lib/publicFootprintCoherenceEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
@@ -41,6 +42,7 @@ import './styles/entity360-press-dossier.css';
 import './styles/typography-floor.css';
 import './styles/gestion-so-table-head.css';
 import './styles/gestion-so-search-focus-fix.css';
+import './styles/public-footprint-coherence.css';
 // Gestión SO visual v2 se carga al final para preservar su jerarquía de diseño.
 import './styles/gestion-so-redesign-v2.css';
 // Corrección final de contención para la ficha de sanciones en paneles angostos/móvil.
