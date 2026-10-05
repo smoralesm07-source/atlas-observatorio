@@ -8,9 +8,22 @@ export const pct = (v: number | null | undefined) => (v == null ? '—' : `${nf1
 
 export function fecha(iso: string | null | undefined): string {
   if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  // Las fechas civiles provenientes de fuentes como SII llegan como YYYY-MM-DD.
+  // new Date('YYYY-MM-DD') las interpreta como UTC y en Chile puede mostrarlas
+  // como el día anterior. Para esos valores preservamos explícitamente la fecha
+  // calendario, sin aplicar conversión de zona horaria.
+  const civil = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (civil) {
+    const [, y, m, d] = civil;
+    const localDate = new Date(Number(y), Number(m) - 1, Number(d));
+    if (Number.isNaN(localDate.getTime())) return '—';
+    return localDate.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function fechaHora(iso: string | null | undefined): string {
