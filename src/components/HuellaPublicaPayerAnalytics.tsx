@@ -6,6 +6,8 @@ type PayerRow = {
   payer_key?: string | null;
   amount_paid?: number | null;
   transaction_count?: number | null;
+  source_kind?: string | null;
+  payment_proof?: boolean | null;
 };
 
 type Slice = {
@@ -28,7 +30,11 @@ function pct(value: number) {
 
 export function HuellaPublicaPayerAnalytics({ rows, onOpenOthers }: { rows: PayerRow[]; onOpenOthers?: () => void }) {
   const model = useMemo(() => {
+    // Esta analítica conserva una única base semántica: pagos efectivos observados.
+    // Las relaciones MUNICIPAL_DTE se muestran en el universo de huella pública,
+    // pero no se mezclan con pagos ni con sus métricas de concentración.
     const normalized = rows
+      .filter((row) => row.source_kind !== 'MUNICIPAL_DTE' && row.payment_proof !== false)
       .map((row) => ({
         label: String(row.payer_name || row.payer_key || 'Pagador s/d'),
         value: Number(row.amount_paid || 0),
@@ -69,13 +75,13 @@ export function HuellaPublicaPayerAnalytics({ rows, onOpenOthers }: { rows: Paye
         <div>
           <span>Distribución de pagos</span>
           <h3>Principales pagadores</h3>
-          <small>Participación sobre el monto observado en Presupuesto Abierto.</small>
+          <small>Participación sólo sobre pagos observados; DTE municipales se excluyen de esta analítica.</small>
         </div>
         {model.normalized.length > 0 && <strong>{model.normalized.length.toLocaleString('es-CL')} pagadores</strong>}
       </header>
 
       {model.normalized.length === 0 ? (
-        <div className="payer-analytics-empty">Sin pagadores identificados para el período seleccionado.</div>
+        <div className="payer-analytics-empty">Sin pagos efectivos identificados para el período seleccionado. La huella DTE municipal, si existe, se muestra separadamente arriba.</div>
       ) : (
         <div className="payer-analytics-body">
           <div className="payer-donut-zone">
