@@ -9,6 +9,7 @@ import './lib/reportTrendInsightsEnhancer';
 import './lib/reportRecentContextEnhancer';
 import './lib/reportAccessEnhancer';
 import './lib/reportPotentialSoEnhancer';
+import './lib/municipalDteEnhancer';
 import './styles/app.css';
 import './styles/explore.css';
 import './styles/osfl.css';
