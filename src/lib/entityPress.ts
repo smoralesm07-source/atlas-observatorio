@@ -13,8 +13,113 @@ const EVIDENCE_RANK: Record<PressEvidenceKind, number> = {
   revision: 1,
 };
 
+const VERIFIED_PRESS_SEEDS_URL =
+  'https://raw.githubusercontent.com/smoralesm07-source/Monitor/main/semillas_prensa_atlas.json';
+
+interface VerifiedPressSeed {
+  id?: string;
+  date?: string | null;
+  title?: string;
+  media?: string | null;
+  url?: string | null;
+  summary?: string | null;
+  search_terms?: string[];
+  verified_entity?: {
+    name?: string | null;
+    rut?: string | null;
+  } | null;
+}
+
+let verifiedSeedsPromise: Promise<VerifiedPressSeed[]> | null = null;
+
 function compactRut(value: unknown): string {
   return String(value ?? '').toUpperCase().replace(/[^0-9K]/g, '');
+}
+
+function normalizeName(value: unknown): string {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-CL')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function loadVerifiedSeeds(): Promise<VerifiedPressSeed[]> {
+  if (!verifiedSeedsPromise) {
+    verifiedSeedsPromise = fetch(VERIFIED_PRESS_SEEDS_URL, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-cache',
+    })
+      .then(async (response) => {
+        if (!response.ok) return [];
+        const payload = await response.json() as { articles?: VerifiedPressSeed[] };
+        return Array.isArray(payload.articles) ? payload.articles : [];
+      })
+      .catch(() => []);
+  }
+  return verifiedSeedsPromise;
+}
+
+async function verifiedSeedMatches(
+  entityName: string,
+  entityRut: string,
+  articleLimit: number,
+): Promise<PressMatch[]> {
+  const seeds = await loadVerifiedSeeds();
+  const rut = compactRut(entityRut);
+  const name = normalizeName(entityName);
+  const hits = seeds.filter((seed) => {
+    const seedRut = compactRut(seed.verified_entity?.rut);
+    if (rut && seedRut) return rut === seedRut;
+    const seedName = normalizeName(seed.verified_entity?.name);
+    return Boolean(name && seedName && name === seedName);
+  });
+  if (!hits.length) return [];
+
+  const verifiedName = String(hits[0].verified_entity?.name || entityName || 'Entidad verificada').trim();
+  const verifiedRut = String(hits[0].verified_entity?.rut || entityRut || '').trim();
+  const dates = hits.map((seed) => String(seed.date ?? '').slice(0, 10)).filter(Boolean);
+  const media = Array.from(new Set(hits.map((seed) => seed.media).filter((value): value is string => Boolean(value))));
+  const articles = hits
+    .map<PressArticleMatch>((seed) => ({
+      id: String(seed.id || `ATLAS-SEED-${compactRut(verifiedRut) || normalizeName(verifiedName).replace(/\s+/g, '-')}`),
+      date: seed.date ?? null,
+      title: String(seed.title || 'Mención verificada en prensa'),
+      media: seed.media ?? null,
+      url: seed.url ?? null,
+      summary: seed.summary ?? null,
+      search_terms: seed.search_terms ?? [],
+      role: 'Mención verificada en fuente abierta',
+      mention_confidence: 1,
+      mention_requires_validation: false,
+    }))
+    .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
+    .slice(0, Math.max(1, articleLimit));
+
+  return [{
+    press_entity_id: `PRESS-VERIFIED-${compactRut(verifiedRut) || normalizeName(verifiedName).replace(/\s+/g, '-')}`,
+    name: verifiedName,
+    entity_type: 'EMPRESA',
+    nature: 'PERSONA_JURIDICA',
+    ruts: verifiedRut ? [verifiedRut] : [],
+    aliases: [verifiedName],
+    first_seen: dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null,
+    last_seen: dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null,
+    article_count: hits.length,
+    mention_count: hits.length,
+    media,
+    roles: ['Mención verificada en fuente abierta'],
+    confidence: 1,
+    requires_validation: false,
+    resolution_status: 'VERIFIED_SEED',
+    match_kind: verifiedRut ? 'RUT' : 'EXACTA',
+    match_score: 1,
+    match_source: 'ENTITY_INDEX',
+    articles,
+    bridge_generated_at: null,
+  }];
 }
 
 function hasExactRut(match: PressMatch, rut: string): boolean {
@@ -117,6 +222,10 @@ export function entityPressArticleRows(matches: PressMatch[]): EntityPressArticl
  * útil, se consulta para conservar alias y contexto de grupo; ambos resultados se
  * fusionan y deduplican. Así una etiqueta distinta en Mercado Público o Presupuesto
  * Abierto no puede ocultar una relación que Entidad 360 ya resuelve por el mismo RUT.
+ *
+ * Las semillas verificadas son una capa de recuperación gobernada para artículos
+ * que el radar descubrió tarde o cuyo título/snippet no contiene la razón social.
+ * Sólo ingresan aquí si fueron asociadas explícitamente a una entidad por RUT/nombre.
  */
 export async function searchEntityPress(
   entityName: string | null | undefined,
@@ -128,15 +237,19 @@ export async function searchEntityPress(
   const rutKey = compactRut(rut);
   const usableName = Boolean(name && !/^consultar rut\b/i.test(name) && compactRut(name) !== rutKey);
 
-  const [rawByRut, rawByName] = await Promise.all([
+  const [rawByRut, rawByName, verified] = await Promise.all([
     rut ? searchPressDossier(rut, limit) : Promise.resolve([] as PressMatch[]),
     usableName ? searchPressDossier(name, limit) : Promise.resolve([] as PressMatch[]),
+    verifiedSeedMatches(name, rut, limit),
   ]);
 
   const byRut = resolveEntityPressMatches(rut, rawByRut);
   const byName = resolveEntityPressMatches(rut, rawByName);
+  const byVerifiedSeed = resolveEntityPressMatches(rut, verified);
 
   // El vínculo por RUT nunca puede desaparecer por una variante de nombre.
   // La búsqueda nominal sólo agrega evidencia/contexto que pase la misma regla.
-  return mergePressMatches([byRut, byName], limit);
+  // Una semilla verificada se fusiona como evidencia directa y auditable, sin
+  // reemplazar el índice principal ni relajar sus umbrales de identidad.
+  return mergePressMatches([byVerifiedSeed, byRut, byName], limit);
 }
