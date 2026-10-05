@@ -1,3 +1,5 @@
+export {};
+
 function text(node: Element | null) {
   return (node?.textContent ?? '').trim();
 }
@@ -50,9 +52,7 @@ function enhanceMunicipalDte() {
     const reading = semantics.find((node) => /^Lectura:/i.test(text(node)));
     if (reading && !reading.dataset.municipalDte) {
       reading.dataset.municipalDte = 'true';
-      const marketNote = [...reading.querySelectorAll('b')].find((node) => /Mercado Público:/i.test(text(node)));
-      const marketSuffix = marketNote ? ` ${marketNote.parentElement?.textContent ?? ''}` : '';
-      reading.innerHTML = '<b>Lectura municipal:</b> Presupuesto Abierto Municipal muestra DTE emitidos y no rechazados observados por contraparte. El monto neto descuenta notas de crédito; no equivale a ejecución devengada ni acredita pago efectivo. Mercado Público se mantiene como una fuente separada y los montos no se suman.' + marketSuffix;
+      reading.innerHTML = '<b>Lectura municipal:</b> Presupuesto Abierto Municipal muestra DTE emitidos y no rechazados observados por contraparte. El monto neto descuenta notas de crédito; no equivale a ejecución devengada ni acredita pago efectivo. Mercado Público se mantiene como una fuente separada y los montos no se suman.';
     }
   }
 }
