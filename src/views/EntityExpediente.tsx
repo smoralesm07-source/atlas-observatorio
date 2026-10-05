@@ -139,6 +139,22 @@ function numberValue(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function hasMarketFootprint(summary: StateMarketSummary | null | undefined): boolean {
+  if (!summary) return false;
+  return (numberValue(summary.order_count) ?? 0) > 0
+    || (numberValue(summary.buyer_count) ?? 0) > 0
+    || (numberValue(summary.amount_clp) ?? 0) !== 0;
+}
+
+function hasFundsFootprint(summary: StateFundsSummary | null | undefined): boolean {
+  if (!summary) return false;
+  return (numberValue(summary.transaction_count) ?? 0) > 0
+    || (numberValue(summary.payer_count) ?? 0) > 0
+    || (numberValue(summary.amount_paid) ?? 0) !== 0
+    || (numberValue(summary.amount_as_supplier) ?? 0) !== 0
+    || (numberValue(summary.amount_as_recipient) ?? 0) !== 0;
+}
+
 type SiiEconomicDisplay = { value: string; sub: string };
 
 function atlasAnnualMissing(tax: Record<string, unknown>, fieldStatus?: string | null): boolean {
@@ -399,14 +415,14 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const stateRut = data?.entity.rut ?? null;
   const stateFromYear = 2020;
   const stateToYear = new Date().getFullYear();
-  const publishedMarketPresent = Boolean(data?.coverage.some((row) => row.source_code === 'MERCADO_PUBLICO' && row.status === 'PRESENT'));
-  const publishedFundsPresent = Boolean(data?.coverage.some((row) => row.source_code === 'PRESUPUESTO_ABIERTO' && row.status === 'PRESENT'));
+  // La cobertura global de una fuente no acredita que ESTE RUT tenga movimientos.
+  // Siempre resolvemos el resumen por entidad antes de mostrar presencia económica.
   const stateMarket = useRpc<StateSummaryResponse<StateMarketSummary>>('obs_state_interaction_entity', {
     p_action: 'summary', p_rut: stateRut, p_query: null, p_from_year: stateFromYear, p_to_year: stateToYear, p_limit: 20, p_offset: 0,
-  }, { skip: !stateRut || publishedMarketPresent });
+  }, { skip: !stateRut });
   const stateFunds = useRpc<StateSummaryResponse<StateFundsSummary>>('obs_state_public_funds_entity', {
     p_action: 'summary', p_rut: stateRut, p_query: null, p_from_year: stateFromYear, p_to_year: stateToYear, p_limit: 20, p_offset: 0,
-  }, { skip: !stateRut || publishedFundsPresent });
+  }, { skip: !stateRut });
   const [liveTaxHistory, setLiveTaxHistory] = useState<EntityTaxHistoryRow[] | null>(null);
 
   useEffect(() => {
@@ -471,17 +487,37 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
   const finding = mainFinding(data);
   const marketFootprint = stateMarket.data?.supplier ?? null;
   const fundsFootprint = stateFunds.data?.summary ?? null;
+  const marketEvidence = hasMarketFootprint(marketFootprint);
+  const fundsEvidence = hasFundsFootprint(fundsFootprint);
+  const marketChecked = Boolean(stateRut) && !stateMarket.loading && !stateMarket.error;
+  const fundsChecked = Boolean(stateRut) && !stateFunds.loading && !stateFunds.error;
+
+  // Reconciliamos la marca publicada contra el detalle efectivo del RUT.
+  // Un PRESENT de cobertura de fuente no puede sobrevivir como presencia de entidad
+  // si la consulta específica devuelve cero OC / cero pagos / cero contrapartes.
   const reconciledCoverage: CoverageRow[] = data.coverage.map((row) => {
-    if (row.source_code === 'MERCADO_PUBLICO' && marketFootprint) return {
-      ...row, status: 'PRESENT' as const, record_count: marketFootprint.order_count ?? row.record_count,
-      last_event_at: marketFootprint.last_seen ?? row.last_event_at,
-      detail: { ...row.detail, unidad: 'órdenes de compra', monto_clp: marketFootprint.amount_clp ?? undefined },
-    };
-    if (row.source_code === 'PRESUPUESTO_ABIERTO' && fundsFootprint) return {
-      ...row, status: 'PRESENT' as const, record_count: fundsFootprint.transaction_count ?? row.record_count,
-      last_event_at: fundsFootprint.last_seen ?? row.last_event_at,
-      detail: { ...row.detail, unidad: 'pagos / transferencias', monto_clp: fundsFootprint.amount_paid ?? undefined },
-    };
+    if (row.source_code === 'MERCADO_PUBLICO') {
+      if (marketEvidence && marketFootprint) return {
+        ...row, status: 'PRESENT' as const, record_count: marketFootprint.order_count ?? row.record_count,
+        last_event_at: marketFootprint.last_seen ?? row.last_event_at,
+        detail: { ...row.detail, unidad: 'órdenes de compra', monto_clp: marketFootprint.amount_clp ?? undefined, entity_presence_reconciled: true },
+      };
+      if (marketChecked) return {
+        ...row, status: 'ABSENT' as const, record_count: 0, last_event_at: null,
+        detail: { ...row.detail, entity_presence_reconciled: true, period_from: stateFromYear, period_to: stateToYear },
+      };
+    }
+    if (row.source_code === 'PRESUPUESTO_ABIERTO') {
+      if (fundsEvidence && fundsFootprint) return {
+        ...row, status: 'PRESENT' as const, record_count: fundsFootprint.transaction_count ?? row.record_count,
+        last_event_at: fundsFootprint.last_seen ?? row.last_event_at,
+        detail: { ...row.detail, unidad: 'pagos / transferencias', monto_clp: fundsFootprint.amount_paid ?? undefined, entity_presence_reconciled: true },
+      };
+      if (fundsChecked) return {
+        ...row, status: 'ABSENT' as const, record_count: 0, last_event_at: null,
+        detail: { ...row.detail, entity_presence_reconciled: true, period_from: stateFromYear, period_to: stateToYear },
+      };
+    }
     return row;
   });
   const coverage = (...codes: string[]) => reconciledCoverage.find((row) => codes.includes(row.source_code));
@@ -489,8 +525,9 @@ export function EntityExpediente({ entityId, onNavigate }: { entityId: string; o
     market: marketFootprint, funds: fundsFootprint,
     loading: stateMarket.loading || stateFunds.loading, error: Boolean(stateMarket.error || stateFunds.error),
     fromYear: stateFromYear, toYear: stateToYear,
-    marketCoverage: coverage('MERCADO_PUBLICO')?.status === 'PRESENT',
-    fundsCoverage: coverage('PRESUPUESTO_ABIERTO')?.status === 'PRESENT',
+    // Estos flags representan presencia efectiva de la entidad, no cobertura global de la fuente.
+    marketCoverage: marketEvidence,
+    fundsCoverage: fundsEvidence,
   };
   const uafCoverage = coverage('RADAR_UAF');
   const siiCoverage = coverage('RADAR_SII');
@@ -689,22 +726,20 @@ function ResumenTab({ data, press, articles, timeline, activities, history, publ
   const latestHistory = history.length ? history[history.length - 1] : null;
   const salesBand = salesBandDisplay(tax, data.entity.tax_sales_band_uf, latestHistory);
   const workers = workersDisplay(tax, data.entity.tax_workers, latestHistory);
-  const marketPresent = Boolean(publicFootprint.market || publicFootprint.marketCoverage);
-  const fundsPresent = Boolean(publicFootprint.funds || publicFootprint.fundsCoverage);
+  const marketPresent = publicFootprint.marketCoverage;
+  const fundsPresent = publicFootprint.fundsCoverage;
   const footprintPresent = marketPresent || fundsPresent;
   const footprintUnknown = !footprintPresent && (publicFootprint.loading || publicFootprint.error);
   const footprintValue = publicFootprint.loading && !footprintPresent ? 'Consultando…' : footprintPresent ? 'Sí registra' : publicFootprint.error ? 'No disponible' : 'No registra';
   const footprintSub = marketPresent && fundsPresent
     ? `Mercado Público + Presupuesto Abierto · ${publicFootprint.fromYear}–${publicFootprint.toYear}`
-    : publicFootprint.market
+    : marketPresent && publicFootprint.market
       ? `Mercado Público · ${formatClp(publicFootprint.market.amount_clp)} · ${n(publicFootprint.market.order_count ?? 0)} OC`
-      : publicFootprint.funds
+      : fundsPresent && publicFootprint.funds
         ? `Presupuesto Abierto · ${formatClp(publicFootprint.funds.amount_paid)} · ${n(publicFootprint.funds.transaction_count ?? 0)} transacciones`
-        : marketPresent
-          ? 'Mercado Público · presencia materializada'
-          : fundsPresent
-            ? 'Presupuesto Abierto · presencia materializada'
-            : footprintUnknown ? 'Verificando fuentes consolidadas' : `Sin compras ni pagos observados · ${publicFootprint.fromYear}–${publicFootprint.toYear}`;
+        : footprintUnknown
+          ? 'Verificando fuentes consolidadas'
+          : `Sin compras ni pagos observados · ${publicFootprint.fromYear}–${publicFootprint.toYear}`;
   const indexedPressCount = press.matches.reduce((best, match) => Math.max(best, match.article_count ?? 0), 0);
   const pressCount = Math.max(articles.length, indexedPressCount, registry.press?.record_count ?? 0);
   return (
@@ -817,8 +852,8 @@ function RegistryCard({ data, pressStatus, pressCount, registry, publicFootprint
   publicFootprint: PublicFootprintState;
 }) {
   const pressTone = pressStatus === 'loading' ? 'unknown' : pressCount > 0 ? 'present' : coverageStatus(registry.press);
-  const marketPresent = Boolean(publicFootprint.market || publicFootprint.marketCoverage);
-  const fundsPresent = Boolean(publicFootprint.funds || publicFootprint.fundsCoverage);
+  const marketPresent = publicFootprint.marketCoverage;
+  const fundsPresent = publicFootprint.fundsCoverage;
   const publicPresent = marketPresent || fundsPresent;
   const publicUnknown = !publicPresent && (publicFootprint.loading || publicFootprint.error);
   const publicSources = [marketPresent ? 'Mercado Público' : null, fundsPresent ? 'Presupuesto Abierto' : null].filter(Boolean).join(' + ');
