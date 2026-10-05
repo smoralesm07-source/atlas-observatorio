@@ -20,6 +20,7 @@ const cache = new Map<string, FootprintRow[]>();
 let requestKey = '';
 let requestSerial = 0;
 let scheduled = false;
+let lastDomSignature = '';
 
 function norm(value: unknown) {
   return String(value ?? '')
@@ -57,6 +58,20 @@ function isEntityHuellaRoute() {
   return window.location.hash === '#/relacion-estado';
 }
 
+function domSignature() {
+  const { from, to } = selectedPeriod();
+  const list = document.querySelector<HTMLElement>('.huella-detail-list');
+  const listTitle = list?.querySelector<HTMLElement>('.huella-detail-list-head strong')?.textContent ?? '';
+  const visibleRows = [...(list?.querySelectorAll<HTMLElement>('.detail-row-button') ?? [])]
+    .map((row) => `${row.querySelector('b')?.textContent ?? ''}:${row.querySelectorAll('small')[1]?.textContent ?? ''}`)
+    .join('|');
+  const drawer = document.querySelector<HTMLElement>('.state-counterparty-drawer');
+  const drawerState = drawer
+    ? `${drawer.querySelector('h3')?.textContent ?? ''}:${Boolean(drawer.querySelector('.public-footprint-method-note'))}`
+    : '';
+  return [window.location.hash, selectedRut(), from, to, listTitle, visibleRows, drawerState].join('::');
+}
+
 function renameGenericLabels() {
   if (!isEntityHuellaRoute()) return;
 
@@ -71,9 +86,10 @@ function renameGenericLabels() {
   for (const list of document.querySelectorAll<HTMLElement>('.huella-detail-list')) {
     const title = list.querySelector<HTMLElement>('.huella-detail-list-head strong');
     if (!title || !/^(¿Quién le ha pagado\?|Organismos con huella pública)$/i.test(title.textContent?.trim() ?? '')) continue;
-    title.textContent = 'Organismos con huella pública';
+    if (title.textContent !== 'Organismos con huella pública') title.textContent = 'Organismos con huella pública';
     const source = title.parentElement?.querySelector<HTMLElement>('span');
-    if (source) source.textContent = 'Presupuesto Abierto · pagos + DTE municipal';
+    const sourceText = 'Presupuesto Abierto · pagos + DTE municipal';
+    if (source && source.textContent !== sourceText) source.textContent = sourceText;
   }
 
   const explorer = document.querySelector<HTMLElement>('.counterparty-explorer');
@@ -117,7 +133,8 @@ function decorateList(rows: FootprintRow[]) {
       if (municipalOnly) {
         rowEl.dataset.publicEvidence = 'municipal-dte';
         const docs = evidence.municipal_dte_document_count ?? evidence.transaction_count;
-        if (detail) detail.textContent = `${numberLabel(docs)} DTE · huella observada`;
+        const detailText = `${numberLabel(docs)} DTE · huella observada`;
+        if (detail && detail.textContent !== detailText) detail.textContent = detailText;
         if (amount) {
           amount.title = 'Monto neto de DTE municipales observados; no acredita pago efectivo.';
           amount.dataset.evidence = 'municipal-dte';
@@ -131,7 +148,8 @@ function decorateList(rows: FootprintRow[]) {
         }
       } else if (mixed) {
         rowEl.dataset.publicEvidence = 'mixed';
-        if (detail) detail.textContent = `${numberLabel(evidence.transaction_count)} pagos · + evidencia DTE`;
+        const detailText = `${numberLabel(evidence.transaction_count)} pagos · + evidencia DTE`;
+        if (detail && detail.textContent !== detailText) detail.textContent = detailText;
       } else {
         rowEl.dataset.publicEvidence = 'payment';
       }
@@ -153,14 +171,15 @@ function decorateDrawer(rows: FootprintRow[]) {
 
   drawer.dataset.publicEvidence = 'municipal-dte';
   const eyebrow = header.querySelector<HTMLElement>('span');
-  if (eyebrow) eyebrow.textContent = 'Organismo con huella DTE';
-  if (headerSmall) headerSmall.textContent = `Presupuesto Abierto Municipal${evidence.payer_key ? ` · ${evidence.payer_key}` : ''}`;
+  if (eyebrow?.textContent !== 'Organismo con huella DTE') eyebrow && (eyebrow.textContent = 'Organismo con huella DTE');
+  const headerText = `Presupuesto Abierto Municipal${evidence.payer_key ? ` · ${evidence.payer_key}` : ''}`;
+  if (headerSmall && headerSmall.textContent !== headerText) headerSmall.textContent = headerText;
 
   const facts = drawer.querySelectorAll<HTMLElement>('.state-counterparty-facts > div');
   const amountLabel = facts[0]?.querySelector<HTMLElement>('span');
   const countLabel = facts[1]?.querySelector<HTMLElement>('span');
-  if (amountLabel) amountLabel.textContent = 'Monto DTE neto';
-  if (countLabel) countLabel.textContent = 'DTE observados';
+  if (amountLabel?.textContent !== 'Monto DTE neto') amountLabel && (amountLabel.textContent = 'Monto DTE neto');
+  if (countLabel?.textContent !== 'DTE observados') countLabel && (countLabel.textContent = 'DTE observados');
 
   for (const node of drawer.querySelectorAll<HTMLElement>('span,small')) {
     if (node.textContent?.trim() === 'Pago observado') node.textContent = 'DTE observado';
@@ -183,10 +202,19 @@ function applyRows(rows: FootprintRow[]) {
 }
 
 async function refreshEvidence() {
+  const before = domSignature();
+  if (before === lastDomSignature) return;
+
   renameGenericLabels();
-  if (!isEntityHuellaRoute()) return;
+  if (!isEntityHuellaRoute()) {
+    lastDomSignature = domSignature();
+    return;
+  }
   const rut = selectedRut();
-  if (!rut) return;
+  if (!rut) {
+    lastDomSignature = domSignature();
+    return;
+  }
   const { from, to } = selectedPeriod();
   const key = `${normRut(rut)}|${from}|${to}`;
   requestKey = key;
@@ -194,6 +222,7 @@ async function refreshEvidence() {
   const cached = cache.get(key);
   if (cached) {
     applyRows(cached);
+    lastDomSignature = domSignature();
     return;
   }
 
@@ -211,6 +240,7 @@ async function refreshEvidence() {
   const rows = ((data as PayersResponse | null)?.rows ?? []) as FootprintRow[];
   cache.set(key, rows);
   applyRows(rows);
+  lastDomSignature = domSignature();
 }
 
 function scheduleEnhancement() {
@@ -224,6 +254,9 @@ function scheduleEnhancement() {
 
 const observer = new MutationObserver(scheduleEnhancement);
 observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-window.addEventListener('hashchange', scheduleEnhancement);
+window.addEventListener('hashchange', () => {
+  lastDomSignature = '';
+  scheduleEnhancement();
+});
 window.addEventListener('load', scheduleEnhancement);
 scheduleEnhancement();
