@@ -1,0 +1,33 @@
+.public-footprint-evidence-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent, #e86f1c) 36%, transparent);
+  border-radius: 999px;
+  color: var(--accent, #e86f1c);
+  background: color-mix(in srgb, var(--accent, #e86f1c) 8%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.detail-row-button[data-public-evidence='municipal-dte'] b[data-evidence='municipal-dte'] {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.public-footprint-method-note {
+  margin: 0 18px 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent, #e86f1c) 24%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent, #e86f1c) 5%, transparent);
+  color: var(--text-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.public-footprint-method-note b {
+  color: var(--text, #30343b);
+}
