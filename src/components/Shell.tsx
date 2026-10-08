@@ -5,6 +5,7 @@ import { markAtlasOffline } from '../lib/activity';
 import { hrefFor, type Route } from '../lib/router';
 import type { AtlasRole } from './Auth';
 import { Mark } from './Mark';
+import { SourceHealthIndicator } from './SourceHealthIndicator';
 import '../styles/monitores-nav.css';
 
 const THEME_KEY = 'atlas-obs-theme-v2';
@@ -258,6 +259,7 @@ export function Shell({
         </nav>
 
         <div className="topbar-right">
+          <SourceHealthIndicator />
           <span
             style={{ fontSize: 11.5, color: 'var(--ink-3)', maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             title={session.user.email ?? ''}
