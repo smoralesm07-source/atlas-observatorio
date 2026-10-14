@@ -6,7 +6,7 @@ import { SubjectDirectory, type DirectorySelection } from '../components/Subject
 import { Empty, ErrorBox, Loading, Semantics } from '../components/primitives';
 import { NovedadesObservatorio } from './pulso/Novedades';
 import { NewEntitiesDirectory } from './pulso/NewEntitiesDirectory';
-import { fecha, n, n1, titleCase } from '../lib/format';
+import { n, n1, titleCase } from '../lib/format';
 import { hrefFor } from '../lib/router';
 import '../styles/pulso-v6.css';
 import '../styles/pulso-new-entities.css';
