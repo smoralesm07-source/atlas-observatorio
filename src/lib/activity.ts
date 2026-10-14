@@ -74,6 +74,8 @@ export function activityLocation(route: Route): ActivityLocation {
       return { route: 'metodologia', section: 'Metodología' };
     case 'administracion':
       return { route: 'administracion', section: 'Administración' };
+    case 'gafi-piloto':
+      return { route: 'gafi-piloto', section: 'Piloto · Evaluación GAFI' };
     default:
       return { route: 'atlas', section: 'ATLAS Observatorio' };
   }
