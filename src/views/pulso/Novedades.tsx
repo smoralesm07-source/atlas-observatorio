@@ -113,8 +113,9 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
           <div className="priority-compact-actions">
             {criticalCount > 0 && <span className="priority-compact-critical"><i />{criticalCount} crítica{criticalCount === 1 ? '' : 's'}</span>}
             <span className={`priority-compact-live${signalRecent ? '' : ' is-stale'}`}
-              title="Fecha del evento más reciente del radar, no fecha de consulta ni garantía de ingesta">
-              <i /> {latestSignal ? `Última señal ${shortDate(latestSignal)}` : 'Sin señales recientes'}
+              title="Se distinguen dos fechas: última verificación del radar y último antecedente efectivamente vinculado a un sujeto obligado.">
+              <i /> {feed?.generated_at ? `Rev. ${shortDate(feed.generated_at)} · ` : ''}
+              {latestSignal ? `señal ${shortDate(latestSignal)}` : 'sin nuevos vínculos'}
             </span>
             <button
               type="button"
@@ -321,16 +322,12 @@ function selectHighlights(items: RadarItem[]) {
 }
 
 function comparePriority(a: RadarItem, b: RadarItem) {
-  const priority = (item: RadarItem) => {
-    if (item.severity === 'CRITICAL') return 0;
-    if (item.is_new_match) return 1;
-    if (item.kind === 'SANCION' && item.severity === 'HIGH') return 2;
-    if (item.kind === 'SANCION') return 3;
-    return 4;
-  };
-  return priority(a) - priority(b)
-    || Number(b.urgency_score ?? 0) - Number(a.urgency_score ?? 0)
-    || sortableDate(b.event_at) - sortableDate(a.event_at);
+  // Prioridad crítica primero. Dentro de cada familia, el evento más reciente
+  // debe verse antes que una sanción antigua de importe mayor.
+  const critical = Number(b.severity === 'CRITICAL') - Number(a.severity === 'CRITICAL');
+  return critical
+    || compareFreshness(a, b)
+    || Number(b.urgency_score ?? 0) - Number(a.urgency_score ?? 0);
 }
 
 function compareFreshness(a: RadarItem, b: RadarItem) {
