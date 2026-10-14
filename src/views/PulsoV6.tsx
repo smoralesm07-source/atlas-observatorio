@@ -14,7 +14,7 @@ import '../styles/pulso-new-entities.css';
 const ALL: CohortRequest = { cohort: 'TODOS', title: 'Padrón completo de sujetos obligados' };
 
 interface NewEntitiesDigest {
-  contract: 'ATLAS_OBS_NEW_ENTITIES_V1';
+  contract: 'ATLAS_OBS_NEW_ENTITIES_V1' | 'ATLAS_OBS_NEW_ENTITIES_V2';
   window_days: number;
   reference_date: string | null;
   staleness_days: number | null;
@@ -27,8 +27,8 @@ interface NewEntitiesDigest {
     outside_visible: number;
   };
   sources: {
-    res: { latest_event_date: string | null; cutoff_date: string | null };
-    sii: { latest_event_date: string | null };
+    res: { latest_event_date: string | null; cutoff_date: string | null; source_updated_at?: string | null };
+    sii: { latest_event_date: string | null; snapshot_refreshed_at?: string | null };
   };
   latest: {
     rut: string;
@@ -414,7 +414,7 @@ function NewEntitiesInsight({
           <div className="p6-new-copy">
             <b>Nuevas entidades detectadas</b>
             <p>{data.staleness_days != null && data.staleness_days > 7
-              ? `Cobertura atrasada ${data.staleness_days} días: estos eventos NO corresponden a los últimos 30 días calendario.`
+              ? `Cobertura hasta ${compactDate(data.reference_date)} (${data.staleness_days} días de desfase). Última publicación RES: ${compactDate(data.sources?.res?.source_updated_at)}; nómina SII cargada: ${compactDate(data.sources?.sii?.snapshot_refreshed_at)}. No son altas de los últimos 30 días calendario.`
               : 'Constituciones RES o inicios SII en los 30 días más recientes cubiertos. SII puede corresponder a una empresa ya constituida.'}</p>
           </div>
         </div>
