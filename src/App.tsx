@@ -20,6 +20,7 @@ import { NominasV3 } from './views/NominasV3';
 import { ReportesDirectivosV3 } from './views/ReportesDirectivosV3';
 import { Metodologia } from './views/Metodologia';
 import { Administracion } from './views/Administracion';
+import { GafiPilot } from './views/GafiPilot';
 import './styles/territory-commune-typography.css';
 
 export default function App() {
@@ -81,6 +82,11 @@ function Routed({ session, role }: { session: Session; role: AtlasRole }) {
       {route.view === 'reportes' && <ReportesDirectivosV3 />}
       {route.view === 'fuentes' && <Fuentes />}
       {route.view === 'metodologia' && <Metodologia />}
+      {route.view === 'gafi-piloto' && (
+        role === 'admin'
+          ? <GafiPilot />
+          : <div className="panel panel-pad fade-in"><h1 className="view-title">Piloto GAFI · acceso restringido</h1><p>Solo administración habilitada puede acceder al piloto.</p></div>
+      )}
       {route.view === 'administracion' && (
         role === 'admin'
           ? <Administracion session={session} />
