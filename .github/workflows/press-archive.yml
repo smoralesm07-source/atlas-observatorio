@@ -1,9 +1,9 @@
-name: Archivar prensa en ATLAS
+name: Vigilar archivo de prensa en ATLAS
 
-# El Monitor de Prensa mantiene su ventana de frescura y no se modifica aquí.
-# ATLAS consume su bridge publicado, hace upsert acumulativo y resuelve identidad
-# contra su padrón propio. Ninguna fila histórica se elimina porque deje de
-# aparecer en la ventana vigente del Monitor.
+# La ingesta canonica corre por pg_cron (atlas-press-archive, cada 2h)
+# con token interno rotado/validado en Supabase. GitHub NO debe duplicar
+# la ingesta con un service_role_key que puede no coincidir tras rotaciones.
+# Este workflow verifica el resultado persistido sin invocar el ingestion endpoint.
 
 on:
   push:
@@ -12,58 +12,85 @@ on:
       - 'supabase/functions/atlas-press-ingest/**'
       - '.github/workflows/press-archive.yml'
   schedule:
-    - cron: '17 */2 * * *'
+    - cron: '40 */2 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: atlas-press-archive
   cancel-in-progress: false
 
 jobs:
-  ingest:
+  verificar:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Consumir bridge de prensa y persistir en ATLAS
+      - name: Verificar ingesta real de prensa y cobertura del bridge
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-
-          if [ -z "${SUPABASE_URL:-}" ]; then
-            echo "::error::Falta el secret SUPABASE_URL"
-            exit 1
-          fi
-          if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-            echo "::error::Falta el secret SUPABASE_SERVICE_ROLE_KEY"
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::Faltan credenciales de consulta para vigilar prensa"
             exit 1
           fi
 
-          raw=$(curl -sS -w '\n%{http_code}' \
-            -X POST "$SUPABASE_URL/functions/v1/atlas-press-ingest" \
+          # Lectura solo del ultimo intento; sin exponer secretos ni hacer writes.
+          raw=$(curl --fail-with-body -sS --get "$SUPABASE_URL/rest/v1/atlas_press_ingest_run" \
+            --data-urlencode 'select=status,started_at,completed_at,bridge_generated_at,article_count,entity_count,mention_count,applied_evidence_count' \
+            --data-urlencode 'order=started_at.desc' \
+            --data-urlencode 'limit=1' \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            -H 'Content-Type: application/json' \
-            -d '{}')
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
 
-          code=$(tail -n1 <<<"$raw")
-          response=$(sed '$d' <<<"$raw")
-
-          if [ "$code" != "200" ]; then
-            echo "::error::atlas-press-ingest respondió HTTP $code"
-            echo "$response" | jq . 2>/dev/null || printf '%s\n' "$response"
+          last=$(jq -c '.[0] // null' <<<"$raw")
+          if [ "$last" = 'null' ]; then
+            echo "::error::No existen corridas de prensa auditadas"
             exit 1
           fi
 
-          echo "$response" | jq .
-          echo '### Archivo histórico de prensa' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo "$response" | jq -r '
-            "- Bridge: `" + (.bridge_generated_at // "sin fecha") + "`\n" +
-            "- Artículos recibidos: " + ((.ingested.articles // 0)|tostring) + "\n" +
-            "- Entidades de prensa: " + ((.ingested.entities // 0)|tostring) + "\n" +
-            "- Menciones: " + ((.ingested.mentions // 0)|tostring) + "\n" +
-            "- Vínculos resueltos: " + ((.resolved_links // 0)|tostring) + "\n" +
-            "- Evidencias aplicadas al padrón: " + ((.applied_evidence // 0)|tostring)
-          ' >> "$GITHUB_STEP_SUMMARY"
+          estado=$(jq -r '.status // "DESCONOCIDO"' <<<"$last")
+          completo=$(jq -r '.completed_at // empty' <<<"$last")
+          puente=$(jq -r '.bridge_generated_at // "sin fecha"' <<<"$last")
+          articulos=$(jq -r '.article_count // 0' <<<"$last")
+          entidades=$(jq -r '.entity_count // 0' <<<"$last")
+          menciones=$(jq -r '.mention_count // 0' <<<"$last")
+          aplicadas=$(jq -r '.applied_evidence_count // 0' <<<"$last")
+          {
+            echo "### Estado del archivo de prensa (ingesta real desde Supabase)"
+            echo ""
+            echo "| Control | Valor |"
+            echo "| --- | --- |"
+            echo "| Ultima corrida | $completo |"
+            echo "| Resultado | $estado |"
+            echo "| Corte publicado por Monitor | $puente |"
+            echo "| Articulos | $articulos |"
+            echo "| Entidades | $entidades |"
+            echo "| Menciones | $menciones |"
+            echo "| Evidencias asociadas al padron | $aplicadas |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$estado" != 'READY' ] || [ -z "$completo" ]; then
+            echo "::error::La ultima ingesta de prensa no termino en READY"
+            exit 1
+          fi
+          now=$(date -u +%s)
+          then=$(date -u -d "$completo" +%s)
+          age_hours=$(( (now - then) / 3600 ))
+          if [ "$age_hours" -gt 4 ]; then
+            echo "::error::El archivo de prensa lleva ${age_hours} h sin corridas exitosas"
+            exit 1
+          fi
+          if [ "$articulos" -le 0 ]; then
+            echo "::error::La ingesta READY no declaro articulos: comprobar bridge"
+            exit 1
+          fi
+          if [ "$puente" != 'sin fecha' ]; then
+            bridge_seconds=$(date -u -d "$puente" +%s)
+            if [ "$(( (now - bridge_seconds) / 3600 ))" -gt 24 ]; then
+              echo "::warning::El Monitor de Prensa no ha publicado un bridge reciente (>24 h)"
+            fi
+          fi
