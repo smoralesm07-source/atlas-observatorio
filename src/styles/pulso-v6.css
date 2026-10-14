@@ -381,3 +381,64 @@
 .pulse-v6 .pulse-updates-compact .pulse-updates-state {
   font-size: 10.1px;
 }
+
+
+/* Pulso: franja de trazabilidad temporal, sin confundir corte oficial con carga. */
+.p6-freshness {
+  display: grid;
+  gap: 5px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg-panel);
+  font-size: 10px;
+}
+.p6-freshness-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+.p6-freshness-indicators > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.p6-freshness-indicators i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ink-4);
+}
+.p6-freshness-indicators [data-status='ok'] i { background: var(--present); }
+.p6-freshness-indicators [data-status='stale'] i { background: var(--sig-high); }
+.p6-freshness-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ink-4);
+  font-size: 9.2px;
+}
+.p6-freshness-foot button {
+  color: var(--accent);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 1px 0;
+  white-space: nowrap;
+  font-size: 9.2px;
+}
+.p6-freshness-warning {
+  margin: 0;
+  color: var(--sig-high);
+  font-size: 9.2px;
+  line-height: 1.35;
+}
+@media (max-width: 760px) {
+  .p6-freshness-indicators > span { white-space: normal; }
+  .p6-freshness-foot { align-items: start; }
+}

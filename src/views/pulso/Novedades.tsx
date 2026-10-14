@@ -98,6 +98,11 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
 
   const highlights = useMemo(() => selectHighlights(feed?.items ?? []), [feed]);
   const criticalCount = feed?.counts.critical ?? 0;
+  const latestSignal = (feed?.items ?? []).reduce<string | null>((latest, item) => (
+    !latest || sortableDate(item.event_at) > sortableDate(latest) ? item.event_at : latest
+  ), null);
+  const signalAgeDays = latestSignal ? Math.max(0, (Date.now() - sortableDate(latestSignal)) / 86400000) : null;
+  const signalRecent = signalAgeDays != null && signalAgeDays <= 7;
 
   return (
     <div className={`pulse-priority-radar${compact ? ' pulse-updates-compact is-compact' : ''}`}>
@@ -107,7 +112,10 @@ export function NovedadesObservatorio({ compact = false }: { compact?: boolean }
         actions={
           <div className="priority-compact-actions">
             {criticalCount > 0 && <span className="priority-compact-critical"><i />{criticalCount} crítica{criticalCount === 1 ? '' : 's'}</span>}
-            <span className="priority-compact-live"><i /> dinámico</span>
+            <span className={`priority-compact-live${signalRecent ? '' : ' is-stale'}`}
+              title="Fecha del evento más reciente del radar, no fecha de consulta ni garantía de ingesta">
+              <i /> {latestSignal ? `Última señal ${shortDate(latestSignal)}` : 'Sin señales recientes'}
+            </span>
             <button
               type="button"
               className="priority-compact-refresh"

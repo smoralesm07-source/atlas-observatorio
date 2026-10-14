@@ -82,4 +82,41 @@ jobs:
             fallo=1
           fi
 
+
+          # Segunda capa: una reconstruccion integral READY no prueba que Pulso
+          # haya sincronizado el padron (son pipelines independientes).
+          padron=$(curl -fsS --get "$SUPABASE_URL/rest/v1/obs_uaf_subject" \
+            --data-urlencode 'select=refreshed_at' \
+            --data-urlencode 'order=refreshed_at.desc' \
+            --data-urlencode 'limit=1' \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          sincronizado=$(jq -r '.[0].refreshed_at // empty' <<<"$padron")
+          if [ -z "$sincronizado" ]; then
+            echo "::error::El padron Pulso no publica fecha de materializacion"
+            fallo=1
+          else
+            # date UTC admite marcas temporales con fracciones de segundo.
+            segundos_padron=$(date -u -d "$sincronizado" +%s)
+            segundos_actual=$(date -u +%s)
+            horas_padron=$(( (segundos_actual - segundos_padron) / 3600 ))
+            echo "| Pulso: ultima sincronizacion del padron | $sincronizado |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$horas_padron" -gt "$MAX_HORAS" ]; then
+              echo "::error::Pulso lleva ${horas_padron} h sin sincronizar su padron (limite ${MAX_HORAS} h)"
+              fallo=1
+            fi
+          fi
+
+          # La antiguedad del evento RES/SII se reporta, pero una fuente
+          # original sin nuevos eventos no se confunde con fallo tecnico.
+          altas=$(curl -fsS --get "$SUPABASE_URL/rest/v1/obs_new_entities_meta" \
+            --data-urlencode 'select=reference_date,refreshed_at' \
+            --data-urlencode 'id=eq.1' \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          fecha_fuente=$(jq -r '.[0].reference_date // "sin corte"' <<<"$altas")
+          fecha_cache=$(jq -r '.[0].refreshed_at // "sin actualizacion"' <<<"$altas")
+          echo "| Pulso: ultima cobertura RES/SII | $fecha_fuente |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pulso: recalculo del digest RES/SII | $fecha_cache |" >> "$GITHUB_STEP_SUMMARY"
+
           exit $fallo

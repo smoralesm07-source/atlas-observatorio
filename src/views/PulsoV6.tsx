@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRpc } from '../lib/rpc';
 import type { UafPulse } from '../lib/contracts';
 import type { CohortRequest } from '../components/CohortDrawer';
@@ -6,7 +6,7 @@ import { SubjectDirectory, type DirectorySelection } from '../components/Subject
 import { Empty, ErrorBox, Loading, Semantics } from '../components/primitives';
 import { NovedadesObservatorio } from './pulso/Novedades';
 import { NewEntitiesDirectory } from './pulso/NewEntitiesDirectory';
-import { fecha, n, n1, titleCase } from '../lib/format';
+import { n, n1, titleCase } from '../lib/format';
 import { hrefFor } from '../lib/router';
 import '../styles/pulso-v6.css';
 import '../styles/pulso-new-entities.css';
@@ -41,6 +41,38 @@ interface NewEntitiesDigest {
   semantics: string;
 }
 
+interface PulseFreshness {
+  contract: string;
+  checked_at: string;
+  full_cut: { published_at: string | null; age_hours: number | null; status: string } | null;
+  padron: {
+    official_as_of: string | null;
+    materialized_at: string | null;
+    source_refreshed_at: string | null;
+    subject_total: number;
+  };
+  new_entities: { reference_date: string | null; cache_updated_at: string | null } | null;
+  priority: { cache_updated_at: string | null; latest_evidence_date: string | null } | null;
+  comparison_7d: {
+    reference_day: string;
+    subject_delta: number;
+    active_delta: number;
+    terminated_delta: number;
+    review_delta: number;
+  } | null;
+  tracking_since: string | null;
+}
+
+function ageHours(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? Math.max(0, (Date.now() - ms) / 3600000) : null;
+}
+
+function deltaLabel(value: number): string {
+  return value > 0 ? `+${n(value)}` : n(value);
+}
+
 export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) {
   const { data, error, loading, reload } = useRpc<UafPulse>('obs_uaf_pulse', {});
   const {
@@ -49,6 +81,17 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
     loading: newEntitiesLoading,
     reload: reloadNewEntities,
   } = useRpc<NewEntitiesDigest>('obs_new_entities_digest', {});
+  const { data: freshness, reload: reloadFreshness } = useRpc<PulseFreshness>('obs_pulse_freshness', {});
+  useEffect(() => {
+    // Reconsulta los contratos; NO dispara ingestas ni representa un nuevo corte oficial.
+    const timer = window.setInterval(() => {
+      reload();
+      reloadNewEntities();
+      reloadFreshness();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [reload, reloadNewEntities, reloadFreshness]);
+
   const [directory, setDirectory] = useState<DirectorySelection>({ kind: 'registered', request: ALL });
   const [newEntitiesDirectoryOpen, setNewEntitiesDirectoryOpen] = useState(false);
 
@@ -57,6 +100,16 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
   if (!data?.universe) return <Empty title="Sin padrón publicado" hint="El corte vigente no devolvió el universo UAF." />;
 
   const u = data.universe;
+  const fullHours = freshness?.full_cut?.age_hours ?? ageHours(data.snapshot?.published_at ?? data.snapshot?.generated_at);
+  const uafHours = ageHours(freshness?.padron.materialized_at);
+  const upstreamHours = ageHours(freshness?.padron.source_refreshed_at);
+  const fullStale = fullHours != null && fullHours > 9;
+  const uafStale = uafHours != null && uafHours > 9;
+  const inputAhead = freshness?.padron.source_refreshed_at && freshness?.padron.materialized_at
+    ? new Date(freshness.padron.source_refreshed_at).getTime() - new Date(freshness.padron.materialized_at).getTime() > 8 * 3600000
+    : false;
+  const sourceLag = newEntities?.staleness_days != null && newEntities.staleness_days > 7;
+  const compare = freshness?.comparison_7d ?? null;
   const c = data.crosscuts;
   const pressExtra = c as unknown as {
     prensa_confirmada?: number;
@@ -111,9 +164,40 @@ export function PulsoV6({ onNavigate }: { onNavigate: (hash: string) => void }) 
         <div className="p6-meta">
           <span><b>Padrón</b> {n(u.total)}</span>
           <span><b>Reportabilidad</b> {data.reporting?.corte.periodo ?? '—'}</span>
-          {data.snapshot && <span><b>Corte</b> {fecha(data.snapshot.published_at ?? data.snapshot.generated_at)}</span>}
+          {freshness?.padron.official_as_of && <span title="Fecha oficial del padrón público, distinta de la fecha de procesamiento"><b>Padrón oficial</b> {compactDate(freshness.padron.official_as_of)}</span>}
+          <span title="Última materialización del Observatorio; puede diferir del corte oficial del padrón"><b>Corte técnico</b> {compactDate(freshness?.full_cut?.published_at ?? data.snapshot?.published_at ?? data.snapshot?.generated_at)}</span>
         </div>
       </header>
+
+      <section className="p6-freshness" aria-label="Frescura y variación de Pulso" role="status">
+        <div className="p6-freshness-indicators">
+          <span data-status={fullStale ? 'stale' : 'ok'} title="Reconstrucción integral del Observatorio">
+            <i /> Observatorio: {fullHours == null ? 'sin fecha' : fullStale ? `atrasado ${Math.floor(fullHours / 24)} días` : 'actualizado'}
+          </span>
+          <span data-status={uafStale || inputAhead ? 'stale' : 'ok'} title="Padrón materializado en Pulso, no fecha oficial de inscripción">
+            <i /> Padrón sincronizado: {compactDate(freshness?.padron.materialized_at)}
+          </span>
+          <span data-status={sourceLag ? 'stale' : 'ok'} title="Última fecha de eventos RES/SII cubierta por el conjunto de altas">
+            <i /> Altas RES/SII: {compactDate(newEntities?.reference_date)}
+          </span>
+          <span data-status={upstreamHours != null && upstreamHours > 48 ? 'stale' : 'neutral'} title="Fecha de última actualización técnica de la caracterización del padrón">
+            <i /> Entrada UAF: {compactDate(freshness?.padron.source_refreshed_at)}
+          </span>
+        </div>
+        <div className="p6-freshness-foot">
+          <span>{compare
+            ? `Variación verificada desde ${compactDate(compare.reference_day)}: padrón ${deltaLabel(compare.subject_delta)}, activos ${deltaLabel(compare.active_delta)}, término de giro ${deltaLabel(compare.terminated_delta)}, revisión ${deltaLabel(compare.review_delta)}.`
+            : `Seguimiento de variaciones de 7 días desde ${compactDate(freshness?.tracking_since)}. Sin un corte comparable anterior, no se estima variación.`}</span>
+          <button type="button" onClick={() => { reload(); reloadNewEntities(); reloadFreshness(); }} aria-label="Reconsultar los datos publicados">Reconsultar ↻</button>
+        </div>
+        {(fullStale || uafStale || inputAhead || sourceLag) && (
+          <p className="p6-freshness-warning">
+            {fullStale && 'El corte integral está atrasado. '}
+            {(uafStale || inputAhead) && 'La materialización del padrón no está al día. '}
+            {sourceLag && 'Las altas RES/SII se calculan sobre la última cobertura disponible, no sobre los últimos 30 días calendario.'}
+          </p>
+        )}
+      </section>
 
       <section className="p6-kpis" aria-label="Cifras principales">
         <Kpi label="Padrón inscrito" value={u.total} share={`${n(u.sectores_uaf)} sectores Ley 19.913`} foot={`${n(u.juridicas)} jurídicas · ${n(u.naturales)} naturales`} tone="var(--accent)" onClick={() => setCohort(ALL)} />
@@ -329,7 +413,9 @@ function NewEntitiesInsight({
           </button>
           <div className="p6-new-copy">
             <b>Nuevas entidades detectadas</b>
-            <p>Constituciones RES o inicios SII en los 30 días más recientes cubiertos. SII puede corresponder a una empresa ya constituida.</p>
+            <p>{data.staleness_days != null && data.staleness_days > 7
+              ? `Cobertura atrasada ${data.staleness_days} días: estos eventos NO corresponden a los últimos 30 días calendario.`
+              : 'Constituciones RES o inicios SII en los 30 días más recientes cubiertos. SII puede corresponder a una empresa ya constituida.'}</p>
           </div>
         </div>
 

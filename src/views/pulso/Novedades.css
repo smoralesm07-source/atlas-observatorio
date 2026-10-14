@@ -577,3 +577,14 @@
   .priority-detail-backdrop,
   .priority-detail-card { animation: none; transition: none; }
 }
+
+
+/* Una consulta periódica no equivale a una señal nueva: estado neutro. */
+.priority-compact-live.is-stale {
+  color: var(--ink-3);
+}
+.priority-compact-live.is-stale i {
+  background: var(--ink-4);
+  box-shadow: none;
+  animation: none;
+}
