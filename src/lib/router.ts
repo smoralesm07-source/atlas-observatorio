@@ -48,7 +48,8 @@ export type Route =
   | { view: 'reportes' }
   | { view: 'fuentes' }
   | { view: 'metodologia' }
-  | { view: 'administracion' };
+  | { view: 'administracion' }
+  | { view: 'gafi-piloto' };
 
 /** Hash routing: the app is a static bundle, so it must survive a hard reload
  *  and a shared link from any host without server rewrites. */
@@ -108,6 +109,8 @@ export function parseHash(hash: string): Route {
       return { view: 'metodologia' };
     case 'administracion':
       return { view: 'administracion' };
+    case 'gafi-piloto':
+      return { view: 'gafi-piloto' };
     default:
       return { view: 'pulso' };
   }
@@ -154,6 +157,8 @@ export function hrefFor(r: Route): string {
       return '#/metodologia';
     case 'administracion':
       return '#/administracion';
+    case 'gafi-piloto':
+      return '#/gafi-piloto';
     case 'pulso':
       return r.lente ? `#/pulso?lente=${r.lente}` : '#/pulso';
     default:
