@@ -9,6 +9,12 @@ on:
   schedule:
     - cron: '40 */6 * * *'
   workflow_dispatch:
+  # Mientras el prototipo vive fuera de main, un push que toque el radar en
+  # su rama de desarrollo arma un corte (workflow_dispatch sólo funciona para
+  # workflows que ya están en la rama por defecto).
+  push:
+    branches: [claude/magical-hypatia-p8bf4p]
+    paths: ['radar-economias/**', '.github/workflows/radar-economias.yml']
 
 concurrency:
   group: radar-economias
