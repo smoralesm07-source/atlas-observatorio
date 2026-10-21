@@ -1,0 +1,4996 @@
+{
+ "schema": "radar.snapshot.v1",
+ "snapshot_id": "RAD-20261021T200219Z",
+ "generated_at": "2026-10-21T20:02:19+00:00",
+ "previous_snapshot_id": "RAD-20261021T195633Z",
+ "economies": {
+  "EXTORSION_DIGITAL": {
+   "label": "Extorsión digital (ransomware)",
+   "laft": "Delito precedente con pago en cripto. Las reivindicaciones sobre entidades chilenas indican exposición operacional de sujetos obligados y flujos de rescate que buscan salida por exchanges.",
+   "rail": "Exchanges y OTC que convierten el rescate; integridad de datos del sujeto obligado."
+  },
+  "MERCADO_DATOS_ROBADOS": {
+   "label": "Comercio de datos robados",
+   "laft": "Las bases filtradas alimentan suplantación de identidad, apertura de cuentas mula y fraude. Una brecha en un servicio chileno es insumo para el resto de la cadena.",
+   "rail": "Onboarding remoto de bancos, billeteras y emisores de prepago."
+  },
+  "FRAUDE_SUPLANTACION": {
+   "label": "Fraude por suplantación de marcas financieras",
+   "laft": "Phishing contra clientes de instituciones chilenas: el dinero robado sale por cuentas mula, que son la tipología dominante (testaferros en el 79% de las condenas, UAF 2025).",
+   "rail": "La marca suplantada y las cuentas de destino de las transferencias."
+  },
+  "SERVICIOS_FIN_NO_AUTORIZADOS": {
+   "label": "Servicios financieros no autorizados",
+   "laft": "Entidades que captan dinero simulando estar fiscalizadas. Suelen recibir los pagos en cuentas de personas naturales.",
+   "rail": "Cuentas receptoras en bancos y fintech chilenas."
+  },
+  "APUESTAS_ILEGALES": {
+   "label": "Apuestas y casinos online no autorizados",
+   "laft": "Mercado sin licencia que mueve cientos de miles de millones de pesos al año y rota dominios para eludir bloqueos.",
+   "rail": "Medios de pago declarados en los sitios: PSP, billeteras, transferencias, cripto."
+  },
+  "CRIPTO_SANCIONADO": {
+   "label": "Criptoactivos sancionados",
+   "laft": "Direcciones designadas por OFAC (mercados darknet, mezcladores, exchanges sancionados, redes de ransomware). Son la lista de vigilancia para rastrear exposición de exchanges que operan en Chile.",
+   "rail": "Exchanges y PSP cripto inscritos o potenciales sujetos obligados."
+  },
+  "ECOSISTEMA_DARKWEB": {
+   "label": "Ecosistema de mercados y foros",
+   "laft": "Estado del ecosistema global: cuántos mercados de tarjetas, logs de infostealers, foros y canales de actores están activos, y cuáles se orientan a Chile o Latinoamérica.",
+   "rail": "Contexto: no se vincula a entidades."
+  }
+ },
+ "sources": [
+  {
+   "code": "RANSOMWARE_LIVE",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:08+00:00",
+   "records_in": 95,
+   "records_kept": 95,
+   "error": null,
+   "note": null,
+   "content_sha256": "ec39af495386f33e77ea70c61fd1f4434272f0edc96c2f3f2be2892bc0285319",
+   "name": "ransomware.live (API v2, víctimas por país)",
+   "economy": "EXTORSION_DIGITAL",
+   "kind": "api",
+   "url": "https://api.ransomware.live/v2/countryvictims/CL",
+   "authority": "Agregador independiente que indexa los sitios de filtración de los grupos.",
+   "legal": 1,
+   "does_not": "No visita los sitios .onion ni descarga lo publicado por los grupos."
+  },
+  {
+   "code": "RANSOMWATCH",
+   "status": "ARCHIVE",
+   "consulted_at": "2026-10-21T20:02:08+00:00",
+   "records_in": 16072,
+   "records_kept": 19,
+   "error": null,
+   "note": "Archivo sin actualizaciones desde 2025-06-16. Sirve como línea base histórica.",
+   "content_sha256": "5eb6c1313bf6ace8ab3702e3e8be688cd747821335ec384ad5c5182c8434542e",
+   "name": "ransomwatch (archivo histórico)",
+   "economy": "EXTORSION_DIGITAL",
+   "kind": "feed",
+   "url": "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json",
+   "authority": "Proyecto abierto que registró reivindicaciones 2020-2025. Archivado.",
+   "legal": 1,
+   "does_not": "No visita los sitios .onion ni descarga lo publicado por los grupos."
+  },
+  {
+   "code": "HIBP_BREACHES",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:09+00:00",
+   "records_in": 1047,
+   "records_kept": 1,
+   "error": null,
+   "note": null,
+   "content_sha256": "56fe66271b9ab7586625bc7fefae32fc58ffabe2e69a4c0dfec8dfe66c514c60",
+   "name": "Have I Been Pwned (catálogo de brechas)",
+   "economy": "MERCADO_DATOS_ROBADOS",
+   "kind": "api",
+   "url": "https://haveibeenpwned.com/api/v3/breaches",
+   "authority": "Catálogo verificado de brechas por servicio. Sin consultas por persona.",
+   "legal": 0,
+   "does_not": "No consulta correos ni personas: sólo el catálogo público de servicios afectados."
+  },
+  {
+   "code": "PHISHING_DATABASE",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:09+00:00",
+   "records_in": 392178,
+   "records_kept": 34,
+   "error": null,
+   "note": null,
+   "content_sha256": "70c6c2e24e6b3484e7ace27b079723e55937bc1f4cbd98bea38a472ec8e37326",
+   "name": "Phishing.Database (dominios activos)",
+   "economy": "FRAUDE_SUPLANTACION",
+   "kind": "feed",
+   "url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+   "authority": "Lista comunitaria de dominios de phishing activos, actualización continua.",
+   "legal": 0,
+   "does_not": "No visita los dominios: sólo compara el nombre contra marcas chilenas."
+  },
+  {
+   "code": "OPENPHISH",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:14+00:00",
+   "records_in": 300,
+   "records_kept": 0,
+   "error": null,
+   "note": null,
+   "content_sha256": "7b804577f5a3b14a17e3254577e559bc09be8bf49e04751504bbe84ac3273097",
+   "name": "OpenPhish (feed público)",
+   "economy": "FRAUDE_SUPLANTACION",
+   "kind": "feed",
+   "url": "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt",
+   "authority": "Feed público de URLs de phishing detectadas.",
+   "legal": 0,
+   "does_not": "No visita las URLs."
+  },
+  {
+   "code": "OFAC_CRYPTO",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:18+00:00",
+   "records_in": 1060,
+   "records_kept": 0,
+   "error": null,
+   "note": null,
+   "content_sha256": "80a11c5786482d1acf77d02326dd47e6dc104937de0759e9310e8f1ddc5f7786",
+   "name": "OFAC SDN, direcciones cripto (extracción diaria)",
+   "economy": "CRIPTO_SANCIONADO",
+   "kind": "feed",
+   "url": "https://raw.githubusercontent.com/0xB10C/ofac-sanctioned-digital-currency-addresses/lists/",
+   "authority": "Extracción automática y diaria de la lista SDN oficial del Tesoro de EE.UU.",
+   "legal": 0,
+   "does_not": "No traza transacciones todavía: arma la lista de vigilancia."
+  },
+  {
+   "code": "DEEPDARKCTI",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:18+00:00",
+   "records_in": 2449,
+   "records_kept": 4,
+   "error": null,
+   "note": "Estado ONLINE/OFFLINE según el catálogo comunitario; no se verifica de forma independiente.",
+   "content_sha256": "02bed352c2ac95177ba7be00d0e16e2e58af6c89acb9766532e3ce6ee5388139",
+   "name": "deepdarkCTI (catálogo de mercados, foros y canales)",
+   "economy": "ECOSISTEMA_DARKWEB",
+   "kind": "catalog",
+   "url": "https://raw.githubusercontent.com/fastfire/deepdarkCTI/main/",
+   "authority": "Catálogo comunitario de fuentes CTI con estado ONLINE/OFFLINE.",
+   "legal": 0,
+   "does_not": "Guarda nombre, categoría y estado. No guarda ni muestra direcciones .onion ni enlaces de invitación."
+  },
+  {
+   "code": "CMF_ALERTAS",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:19+00:00",
+   "records_in": 3,
+   "records_kept": 3,
+   "error": null,
+   "note": null,
+   "content_sha256": "7c97f3b5880e2bcc51c283ac03474920aabc0bfea0568e827ed127600d43f313",
+   "name": "CMF, alertas de entidades no autorizadas (curado)",
+   "economy": "SERVICIOS_FIN_NO_AUTORIZADOS",
+   "kind": "curated",
+   "url": "seeds/cmf_alertas.csv",
+   "authority": "Comisión para el Mercado Financiero. Cada fila cita su publicación.",
+   "legal": 0,
+   "does_not": "No raspa el sitio de la CMF todavía: se carga a mano con su fuente."
+  },
+  {
+   "code": "SUBTEL_BLOQUEOS",
+   "status": "FRESH",
+   "consulted_at": "2026-10-21T20:02:19+00:00",
+   "records_in": 20,
+   "records_kept": 20,
+   "error": null,
+   "note": null,
+   "content_sha256": "e8a41ede58b470f570711aa6b362f4438b22a939636e76d47176d85cf95bb05e",
+   "name": "Subtel, sitios de apuestas con orden de bloqueo (curado)",
+   "economy": "APUESTAS_ILEGALES",
+   "kind": "curated",
+   "url": "seeds/subtel_bloqueos.csv",
+   "authority": "Orden de bloqueo de la Subtel / resolución judicial. Cada fila cita su fuente.",
+   "legal": 0,
+   "does_not": "No visita los sitios ni registra cuentas en ellos."
+  },
+  {
+   "code": "TELEGRAM_PUBLICO",
+   "status": "NOT_CONSULTED",
+   "consulted_at": "2026-10-21T20:02:19+00:00",
+   "records_in": 0,
+   "records_kept": 0,
+   "error": null,
+   "note": "Desactivada hasta contar con informe jurídico.",
+   "content_sha256": null,
+   "name": "Canales públicos de Telegram (cuentas mula, datos)",
+   "economy": "MERCADO_DATOS_ROBADOS",
+   "kind": "pending",
+   "url": null,
+   "authority": "—",
+   "legal": 2,
+   "does_not": "No está activo: requiere informe jurídico (Ley 21.459 art. 6, Ley 21.719)."
+  }
+ ],
+ "indicators": {
+  "by_economy": {
+   "EXTORSION_DIGITAL": {
+    "total": 97,
+    "cl": 97,
+    "new": 95,
+    "by_scope": {
+     "CL": 97
+    }
+   },
+   "MERCADO_DATOS_ROBADOS": {
+    "total": 1,
+    "cl": 1,
+    "new": 1,
+    "by_scope": {
+     "CL": 1
+    }
+   },
+   "FRAUDE_SUPLANTACION": {
+    "total": 34,
+    "cl": 34,
+    "new": 0,
+    "by_scope": {
+     "CL": 34
+    }
+   },
+   "SERVICIOS_FIN_NO_AUTORIZADOS": {
+    "total": 3,
+    "cl": 3,
+    "new": 0,
+    "by_scope": {
+     "CL": 3
+    }
+   },
+   "APUESTAS_ILEGALES": {
+    "total": 20,
+    "cl": 20,
+    "new": 0,
+    "by_scope": {
+     "CL": 20
+    }
+   },
+   "CRIPTO_SANCIONADO": {
+    "total": 0,
+    "cl": 0,
+    "new": 0,
+    "by_scope": {}
+   },
+   "ECOSISTEMA_DARKWEB": {
+    "total": 4,
+    "cl": 1,
+    "new": 0,
+    "by_scope": {
+     "CL": 1,
+     "LATAM": 3
+    }
+   }
+  },
+  "ransomware": {
+   "victims_cl": 97,
+   "by_year": {
+    "2019": 1,
+    "2020": 2,
+    "2022": 4,
+    "2023": 15,
+    "2024": 13,
+    "2025": 20,
+    "2026": 42
+   },
+   "top_groups": [
+    [
+     "qilin",
+     22
+    ],
+    [
+     "thegentlemen",
+     10
+    ],
+    [
+     "lockbit3",
+     8
+    ],
+    [
+     "akira",
+     6
+    ],
+    [
+     "medusa",
+     4
+    ],
+    [
+     "lockbit5",
+     3
+    ],
+    [
+     "direwolf",
+     2
+    ],
+    [
+     "Deadlock",
+     2
+    ],
+    [
+     "lynx",
+     2
+    ],
+    [
+     "devman",
+     2
+    ]
+   ]
+  },
+  "phishing": {
+   "domains": 34,
+   "by_brand": [
+    [
+     "BancoEstado / CuentaRUT",
+     20
+    ],
+    [
+     "Itaú Chile",
+     4
+    ],
+    [
+     "Banco de Chile",
+     3
+    ],
+    [
+     "Santander Chile",
+     3
+    ],
+    [
+     "Banco Ripley",
+     2
+    ],
+    [
+     "Banco / CMR Falabella",
+     2
+    ]
+   ],
+   "by_kind": {
+    "banco": 30,
+    "retail_financiero": 4
+   }
+  },
+  "breaches": {
+   "breaches_cl": 1,
+   "accounts_cl": 319613
+  },
+  "ofac_crypto": {
+   "addresses_total": 1060,
+   "by_chain": {
+    "XBT": 532,
+    "TRX": 261,
+    "ETH": 120,
+    "USDT": 94,
+    "LTC": 13,
+    "XMR": 11,
+    "BCH": 7,
+    "DASH": 5,
+    "SOL": 4,
+    "ZEC": 4,
+    "USDC": 2,
+    "BSC": 1,
+    "ARB": 1,
+    "ETC": 1,
+    "XRP": 1,
+    "BSV": 1,
+    "BTG": 1,
+    "XVG": 1
+   }
+  },
+  "ecosystem": {
+   "categories": [
+    {
+     "category": "Mercados",
+     "total": 168,
+     "active": 129,
+     "inactive": 36,
+     "unknown": 3,
+     "active_by_kind": {
+      "general": 110,
+      "logs de infostealers": 1,
+      "tarjetas": 12,
+      "bases filtradas": 6
+     }
+    },
+    {
+     "category": "Foros",
+     "total": 356,
+     "active": 238,
+     "inactive": 111,
+     "unknown": 7
+    },
+    {
+     "category": "Sitios de grupos de ransomware",
+     "total": 713,
+     "active": 484,
+     "inactive": 217,
+     "unknown": 12
+    },
+    {
+     "category": "Canales de actores en Telegram",
+     "total": 1060,
+     "active": 398,
+     "inactive": 661,
+     "unknown": 1
+    },
+    {
+     "category": "Canales de logs de infostealers",
+     "total": 134,
+     "active": 57,
+     "inactive": 77,
+     "unknown": 0
+    },
+    {
+     "category": "Malware como servicio",
+     "total": 10,
+     "active": 8,
+     "inactive": 2,
+     "unknown": 0
+    },
+    {
+     "category": "Bienes falsificados",
+     "total": 8,
+     "active": 0,
+     "inactive": 0,
+     "unknown": 8
+    }
+   ]
+  }
+ },
+ "events": [
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Valenti Management",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-10-12",
+   "actor": "interlock",
+   "target": {
+    "name": "Valenti Management",
+    "domain": "valentichilisrestaurants.com",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-10-12",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "6c497b7c13772bd9"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "LD Constructora",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-10-10",
+   "actor": "qilin",
+   "target": {
+    "name": "LD Constructora",
+    "domain": "ldconstructora.cl",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-10-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "3bc59974b100cce1"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "CALICHE",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-10-10",
+   "actor": "Majinahanashi",
+   "target": {
+    "name": "CALICHE",
+    "domain": null,
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-10-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "11603b61a1b29b96"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "anwo.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-10-05",
+   "actor": "safepay",
+   "target": {
+    "name": "anwo.cl",
+    "domain": "anwo.cl",
+    "country": "CL",
+    "sector": "Not Found"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-10-05",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "266c93a2f9a0b1f7"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Cotesma",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-10-04",
+   "actor": "qilin",
+   "target": {
+    "name": "Cotesma",
+    "domain": "cotesma.coop",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-10-04",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9d318826c2258165"
+  },
+  {
+   "economy": "SERVICIOS_FIN_NO_AUTORIZADOS",
+   "source_code": "CMF_ALERTAS",
+   "event_type": "ENTIDAD_ALERTADA",
+   "title": "Cifmarkets",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-10",
+   "actor": null,
+   "target": {
+    "name": "Cifmarkets",
+    "domain": null,
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://chocale.cl/2026/10/cifmarkets-bkl-ultra-y-jifu-cmf-alerta-sobre-nuevas-entidades-no-autorizadas/"
+   },
+   "attributes": {
+    "note": "Marca de uno de los tres listados de entidades no autorizadas alertados por la CMF (15 entidades en total). Verificar contra el listado oficial de la CMF."
+   },
+   "first_seen": "2026-10-21T19:12:23+00:00",
+   "id": "0acfd79e7c226f74"
+  },
+  {
+   "economy": "SERVICIOS_FIN_NO_AUTORIZADOS",
+   "source_code": "CMF_ALERTAS",
+   "event_type": "ENTIDAD_ALERTADA",
+   "title": "BKL Ultra",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-10",
+   "actor": null,
+   "target": {
+    "name": "BKL Ultra",
+    "domain": null,
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://chocale.cl/2026/10/cifmarkets-bkl-ultra-y-jifu-cmf-alerta-sobre-nuevas-entidades-no-autorizadas/"
+   },
+   "attributes": {
+    "note": "Marca de uno de los tres listados de entidades no autorizadas alertados por la CMF (15 entidades en total). Verificar contra el listado oficial de la CMF."
+   },
+   "first_seen": "2026-10-21T19:12:23+00:00",
+   "id": "efc402ecccec9de3"
+  },
+  {
+   "economy": "SERVICIOS_FIN_NO_AUTORIZADOS",
+   "source_code": "CMF_ALERTAS",
+   "event_type": "ENTIDAD_ALERTADA",
+   "title": "Jifu",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-10",
+   "actor": null,
+   "target": {
+    "name": "Jifu",
+    "domain": null,
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://chocale.cl/2026/10/cifmarkets-bkl-ultra-y-jifu-cmf-alerta-sobre-nuevas-entidades-no-autorizadas/"
+   },
+   "attributes": {
+    "note": "Marca de uno de los tres listados de entidades no autorizadas alertados por la CMF (15 entidades en total). Verificar contra el listado oficial de la CMF."
+   },
+   "first_seen": "2026-10-21T19:12:23+00:00",
+   "id": "d0bbea014c2f4114"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Futuro Forestal",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-09-18",
+   "actor": "qilin",
+   "target": {
+    "name": "Futuro Forestal",
+    "domain": "futuroforestal.com",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-09-18",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "506691cc59702163"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "forus.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-09-18",
+   "actor": "lockbit5",
+   "target": {
+    "name": "forus.cl",
+    "domain": "forus.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-09-18",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "b70ad5204023ff7a"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "S A Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-09-07",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "S A Chile",
+    "domain": "syachile.cl",
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-09-07",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "b811dfd245d169c9"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Tanner",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-09-04",
+   "actor": "qilin",
+   "target": {
+    "name": "Tanner",
+    "domain": "tanner.cl",
+    "country": "CL",
+    "sector": "Other"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-09-04",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "d5e5f6e0f16827fd"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Betano",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Betano",
+    "domain": "lat.betano.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026 (42 URL remitidas por la SCJ). Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "e1509ca4a58e296f"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Coolbet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Coolbet",
+    "domain": "coolbet.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "0440e07322ddebba"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Coolbet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Coolbet",
+    "domain": "coolbetchile.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "ef2675a9ace48545"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Jugabet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Jugabet",
+    "domain": "jugabet.cl",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "13630a5763c9491b"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Rojabet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Rojabet",
+    "domain": "rojabet.cl",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "bca0d652faf52c2b"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Rojabet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Rojabet",
+    "domain": "rojabet.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "5c79986b9b06a58e"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Betsala",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Betsala",
+    "domain": "betsala.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "b0e68b2cbb6f4364"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Betsala",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Betsala",
+    "domain": "betsala11.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.24horas.cl/actualidad/nacional/betano-coolbet-y-jugabet-en-la-lista-estas-son-las-42-casas-de-apuesta"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "580590135cac246c"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Bet365",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Bet365",
+    "domain": "z2.bet365.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.df.cl/empresas/telecom-tecnologia/subtel-ordena-bloqueo-de-42-sitios-de-apuestas-online-a-entel-movistar"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "16f194965c7fd920"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Betsson",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Betsson",
+    "domain": "betsson.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026 (ruta /cl). Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "72d01d27a273115e"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Betsson",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Betsson",
+    "domain": "betsson1001.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "d1ae7a9d380bea89"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "1xBet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "1xBet",
+    "domain": "1xbet.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "1c98bb6f78aeb7da"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "1xBet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "1xBet",
+    "domain": "chile.1xbet.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "d4aeec215e8fc48b"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Stake",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Stake",
+    "domain": "stake.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "bdfefab0b539b6c0"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Novibet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Novibet",
+    "domain": "cl.novibet.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "3ca907c97d6b9924"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Rabona",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Rabona",
+    "domain": "rabona.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "06185f7d8050d4a1"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Rabona",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Rabona",
+    "domain": "rab0na-2417.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026 (ruta /es). Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "31fbe28334bd870c"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "TonyBet",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "TonyBet",
+    "domain": "tonybet.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://www.t13.cl/noticia/nacional/subtel-ordena-bloquear-42-sitios-apuestas-irregulares-menos-48-horas-1-9-2026"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "6eb37561fbdda0df"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Betcris",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Betcris",
+    "domain": "betcris.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://chocale.cl/2026/09/subtel-ordena-bloquear-42-sitios-de-apuestas-ilegales-betano-coolbet-y-hasta-casino-de-naya-facil-estan-en-la-lista/"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Algunas transcripciones lo omiten; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "091b156a07a5df42"
+  },
+  {
+   "economy": "APUESTAS_ILEGALES",
+   "source_code": "SUBTEL_BLOQUEOS",
+   "event_type": "SITIO_BLOQUEADO",
+   "title": "Casino asociado a Naya Fácil",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:19+00:00",
+   "event_date": "2026-09-01",
+   "actor": null,
+   "target": {
+    "name": "Casino asociado a Naya Fácil",
+    "domain": "nayafacil-903.com",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "publicado por un organismo chileno",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://chocale.cl/2026/09/subtel-ordena-bloquear-42-sitios-de-apuestas-ilegales-betano-coolbet-y-hasta-casino-de-naya-facil-estan-en-la-lista/"
+   },
+   "attributes": {
+    "note": "Orden Subtel 1-9-2026. Dominio transcrito por prensa; contrastar con el anexo oficial."
+   },
+   "first_seen": "2026-10-21T19:56:33+00:00",
+   "id": "f1409ce2d50635cf"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Hospital Clnico Universidad de Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-30",
+   "actor": "direwolf",
+   "target": {
+    "name": "Hospital Clnico Universidad de Chile",
+    "domain": "redclinica.cl",
+    "country": "CL",
+    "sector": "Healthcare"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-30",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "6495dbc6f19ee2c3"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Incolur",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-26",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Incolur",
+    "domain": "incolur.cl",
+    "country": "CL",
+    "sector": "Other"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-26",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "2fbc4e6022dddf68"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Difor",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-23",
+   "actor": "qilin",
+   "target": {
+    "name": "Difor",
+    "domain": "difor.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-23",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "782a12a769d16a5a"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Layher",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-23",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Layher",
+    "domain": "layher.cl",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-23",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9e5f5a75c5a75739"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Espac",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-23",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Espac",
+    "domain": "espac.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-23",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "fe0f58d530c7eda4"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "AGUNSA",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-16",
+   "actor": "qilin",
+   "target": {
+    "name": "AGUNSA",
+    "domain": "agunsa.com",
+    "country": "CL",
+    "sector": "Transportation"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-16",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "2ca4483478e22a64"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "servmarmg.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-15",
+   "actor": "ms13089",
+   "target": {
+    "name": "servmarmg.cl",
+    "domain": "servmarmg.cl",
+    "country": "CL",
+    "sector": "Other"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-15",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "356e24556f771cd6"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "CONTAC Ingenieros",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-08-10",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "CONTAC Ingenieros",
+    "domain": "contac.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-08-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "cc4192069e95f5f7"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Las Cenizas",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-07-31",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Las Cenizas",
+    "domain": "cenizas.cl",
+    "country": "CL",
+    "sector": "Other"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-07-31",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "a5d2d3d7a8882ddd"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "servitelco",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-07-30",
+   "actor": "qilin",
+   "target": {
+    "name": "servitelco",
+    "domain": "servitelco.com",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-07-30",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "2659fa6a955a6356"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Hardware Asesorias Software Ltda",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-07-27",
+   "actor": "Deadlock",
+   "target": {
+    "name": "Hardware Asesorias Software Ltda",
+    "domain": "hasltda.com",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-07-27",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "d477ba7ab38ed001"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Vinilon",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-07-25",
+   "actor": "Deadlock",
+   "target": {
+    "name": "Vinilon",
+    "domain": "vinilon.com",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-07-25",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "562cc1b96fbc0aa9"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Hokua",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-06-26",
+   "actor": "AiLock",
+   "target": {
+    "name": "Hokua",
+    "domain": "hokua.net",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-06-26",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "801f01e6bc60c117"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "ATCOM Outsourcing",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-06-18",
+   "actor": "qilin",
+   "target": {
+    "name": "ATCOM Outsourcing",
+    "domain": "atcom.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-06-18",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "953fb46531f582a9"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Enciso Ltda",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-06-15",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Enciso Ltda",
+    "domain": "encisoltda.com",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-06-15",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "4ea4064125c173c2"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Clinica Maitenes",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-06-02",
+   "actor": "qilin",
+   "target": {
+    "name": "Clinica Maitenes",
+    "domain": "clinicamaitenes.cl",
+    "country": "CL",
+    "sector": "Healthcare"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-06-02",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "970b6161290e03d1"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Comercial Echave Turri Limitada",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-05-17",
+   "actor": "qilin",
+   "target": {
+    "name": "Comercial Echave Turri Limitada",
+    "domain": "ajj.cl",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-05-17",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "44ed3061e778eb43"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Calidra",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-05-08",
+   "actor": "qilin",
+   "target": {
+    "name": "Calidra",
+    "domain": "calidra.com",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-05-08",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "bc5841a68c75d683"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "seit.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-04-27",
+   "actor": "apt73",
+   "target": {
+    "name": "seit.cl",
+    "domain": "seit.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-04-27",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "588d4e1fa1dfbd5c"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Frutcola Olmué",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-04-13",
+   "actor": "qilin",
+   "target": {
+    "name": "Frutcola Olmué",
+    "domain": "olmue.com",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-04-13",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "b111c2d973cc767a"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "SAAM Towage",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-04-10",
+   "actor": "qilin",
+   "target": {
+    "name": "SAAM Towage",
+    "domain": "saamtowage.com",
+    "country": "CL",
+    "sector": "Transportation"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-04-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "d11c61ae464d5d35"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Noi Hotels",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-03-26",
+   "actor": "qilin",
+   "target": {
+    "name": "Noi Hotels",
+    "domain": "noihotels.com",
+    "country": "CL",
+    "sector": "Hospitality"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-03-26",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "735af7c4c94a1c53"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Cortporation Colina",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-03-16",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Cortporation Colina",
+    "domain": "corporacioncolina.cl",
+    "country": "CL",
+    "sector": "Government & Defense"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-03-16",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "f6d419b01518ec6c"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "davila.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-23",
+   "actor": "lockbit5",
+   "target": {
+    "name": "davila.cl",
+    "domain": "davila.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-23",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "d90e61f84d347075"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Keylogistics Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-20",
+   "actor": "lynx",
+   "target": {
+    "name": "Keylogistics Chile",
+    "domain": "keylogistics.cl",
+    "country": "CL",
+    "sector": "Transportation"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-20",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "6de543cd9ea68c68"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Graneles de Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-19",
+   "actor": "qilin",
+   "target": {
+    "name": "Graneles de Chile",
+    "domain": "granelesdechile.com",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-19",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "5de452289db1bda9"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "isesa.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-14",
+   "actor": "lockbit5",
+   "target": {
+    "name": "isesa.cl",
+    "domain": "isesa.cl",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-14",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "a7039cfb0b667af8"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Ducasse Comercial Ltda",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-12",
+   "actor": "qilin",
+   "target": {
+    "name": "Ducasse Comercial Ltda",
+    "domain": "ducasse.cl",
+    "country": "CL",
+    "sector": "Retail & E-Commerce"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-12",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "3a18814bfdcb4370"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Conectados Chile S.A.",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-12",
+   "actor": "qilin",
+   "target": {
+    "name": "Conectados Chile S.A.",
+    "domain": "conectadoschile.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-12",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "f6f0afada6922e20"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Instituto Nacional de Derechos Humanos",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-10",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Instituto Nacional de Derechos Humanos",
+    "domain": "indh.cl",
+    "country": "CL",
+    "sector": "Government & Defense"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "16889f93b57575b7"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "www.pucobre.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-02-02",
+   "actor": "incransom",
+   "target": {
+    "name": "www.pucobre.cl",
+    "domain": "pucobre.cl",
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-02-02",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9804d40f583fada8"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Valbifrut",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-01-28",
+   "actor": "qilin",
+   "target": {
+    "name": "Valbifrut",
+    "domain": "valbifrut.cl",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-01-28",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "6fa4214d5de9eeca"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Copec S.A.",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2026-01-14",
+   "actor": "anubis",
+   "target": {
+    "name": "Copec S.A.",
+    "domain": "ww2.copec.cl",
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2026-01-14",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "1c3833ccf88cb119"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Clínica Dávila",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-12-22",
+   "actor": "devman",
+   "target": {
+    "name": "Clínica Dávila",
+    "domain": "davila.cl",
+    "country": "CL",
+    "sector": "Healthcare"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-12-22",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "dd68e347848baf34"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "d*v***.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-12-18",
+   "actor": "devman",
+   "target": {
+    "name": "d*v***.cl",
+    "domain": "d*v***.cl",
+    "country": "CL",
+    "sector": "Healthcare"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-12-18",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "eb723450ec6e7ce5"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Keylogistics Chile SA",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-12-12",
+   "actor": "minteye",
+   "target": {
+    "name": "Keylogistics Chile SA",
+    "domain": "keylogistics.cl",
+    "country": "CL",
+    "sector": "Transportation"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-12-12",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "0b9e4fc7b40fa73e"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Pangea",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-10-15",
+   "actor": "qilin",
+   "target": {
+    "name": "Pangea",
+    "domain": "pangea.es",
+    "country": "CL",
+    "sector": "Hospitality"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-10-15",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "fc5736af3245c2ac"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "www.officepro.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-09-24",
+   "actor": "qilin",
+   "target": {
+    "name": "www.officepro.cl",
+    "domain": "officepro.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-09-24",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "955ce5f0a734ee4b"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Liceo Francés Antoine y Consuelo de Saint-Exupéry",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-09-09",
+   "actor": "thegentlemen",
+   "target": {
+    "name": "Liceo Francés Antoine y Consuelo de Saint-Exupéry",
+    "domain": "lfelsalvador.org",
+    "country": "CL",
+    "sector": "Education"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-09-09",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "0ce049b21d6272c0"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "nubox.com & sumasaas.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-09-08",
+   "actor": "alphalocker",
+   "target": {
+    "name": "nubox.com & sumasaas.com",
+    "domain": "nubox.com",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-09-08",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "5d3eab7d38524abf"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Universidad Mayor",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-07-20",
+   "actor": "direwolf",
+   "target": {
+    "name": "Universidad Mayor",
+    "domain": "umayor.cl",
+    "country": "CL",
+    "sector": "Education"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-07-20",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "7027134e5366ff30"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Petroquim Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-06-10",
+   "actor": "nightspire",
+   "target": {
+    "name": "Petroquim Chile",
+    "domain": "petroquim.cl",
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-06-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "85b92c0cd445f683"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "university of chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-06-04",
+   "actor": "lynx",
+   "target": {
+    "name": "university of chile",
+    "domain": "uchile.cl",
+    "country": "CL",
+    "sector": "Education"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-06-04",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "b24da63283a69e0f"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Agencia Browne y Espinoza",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-04-18",
+   "actor": "akira",
+   "target": {
+    "name": "Agencia Browne y Espinoza",
+    "domain": "browneyespinoza.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-04-18",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "113a82de4ffe57ab"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Emotrans Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-04-13",
+   "actor": "nightspire",
+   "target": {
+    "name": "Emotrans Chile",
+    "domain": "emotrans-chile.cl",
+    "country": "CL",
+    "sector": "Transportation"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-04-13",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "881cbbc2263f3b50"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "caschile.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-04-05",
+   "actor": "VanHelsing",
+   "target": {
+    "name": "caschile.cl",
+    "domain": "caschile.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-04-05",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "8c055969c72c58d8"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Megacentro",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-03-20",
+   "actor": "hunters",
+   "target": {
+    "name": "Megacentro",
+    "domain": "megacentro.cl",
+    "country": "CL",
+    "sector": "Retail & E-Commerce"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-03-20",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "da44986f63357535"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Ricardo Rodriguez",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-03-15",
+   "actor": "qilin",
+   "target": {
+    "name": "Ricardo Rodriguez",
+    "domain": "ricardorodriguez.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-03-15",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9ba6e133bda4a640"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "www.cmsg.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-02-26",
+   "actor": "ransomhub",
+   "target": {
+    "name": "www.cmsg.cl",
+    "domain": "cmsg.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-02-26",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "a9dc4fe7da736c97"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Saint George's College (saintgeorge.cl)",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-02-11",
+   "actor": "fog",
+   "target": {
+    "name": "Saint George's College (saintgeorge.cl)",
+    "domain": "saintgeorge.cl",
+    "country": "CL",
+    "sector": "Education"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-02-11",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "3b6cdbe275b5a6f1"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "emin.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-02-04",
+   "actor": "akira",
+   "target": {
+    "name": "emin.cl",
+    "domain": "emin.cl",
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-02-04",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "1f512b2e48fc21db"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "garcesfruit.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-01-31",
+   "actor": "akira",
+   "target": {
+    "name": "garcesfruit.com",
+    "domain": "garcesfruit.com",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-01-31",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "8c79598fa9b34546"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Farmacia Cofar",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2025-01-16",
+   "actor": "killsec",
+   "target": {
+    "name": "Farmacia Cofar",
+    "domain": "cofar.cl",
+    "country": "CL",
+    "sector": "Healthcare"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2025-01-16",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "0e9bff3beb6940b4"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "web.vaips.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-12-19",
+   "actor": "funksec",
+   "target": {
+    "name": "web.vaips.cl",
+    "domain": "web.vaips.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-12-19",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9a937aba4dca54f3"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "logikaservicios.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-12-15",
+   "actor": "dragonransomware",
+   "target": {
+    "name": "logikaservicios.cl",
+    "domain": "logikaservicios.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-12-15",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9ac91d13b3c328a3"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Inmobiliaria Armas",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-12-11",
+   "actor": "medusa",
+   "target": {
+    "name": "Inmobiliaria Armas",
+    "domain": "iarmas.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-12-11",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "7223f8b047cdc730"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Lexco",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-11-07",
+   "actor": "meow",
+   "target": {
+    "name": "Lexco",
+    "domain": "lexco.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-11-07",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "2e2eb2528467b75e"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "www.usm.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-11-01",
+   "actor": "ransomhub",
+   "target": {
+    "name": "www.usm.cl",
+    "domain": "usm.cl",
+    "country": "CL",
+    "sector": "Education"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-11-01",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "44189ee3fa21690d"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Country Club El Bosque",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-10-20",
+   "actor": "arcusmedia",
+   "target": {
+    "name": "Country Club El Bosque",
+    "domain": "elbosque.org.pe",
+    "country": "CL",
+    "sector": "Hospitality"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-10-20",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "2fc1092fa2146094"
+  },
+  {
+   "economy": "MERCADO_DATOS_ROBADOS",
+   "source_code": "HIBP_BREACHES",
+   "event_type": "BRECHA_CATALOGADA",
+   "title": "Instituto Nacional de Deportes de Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": "2024-09-12",
+   "actor": null,
+   "target": {
+    "name": "Instituto Nacional de Deportes de Chile",
+    "domain": "ind.cl",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "dominio .cl del servicio",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://haveibeenpwned.com/PwnedWebsites#InstitutoNacionalDeDeportesDeChile"
+   },
+   "attributes": {
+    "accounts": 319613,
+    "data_classes": [
+     "Dates of birth",
+     "Email addresses",
+     "Genders",
+     "Names",
+     "Passwords",
+     "Usernames"
+    ],
+    "verified": true,
+    "added": "2024-09-16"
+   },
+   "first_seen": "2026-10-21T20:02:09+00:00",
+   "id": "31ec41622d1f71a8"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Financoop",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-07-11",
+   "actor": "akira",
+   "target": {
+    "name": "Financoop",
+    "domain": "financoop.net",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-07-11",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "5dbbacf3d146a741"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "acfin.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-05-13",
+   "actor": "cactus",
+   "target": {
+    "name": "acfin.cl",
+    "domain": "acfin.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-05-13",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "325317395d3295d1"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "salmonesaysen.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-05-09",
+   "actor": "lockbit3",
+   "target": {
+    "name": "salmonesaysen.cl",
+    "domain": "salmonesaysen.cl",
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-05-09",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "39bc36f03cd76097"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "amsoft.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-05-09",
+   "actor": "lockbit3",
+   "target": {
+    "name": "amsoft.cl",
+    "domain": "amsoft.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-05-09",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "be2e22a10f870698"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "GRUPOCREATIVO",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-02-24",
+   "actor": "qilin",
+   "target": {
+    "name": "GRUPOCREATIVO",
+    "domain": "company url",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-02-24",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "ed331a7ab631a62d"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Desarrollo De Tecnologia y Sistemas Ltda",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-02-21",
+   "actor": "akira",
+   "target": {
+    "name": "Desarrollo De Tecnologia y Sistemas Ltda",
+    "domain": null,
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-02-21",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9b3f5575a565d4fa"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "tormetal.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2024-02-16",
+   "actor": "lockbit3",
+   "target": {
+    "name": "tormetal.cl",
+    "domain": "tormetal.cl",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2024-02-16",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "32be422e007b4f42"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Midea Carrier",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-12-04",
+   "actor": "akira",
+   "target": {
+    "name": "Midea Carrier",
+    "domain": null,
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-12-04",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "66cd461555fcdc52"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWATCH",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "lafase.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-11-02",
+   "actor": "lockbit3",
+   "target": {
+    "name": "lafase.cl",
+    "domain": "lafase.cl",
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "dominio .cl en la publicación",
+    "domains": [
+     "lafase.cl"
+    ],
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json"
+   },
+   "attributes": {
+    "discovered": "2023-11-02"
+   },
+   "first_seen": "2026-10-21T19:12:08+00:00",
+   "id": "e116460fbdc287a7"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Pontifica Universidad Católica de Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-10-31",
+   "actor": "knight",
+   "target": {
+    "name": "Pontifica Universidad Católica de Chile",
+    "domain": "uc.cl",
+    "country": "CL",
+    "sector": "Education"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-10-31",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "5eeae5528cdf0f60"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "excon.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-10-24",
+   "actor": "lockbit3",
+   "target": {
+    "name": "excon.cl",
+    "domain": "excon.cl",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-10-24",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "8a9ae254b50c0c53"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Chula Vista Electric (CVE)",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-09-06",
+   "actor": "8base",
+   "target": {
+    "name": "Chula Vista Electric (CVE)",
+    "domain": "c-v-e.com",
+    "country": "CL",
+    "sector": "Energy & Utilities"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-09-06",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "38899456dfd6cdd2"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Saville Row - Grupo GTD was hacked A huge amount of personal information was stolen",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-07-26",
+   "actor": "alphv",
+   "target": {
+    "name": "Saville Row - Grupo GTD was hacked A huge amount of personal information was stolen",
+    "domain": "savillerow.cl",
+    "country": "CL",
+    "sector": "Retail & E-Commerce"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-07-26",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "fc1348802bc22a72"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Mutual de Seguros de Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-07-26",
+   "actor": "alphv",
+   "target": {
+    "name": "Mutual de Seguros de Chile",
+    "domain": "https:\\\\www.mutualdeseguros.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-07-26",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "4edd3c5b02c99600"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Ejercito de Chile",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-06-10",
+   "actor": "rhysida",
+   "target": {
+    "name": "Ejercito de Chile",
+    "domain": "ejercito.cl",
+    "country": "CL",
+    "sector": "Government & Defense"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-06-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "050727a40fa98a69"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "softland.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-05-22",
+   "actor": "lockbit3",
+   "target": {
+    "name": "softland.cl",
+    "domain": "softland.cl",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-05-22",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "4e76333e505ed4e1"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Cooperativa de Ahorro y Crédito Ahorrocoop Ltda",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-05-10",
+   "actor": "medusa",
+   "target": {
+    "name": "Cooperativa de Ahorro y Crédito Ahorrocoop Ltda",
+    "domain": "ahorrocoop.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-05-10",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "8c77f7227919b655"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Sonda (Duplicate with update)",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-05-05",
+   "actor": "medusa",
+   "target": {
+    "name": "Sonda (Duplicate with update)",
+    "domain": null,
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-05-05",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "5d6af01258087f93"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "apro.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-04-13",
+   "actor": "lockbit3",
+   "target": {
+    "name": "apro.cl",
+    "domain": "apro.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-04-13",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "6a49dfab85af775f"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Cementos Bio-Bio",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-04-09",
+   "actor": "blackbyte",
+   "target": {
+    "name": "Cementos Bio-Bio",
+    "domain": "cbb.cl/",
+    "country": "CL",
+    "sector": "Manufacturing"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-04-09",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "96ed4f26132c914e"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Sonda",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-04-03",
+   "actor": "medusa",
+   "target": {
+    "name": "Sonda",
+    "domain": "sonda.com",
+    "country": "CL",
+    "sector": "Technology"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-04-03",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "29ad459383b51095"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "DERK.CL",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2023-03-24",
+   "actor": "clop",
+   "target": {
+    "name": "DERK.CL",
+    "domain": "derk.cl",
+    "country": "CL",
+    "sector": "Professional Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2023-03-24",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "231bc437770cc196"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "cnachile.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2022-09-14",
+   "actor": "lockbit3",
+   "target": {
+    "name": "cnachile.cl",
+    "domain": "cnachile.cl",
+    "country": "CL",
+    "sector": "Government & Defense"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2022-09-14",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "809f8655ef5b82df"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "grupocabal.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2022-05-16",
+   "actor": "lockbit2",
+   "target": {
+    "name": "grupocabal.cl",
+    "domain": "grupocabal.cl",
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2022-05-16",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "2f0942a76fe4c538"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWATCH",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "BMW CHILE",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2022-04-01",
+   "actor": "kelvinsecurity",
+   "target": {
+    "name": "BMW CHILE",
+    "domain": null,
+    "country": "CL"
+   },
+   "chile_link": {
+    "reason": "menciona Chile en la publicación",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json"
+   },
+   "attributes": {
+    "discovered": "2022-04-01"
+   },
+   "first_seen": "2026-10-21T19:12:08+00:00",
+   "id": "b6288d9c2ce9b018"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "o2fit.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2022-02-14",
+   "actor": "lockbit2",
+   "target": {
+    "name": "o2fit.cl",
+    "domain": "o2fit.cl",
+    "country": "CL",
+    "sector": "Retail & E-Commerce"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2022-02-14",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "c8579a2c39b18d56"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Cencosud",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2020-11-13",
+   "actor": "egregor",
+   "target": {
+    "name": "Cencosud",
+    "domain": null,
+    "country": "CL",
+    "sector": "Retail & E-Commerce"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2020-11-13",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "9e28e4143ac91a77"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Banco Estado (Public Bank)",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2020-09-07",
+   "actor": "revil",
+   "target": {
+    "name": "Banco Estado (Public Bank)",
+    "domain": null,
+    "country": "CL",
+    "sector": "Financial Services"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2020-09-07",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "876d043381e1d1e8"
+  },
+  {
+   "economy": "EXTORSION_DIGITAL",
+   "source_code": "RANSOMWARE_LIVE",
+   "event_type": "REIVINDICACION_RANSOMWARE",
+   "title": "Chilean Ministry of Agriculture",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:08+00:00",
+   "event_date": "2019-06-01",
+   "actor": "doppelpaymer",
+   "target": {
+    "name": "Chilean Ministry of Agriculture",
+    "domain": null,
+    "country": "CL",
+    "sector": "Agriculture and Food Production"
+   },
+   "chile_link": {
+    "reason": "país declarado por el agregador",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://api.ransomware.live/v2/countryvictims/CL"
+   },
+   "attributes": {
+    "discovered": "2019-06-01",
+    "attack_date": null
+   },
+   "first_seen": "2026-10-21T20:02:08+00:00",
+   "id": "c8713bcf5453b227"
+  },
+  {
+   "economy": "ECOSISTEMA_DARKWEB",
+   "source_code": "DEEPDARKCTI",
+   "event_type": "ACTOR_ORIENTADO_REGION",
+   "title": "CHILE LOCKER (Victim request ID Page)",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:18+00:00",
+   "event_date": null,
+   "actor": "CHILE LOCKER (Victim request ID Page)",
+   "target": {
+    "category": "Sitios de grupos de ransomware"
+   },
+   "chile_link": {
+    "reason": "el nombre del actor alude a Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/fastfire/deepdarkCTI/main/ransomware_gang.md"
+   },
+   "attributes": {
+    "status": "OFFLINE",
+    "description": null
+   },
+   "first_seen": "2026-10-21T19:12:22+00:00",
+   "id": "7bfa0ad67db107a4"
+  },
+  {
+   "economy": "ECOSISTEMA_DARKWEB",
+   "source_code": "DEEPDARKCTI",
+   "event_type": "ACTOR_ORIENTADO_REGION",
+   "title": "KillnetLATAM chat",
+   "scope": "LATAM",
+   "observed_at": "2026-10-21T20:02:18+00:00",
+   "event_date": null,
+   "actor": "KillnetLATAM chat",
+   "target": {
+    "category": "Canales de actores en Telegram"
+   },
+   "chile_link": null,
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/fastfire/deepdarkCTI/main/telegram_threat_actors.md"
+   },
+   "attributes": {
+    "status": "ONLINE",
+    "description": null
+   },
+   "first_seen": "2026-10-21T19:12:22+00:00",
+   "id": "15d32c4744652f95"
+  },
+  {
+   "economy": "ECOSISTEMA_DARKWEB",
+   "source_code": "DEEPDARKCTI",
+   "event_type": "ACTOR_ORIENTADO_REGION",
+   "title": "KillneLATAM channel",
+   "scope": "LATAM",
+   "observed_at": "2026-10-21T20:02:18+00:00",
+   "event_date": null,
+   "actor": "KillneLATAM channel",
+   "target": {
+    "category": "Canales de actores en Telegram"
+   },
+   "chile_link": null,
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/fastfire/deepdarkCTI/main/telegram_threat_actors.md"
+   },
+   "attributes": {
+    "status": "OFFLINE",
+    "description": null
+   },
+   "first_seen": "2026-10-21T19:12:22+00:00",
+   "id": "7d00318e269685e5"
+  },
+  {
+   "economy": "ECOSISTEMA_DARKWEB",
+   "source_code": "DEEPDARKCTI",
+   "event_type": "ACTOR_ORIENTADO_REGION",
+   "title": "MexicanMafia Announcement",
+   "scope": "LATAM",
+   "observed_at": "2026-10-21T20:02:18+00:00",
+   "event_date": null,
+   "actor": "MexicanMafia Announcement",
+   "target": {
+    "category": "Canales de actores en Telegram"
+   },
+   "chile_link": null,
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/fastfire/deepdarkCTI/main/telegram_threat_actors.md"
+   },
+   "attributes": {
+    "status": "ONLINE",
+    "description": "Data Leak"
+   },
+   "first_seen": "2026-10-21T19:12:22+00:00",
+   "id": "b2bc18e9d3d3b527"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "banca.por.internet.itau.cl.cafecohuen.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Itaú Chile",
+    "brand_code": "ITAU_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Itaú Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "banca[.]por[.]internet[.]itau[.]cl[.]cafecohuen[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "d9f633a33c6e3a14"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancochile.cl.mget.com.br",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco de Chile",
+    "brand_code": "BANCO_CHILE",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco de Chile",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancochile[.]cl[.]mget[.]com[.]br"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "9c9abea928b4ae06"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancochilepersonas.bancochileper1.repl.co",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco de Chile",
+    "brand_code": "BANCO_CHILE",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco de Chile",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancochilepersonas[.]bancochileper1[.]repl[.]co"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "e801e4b916a911c9"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-afp-10-cupo.cf",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-afp-10-cupo[.]cf"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "1243eefb13b78fc7"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestadochile.club",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestadochile[.]club"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "ef1f90eaa5f6c19f"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.cl49f4g.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]cl49f4g[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "19f396998742a8c1"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.cl-estado.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]cl-estado[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "aa941904e277d30f"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.cl.iusm-cm.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]cl[.]iusm-cm[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "be1e734b11e71009"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.cl.personas.pasteleriatiarosa.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]cl[.]personas[.]pasteleriatiarosa[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "b1a0c0ac5058ba41"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-cl-portal-cl.ml",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-cl-portal-cl[.]ml"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "c96ad86dde2c344b"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-cl-portal-cl.tk",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-cl-portal-cl[.]tk"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "43d164a34f7a355a"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-cl.radiocrossovernetwork.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-cl[.]radiocrossovernetwork[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "43fa5c1eb0a616a5"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-cl.tvstand.co",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-cl[.]tvstand[.]co"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "8fd4c80fd7d50c2b"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.cl.wandja-djoumessi.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]cl[.]wandja-djoumessi[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "525533bf792d078c"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.cl.webzilla.co.in",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]cl[.]webzilla[.]co[.]in"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "941fbf7709e397cf"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado.ddns.net",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado[.]ddns[.]net"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "7c126fd692238692"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestadoonline.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestadoonline[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "de45175bcc86aa93"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-personas.site",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-personas[.]site"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "bd50d7048293ac5b"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestado-portal-personas-cl.ml",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestado-portal-personas-cl[.]ml"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "7cd072877c919b97"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bancoestados.ru.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bancoestados[.]ru[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "77b91f1b31a863a0"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "banco.itau.cl.en.linea.area.cliente.hoteltarapoto.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Itaú Chile",
+    "brand_code": "ITAU_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Itaú Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "banco[.]itau[.]cl[.]en[.]linea[.]area[.]cliente[.]hoteltarapoto[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "a7c69687626232bd"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "banco.itau.cl.wps.portal.bicpublico.hoteltarapoto.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Itaú Chile",
+    "brand_code": "ITAU_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Itaú Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "banco[.]itau[.]cl[.]wps[.]portal[.]bicpublico[.]hoteltarapoto[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "aa384bb1d6bf07c0"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "banco-ripley-soporte-clientes.cl.terksol.africa",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco Ripley",
+    "brand_code": "RIPLEY",
+    "brand_kind": "retail_financiero"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco Ripley",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "banco-ripley-soporte-clientes[.]cl[.]terksol[.]africa"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "7c9c4d8a4686936e"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "bfalabella-zonasegura-cuentapersona-online-cl.000webhostapp.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco / CMR Falabella",
+    "brand_code": "FALABELLA",
+    "brand_kind": "retail_financiero"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco / CMR Falabella",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "bfalabella-zonasegura-cuentapersona-online-cl[.]000webhostapp[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "561c12641c9a3eac"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "falabellas.loginss.cl.richarte.com.mx",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco / CMR Falabella",
+    "brand_code": "FALABELLA",
+    "brand_kind": "retail_financiero"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco / CMR Falabella",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "falabellas[.]loginss[.]cl[.]richarte[.]com[.]mx"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "af58a4d9c985942f"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "hltps-wwv-bancoripley-cl.publicidadtechtre.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco Ripley",
+    "brand_code": "RIPLEY",
+    "brand_kind": "retail_financiero"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco Ripley",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "hltps-wwv-bancoripley-cl[.]publicidadtechtre[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "d297634bcbe18cf9"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "https-wwv-itau-cl.consultoriainformatica389.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Itaú Chile",
+    "brand_code": "ITAU_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Itaú Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "https-wwv-itau-cl[.]consultoriainformatica389[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "5776d3ee50db40cc"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "login-personas-bancoestado-ingreso.cf",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "login-personas-bancoestado-ingreso[.]cf"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "0331da6c2dc4fdb5"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "mail.www-bancoestado-personas-credito-web.ga",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "mail[.]www-bancoestado-personas-credito-web[.]ga"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "3ea320fb3c6d3dbd"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "portal-ingreso-bancoestado-cl.gq",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "BancoEstado / CuentaRUT",
+    "brand_code": "BANCOESTADO",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca BancoEstado / CuentaRUT",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "portal-ingreso-bancoestado-cl[.]gq"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "1efc37126f7ad78f"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "santanderchile.net",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Santander Chile",
+    "brand_code": "SANTANDER_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Santander Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "santanderchile[.]net"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "33ef37be9a06da88"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "santander-competencia.activaonline.cl",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Santander Chile",
+    "brand_code": "SANTANDER_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Santander Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "santander-competencia[.]activaonline[.]cl"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "d2023415c9cd5094"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "santandermovil.cl.lbnl.one",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Santander Chile",
+    "brand_code": "SANTANDER_CL",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Santander Chile",
+    "confidence": "media"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "santandermovil[.]cl[.]lbnl[.]one"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "9d9fd0cdc787d9b5"
+  },
+  {
+   "economy": "FRAUDE_SUPLANTACION",
+   "source_code": "PHISHING_DATABASE",
+   "event_type": "DOMINIO_SUPLANTACION",
+   "title": "sitiospublicosbancochilecl.com",
+   "scope": "CL",
+   "observed_at": "2026-10-21T20:02:09+00:00",
+   "event_date": null,
+   "actor": null,
+   "target": {
+    "name": "Banco de Chile",
+    "brand_code": "BANCO_CHILE",
+    "brand_kind": "banco"
+   },
+   "chile_link": {
+    "reason": "suplanta la marca Banco de Chile",
+    "confidence": "alta"
+   },
+   "evidence": {
+    "source_url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+    "indicator": "sitiospublicosbancochilecl[.]com"
+   },
+   "attributes": {},
+   "first_seen": "2026-10-21T19:12:09+00:00",
+   "id": "87b06dbe9401ea54"
+  }
+ ],
+ "new_event_ids": [
+  "6c497b7c13772bd9",
+  "3bc59974b100cce1",
+  "266c93a2f9a0b1f7",
+  "9d318826c2258165",
+  "506691cc59702163",
+  "b811dfd245d169c9",
+  "d5e5f6e0f16827fd",
+  "6495dbc6f19ee2c3",
+  "2fbc4e6022dddf68",
+  "782a12a769d16a5a",
+  "9e5f5a75c5a75739",
+  "fe0f58d530c7eda4",
+  "2ca4483478e22a64",
+  "356e24556f771cd6",
+  "11603b61a1b29b96",
+  "cc4192069e95f5f7",
+  "a5d2d3d7a8882ddd",
+  "2659fa6a955a6356",
+  "d477ba7ab38ed001",
+  "562cc1b96fbc0aa9",
+  "801f01e6bc60c117",
+  "953fb46531f582a9",
+  "4ea4064125c173c2",
+  "970b6161290e03d1",
+  "44ed3061e778eb43",
+  "b70ad5204023ff7a",
+  "bc5841a68c75d683",
+  "588d4e1fa1dfbd5c",
+  "b111c2d973cc767a",
+  "d11c61ae464d5d35",
+  "735af7c4c94a1c53",
+  "f6d419b01518ec6c",
+  "5de452289db1bda9",
+  "3a18814bfdcb4370",
+  "f6f0afada6922e20",
+  "a7039cfb0b667af8",
+  "6de543cd9ea68c68",
+  "16889f93b57575b7",
+  "9804d40f583fada8",
+  "6fa4214d5de9eeca",
+  "1c3833ccf88cb119",
+  "dd68e347848baf34",
+  "eb723450ec6e7ce5",
+  "d90e61f84d347075",
+  "0b9e4fc7b40fa73e",
+  "fc5736af3245c2ac",
+  "0ce049b21d6272c0",
+  "5d3eab7d38524abf",
+  "955ce5f0a734ee4b",
+  "7027134e5366ff30",
+  "85b92c0cd445f683",
+  "b24da63283a69e0f",
+  "113a82de4ffe57ab",
+  "881cbbc2263f3b50",
+  "8c055969c72c58d8",
+  "da44986f63357535",
+  "9ba6e133bda4a640",
+  "3b6cdbe275b5a6f1",
+  "1f512b2e48fc21db",
+  "8c79598fa9b34546",
+  "a9dc4fe7da736c97",
+  "0e9bff3beb6940b4",
+  "9a937aba4dca54f3",
+  "7223f8b047cdc730",
+  "9ac91d13b3c328a3",
+  "2e2eb2528467b75e",
+  "44189ee3fa21690d",
+  "2fc1092fa2146094",
+  "325317395d3295d1",
+  "ed331a7ab631a62d",
+  "9b3f5575a565d4fa",
+  "32be422e007b4f42",
+  "39bc36f03cd76097",
+  "5dbbacf3d146a741",
+  "66cd461555fcdc52",
+  "5eeae5528cdf0f60",
+  "8a9ae254b50c0c53",
+  "38899456dfd6cdd2",
+  "050727a40fa98a69",
+  "4e76333e505ed4e1",
+  "8c77f7227919b655",
+  "5d6af01258087f93",
+  "fc1348802bc22a72",
+  "6a49dfab85af775f",
+  "96ed4f26132c914e",
+  "29ad459383b51095",
+  "4edd3c5b02c99600",
+  "231bc437770cc196",
+  "be2e22a10f870698",
+  "809f8655ef5b82df",
+  "2f0942a76fe4c538",
+  "c8579a2c39b18d56",
+  "9e28e4143ac91a77",
+  "876d043381e1d1e8",
+  "c8713bcf5453b227",
+  "31ec41622d1f71a8"
+ ]
+}
