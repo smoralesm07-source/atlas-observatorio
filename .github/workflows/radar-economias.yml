@@ -1,0 +1,59 @@
+name: Radar de economías criminales · corte
+
+# Prototipo independiente de ATLAS (radar-economias/). Cada 6 horas consulta las
+# fuentes abiertas y publica el corte en la rama `radar-economias-state`, para
+# no llenar main de commits de datos. Sólo lee fuentes públicas: no necesita
+# secretos ni toca el proyecto Supabase de ATLAS.
+
+on:
+  schedule:
+    - cron: '40 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: radar-economias
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  corte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Pruebas de los recolectores
+        working-directory: radar-economias/collectors
+        run: python -m unittest -v
+
+      - name: Traer el corte anterior
+        run: |
+          set -euo pipefail
+          mkdir -p state
+          if git fetch --depth 1 origin radar-economias-state 2>/dev/null; then
+            git --work-tree=state checkout FETCH_HEAD -- .
+          fi
+          # Sin corte anterior se parte del que viene en el repositorio.
+          if [ ! -f state/latest.json ]; then cp -r radar-economias/data/. state/; fi
+
+      - name: Armar el corte
+        working-directory: radar-economias/collectors
+        run: python -m radar.run --data "$GITHUB_WORKSPACE/state"
+
+      - name: Publicar en radar-economias-state
+        run: |
+          set -euo pipefail
+          cd state
+          git init -q
+          git checkout -q -b radar-economias-state
+          git config user.name 'radar-economias'
+          git config user.email 'radar-economias@users.noreply.github.com'
+          git add -A
+          git commit -q -m "corte $(jq -r .snapshot_id latest.json)"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" radar-economias-state
