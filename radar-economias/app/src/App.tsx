@@ -6,8 +6,8 @@ import { Fuentes } from './views/Fuentes';
 import { Metodo } from './views/Metodo';
 import { Panorama } from './views/Panorama';
 
-type Tab = 'panorama' | 'eventos' | 'fuentes' | 'metodo';
-const TABS: [Tab, string][] = [['panorama', 'Panorama'], ['eventos', 'Hechos'], ['fuentes', 'Fuentes'], ['metodo', 'Método']];
+type Tab = 'panorama' | 'hechos' | 'fuentes' | 'metodo';
+const TABS: [Tab, string][] = [['panorama', 'Panorama'], ['hechos', 'Hechos'], ['fuentes', 'Fuentes'], ['metodo', 'Método']];
 
 export function App() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -16,14 +16,35 @@ export function App() {
   const [filter, setFilter] = useState<EventFilter>(EMPTY_FILTER);
 
   useEffect(() => {
-    fetch('./latest.json', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((s: Snapshot) => {
+    // La versión autocontenida (scripts/standalone.mjs) trae el corte embebido;
+    // la app servida por Vite lo lee de data/latest.json.
+    const embedded = document.getElementById('radar-snapshot')?.textContent;
+    const load: Promise<Snapshot> = embedded
+      ? Promise.resolve(JSON.parse(embedded))
+      : fetch('./latest.json', { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))));
+    load
+      .then((s) => {
         if (s.schema !== 'radar.snapshot.v1') throw new Error(`Esquema no soportado: ${s.schema}`);
         setSnap(s);
       })
       .catch((e: Error) => setError(e.message));
   }, []);
+
+  // Cada sección tiene su ancla (#hechos, #fuentes…) para poder compartirla.
+  useEffect(() => {
+    const fromHash = () => {
+      const h = location.hash.slice(1) as Tab;
+      if (TABS.some(([k]) => k === h)) setTab(h);
+    };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+    return () => window.removeEventListener('hashchange', fromHash);
+  }, []);
+  const go = (t: Tab) => {
+    setTab(t);
+    try { history.replaceState(null, '', `#${t}`); } catch { /* el visor puede impedirlo */ }
+  };
 
   if (error) {
     return <main className="shell"><p className="notice">No se pudo leer el corte vigente ({error}). Corre los recolectores: <code>python -m radar.run</code>.</p></main>;
@@ -31,7 +52,7 @@ export function App() {
   if (!snap) return <main className="shell"><p className="loading">Leyendo el corte vigente…</p></main>;
 
   const fresh = snap.sources.filter((s) => s.status === 'FRESH' || s.status === 'ARCHIVE').length;
-  const openEconomy = (economy: string) => { setFilter({ ...EMPTY_FILTER, economy }); setTab('eventos'); };
+  const openEconomy = (economy: string) => { setFilter({ ...EMPTY_FILTER, economy }); go('hechos'); };
 
   return (
     <main className="shell">
@@ -51,12 +72,12 @@ export function App() {
 
       <nav className="tabs" aria-label="Secciones">
         {TABS.map(([k, label]) => (
-          <button key={k} type="button" aria-current={tab === k ? 'page' : undefined} onClick={() => setTab(k)}>{label}</button>
+          <button key={k} type="button" aria-current={tab === k ? 'page' : undefined} onClick={() => go(k)}>{label}</button>
         ))}
       </nav>
 
       {tab === 'panorama' && <Panorama snap={snap} onOpen={openEconomy} />}
-      {tab === 'eventos' && <Eventos snap={snap} filter={filter} setFilter={setFilter} />}
+      {tab === 'hechos' && <Eventos snap={snap} filter={filter} setFilter={setFilter} />}
       {tab === 'fuentes' && <Fuentes snap={snap} />}
       {tab === 'metodo' && <Metodo snap={snap} />}
 

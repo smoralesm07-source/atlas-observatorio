@@ -31,7 +31,7 @@ propio copiando la carpeta y el workflow `.github/workflows/radar-economias.yml`
 | Fraude por suplantación | Phishing.Database (dominios activos) | **34 dominios** que imitan marcas chilenas | metadatos públicos |
 | | OpenPhish (feed público) | respondió, sin coincidencias | metadatos públicos |
 | Servicios financieros no autorizados | Alertas de la CMF (curado) | 3 marcas, por contrastar con la CMF | metadatos públicos |
-| Apuestas ilegales | Órdenes de bloqueo de la Subtel (curado) | **no consultada**: falta cargar la lista | metadatos públicos |
+| Apuestas ilegales | Órdenes de bloqueo de la Subtel (curado) | **20 dominios** de la orden del 1-9-2026 transcritos por prensa; falta contrastar con el anexo de la SCJ y cargar la orden del 22-9 | metadatos públicos |
 | Criptoactivos sancionados | OFAC SDN, direcciones cripto | **1.060 direcciones** en 18 redes (línea base) | metadatos públicos |
 | Ecosistema de mercados y foros | deepdarkCTI | 129 mercados, 238 foros, 484 sitios de ransomware y 398 canales activos; 4 actores orientados a Chile o Latinoamérica | metadatos públicos |
 
@@ -64,6 +64,8 @@ cd ../app
 npm install
 npm run dev                               # http://localhost:5173
 npm run build
+npm run standalone                        # dist/radar-economias.html: un solo archivo
+                                          # con el corte embebido, para probar sin servidor
 ```
 
 En GitHub, `.github/workflows/radar-economias.yml` arma un corte cada 6 horas y lo
