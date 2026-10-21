@@ -65,7 +65,7 @@ export interface Snapshot {
   sources: Source[];
   indicators: {
     by_economy: Record<string, { total: number; cl: number; new: number; by_scope: Partial<Record<Scope, number>> }>;
-    ransomware: { victims_cl: number; by_year: Record<string, number>; top_groups: [string, number][] };
+    ransomware: { victims_cl: number; by_year: Record<string, number>; top_groups: [string, number][]; by_confidence?: Record<string, number> };
     phishing: { domains: number; by_brand: [string, number][]; by_kind: Record<string, number> };
     breaches: { breaches_cl: number; accounts_cl: number } | null;
     ofac_crypto: { addresses_total: number; by_chain: Record<string, number> } | null;

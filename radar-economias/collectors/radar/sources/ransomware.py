@@ -42,6 +42,20 @@ def chile_link_for_post(title: str, description: str = "") -> dict[str, Any] | N
     return None
 
 
+def live_chile_link(country: str | None, victim: str, domain: str | None, description: str) -> dict[str, Any] | None:
+    """El agregador asigna el país de forma automática y se equivoca (p. ej.
+    «Chili's» como Chile). Sólo hay confianza alta si además hay dominio .cl o
+    una mención explícita de Chile."""
+    if country != "CL":
+        return None
+    if domain and domain.endswith(".cl"):
+        return {"reason": "país asignado por el agregador y dominio .cl", "confidence": "alta"}
+    if mentions_chile(f"{victim} {description}"):
+        return {"reason": "país asignado por el agregador y mención de Chile", "confidence": "alta"}
+    return {"reason": "sólo el país asignado por el agregador; sin dominio .cl ni mención de Chile: verificar",
+            "confidence": "baja"}
+
+
 def parse_ransomware_live(items: list[dict[str, Any]], observed_at: str, url: str) -> list[Event]:
     """Formato v2 de ransomware.live. Tolera nombres de campo alternativos,
     porque la API no publica un contrato versionado."""
@@ -55,6 +69,7 @@ def parse_ransomware_live(items: list[dict[str, Any]], observed_at: str, url: st
         domain = str(_first(it, "domain", "website") or "").strip().lower().removeprefix("www.") or None
         discovered = _date(_first(it, "discovered", "published", "date"))
         attacked = _date(_first(it, "attackdate", "attack_date"))
+        sector = _first(it, "activity", "sector")
         out.append(Event(
             economy=ECONOMY,
             source_code="RANSOMWARE_LIVE",
@@ -66,8 +81,8 @@ def parse_ransomware_live(items: list[dict[str, Any]], observed_at: str, url: st
             event_date=attacked or discovered,
             actor=group,
             target={"name": victim, "domain": domain, "country": country,
-                    "sector": _first(it, "activity", "sector")},
-            chile_link={"reason": "país declarado por el agregador", "confidence": "alta"} if country == "CL" else None,
+                    "sector": None if str(sector).lower() in ("not found", "none", "") else sector},
+            chile_link=live_chile_link(country, victim, domain, strip_html(str(it.get("description") or ""))),
             evidence={"source_url": url},
             attributes={"discovered": discovered, "attack_date": attacked},
         ))

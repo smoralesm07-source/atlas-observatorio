@@ -88,9 +88,18 @@ class Ransomware(unittest.TestCase):
         ]
         evs = ransomware.parse_ransomware_live(items, AT, "u")
         self.assertEqual(evs[0].scope, "CL")
+        self.assertEqual(evs[0].chile_link["confidence"], "alta")
         self.assertEqual(evs[0].event_date, "2026-08-30")
         self.assertEqual(evs[0].target["domain"], "ficticia.cl")
         self.assertEqual(evs[1].scope, "GLOBAL")
+
+
+    def test_pais_del_agregador_sin_senal_es_confianza_baja(self):
+        items = [{"victim": "Ficticia Chilis Restaurants", "group": "g", "country": "CL",
+                  "discovered": "2026-10-12", "domain": "ficticiachilis.com", "activity": "Not Found"}]
+        ev = ransomware.parse_ransomware_live(items, AT, "u")[0]
+        self.assertEqual(ev.chile_link["confidence"], "baja")
+        self.assertIsNone(ev.target["sector"])
 
 
 class Hibp(unittest.TestCase):

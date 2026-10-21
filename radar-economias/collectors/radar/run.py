@@ -97,7 +97,10 @@ def build(data_dir: Path, only: set[str] | None = None) -> dict[str, Any]:
     by_source = {c.result.code: c for c in results}
     indicators = {
         "by_economy": _by_economy(events, set(new_ids)),
-        "ransomware": ransomware.indicators([_Ev(e) for e in events if e["economy"] == "EXTORSION_DIGITAL"]),
+        "ransomware": dict(
+            ransomware.indicators([_Ev(e) for e in events if e["economy"] == "EXTORSION_DIGITAL"]),
+            by_confidence=dict(Counter((e.get("chile_link") or {}).get("confidence", "sin vínculo")
+                                       for e in events if e["economy"] == "EXTORSION_DIGITAL"))),
         "phishing": phishing.indicators([_Ev(e) for e in events if e["economy"] == "FRAUDE_SUPLANTACION"]),
         "breaches": by_source["HIBP_BREACHES"].indicators or None,
         "ofac_crypto": by_source["OFAC_CRYPTO"].indicators or None,

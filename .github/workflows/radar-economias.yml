@@ -52,6 +52,19 @@ jobs:
         working-directory: radar-economias/collectors
         run: python -m radar.run --data "$GITHUB_WORKSPACE/state"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Versión de un solo archivo con el corte recién armado: se abre en el
+      # navegador sin servidor y queda junto a los datos en la rama de estado.
+      - name: Armar la app de un solo archivo
+        working-directory: radar-economias/app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          node scripts/standalone.mjs "$GITHUB_WORKSPACE/state/latest.json" "$GITHUB_WORKSPACE/state/radar-economias.html"
+
       - name: Publicar en radar-economias-state
         run: |
           set -euo pipefail

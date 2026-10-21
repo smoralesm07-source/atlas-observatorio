@@ -74,7 +74,12 @@ export function Panorama({ snap, onOpen }: { snap: Snapshot; onOpen: (economy: s
           </header>
           <Columns unit="reivindicaciones"
                    data={Object.entries(ind.ransomware.by_year).map(([y, v]) => ({ label: y, value: v }))} />
-          <footer>Grupos con más reivindicaciones: {ind.ransomware.top_groups.slice(0, 4).map(([g, c]) => `${g} (${c})`).join(', ') || '—'}</footer>
+          <footer>
+            Grupos con más reivindicaciones: {ind.ransomware.top_groups.slice(0, 4).map(([g, c]) => `${g} (${c})`).join(', ') || '—'}.
+            {(ind.ransomware.by_confidence?.baja ?? 0) > 0 && (
+              <> {n(ind.ransomware.by_confidence!.baja)} sólo traen el país asignado por el agregador y deben verificarse.</>
+            )}
+          </footer>
         </article>
 
         <article className="card">

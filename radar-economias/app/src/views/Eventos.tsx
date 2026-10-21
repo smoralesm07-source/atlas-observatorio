@@ -7,10 +7,11 @@ export interface EventFilter {
   scope: string;
   source: string;
   q: string;
+  confidence: string;
   onlyNew: boolean;
 }
 
-export const EMPTY_FILTER: EventFilter = { economy: '', scope: '', source: '', q: '', onlyNew: false };
+export const EMPTY_FILTER: EventFilter = { economy: '', scope: '', source: '', q: '', confidence: '', onlyNew: false };
 
 function haystack(e: RadarEvent) {
   return [e.title, e.actor, JSON.stringify(e.target)].join(' ').toLowerCase();
@@ -45,6 +46,7 @@ export function Eventos({ snap, filter, setFilter }: {
       (!filter.economy || e.economy === filter.economy) &&
       (!filter.scope || e.scope === filter.scope) &&
       (!filter.source || e.source_code === filter.source) &&
+      (!filter.confidence || e.chile_link?.confidence === filter.confidence) &&
       (!filter.onlyNew || newIds.has(e.id)) &&
       (!q || haystack(e).includes(q)));
   }, [snap, filter, newIds]);
@@ -70,6 +72,14 @@ export function Eventos({ snap, filter, setFilter }: {
           <select value={filter.source} onChange={(e) => set({ source: e.target.value })}>
             <option value="">Todas</option>
             {snap.sources.filter((s) => s.records_kept > 0).map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+          </select>
+        </label>
+        <label>Confianza del vínculo
+          <select value={filter.confidence} onChange={(e) => set({ confidence: e.target.value })}>
+            <option value="">Todas</option>
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja: verificar</option>
           </select>
         </label>
         <label className="grow">Buscar
