@@ -1,0 +1,22 @@
+brand,tokens,match,orders,note
+Betano,betano,contains,2026-09-01|2026-09-22,
+Coolbet,coolbet,contains,2026-09-01,
+Jugabet,jugabet,contains,2026-09-01,
+Rojabet,rojabet,contains,2026-09-01|2026-09-22,
+Betsala,betsala,contains,2026-09-01|2026-09-22,
+Bet365,bet365,contains,2026-09-01|2026-09-22,
+Betsson,betsson,contains,2026-09-01|2026-09-22,
+1xBet,1xbet,contains,2026-09-01|2026-09-22,
+Stake,stake,prefix,2026-09-01,"«stake» es una palabra común: sólo cuenta al inicio de una etiqueta del dominio"
+Novibet,novibet,contains,2026-09-01,
+Rabona,rabona|rab0na,prefix,2026-09-01,
+TonyBet,tonybet,contains,2026-09-01,
+Betcris,betcris,contains,2026-09-01|2026-09-22,
+MiCasino,micasino,contains,2026-09-01|2026-09-22,Dominio exacto pendiente del anexo oficial
+Casino asociado a Naya Fácil,nayafacil,contains,2026-09-01,
+Estelarbet,estelarbet,contains,2026-09-22,Segunda orden (37 dominios); dominio exacto pendiente del anexo oficial
+KTO,kto,prefix,2026-09-22,Segunda orden; «kto» es corto: sólo cuenta al inicio de una etiqueta
+Marathonbet,marathonbet,contains,2026-09-22,Segunda orden; dominio exacto pendiente del anexo oficial
+Betway,betway,contains,2026-09-22,Segunda orden; dominio exacto pendiente del anexo oficial
+Betfair,betfair,contains,2026-09-22,Segunda orden; dominio exacto pendiente del anexo oficial
+Sportingbet,sportingbet,contains,2026-09-22,Segunda orden; dominio exacto pendiente del anexo oficial
