@@ -251,6 +251,7 @@ export function Shell({
           </div>
 
           <a href={hrefFor({ view: 'nominas' })} data-active={route.view === 'nominas'}>Nóminas</a>
+          <a href={hrefFor({ view: 'cribado' })} data-active={route.view === 'cribado'}>Cribado</a>
           <a href={hrefFor({ view: 'reportes' })} data-active={route.view === 'reportes'}>Informes</a>
 
           {role === 'admin' && (

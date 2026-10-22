@@ -45,6 +45,7 @@ export type Route =
   | { view: 'relacionEstado' }
   | { view: 'territorio' }
   | { view: 'nominas' }
+  | { view: 'cribado' }
   | { view: 'reportes' }
   | { view: 'fuentes' }
   | { view: 'metodologia' }
@@ -100,6 +101,8 @@ export function parseHash(hash: string): Route {
       return { view: 'territorio' };
     case 'nominas':
       return { view: 'nominas' };
+    case 'cribado':
+      return { view: 'cribado' };
     case 'reportes':
     case 'informes':
       return { view: 'reportes' };
@@ -149,6 +152,8 @@ export function hrefFor(r: Route): string {
       return '#/territorio';
     case 'nominas':
       return '#/nominas';
+    case 'cribado':
+      return '#/cribado';
     case 'reportes':
       return '#/informes';
     case 'fuentes':
