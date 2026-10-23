@@ -1,0 +1,20 @@
+{
+  "project": "AML_CLAUDE",
+  "pair_count": 494867,
+  "period_end": "2026-07-01",
+  "captured_at": "2026-10-23T17:58:09.293253+00:00",
+  "snapshot_id": "PS-2026-07-V1",
+  "signal_count": 1744,
+  "school_events": 144,
+  "snapshot_date": "2026-09-05T00:50:44.954486+00:00",
+  "findings_count": 6058,
+  "supplier_count": 72802,
+  "school_deliveries": 64,
+  "latest_provider_run": {
+    "status": "FAILED",
+    "pipeline": "PROVIDER_ANALYZER_2026_09",
+    "updated_at": "2026-10-15T15:35:27.246986+00:00"
+  },
+  "school_subscriptions": 1,
+  "provider_schema_size_bytes": 1369931776
+}

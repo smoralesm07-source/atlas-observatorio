@@ -1,0 +1,198 @@
+{
+  "captured_at": "2026-10-23",
+  "source_project_ref": "bzqxvidggykkdouotylg",
+  "content_type": "METADATA_ONLY_NO_SOURCE_CODE",
+  "warning": "NO constituye backup del codigo fuente ni incluye configuracion de secretos o datos.",
+  "functions": [
+    {
+      "slug": "aml-digital-identity-deep",
+      "version": 3,
+      "sha256": "45b82cb0ca038fa687771dfe63da3de9927ba4cdc981e1db83dc79685ae6465c",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 7005,
+      "dependencies": [],
+      "core_reference": false
+    },
+    {
+      "slug": "aml-digital-identity-resolver-live",
+      "version": 3,
+      "sha256": "3f4fa0f34d5088097e2e90f77e90c0f7ba0e784c439775699582558a49baf72d",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 8655,
+      "dependencies": [],
+      "core_reference": false
+    },
+    {
+      "slug": "aml-entity-global-watchlists-live",
+      "version": 4,
+      "sha256": "7adecce179559d37640f190e9a1451507579c599fe74be440a5a624a5dc8f6d9",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 17060,
+      "dependencies": [
+        "OPENSANCTIONS_API_KEY"
+      ],
+      "core_reference": false
+    },
+    {
+      "slug": "atlas-v2-entity-intelligence",
+      "version": 4,
+      "sha256": "7d8773c07a8093dbf35c7ef7b99edb50b2a479ba63688c15230804ac11e42e4d",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 5383,
+      "dependencies": [],
+      "core_reference": true
+    },
+    {
+      "slug": "atlas-v2-municipal-read",
+      "version": 3,
+      "sha256": "ff2d8cf720a05cb911b41dda83de2ac73edcc58724a3cc14f8b51481b4932c32",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 4421,
+      "dependencies": [],
+      "core_reference": true
+    },
+    {
+      "slug": "atlas-v2-read",
+      "version": 13,
+      "sha256": "4e448b7bab553945e999db24bdfc3d7f339122925685d1432cfd641ef2b10768",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 18894,
+      "dependencies": [
+        "SUPABASE_ANON_KEY",
+        "SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": true
+    },
+    {
+      "slug": "atlas-v2-session-exchange",
+      "version": 6,
+      "sha256": "e8f4bfac67f79da7aee4cda1ec61733aa37773e52ed50ed5da7dc015bc71b123",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 9287,
+      "dependencies": [
+        "SUPABASE_URL"
+      ],
+      "core_reference": true
+    },
+    {
+      "slug": "atlas-v2-source-ingest",
+      "version": 6,
+      "sha256": "0f7dc511b931d6bc1fbdc0cacb7943a3b81f301d6a19eb6e0701a23d76f2e20e",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 5808,
+      "dependencies": [
+        "SUPABASE_SECRET_KEYS",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": false
+    },
+    {
+      "slug": "diagnostic-infoprobidad-materialize",
+      "version": 12,
+      "sha256": "9739595a4eb1053a04b529eebe8a26734bc2bfab28a0ae46ba675e449c3804db",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 279,
+      "dependencies": [],
+      "core_reference": false
+    },
+    {
+      "slug": "provider-analyzer-ingest",
+      "version": 13,
+      "sha256": "9649a62e4c15358871c2e6f63d63b8aec02fcad3de162684a3730e685e3df171",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 5398,
+      "dependencies": [
+        "SUPABASE_SECRET_KEYS",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": false
+    },
+    {
+      "slug": "provider-analyzer-query",
+      "version": 5,
+      "sha256": "9b399320cb0d0794e96968b86ff4b4ea7ec9d1fdec89a45a2cf1d8168fae8e25",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 3704,
+      "dependencies": [
+        "SUPABASE_SECRET_KEYS",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": false
+    },
+    {
+      "slug": "provider-entity-history",
+      "version": 3,
+      "sha256": "003c036cd947a40e9d2277d4bda3422cf27d0d13d3ebce44248939b19e1d2b2f",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 3575,
+      "dependencies": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": true
+    },
+    {
+      "slug": "provider-identity-ingest",
+      "version": 1,
+      "sha256": "d3ffb64e31beedb5a7018d7b1d5f1f869e1a7fb00d080176af2071f14e34c73e",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 2421,
+      "dependencies": [
+        "SUPABASE_SECRET_KEYS",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": false
+    },
+    {
+      "slug": "school-alert-notify",
+      "version": 2,
+      "sha256": "6094a068b36d4b1430374c48b9259d670593cd496f796c40194dbaa106c25c5b",
+      "verify_jwt": true,
+      "files": 1,
+      "code_bytes": 7740,
+      "dependencies": [
+        "APP_BASE_URL",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "SCHOOL_ALERT_FEED_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": false
+    },
+    {
+      "slug": "school-alerts",
+      "version": 1,
+      "sha256": "cad0efc300650924ac4aa380d73f26360dafc71f0b9eb3078d2c42f9774ecf0b",
+      "verify_jwt": false,
+      "files": 1,
+      "code_bytes": 7738,
+      "dependencies": [
+        "APP_BASE_URL",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_URL"
+      ],
+      "core_reference": false
+    }
+  ]
+}

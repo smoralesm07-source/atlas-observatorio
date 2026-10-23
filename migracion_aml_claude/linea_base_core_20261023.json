@@ -1,0 +1,15 @@
+{
+  "project": "ATLAS_CORE",
+  "pair_count": 494867,
+  "period_end": "2026-07-01",
+  "captured_at": "2026-10-23T17:58:11.215276+00:00",
+  "snapshot_id": "OBS-2026-09-09T1825Z",
+  "refreshed_at": "2026-09-09T18:25:00.064789+00:00",
+  "signal_count": 1744,
+  "findings_count": 6058,
+  "supplier_count": 72802,
+  "source_snapshot_id": "PS-2026-07-V1",
+  "prioritized_pairs_count": 3000,
+  "supplier_directory_count": 72802,
+  "observatory_cron_failures_7d": 0
+}
